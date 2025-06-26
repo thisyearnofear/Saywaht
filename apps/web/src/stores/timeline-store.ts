@@ -55,6 +55,12 @@ interface TimelineStore {
 
   // Computed values
   getTotalDuration: () => number;
+  
+  // New features
+  closeGapsInTrack: (trackId: string) => void;
+  closeAllGaps: () => void;
+  nudgeSelectedClips: (amount: number) => void;
+  getGapsInTrack: (trackId: string) => { startTime: number; endTime: number; duration: number }[];
 
   // New actions
   undo: () => void;
@@ -260,5 +266,113 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     if (redoStack.length === 0) return;
     const next = redoStack[redoStack.length - 1];
     set({ tracks: next, redoStack: redoStack.slice(0, -1) });
+  },
+
+  // Get all gaps in a track
+  getGapsInTrack: (trackId) => {
+    const { tracks } = get();
+    const track = tracks.find(t => t.id === trackId);
+    if (!track || track.clips.length <= 1) return [];
+
+    // Sort clips by start time
+    const sortedClips = [...track.clips].sort((a, b) => a.startTime - b.startTime);
+    const gaps = [];
+
+    // Find gaps between clips
+    for (let i = 0; i < sortedClips.length - 1; i++) {
+      const currentClip = sortedClips[i];
+      const nextClip = sortedClips[i + 1];
+      
+      const currentClipEnd = currentClip.startTime + (currentClip.duration - currentClip.trimStart - currentClip.trimEnd);
+      const nextClipStart = nextClip.startTime;
+      
+      const gapDuration = nextClipStart - currentClipEnd;
+      
+      if (gapDuration > 0.1) { // Only consider gaps larger than 0.1 seconds
+        gaps.push({
+          startTime: currentClipEnd,
+          endTime: nextClipStart,
+          duration: gapDuration
+        });
+      }
+    }
+    
+    return gaps;
+  },
+
+  // Close gaps in a specific track
+  closeGapsInTrack: (trackId) => {
+    get().pushHistory();
+    set((state) => {
+      const track = state.tracks.find(t => t.id === trackId);
+      if (!track || track.clips.length <= 1) return state;
+
+      // Sort clips by start time
+      const sortedClips = [...track.clips].sort((a, b) => a.startTime - b.startTime);
+      
+      // Adjust start times to close gaps
+      const updatedClips = sortedClips.map((clip, index) => {
+        if (index === 0) return clip; // Keep first clip at its position
+        
+        const prevClip = sortedClips[index - 1];
+        const prevClipEnd = prevClip.startTime + (prevClip.duration - prevClip.trimStart - prevClip.trimEnd);
+        
+        return {
+          ...clip,
+          startTime: prevClipEnd
+        };
+      });
+      
+      // Update the track with the adjusted clips
+      return {
+        tracks: state.tracks.map(t => 
+          t.id === trackId 
+            ? { ...t, clips: updatedClips } 
+            : t
+        )
+      };
+    });
+  },
+
+  // Close gaps in all tracks
+  closeAllGaps: () => {
+    get().pushHistory();
+    const { tracks } = get();
+    tracks.forEach(track => {
+      get().closeGapsInTrack(track.id);
+    });
+  },
+
+  // Nudge selected clips by a time amount (positive or negative)
+  nudgeSelectedClips: (amount) => {
+    const { selectedClips, tracks } = get();
+    if (selectedClips.length === 0) return;
+    
+    get().pushHistory();
+    
+    set((state) => {
+      return {
+        tracks: state.tracks.map(track => {
+          const trackClips = selectedClips.filter(sc => sc.trackId === track.id);
+          if (trackClips.length === 0) return track;
+          
+          return {
+            ...track,
+            clips: track.clips.map(clip => {
+              const isSelected = trackClips.some(sc => sc.clipId === clip.id);
+              if (!isSelected) return clip;
+              
+              // Calculate new start time, ensuring it doesn't go below 0
+              const newStartTime = Math.max(0, clip.startTime + amount);
+              
+              return {
+                ...clip,
+                startTime: newStartTime
+              };
+            })
+          };
+        })
+      };
+    });
   },
 }));

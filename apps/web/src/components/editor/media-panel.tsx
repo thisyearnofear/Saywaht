@@ -9,6 +9,7 @@ import { Plus, Image, Video, Music, Trash2, Upload } from "lucide-react";
 import { useDragDrop } from "@/hooks/use-drag-drop";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { VoiceoverRecorder } from "./voiceover-recorder";
 
 // MediaPanel lets users add, view, and drag media (images, videos, audio) into the project.
 // You can upload files or drag them from your computer. Dragging from here to the timeline adds them to your video project.
@@ -210,7 +211,7 @@ export function MediaPanel() {
 
         <div className="p-2 border-b">
           {/* Button to add/upload media */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-2">
             {/* Search and filter controls */}
             <select
               value={mediaFilter}
@@ -246,15 +247,15 @@ export function MediaPanel() {
               ) : (
                 <>
                   <Plus className="h-4 w-4" />
-                  <span
-                    className="hidden sm:inline ml-2"
-                    aria-label="Add file"
-                  >
+                  <span className="hidden sm:inline ml-2" aria-label="Add file">
                     Add
                   </span>
                 </>
               )}
             </Button>
+          </div>
+          <div className="mt-2">
+            <VoiceoverRecorder />
           </div>
         </div>
 
