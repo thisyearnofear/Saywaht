@@ -175,6 +175,7 @@ export function MediaPanel() {
               {formatDuration(item.duration)}
             </span>
           )}
+          <audio src={item.url} className="w-full mt-2" controls />
         </div>
       );
     }

@@ -1,5 +1,7 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { toBlobURL } from '@ffmpeg/util';
+import { TimelineTrack } from '@/stores/timeline-store';
+import { MediaItem } from '@/stores/media-store';
 
 let ffmpeg: FFmpeg | null = null;
 
@@ -8,8 +10,7 @@ export const initFFmpeg = async (): Promise<FFmpeg> => {
 
   ffmpeg = new FFmpeg();
   
-  // Use locally hosted files instead of CDN
-  const baseURL = '/ffmpeg';
+  const baseURL = '/ffmpeg'
   
   await ffmpeg.load({
     coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
@@ -65,7 +66,7 @@ export const trimVideo = async (
   
   // Set up progress callback
   if (onProgress) {
-    ffmpeg.on('progress', ({ progress }) => {
+    ffmpeg.on('progress', ({ progress }: { progress: number }) => {
       onProgress(progress * 100);
     });
   }
@@ -114,7 +115,7 @@ export const getVideoInfo = async (videoFile: File): Promise<{
   const listener = (data: string) => {
     if (listening) ffmpegOutput += data;
   };
-  ffmpeg.on('log', ({ message }) => listener(message));
+  ffmpeg.on('log', ({ message }: { message: string }) => listener(message));
 
   // Run ffmpeg to get info (stderr will contain the info)
   try {
@@ -170,7 +171,7 @@ export const convertToWebM = async (
   
   // Set up progress callback
   if (onProgress) {
-    ffmpeg.on('progress', ({ progress }) => {
+    ffmpeg.on('progress', ({ progress }: { progress: number }) => {
       onProgress(progress * 100);
     });
   }
@@ -199,6 +200,104 @@ export const convertToWebM = async (
   return blob;
 };
 
+export const exportTimeline = async (
+  tracks: TimelineTrack[],
+  mediaItems: MediaItem[],
+  totalDuration: number,
+  onProgress?: (progress: number) => void
+): Promise<Blob> => {
+  const ffmpeg = await initFFmpeg();
+
+  if (onProgress) {
+    ffmpeg.on('progress', ({ progress }: { progress: number }) => {
+      onProgress(progress * 100);
+    });
+  }
+
+  const inputFiles: string[] = [];
+  const filterComplex: string[] = [];
+  let videoStreamCount = 0;
+  let audioStreamCount = 0;
+
+  // Prepare inputs and map streams
+  for (const track of tracks) {
+    for (const clip of track.clips) {
+      const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
+      if (!mediaItem) continue;
+
+      const inputIndex = inputFiles.length;
+      const inputName = `input${inputIndex}.dat`;
+      await ffmpeg.writeFile(inputName, new Uint8Array(await mediaItem.file.arrayBuffer()));
+      inputFiles.push('-i', inputName);
+
+      const clipDuration = clip.duration - clip.trimStart - clip.trimEnd;
+
+      if (mediaItem.type === 'video') {
+        filterComplex.push(
+          `[${inputIndex}:v]trim=start=${clip.trimStart}:end=${clip.duration - clip.trimEnd},setpts=PTS-STARTPTS,scale=1920:1080,setsar=1[v${videoStreamCount}];`
+        );
+        filterComplex.push(
+          `[v${videoStreamCount}]fifo,adelay=${clip.startTime * 1000}|${clip.startTime * 1000}[v_delayed${videoStreamCount}];`
+        );
+        videoStreamCount++;
+      } else if (mediaItem.type === 'audio') {
+        filterComplex.push(
+          `[${inputIndex}:a]atrim=start=${clip.trimStart}:end=${clip.duration - clip.trimEnd},asetpts=PTS-STARTPTS[a${audioStreamCount}];`
+        );
+        filterComplex.push(
+          `[a${audioStreamCount}]afifo,adelay=${clip.startTime * 1000}|${clip.startTime * 1000}[a_delayed${audioStreamCount}];`
+        );
+        audioStreamCount++;
+      }
+    }
+  }
+
+  // Overlay videos
+  let lastVideo = `v_delayed0`;
+  for (let i = 1; i < videoStreamCount; i++) {
+    filterComplex.push(`[${lastVideo}][v_delayed${i}]overlay=shortest=1[v_over${i - 1}];`);
+    lastVideo = `v_over${i - 1}`;
+  }
+
+  // Mix audios
+  let lastAudio = `a_delayed0`;
+  if (audioStreamCount > 1) {
+    const audioInputs = Array.from({ length: audioStreamCount }, (_, i) => `[a_delayed${i}]`).join('');
+    filterComplex.push(`${audioInputs}amix=inputs=${audioStreamCount}[audio_out];`);
+    lastAudio = 'audio_out';
+  } else if (audioStreamCount === 1) {
+    filterComplex.push(`[a_delayed0]acopy[audio_out];`);
+    lastAudio = 'audio_out';
+  }
+
+  const outputName = 'output.mp4';
+  const command = [
+    ...inputFiles,
+    '-filter_complex',
+    filterComplex.join(''),
+    '-map', `[${lastVideo}]`,
+  ];
+
+  if (audioStreamCount > 0) {
+    command.push('-map', `[${lastAudio}]`);
+  }
+  
+  command.push('-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac', '-t', totalDuration.toString(), outputName);
+
+  await ffmpeg.exec(command);
+
+  const data = await ffmpeg.readFile(outputName);
+  const blob = new Blob([data], { type: 'video/mp4' });
+
+  // Cleanup
+  for (let i = 0; i < inputFiles.length / 2; i++) {
+    await ffmpeg.deleteFile(`input${i}.dat`);
+  }
+  await ffmpeg.deleteFile(outputName);
+
+  return blob;
+};
+
 export const extractAudio = async (
   videoFile: File,
   format: 'mp3' | 'wav' = 'mp3'
@@ -213,10 +312,12 @@ export const extractAudio = async (
   
   // Extract audio
   await ffmpeg.exec([
-    '-i', inputName,
+    '-i',
+    inputName,
     '-vn', // Disable video
-    '-acodec', format === 'mp3' ? 'libmp3lame' : 'pcm_s16le',
-    outputName
+    '-acodec',
+    format === 'mp3' ? 'libmp3lame' : 'pcm_s16le',
+    outputName,
   ]);
   
   // Read output file

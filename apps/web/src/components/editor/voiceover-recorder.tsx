@@ -130,7 +130,7 @@ export function VoiceoverRecorder() {
         duration: recordingTime,
         aspectRatio: 1,
       });
-      setAudioURL(null); // Revoke URL after adding to store
+      // The URL will be revoked when the component unmounts or the media item is deleted.
       setRecordingState("idle");
       toast.success("Voiceover saved to library.");
     }

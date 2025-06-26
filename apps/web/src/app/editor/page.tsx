@@ -1,6 +1,6 @@
 "use client";
-
 import { useEffect } from "react";
+import dynamic from "next/dynamic";
 import "./editor.css";
 import {
   ResizablePanelGroup,
@@ -11,11 +11,15 @@ import { MediaPanel } from "../../components/editor/media-panel";
 // import { PropertiesPanel } from "../../components/editor/properties-panel";
 import { Timeline } from "../../components/editor/timeline";
 import { PreviewPanel } from "../../components/editor/preview-panel";
-import { EditorHeader } from "@/components/editor-header";
 import { usePanelStore } from "@/stores/panel-store";
 import { useProjectStore } from "@/stores/project-store";
 import { EditorProvider } from "@/components/editor-provider";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
+
+const EditorHeader = dynamic(
+  () => import("@/components/editor-header").then((mod) => mod.EditorHeader),
+  { ssr: false }
+);
 
 export default function Editor() {
   const {
@@ -55,7 +59,10 @@ export default function Editor() {
               className="min-h-0"
             >
               {/* Main content area */}
-              <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+              <ResizablePanelGroup
+                direction="horizontal"
+                className="h-full w-full"
+              >
                 {/* Tools Panel */}
                 <ResizablePanel
                   defaultSize={toolsPanel}
