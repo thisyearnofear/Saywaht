@@ -4,7 +4,7 @@
 
 
 
-# OpenCut (prev AppCut)
+# SayWhat (prev AppCut)
 ### A free, open-source video editor for web, desktop, and mobile.
 </div>
 
@@ -20,7 +20,7 @@
 - Multi-track support
 - Real-time preview
 - No watermarks or subscriptions
-- Analytics provided by [Databuddy](https://www.databuddy.cc?utm_source=opencut), 100% Anonymized & Non-invasive.
+- Analytics provided by [Databuddy](https://www.databuddy.cc?utm_source=saywhat), 100% Anonymized & Non-invasive.
 
 ## Project Structure
 
@@ -46,7 +46,7 @@ Before you begin, ensure you have the following installed on your system:
 1.  **Clone the repository**
     ```bash
     git clone <repo-url>
-    cd OpenCut
+    cd SayWhat
     ```
 
 2.  **Start backend services**

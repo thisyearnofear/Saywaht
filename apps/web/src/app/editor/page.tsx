@@ -11,6 +11,9 @@ import { MediaPanel } from "../../components/editor/media-panel";
 // import { PropertiesPanel } from "../../components/editor/properties-panel";
 import { Timeline } from "../../components/editor/timeline";
 import { PreviewPanel } from "../../components/editor/preview-panel";
+import { StatusBar } from "../../components/editor/status-bar";
+import { WelcomeModal } from "../../components/onboarding/welcome-modal";
+import { QuickActions } from "../../components/editor/quick-actions";
 import { usePanelStore } from "@/stores/panel-store";
 import { useProjectStore } from "@/stores/project-store";
 import { EditorProvider } from "@/components/editor-provider";
@@ -100,6 +103,13 @@ export default function Editor() {
             </ResizablePanel>
           </ResizablePanelGroup>
         </div>
+        
+        {/* Status Bar */}
+        <StatusBar />
+        
+        {/* Floating UI Elements */}
+        <WelcomeModal />
+        <QuickActions />
       </div>
     </EditorProvider>
   );
