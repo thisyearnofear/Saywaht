@@ -6,6 +6,7 @@ import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "../components/ui/sonner";
 import { TooltipProvider } from "../components/ui/tooltip";
+import { Web3Provider } from "@/components/wagmi-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -55,23 +56,25 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <ThemeProvider attribute="class" forcedTheme="dark" enableSystem>
-          <TooltipProvider>
-            {children}
-            <Analytics />
-            <Toaster />
-            <Script
-              src="https://app.databuddy.cc/databuddy.js"
-              strategy="afterInteractive"
-              async
-              data-client-id="UP-Wcoy5arxFeK7oyjMMZ"
-              data-track-attributes={true}
-              data-track-errors={true}
-              data-track-outgoing-links={true}
-              data-track-web-vitals={true}
-            />
-          </TooltipProvider>
-        </ThemeProvider>
+        <Web3Provider>
+          <ThemeProvider attribute="class" forcedTheme="dark" enableSystem>
+            <TooltipProvider>
+              {children}
+              <Analytics />
+              <Toaster />
+              <Script
+                src="https://app.databuddy.cc/databuddy.js"
+                strategy="afterInteractive"
+                async
+                data-client-id="UP-Wcoy5arxFeK7oyjMMZ"
+                data-track-attributes={true}
+                data-track-errors={true}
+                data-track-outgoing-links={true}
+                data-track-web-vitals={true}
+              />
+            </TooltipProvider>
+          </ThemeProvider>
+        </Web3Provider>
       </body>
     </html>
   );

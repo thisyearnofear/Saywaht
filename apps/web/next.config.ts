@@ -24,19 +24,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   productionBrowserSourceMaps: true,
   output: "standalone",
-  webpack: (config) => {
-    // Add support for Web Workers
-    config.module.rules.push({
-      test: /worker\.js$/,
-      use: {
-        loader: 'worker-loader',
-        options: {
-          inline: 'no-fallback',
-        },
-      },
-    });
-    return config;
-  },
 };
 
 export default nextConfig;

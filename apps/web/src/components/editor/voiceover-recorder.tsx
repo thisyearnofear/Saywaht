@@ -22,15 +22,15 @@ export function VoiceoverRecorder() {
   >("idle");
   const [audioURL, setAudioURL] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [syncWithVideo, setSyncWithVideo] = useState<boolean>(true);
   const [recordingTime, setRecordingTime] = useState(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { addMediaItem } = useMediaStore();
+  const { addMediaItem, mediaItems } = useMediaStore();
   const { isPlaying, play, pause, currentTime } = usePlaybackStore();
+  const hasVideo = mediaItems.some((item) => item.type === "video");
 
   useEffect(() => {
     // Cleanup on unmount
@@ -67,7 +67,7 @@ export function VoiceoverRecorder() {
     const stream = await requestMicrophoneAccess();
     if (!stream) return;
 
-    if (syncWithVideo && !isPlaying) {
+    if (!isPlaying) {
       play();
     }
 
@@ -85,7 +85,7 @@ export function VoiceoverRecorder() {
       const url = URL.createObjectURL(audioBlob);
       setAudioURL(url);
       setRecordingState("previewing");
-      if (syncWithVideo && isPlaying) {
+      if (isPlaying) {
         pause();
       }
       if (timerRef.current) clearInterval(timerRef.current);
@@ -175,22 +175,13 @@ export function VoiceoverRecorder() {
               onClick={startRecording}
               size="lg"
               className="h-20 w-20 rounded-full"
+              disabled={!hasVideo}
+              title={
+                !hasVideo ? "Please upload a video first" : "Start Recording"
+              }
             >
               <Mic className="h-8 w-8" />
             </Button>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="sync-video"
-                checked={syncWithVideo}
-                onCheckedChange={setSyncWithVideo}
-              />
-              <Label
-                htmlFor="sync-video"
-                className="text-sm text-muted-foreground"
-              >
-                Sync with video playback
-              </Label>
-            </div>
           </div>
         )}
 

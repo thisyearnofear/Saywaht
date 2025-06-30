@@ -10,6 +10,8 @@ import { useDragDrop } from "@/hooks/use-drag-drop";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { VoiceoverRecorder } from "./voiceover-recorder";
+import { AiVoiceGenerator } from "./ai-voice-generator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
 // MediaPanel lets users add, view, and drag media (images, videos, audio) into the project.
 // You can upload files or drag them from your computer. Dragging from here to the timeline adds them to your video project.
@@ -18,8 +20,6 @@ export function MediaPanel() {
   const { mediaItems, addMediaItem, removeMediaItem } = useMediaStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [mediaFilter, setMediaFilter] = useState("all");
 
   const processFiles = async (files: FileList | File[]) => {
     // If no files, do nothing
@@ -81,26 +81,7 @@ export function MediaPanel() {
     e.dataTransfer.effectAllowed = "copy";
   };
 
-  const [filteredMediaItems, setFilteredMediaItems] = useState(mediaItems);
-
-  useEffect(() => {
-    const filtered = mediaItems.filter((item) => {
-      if (mediaFilter && mediaFilter !== "all" && item.type !== mediaFilter) {
-        return false;
-      }
-
-      if (
-        searchQuery &&
-        !item.name.toLowerCase().includes(searchQuery.toLowerCase())
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-
-    setFilteredMediaItems(filtered);
-  }, [mediaItems, mediaFilter, searchQuery]);
+  const filteredMediaItems = mediaItems;
 
   const renderPreview = (item: any) => {
     // Render a preview for each media type (image, video, audio, unknown)
@@ -204,7 +185,9 @@ export function MediaPanel() {
       />
 
       <div
-        className={`h-full flex flex-col transition-colors relative ${isDragOver ? "bg-accent/30" : ""}`}
+        className={`h-full flex flex-col transition-colors relative ${
+          isDragOver ? "bg-accent/30" : ""
+        }`}
         {...dragProps}
       >
         {/* Show overlay when dragging files over the panel */}
@@ -212,51 +195,38 @@ export function MediaPanel() {
 
         <div className="p-2 border-b">
           {/* Button to add/upload media */}
-          <div className="flex gap-2 mb-2">
-            {/* Search and filter controls */}
-            <select
-              value={mediaFilter}
-              onChange={(e) => setMediaFilter(e.target.value)}
-              className="px-2 py-1 text-xs border rounded bg-background"
-            >
-              <option value="all">All</option>
-              <option value="video">Video</option>
-              <option value="audio">Audio</option>
-              <option value="image">Image</option>
-            </select>
-            <input
-              type="text"
-              placeholder="Search media..."
-              className="min-w-[60px] flex-1 px-2 py-1 text-xs border rounded bg-background"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-
-            {/* Add media button */}
+          <div className="space-y-4">
             <Button
               variant="outline"
-              size="sm"
+              size="lg"
               onClick={handleFileSelect}
               disabled={isProcessing}
-              className="flex-none min-w-[30px] whitespace-nowrap overflow-hidden px-2 justify-center items-center"
+              className="w-full"
             >
               {isProcessing ? (
                 <>
-                  <Upload className="h-4 w-4 animate-spin" />
-                  <span className="hidden md:inline ml-2">Processing...</span>
+                  <Upload className="h-4 w-4 animate-spin mr-2" />
+                  <span>Processing...</span>
                 </>
               ) : (
                 <>
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline ml-2" aria-label="Add file">
-                    Add
-                  </span>
+                  <Video className="h-4 w-4 mr-2" />
+                  <span>Upload Video</span>
                 </>
               )}
             </Button>
-          </div>
-          <div className="mt-2">
-            <VoiceoverRecorder />
+            <Tabs defaultValue="record" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="record">Record</TabsTrigger>
+                <TabsTrigger value="generate">Generate</TabsTrigger>
+              </TabsList>
+              <TabsContent value="record">
+                <VoiceoverRecorder />
+              </TabsContent>
+              <TabsContent value="generate">
+                <AiVoiceGenerator />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
 

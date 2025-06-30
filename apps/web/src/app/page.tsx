@@ -1,17 +1,18 @@
+"use client";
+
 import { Hero } from "@/components/landing/hero";
 import { Header } from "@/components/header";
-import { getWaitlistCount } from "@/lib/waitlist";
+import { DiscoveryFeed } from "@/components/landing/discovery-feed";
+import { useAccount } from "wagmi";
 
-// Force dynamic rendering so waitlist count updates in real-time
-export const dynamic = "force-dynamic";
-
-export default async function Home() {
-  const signupCount = await getWaitlistCount();
+export default function Home() {
+  const { isConnected } = useAccount();
 
   return (
     <div>
       <Header />
-      <Hero signupCount={signupCount} />
+      <Hero />
+      {isConnected && <DiscoveryFeed />}
     </div>
   );
 }

@@ -6,7 +6,6 @@ import {
   getImageAspectRatio,
   type MediaItem,
 } from "@/stores/media-store";
-// import { generateThumbnail, getVideoInfo } from "./ffmpeg-utils"; // Temporarily disabled
 
 export interface ProcessedMediaItem extends Omit<MediaItem, "id"> {}
 
@@ -43,8 +42,8 @@ export async function processMediaFiles(
         aspectRatio = 1;
       }
 
-      // Get duration for videos and audio (if not already set by FFmpeg)
-      if ((fileType === "video" || fileType === "audio") && !duration) {
+      // Get duration for videos and audio
+      if (fileType === "video" || fileType === "audio") {
         duration = await getMediaDuration(file);
       }
 

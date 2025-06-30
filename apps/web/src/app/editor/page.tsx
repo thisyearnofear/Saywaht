@@ -25,12 +25,10 @@ export default function Editor() {
   const {
     toolsPanel,
     previewPanel,
-    propertiesPanel,
     mainContent,
     timeline,
     setToolsPanel,
     setPreviewPanel,
-    setPropertiesPanel,
     setMainContent,
     setTimeline,
   } = usePanelStore();
@@ -85,19 +83,6 @@ export default function Editor() {
                 >
                   <PreviewPanel />
                 </ResizablePanel>
-
-                <ResizableHandle withHandle />
-
-                {/* Properties Panel - Hidden for now but ready */}
-                {/* <ResizablePanel
-                  defaultSize={propertiesPanel}
-                  minSize={15}
-                  maxSize={40}
-                  onResize={setPropertiesPanel}
-                  className="min-w-0"
-                >
-                  <PropertiesPanel />
-                </ResizablePanel> */}
               </ResizablePanelGroup>
             </ResizablePanel>
 
