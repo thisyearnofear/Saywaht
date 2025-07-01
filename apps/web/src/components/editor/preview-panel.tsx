@@ -7,6 +7,7 @@ import { VideoPlayer } from "@/components/ui/video-player";
 import { AudioPlayer } from "@/components/ui/audio-player";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Volume2, VolumeX } from "lucide-react";
+import Image from "next/image";
 import { useState, useRef } from "react";
 
 // Debug flag - set to false to hide active clips info
@@ -93,10 +94,11 @@ export function PreviewPanel() {
     if (mediaItem.type === "image") {
       return (
         <div key={clip.id} className="absolute inset-0">
-          <img
+          <Image
             src={mediaItem.url}
             alt={mediaItem.name}
-            className="w-full h-full object-cover"
+            fill
+            style={{ objectFit: "cover" }}
             draggable={false}
           />
         </div>

@@ -96,7 +96,7 @@ function MintCoinFormComponent() {
         <div>
           <h2 className="text-2xl font-bold mb-2">Mint Successful! 🎉</h2>
           <p className="text-muted-foreground">
-            Your commentary "{mintedCoin.name}" ({mintedCoin.symbol}) is now a
+            Your commentary &quot;{mintedCoin.name}&quot; ({mintedCoin.symbol}) is now a
             Zora Coin.
           </p>
         </div>
@@ -206,7 +206,7 @@ function MintCoinFormComponent() {
               <p className="text-sm font-medium">What happens when you mint?</p>
               <p className="text-xs text-muted-foreground">
                 Your video becomes a tradeable Zora Coin that others can collect
-                and trade. You'll receive royalties from future sales.
+                and trade. You&apos;ll receive royalties from future sales.
               </p>
             </div>
           </div>

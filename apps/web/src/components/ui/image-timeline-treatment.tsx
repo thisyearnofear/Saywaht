@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -51,10 +52,12 @@ export function ImageTimelineTreatment({
         <>
           {backgroundType === "blur" && (
             <div className="absolute inset-0">
-              <img
+              <Image
                 src={src}
                 alt=""
-                className="w-full h-full object-cover filter blur-xl scale-110 opacity-60"
+                fill
+                style={{ objectFit: "cover" }}
+                className="filter blur-xl scale-110 opacity-60"
                 aria-hidden="true"
               />
               <div className="absolute inset-0 bg-black/20" />
@@ -63,10 +66,12 @@ export function ImageTimelineTreatment({
 
           {backgroundType === "mirror" && (
             <div className="absolute inset-0">
-              <img
+              <Image
                 src={src}
                 alt=""
-                className="w-full h-full object-cover opacity-30"
+                fill
+                style={{ objectFit: "cover" }}
+                className="opacity-30"
                 aria-hidden="true"
               />
             </div>
@@ -80,10 +85,11 @@ export function ImageTimelineTreatment({
 
       {/* Main Image Layer */}
       <div className="absolute inset-0">
-        <img
+        <Image
           src={src}
           alt={alt}
-          className="w-full h-full object-cover"
+          fill
+          style={{ objectFit: "cover" }}
           onLoad={handleImageLoad}
         />
       </div>

@@ -4,22 +4,33 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    --background: 0 0% 98%; /* Slightly off-white for a softer feel */
+    --foreground: 0 0% 10%; /* Darker for better contrast */
+
+    --brand-purple: 270 80% 50%; /* Vibrant purple */
+    --brand-blue: 210 80% 50%; /* Vibrant blue */
+
     --card: 0 0% 100%;
     --card-foreground: 0 0% 3.9%;
+
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
+
+    --primary: 210 80% 40%; /* A more vibrant blue for primary actions */
     --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
+
+    --secondary: 210 20% 90%; /* Lighter, less saturated blue for secondary elements */
     --secondary-foreground: 0 0% 9%;
+
     --muted: 0 0% 96.1%;
     --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
+
+    --accent: 270 80% 60%; /* Brighter purple for accent elements */
     --accent-foreground: 0 0% 9%;
+
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
+
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
@@ -39,25 +50,36 @@
     --sidebar-ring: 0 0% 3.9%;
   }
   .dark {
-    --background: 0 0% 8%;
+    --background: 240 10% 3.9%; /* Darker background */
     --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
+
+    --brand-purple: 270 80% 60%; /* Vibrant purple for dark mode */
+    --brand-blue: 210 80% 60%; /* Vibrant blue for dark mode */
+
+    --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
+
+    --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
+
+    --primary: 210 80% 50%; /* A more vibrant blue for primary actions in dark mode */
     --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
+
+    --secondary: 210 20% 20%; /* Darker, less saturated blue for secondary elements */
     --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
+
+    --muted: 240 10% 14.9%;
     --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
+
+    --accent: 270 80% 70%; /* Brighter purple for accent elements in dark mode */
     --accent-foreground: 0 0% 98%;
+
     --destructive: 0 100% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+
+    --border: 240 10% 14.9%;
+    --input: 240 10% 14.9%;
+    --ring: 240 10% 83.1%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;

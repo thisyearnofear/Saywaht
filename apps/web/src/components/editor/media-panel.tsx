@@ -5,7 +5,8 @@ import { AspectRatio } from "../ui/aspect-ratio";
 import { DragOverlay } from "../ui/drag-overlay";
 import { useMediaStore } from "@/stores/media-store";
 import { processMediaFiles } from "@/lib/media-processing";
-import { Plus, Image, Video, Music, Trash2, Upload } from "lucide-react";
+import { Plus, Image as ImageIcon, Video, Music, Trash2, Upload } from "lucide-react";
+import Image from "next/image";
 import { useDragDrop } from "@/hooks/use-drag-drop";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -93,11 +94,12 @@ export function MediaPanel() {
 
     if (item.type === "image") {
       return (
-        <img
+        <Image
           src={item.url}
           alt={item.name}
-          className="w-full h-full object-cover rounded cursor-grab active:cursor-grabbing"
-          loading="lazy"
+          fill
+          style={{ objectFit: "cover" }}
+          className="rounded cursor-grab active:cursor-grabbing"
           {...baseDragProps}
         />
       );
@@ -110,11 +112,12 @@ export function MediaPanel() {
             className="relative w-full h-full cursor-grab active:cursor-grabbing"
             {...baseDragProps}
           >
-            <img
+            <Image
               src={item.thumbnailUrl}
               alt={item.name}
-              className="w-full h-full object-cover rounded"
-              loading="lazy"
+              fill
+              style={{ objectFit: "cover" }}
+              className="rounded"
             />
             <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded">
               <Video className="h-6 w-6 text-white drop-shadow-md" />
@@ -166,7 +169,7 @@ export function MediaPanel() {
         className="w-full h-full bg-muted/30 flex flex-col items-center justify-center text-muted-foreground rounded cursor-grab active:cursor-grabbing"
         {...baseDragProps}
       >
-        <Image className="h-6 w-6" />
+        <ImageIcon className="h-6 w-6" />
         <span className="text-xs mt-1">Unknown</span>
       </div>
     );
@@ -235,7 +238,7 @@ export function MediaPanel() {
           {filteredMediaItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center h-full">
               <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
-                <Image className="h-8 w-8 text-muted-foreground" />
+                <ImageIcon className="h-8 w-8 text-muted-foreground" />
               </div>
               <p className="text-sm text-muted-foreground">
                 No media in project

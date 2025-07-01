@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+
 import dynamic from "next/dynamic";
 import "./editor.css";
 import {
@@ -13,7 +13,10 @@ import { Timeline } from "../../components/editor/timeline";
 import { PreviewPanel } from "../../components/editor/preview-panel";
 import { StatusBar } from "../../components/editor/status-bar";
 import { WelcomeModal } from "../../components/onboarding/welcome-modal";
+
+
 import { QuickActions } from "../../components/editor/quick-actions";
+import { WelcomeScreen } from "@/components/editor/welcome-screen";
 import { usePanelStore } from "@/stores/panel-store";
 import { useProjectStore } from "@/stores/project-store";
 import { EditorProvider } from "@/components/editor-provider";
@@ -40,11 +43,9 @@ export default function Editor() {
 
   usePlaybackControls();
 
-  useEffect(() => {
-    if (!activeProject) {
-      createNewProject("Untitled Project");
-    }
-  }, [activeProject, createNewProject]);
+  if (!activeProject) {
+    return <WelcomeScreen />;
+  }
 
   return (
     <EditorProvider>

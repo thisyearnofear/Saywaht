@@ -397,15 +397,6 @@ export function Timeline() {
   };
 
   // --- Playhead Scrubbing Handlers ---
-  const handlePlayheadMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      setIsScrubbing(true);
-      handleScrub(e);
-    },
-    [duration, zoomLevel]
-  );
-
   const handleScrub = useCallback(
     (e: MouseEvent | React.MouseEvent) => {
       const timeline = timelineRef.current;
@@ -417,6 +408,15 @@ export function Timeline() {
       seek(time); // update video preview in real time
     },
     [duration, zoomLevel, seek]
+  );
+
+  const handlePlayheadMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsScrubbing(true);
+      handleScrub(e);
+    },
+    [handleScrub]
   );
 
   useEffect(() => {

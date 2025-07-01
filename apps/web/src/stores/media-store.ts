@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { customStorage } from "@/lib/custom-storage";
 
 export interface MediaItem {
   id: string;
@@ -124,47 +126,55 @@ export const getMediaDuration = (file: File): Promise<number> => {
   });
 };
 
-export const useMediaStore = create<MediaStore>((set, get) => ({
-  mediaItems: [],
+export const useMediaStore = create<MediaStore>()(
+  persist(
+    (set, get) => ({
+      mediaItems: [],
 
-  addMediaItem: (item) => {
-    const newItem: MediaItem = {
-      ...item,
-      id: crypto.randomUUID(),
-    };
-    set((state) => ({
-      mediaItems: [...state.mediaItems, newItem],
-    }));
-  },
+      addMediaItem: (item: Omit<MediaItem, "id">) => {
+        const newItem: MediaItem = {
+          ...item,
+          id: crypto.randomUUID(),
+        };
+        set((state: MediaStore) => ({
+          mediaItems: [...state.mediaItems, newItem],
+        }));
+      },
 
-  removeMediaItem: (id) => {
-    const state = get();
-    const item = state.mediaItems.find((item) => item.id === id);
+      removeMediaItem: (id: string) => {
+        const state = get();
+        const item = state.mediaItems.find((item: MediaItem) => item.id === id);
 
-    // Cleanup object URLs to prevent memory leaks
-    if (item) {
-      URL.revokeObjectURL(item.url);
-      if (item.thumbnailUrl) {
-        URL.revokeObjectURL(item.thumbnailUrl);
-      }
+        // Cleanup object URLs to prevent memory leaks
+        if (item) {
+          URL.revokeObjectURL(item.url);
+          if (item.thumbnailUrl) {
+            URL.revokeObjectURL(item.thumbnailUrl);
+          }
+        }
+
+        set((state: MediaStore) => ({
+          mediaItems: state.mediaItems.filter((item: MediaItem) => item.id !== id),
+        }));
+      },
+
+      clearAllMedia: () => {
+        const state = get();
+
+        // Cleanup all object URLs
+        state.mediaItems.forEach((item: MediaItem) => {
+          URL.revokeObjectURL(item.url);
+          if (item.thumbnailUrl) {
+            URL.revokeObjectURL(item.thumbnailUrl);
+          }
+        });
+
+        set({ mediaItems: [] });
+      },
+    }),
+    {
+      name: "media-storage",
+      storage: customStorage,
     }
-
-    set((state) => ({
-      mediaItems: state.mediaItems.filter((item) => item.id !== id),
-    }));
-  },
-
-  clearAllMedia: () => {
-    const state = get();
-
-    // Cleanup all object URLs
-    state.mediaItems.forEach((item) => {
-      URL.revokeObjectURL(item.url);
-      if (item.thumbnailUrl) {
-        URL.revokeObjectURL(item.thumbnailUrl);
-      }
-    });
-
-    set({ mediaItems: [] });
-  },
-}));
+  )
+);

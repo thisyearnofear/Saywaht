@@ -99,7 +99,7 @@ export function WelcomeModal() {
             </Button>
           </div>
           <DialogDescription>
-            Let's get you started with creating amazing content
+            Let&apos;s get you started with creating amazing content
           </DialogDescription>
         </DialogHeader>
 

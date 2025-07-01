@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Button } from "../ui/button";
 import { Scissors, Trash2, MoreVertical, ArrowLeftRight } from "lucide-react";
@@ -596,10 +597,11 @@ export function TimelineTrackContent({
     if (mediaItem.type === "image") {
       return (
         <div className="w-full h-full flex items-center justify-center">
-          <img
+          <Image
             src={mediaItem.url}
             alt={mediaItem.name}
-            className="w-full h-full object-cover"
+            fill
+            style={{ objectFit: "cover" }}
           />
         </div>
       );
@@ -608,11 +610,13 @@ export function TimelineTrackContent({
     if (mediaItem.type === "video" && mediaItem.thumbnailUrl) {
       return (
         <div className="w-full h-full flex items-center gap-2">
-          <div className="w-8 h-8 flex-shrink-0">
-            <img
+          <div className="w-8 h-8 flex-shrink-0 relative">
+            <Image
               src={mediaItem.thumbnailUrl}
               alt={mediaItem.name}
-              className="w-full h-full object-cover rounded-sm"
+              fill
+              style={{ objectFit: "cover" }}
+              className="rounded-sm"
             />
           </div>
           <span className="text-xs text-foreground/80 truncate flex-1">
@@ -659,7 +663,7 @@ export function TimelineTrackContent({
   // Memoize gaps to prevent unnecessary recalculations
   const gaps = useMemo(() => {
     return useTimelineStore.getState().getGapsInTrack(track.id);
-  }, [track.id, track.clips]);
+  }, [track.id]);
 
   // Memoize the gap rendering for better performance
   const gapElements = useMemo(() => {
