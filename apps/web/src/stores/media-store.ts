@@ -6,11 +6,16 @@ export interface MediaItem {
   id: string;
   name: string;
   type: "image" | "video" | "audio";
-  file: File;
-  url: string; // Object URL for preview
+  file?: File; // Optional for FilCDN items
+  url: string; // Object URL for preview or FilCDN URL
   thumbnailUrl?: string; // For video thumbnails
   duration?: number; // For video/audio duration
   aspectRatio: number; // width / height
+  
+  // FilCDN specific properties
+  isFilCDN?: boolean; // Flag to identify FilCDN content
+  cid?: string; // Content identifier for FilCDN
+  size?: number; // File size in bytes
 }
 
 interface MediaStore {
@@ -145,10 +150,12 @@ export const useMediaStore = create<MediaStore>()(
         const state = get();
         const item = state.mediaItems.find((item: MediaItem) => item.id === id);
 
-        // Cleanup object URLs to prevent memory leaks
-        if (item) {
-          URL.revokeObjectURL(item.url);
-          if (item.thumbnailUrl) {
+        // Cleanup object URLs to prevent memory leaks (but not FilCDN URLs)
+        if (item && !item.isFilCDN) {
+          if (item.url.startsWith('blob:')) {
+            URL.revokeObjectURL(item.url);
+          }
+          if (item.thumbnailUrl && item.thumbnailUrl.startsWith('blob:')) {
             URL.revokeObjectURL(item.thumbnailUrl);
           }
         }
@@ -161,11 +168,15 @@ export const useMediaStore = create<MediaStore>()(
       clearAllMedia: () => {
         const state = get();
 
-        // Cleanup all object URLs
+        // Cleanup all object URLs (but not FilCDN URLs)
         state.mediaItems.forEach((item: MediaItem) => {
-          URL.revokeObjectURL(item.url);
-          if (item.thumbnailUrl) {
-            URL.revokeObjectURL(item.thumbnailUrl);
+          if (!item.isFilCDN) {
+            if (item.url.startsWith('blob:')) {
+              URL.revokeObjectURL(item.url);
+            }
+            if (item.thumbnailUrl && item.thumbnailUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(item.thumbnailUrl);
+            }
           }
         });
 

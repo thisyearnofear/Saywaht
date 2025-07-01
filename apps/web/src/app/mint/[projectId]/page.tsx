@@ -13,6 +13,10 @@ import { createCoinCall, DeployCurrency } from "@zoralabs/coins-sdk";
 import { toast } from "sonner";
 import { baseSepolia } from "viem/chains";
 import { motion } from "motion/react";
+import { generateCoinMetadata, uploadMetadataToIPFS, getFilCDNHighlights } from "@/lib/metadata";
+import { useProjectStore } from "@/stores/project-store";
+import { useTimelineStore } from "@/stores/timeline-store";
+import { useMediaStore } from "@/stores/media-store";
 import {
   Coins,
   CheckCircle,
@@ -39,22 +43,57 @@ function MintCoinFormComponent() {
     name: string;
     symbol: string;
   } | null>(null);
+  const [isGeneratingMetadata, setIsGeneratingMetadata] = useState(false);
+  const [metadataURI, setMetadataURI] = useState("ipfs://bafybeigoxzqzbnxsn35vq7lls3ljxdcwjafxvbvkivprsodzrptpiguysy");
 
-  const metadataURI =
-    "ipfs://bafybeigoxzqzbnxsn35vq7lls3ljxdcwjafxvbvkivprsodzrptpiguysy";
+  const { activeProject } = useProjectStore();
+  const { tracks } = useTimelineStore();
+  const { mediaItems } = useMediaStore();
+
+  // Generate metadata when name/symbol changes
+  useEffect(() => {
+    if (!name || !symbol || !address || !activeProject) return;
+
+    const generateMetadata = async () => {
+      setIsGeneratingMetadata(true);
+      try {
+        const metadata = generateCoinMetadata({
+          coinName: name,
+          coinSymbol: symbol,
+          creatorAddress: address,
+          mediaItems,
+          tracks,
+          projectId: activeProject.id,
+        });
+
+        // Upload to IPFS (currently returns placeholder)
+        const uri = await uploadMetadataToIPFS(metadata);
+        setMetadataURI(uri);
+      } catch (error) {
+        console.error('Failed to generate metadata:', error);
+        // Keep using placeholder URI
+      } finally {
+        setIsGeneratingMetadata(false);
+      }
+    };
+
+    // Debounce metadata generation
+    const timeout = setTimeout(generateMetadata, 500);
+    return () => clearTimeout(timeout);
+  }, [name, symbol, address, activeProject, mediaItems, tracks]);
 
   const { data: config } = useSimulateContract({
     ...createCoinCall({
       name,
       symbol,
-      uri: metadataURI,
+      uri: metadataURI as any, // Type assertion for ValidMetadataURI
       payoutRecipient: address!,
       platformReferrer: "0x55A5705453Ee82c742274154136Fce8149597058",
       chainId: baseSepolia.id,
       currency: DeployCurrency.ETH,
     }),
     query: {
-      enabled: !!address && !!name && !!symbol,
+      enabled: !!address && !!name && !!symbol && !!metadataURI,
     },
   });
 
@@ -180,13 +219,18 @@ function MintCoinFormComponent() {
         </Button>
         <Button
           onClick={handleMint}
-          disabled={!config || status === "pending" || !name || !symbol}
+          disabled={!config || status === "pending" || !name || !symbol || isGeneratingMetadata}
           className="flex-1"
         >
           {status === "pending" ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Minting...
+            </>
+          ) : isGeneratingMetadata ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Generating...
             </>
           ) : (
             <>
@@ -196,6 +240,42 @@ function MintCoinFormComponent() {
           )}
         </Button>
       </div>
+
+      {/* FilCDN Content Preview */}
+      {mediaItems.length > 0 && (
+        <Card className="bg-muted/50">
+          <CardContent className="pt-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <p className="text-sm font-medium">Content Summary</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Media Items:</span>
+                  <span className="ml-1 font-medium">{mediaItems.length}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">FilCDN Items:</span>
+                  <span className="ml-1 font-medium">{mediaItems.filter(item => item.isFilCDN).length}</span>
+                </div>
+              </div>
+
+              {getFilCDNHighlights(mediaItems).length > 0 && (
+                <div className="space-y-1">
+                  {getFilCDNHighlights(mediaItems).map((highlight, index) => (
+                    <div key={index} className="text-xs text-muted-foreground flex items-center gap-2">
+                      <div className="w-1 h-1 bg-primary rounded-full" />
+                      {highlight}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Mint Info */}
       <Card className="bg-muted/50">

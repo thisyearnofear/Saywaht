@@ -53,14 +53,32 @@ export const exportVideoWithCanvas = async (
           if (mediaItem && mediaItem.type === "video") {
             // Create a video element to draw the current frame
             const video = document.createElement("video");
-            video.src = URL.createObjectURL(mediaItem.file);
+            
+            // Handle both local files and FilCDN URLs
+            if (mediaItem.file) {
+              video.src = URL.createObjectURL(mediaItem.file);
+            } else {
+              video.src = mediaItem.url; // Use FilCDN URL directly
+              video.crossOrigin = "anonymous"; // Allow cross-origin for FilCDN
+              
+              // Add fallback for CORS issues
+              video.onerror = () => {
+                console.warn(`CORS issue with ${mediaItem.url}, using proxy or fallback`);
+                // For demo purposes, we could add a proxy route if needed
+              };
+            }
+            
             video.currentTime = time - clip.startTime + clip.trimStart;
             await new Promise((resolve) => {
               video.onloadeddata = resolve;
               video.onerror = () => resolve(null);
             });
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            URL.revokeObjectURL(video.src);
+            
+            // Only revoke object URLs, not external URLs
+            if (mediaItem.file) {
+              URL.revokeObjectURL(video.src);
+            }
           }
         }
       }

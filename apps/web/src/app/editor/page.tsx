@@ -1,29 +1,77 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import "./editor.css";
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
 } from "../../components/ui/resizable";
-import { MediaPanel } from "../../components/editor/media-panel";
-// import { PropertiesPanel } from "../../components/editor/properties-panel";
-import { Timeline } from "../../components/editor/timeline";
-import { PreviewPanel } from "../../components/editor/preview-panel";
 import { StatusBar } from "../../components/editor/status-bar";
-import { WelcomeModal } from "../../components/onboarding/welcome-modal";
-
-
-import { QuickActions } from "../../components/editor/quick-actions";
 import { WelcomeScreen } from "@/components/editor/welcome-screen";
 import { usePanelStore } from "@/stores/panel-store";
 import { useProjectStore } from "@/stores/project-store";
 import { EditorProvider } from "@/components/editor-provider";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
+import { Loader2 } from "lucide-react";
 
+// Lazy load heavy components
 const EditorHeader = dynamic(
   () => import("@/components/editor-header").then((mod) => mod.EditorHeader),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="h-14 border-b border-border bg-background/95 backdrop-blur flex items-center justify-center">
+        <Loader2 className="h-4 w-4 animate-spin" />
+      </div>
+    )
+  }
+);
+
+const MediaPanel = dynamic(
+  () => import("../../components/editor/media-panel").then((mod) => ({ default: mod.MediaPanel })),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    )
+  }
+);
+
+const Timeline = dynamic(
+  () => import("../../components/editor/timeline").then((mod) => ({ default: mod.Timeline })),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    )
+  }
+);
+
+const PreviewPanel = dynamic(
+  () => import("../../components/editor/preview-panel").then((mod) => ({ default: mod.PreviewPanel })),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="h-full flex items-center justify-center bg-black/10">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+);
+
+const WelcomeModal = dynamic(
+  () => import("../../components/onboarding/welcome-modal").then((mod) => ({ default: mod.WelcomeModal })),
+  { ssr: false }
+);
+
+const QuickActions = dynamic(
+  () => import("../../components/editor/quick-actions").then((mod) => ({ default: mod.QuickActions })),
   { ssr: false }
 );
 

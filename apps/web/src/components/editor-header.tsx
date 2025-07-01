@@ -12,9 +12,13 @@ import {
   Pause,
   MoreHorizontal,
   Coins,
+  Loader2,
 } from "lucide-react";
 import { useProjectStore } from "@/stores/project-store";
 import { usePlaybackStore } from "@/stores/playback-store";
+import { useTimelineStore } from "@/stores/timeline-store";
+import { useMediaStore } from "@/stores/media-store";
+import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,10 +35,59 @@ export function EditorHeader() {
   const { isPlaying, toggle } = usePlaybackStore();
   const { address } = useAccount();
 
-  // Save functionality temporarily removed - will implement decentralized storage later
+  const [isExporting, setIsExporting] = useState(false);
+  const { tracks } = useTimelineStore();
+  const { mediaItems } = useMediaStore();
 
-  const handleExport = () => {
-    toast.info("Export functionality coming soon");
+  const handleExport = async () => {
+    if (!activeProject || tracks.length === 0) {
+      toast.error("No content to export");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      // Calculate total duration from timeline
+      const totalDuration = Math.max(
+        ...tracks.flatMap(track => 
+          track.clips.map(clip => clip.startTime + clip.duration)
+        ),
+        5 // Minimum 5 seconds
+      );
+
+      // Dynamic import to avoid loading export utils unless needed
+      const { exportVideoWithCanvas } = await import("@/lib/canvas-export-utils");
+      
+      const blob = await exportVideoWithCanvas(
+        tracks,
+        mediaItems,
+        totalDuration,
+        (progress) => {
+          toast.loading(`Exporting... ${Math.round(progress)}%`, {
+            id: 'export-progress'
+          });
+        }
+      );
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${activeProject.name.replace(/[^a-zA-Z0-9]/g, '_')}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.dismiss('export-progress');
+      toast.success("Video exported successfully!");
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.dismiss('export-progress');
+      toast.error(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleMint = () => {
@@ -95,10 +148,20 @@ export function EditorHeader() {
           variant="text"
           size="sm"
           onClick={handleExport}
+          disabled={isExporting || !activeProject || tracks.length === 0}
           className="text-xs font-medium"
         >
-          <Download className="h-4 w-4 mr-1" />
-          Export
+          {isExporting ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              Exporting...
+            </>
+          ) : (
+            <>
+              <Download className="h-4 w-4 mr-1" />
+              Export
+            </>
+          )}
         </Button>
 
         {address && (

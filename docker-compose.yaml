@@ -55,13 +55,18 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://opencut:opencutthegoat@db:5432/opencut
-      - BETTER_AUTH_URL=http://localhost:3000
-      - BETTER_AUTH_SECRET=your-production-secret-key-here
+      - DATABASE_URL=postgresql://opencut:${POSTGRES_PASSWORD}@db:5432/opencut
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:3000}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - UPSTASH_REDIS_REST_URL=http://serverless-redis-http:80
-      - UPSTASH_REDIS_REST_TOKEN=example_token
+      - UPSTASH_REDIS_REST_TOKEN=${REDIS_TOKEN:-example_token}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - NEXT_PUBLIC_BETTER_AUTH_URL=${NEXT_PUBLIC_BETTER_AUTH_URL:-http://localhost:3000}
+      - NEXT_PUBLIC_ZORA_API_KEY=${NEXT_PUBLIC_ZORA_API_KEY}
+      - NEXT_PUBLIC_FILECOIN_PRIVATE_KEY=${NEXT_PUBLIC_FILECOIN_PRIVATE_KEY}
+      - NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS=${NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS}
     depends_on:
       db:
         condition: service_healthy

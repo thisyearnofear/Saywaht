@@ -13,6 +13,10 @@ import { toast } from "sonner";
 import { VoiceoverRecorder } from "./voiceover-recorder";
 import { AiVoiceGenerator } from "./ai-voice-generator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { FileUpload } from "./file-upload";
+import { isFilCDNConfigured, UploadResult } from "@/lib/filcdn";
+import { Badge } from "../ui/badge";
+import { Cloud, Zap } from "lucide-react";
 
 // MediaPanel lets users add, view, and drag media (images, videos, audio) into the project.
 // You can upload files or drag them from your computer. Dragging from here to the timeline adds them to your video project.
@@ -41,6 +45,26 @@ export function MediaPanel() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleFilCDNUpload = (result: UploadResult) => {
+    // When FilCDN upload completes, add the file as a media item
+    const type = result.filename.match(/\.(mp4|webm|mov|avi)$/i) ? "video" as const : "audio" as const;
+    
+    const mediaItem = {
+      id: crypto.randomUUID(),
+      name: result.filename,
+      url: result.filcdnUrl, // Use FilCDN URL for fast retrieval
+      cid: result.cid, // Store the CID for later reference
+      type,
+      size: result.size,
+      duration: 0, // Will be updated when the media loads
+      aspectRatio: 16 / 9, // Default ratio
+      isFilCDN: true, // Flag to identify FilCDN content
+    };
+    
+    addMediaItem(mediaItem);
+    toast.success(`Added ${result.filename} from FilCDN`);
   };
 
   const { isDragOver, dragProps } = useDragDrop({
@@ -197,27 +221,74 @@ export function MediaPanel() {
         <DragOverlay isVisible={isDragOver} />
 
         <div className="p-2 border-b">
-          {/* Button to add/upload media */}
+          {/* Media upload and generation options */}
           <div className="space-y-4">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handleFileSelect}
-              disabled={isProcessing}
-              className="w-full"
-            >
-              {isProcessing ? (
-                <>
-                  <Upload className="h-4 w-4 animate-spin mr-2" />
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <Video className="h-4 w-4 mr-2" />
-                  <span>Upload Video</span>
-                </>
-              )}
-            </Button>
+            <Tabs defaultValue={isFilCDNConfigured() ? "filcdn" : "local"} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="filcdn" className="text-xs">
+                  <div className="flex items-center gap-1">
+                    <Zap className="h-3 w-3" />
+                    FilCDN
+                  </div>
+                </TabsTrigger>
+                <TabsTrigger value="local" className="text-xs">
+                  <div className="flex items-center gap-1">
+                    <Upload className="h-3 w-3" />
+                    Local
+                  </div>
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="filcdn" className="space-y-3 mt-3">
+                {isFilCDNConfigured() ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Cloud className="h-3 w-3" />
+                      <span>Powered by Filecoin PDP + CDN</span>
+                    </div>
+                    <FileUpload onUploadComplete={handleFilCDNUpload} />
+                  </div>
+                ) : (
+                  <div className="p-3 bg-muted/30 rounded-lg text-center">
+                    <p className="text-xs text-muted-foreground mb-2">
+                      FilCDN not configured
+                    </p>
+                    <Button asChild size="sm" variant="outline">
+                      <a 
+                        href="https://fs-upload-dapp.netlify.app" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                      >
+                        Setup Guide
+                      </a>
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="local" className="mt-3">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handleFileSelect}
+                  disabled={isProcessing}
+                  className="w-full"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Upload className="h-4 w-4 animate-spin mr-2" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Video className="h-4 w-4 mr-2" />
+                      <span>Upload Local Files</span>
+                    </>
+                  )}
+                </Button>
+              </TabsContent>
+            </Tabs>
+            
             <Tabs defaultValue="record" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="record">Record</TabsTrigger>
