@@ -5,14 +5,14 @@ import Image from "next/image";
 import { Button } from "./ui/button";
 import { ArrowRight, Star, Menu, X } from "lucide-react";
 import { HeaderBase } from "./header-base";
-import { useSession } from "@opencut/auth/client";
+import { useWalletAuth } from "@opencut/auth";
 import { getStars } from "@/lib/fetchGhStars";
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 export function Header() {
-  const { data: session } = useSession();
+  const { isAuthenticated } = useWalletAuth();
   const { isConnected } = useAccount();
   const [star, setStar] = useState<string>("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

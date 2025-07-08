@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getSessionCookie } from "better-auth/cookies";
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  const session = getSessionCookie(request);
 
-  if (path === "/editor" && !session && process.env.NODE_ENV === "production") {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", request.url);
-    return NextResponse.redirect(loginUrl);
-  }
+  // With wallet-based auth, we don't need server-side session checks
+  // Authentication is handled client-side via wallet connection
+  // The editor will prompt for wallet connection if needed
 
   return NextResponse.next();
 }

@@ -1,5 +1,6 @@
-// Re-export server auth
-export * from "./server";
+// Re-export wallet-based auth (replaces Better Auth)
+export * from "./wallet-auth";
 
-// Re-export client auth
-export * from "./client"; 
+// Legacy exports (to be removed)
+// export * from "./server";
+// export * from "./client";
