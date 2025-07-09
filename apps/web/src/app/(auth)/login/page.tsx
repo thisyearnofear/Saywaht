@@ -10,22 +10,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Suspense, useState } from "react";
+import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { GoogleIcon } from "@/components/icons";
 
 function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isEmailLoading, setIsEmailLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
+  const [isEmailLoading, setIsEmailLoading] = React.useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
 
   const handleLogin = async () => {
     setError(null);
@@ -102,7 +102,7 @@ function LoginForm() {
             type="email"
             placeholder="m@example.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
             disabled={isAnyLoading}
             className="h-11"
           />
@@ -113,7 +113,7 @@ function LoginForm() {
             id="password"
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
             disabled={isAnyLoading}
             className="h-11"
           />
@@ -141,7 +141,7 @@ export default function LoginPage() {
         onClick={() => router.back()}
         className="absolute top-6 left-6"
       >
-        <ArrowLeft className="h-5 w-5" /> Back
+        Back
       </Button>
       <Card className="w-[400px] shadow-lg border-0">
         <CardHeader className="text-center pb-4">
@@ -151,15 +151,7 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
-          <Suspense
-            fallback={
-              <div className="text-center">
-                <Loader2 className="animate-spin" />
-              </div>
-            }
-          >
-            <LoginForm />
-          </Suspense>
+          <LoginForm />
           <div className="mt-6 text-center text-sm">
             Don&apos;t have an account?{" "}
             <Link

@@ -115,16 +115,7 @@ export default function Editor() {
 
   const { activeProject, createNewProject } = useProjectStore();
   const isMobile = useIsMobile();
-
-  // Check if mobile context exists, if not we're not wrapped in the provider yet
-  let isEditorMobileMode = false;
-  try {
-    const { isEditorMobileMode: mobileMode } = useMobileContext();
-    isEditorMobileMode = mobileMode;
-  } catch (error) {
-    // Mobile context not available, default to checking just isMobile
-    isEditorMobileMode = isMobile;
-  }
+  const { isEditorMobileMode } = useMobileContext();
 
   usePlaybackControls();
 

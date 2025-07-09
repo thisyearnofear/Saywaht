@@ -234,7 +234,7 @@ export function VideoToCoinFlow({
             <div>
               <h3 className="text-lg font-semibold mb-2">Coin Created!</h3>
               <p className="text-muted-foreground">
-                Your video coin "{coinName}" is ready for trading
+                Your video coin &quot;{coinName}&quot; is ready for trading
               </p>
             </div>
 

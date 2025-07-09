@@ -10,32 +10,32 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Suspense, useState } from "react";
+import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { GoogleIcon } from "@/components/icons";
 
 function SignUpForm() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isEmailLoading, setIsEmailLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [name, setName] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
+  const [isEmailLoading, setIsEmailLoading] = React.useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
 
   const handleSignUp = async () => {
     setError(null);
     setIsEmailLoading(true);
 
     const { error } = await signUp.email({
-      name,
       email,
       password,
+      name,
     });
 
     if (error) {
@@ -44,7 +44,7 @@ function SignUpForm() {
       return;
     }
 
-    router.push("/login");
+    router.push("/editor");
   };
 
   const handleGoogleSignUp = async () => {
@@ -55,7 +55,6 @@ function SignUpForm() {
       await signIn.social({
         provider: "google",
       });
-
       router.push("/editor");
     } catch (error) {
       setError("Failed to sign up with Google. Please try again.");
@@ -87,7 +86,6 @@ function SignUpForm() {
         )}{" "}
         Continue with Google
       </Button>
-
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
           <Separator className="w-full" />
@@ -98,7 +96,6 @@ function SignUpForm() {
           </span>
         </div>
       </div>
-
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="name">Full Name</Label>
@@ -107,7 +104,7 @@ function SignUpForm() {
             type="text"
             placeholder="John Doe"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
             disabled={isAnyLoading}
             className="h-11"
           />
@@ -119,7 +116,7 @@ function SignUpForm() {
             type="email"
             placeholder="m@example.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
             disabled={isAnyLoading}
             className="h-11"
           />
@@ -129,24 +126,19 @@ function SignUpForm() {
           <Input
             id="password"
             type="password"
-            placeholder="Create a strong password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
             disabled={isAnyLoading}
             className="h-11"
           />
         </div>
         <Button
           onClick={handleSignUp}
-          disabled={isAnyLoading || !name || !email || !password}
+          disabled={isAnyLoading || !email || !password || !name}
           className="w-full h-11"
           size="lg"
         >
-          {isEmailLoading ? (
-            <Loader2 className="animate-spin" />
-          ) : (
-            "Create account"
-          )}
+          {isEmailLoading ? <Loader2 className="animate-spin" /> : "Create account"}
         </Button>
       </div>
     </div>
@@ -163,9 +155,8 @@ export default function SignUpPage() {
         onClick={() => router.back()}
         className="absolute top-6 left-6"
       >
-        <ArrowLeft className="h-5 w-5" /> Back
+        Back
       </Button>
-
       <Card className="w-[400px] shadow-lg border-0">
         <CardHeader className="text-center pb-4">
           <CardTitle className="text-2xl font-semibold">
@@ -176,15 +167,7 @@ export default function SignUpPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
-          <Suspense
-            fallback={
-              <div className="text-center">
-                <Loader2 className="animate-spin" />
-              </div>
-            }
-          >
-            <SignUpForm />
-          </Suspense>
+          <SignUpForm />
           <div className="mt-6 text-center text-sm">
             Already have an account?{" "}
             <Link
