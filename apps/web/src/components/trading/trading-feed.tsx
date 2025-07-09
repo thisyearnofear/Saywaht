@@ -7,10 +7,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, RefreshCw, TrendingUp, AlertCircle } from "lucide-react";
 import { zoraCoins, type VideoCoin } from "@/lib/zora-coins";
 import { useWalletAuth } from "@opencut/auth";
+import { useTrading } from "@/hooks/use-trading";
 import { toast } from "sonner";
 
 export function TradingFeed() {
   const { isAuthenticated, user } = useWalletAuth();
+  const { buyCoin, sellCoin, isLoading: tradingLoading } = useTrading();
   const [coins, setCoins] = useState<VideoCoin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -55,13 +57,8 @@ export function TradingFeed() {
     try {
       toast.loading("Preparing buy order...");
 
-      // TODO: Implement actual buy logic with amount selection
-      const txHash = await zoraCoins.buyCoin({
-        coinAddress: coin.address,
-        amount: "0.01", // Default amount for now
-      });
+      await buyCoin(coin.address, "0.001"); // Default 0.001 ETH
 
-      toast.success(`Buy order successful! TX: ${txHash.slice(0, 10)}...`);
     } catch (error) {
       toast.dismiss();
       const errorMessage =

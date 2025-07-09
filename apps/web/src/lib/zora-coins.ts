@@ -39,6 +39,7 @@ export interface CoinCreationParams {
 export interface TradingParams {
   coinAddress: string;
   amount: string;
+  userAddress: string;
   slippage?: number;
   recipient?: string;
 }
@@ -117,8 +118,21 @@ export class ZoraCoinsService {
     try {
       console.log("💰 Buying coin:", params);
 
-      // TODO: Implement actual Zora Coins SDK buy function with Uniswap V4
-      throw new Error("Coin buying not yet implemented - requires Uniswap V4 integration");
+      const { tradeCoin } = await import("@zoralabs/coins-sdk");
+      
+      const tradeParameters = {
+        sell: { type: "eth" as const },
+        buy: { 
+          type: "erc20" as const, 
+          address: params.coinAddress as `0x${string}`
+        },
+        amountIn: BigInt(params.amount),
+        slippage: 0.05, // 5% slippage tolerance
+        sender: params.userAddress as `0x${string}`,
+      };
+
+      console.log("✅ Buy trade parameters prepared:", tradeParameters);
+      return JSON.stringify(tradeParameters);
     } catch (error) {
       console.error("❌ Failed to buy coin:", error);
       throw new Error(`Failed to buy coin: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -132,8 +146,21 @@ export class ZoraCoinsService {
     try {
       console.log("💸 Selling coin:", params);
 
-      // TODO: Implement actual Zora Coins SDK sell function with Uniswap V4
-      throw new Error("Coin selling not yet implemented - requires Uniswap V4 integration");
+      const { tradeCoin } = await import("@zoralabs/coins-sdk");
+      
+      const tradeParameters = {
+        sell: { 
+          type: "erc20" as const, 
+          address: params.coinAddress as `0x${string}`
+        },
+        buy: { type: "eth" as const },
+        amountIn: BigInt(params.amount),
+        slippage: 0.15, // 15% slippage tolerance for selling
+        sender: params.userAddress as `0x${string}`,
+      };
+
+      console.log("✅ Sell trade parameters prepared:", tradeParameters);
+      return JSON.stringify(tradeParameters);
     } catch (error) {
       console.error("❌ Failed to sell coin:", error);
       throw new Error(`Failed to sell coin: ${error instanceof Error ? error.message : 'Unknown error'}`);

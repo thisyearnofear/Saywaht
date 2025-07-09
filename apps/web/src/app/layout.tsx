@@ -73,7 +73,6 @@ export default function RootLayout({
                 <Script
                   src="https://app.databuddy.cc/databuddy.js"
                   strategy="afterInteractive"
-                  async
                   data-client-id="UP-Wcoy5arxFeK7oyjMMZ"
                   data-track-attributes={true}
                   data-track-errors={true}

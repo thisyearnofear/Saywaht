@@ -3,7 +3,7 @@ import { Header } from "@/components/header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ExternalLink } from "lucide-react";
+// import { ExternalLinkIcon } from "lucide-react";
 import Link from "next/link";
 import { GithubIcon } from "@/components/icons";
 
@@ -222,7 +222,6 @@ export default async function ContributorsPage() {
                   <Button variant="outline" className="gap-2">
                     <GithubIcon className="h-4 w-4" />
                     View on GitHub
-                    <ExternalLink className="h-4 w-4" />
                   </Button>
                 </Link>
               </div>
@@ -255,7 +254,6 @@ export default async function ContributorsPage() {
                   >
                     <Button variant="outline" size="lg" className="gap-2 group">
                       Browse Issues
-                      <ExternalLink className="h-4 w-4 group-hover:scale-110 transition-transform" />
                     </Button>
                   </Link>
                 </div>
