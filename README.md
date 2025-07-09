@@ -16,13 +16,25 @@
 
 ## Features
 
-- **Wallet-based authentication** - No accounts, just connect your Web3 wallet
+### **🎬 Video Creation**
+
 - **Timeline-based editing** - Professional video editing in your browser
 - **Multi-track support** - Layer videos, audio, and effects
 - **Real-time preview** - See changes instantly
-- **Decentralized storage** - IPFS integration for permanent, censorship-resistant storage
+- **IPFS storage** - Decentralized, permanent content storage via Grove
+
+### **🪙 Creator Economy**
+
+- **Video creator coins** - Each video becomes a tradeable coin using Zora Protocol
+- **Creator-supporter trading** - Fans can invest in creators through coin trading
+- **Automated rewards** - Creators earn from trading fees (50% of all trades)
+- **Uniswap V4 integration** - Seamless liquidity and price discovery
+
+### **🔐 Decentralized & Private**
+
+- **Wallet-based authentication** - No accounts, just connect your Web3 wallet
 - **No watermarks or subscriptions** - Completely free and open source
-- **Blockchain integration** - Mint your creations as NFTs on Zora Protocol
+- **Mobile-first design** - Optimized for mobile without traditional navigation
 - Analytics provided by [Databuddy](https://www.databuddy.cc?utm_source=saywhat), 100% Anonymized & Non-invasive.
 
 ## Project Structure
@@ -78,29 +90,35 @@ Before you begin, ensure you have the following installed on your system:
     - Click "Connect Wallet" to authenticate with your Web3 wallet
     - Start creating and editing videos immediately!
 
+5.  **Explore the three-phase app**
+    - **Landing** (`/`) - Wallet authentication and onboarding
+    - **Editor** (`/editor`) - Professional video editing and creation
+    - **Trading** (`/trade`) - Creator coin trading and discovery
+
 The application will be available at [http://localhost:3000](http://localhost:3000).
 
-## 🌐 Decentralized Architecture
+## 🌐 Three-Phase App Architecture
 
-SayWhat is built with a **fully decentralized approach**:
+SayWhat follows a **mobile-first, three-phase design**:
 
-### **🔐 Authentication**
+### **Phase 1: Landing & Authentication** (`/`)
 
-- **Wallet-based auth** - No accounts, passwords, or personal data collection
-- **Instant access** - Connect any Web3 wallet (MetaMask, WalletConnect, etc.)
-- **Privacy-first** - Your identity is your wallet address
+- **Wallet connection** - Instant access with any Web3 wallet
+- **Creator onboarding** - Simple introduction to the platform
+- **No traditional navigation** - Mobile-optimized, gesture-based design
 
-### **💾 Storage**
+### **Phase 2: Video Creation** (`/editor`)
 
-- **IPFS integration** - Content stored on the decentralized web
-- **Local-first** - Projects cached locally for instant access
-- **Censorship-resistant** - No central servers to shut down
+- **Professional editing** - Timeline-based video editor
+- **IPFS storage** - Decentralized content storage via Grove
+- **Project sharing** - Share projects via IPFS links
 
-### **⛓️ Blockchain Integration**
+### **Phase 3: Trading & Discovery** (`/trade`)
 
-- **Zora Protocol** - Mint your videos as tradeable NFT coins
-- **Base Sepolia** - Fast, low-cost transactions
-- **Decentralized marketplace** - Trade directly on-chain
+- **Creator coin trading** - Buy/sell video creator coins
+- **Mobile-first interface** - TikTok-style vertical feed
+- **Real-time markets** - Uniswap V4 integration for liquidity
+- **Creator economy** - Supporters invest in creators, creators earn from trading
 
 ## License
 

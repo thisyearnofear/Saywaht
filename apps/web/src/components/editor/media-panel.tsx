@@ -5,7 +5,14 @@ import { AspectRatio } from "../ui/aspect-ratio";
 import { DragOverlay } from "../ui/drag-overlay";
 import { useMediaStore } from "@/stores/media-store";
 import { processMediaFiles } from "@/lib/media-processing";
-import { Plus, Image as ImageIcon, Video, Music, Trash2, Upload } from "lucide-react";
+import {
+  Plus,
+  Image as ImageIcon,
+  Video,
+  Music,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import Image from "next/image";
 import { useDragDrop } from "@/hooks/use-drag-drop";
 import { useEffect, useRef, useState } from "react";
@@ -14,9 +21,11 @@ import { VoiceoverRecorder } from "./voiceover-recorder";
 import { AiVoiceGenerator } from "./ai-voice-generator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { FileUpload } from "./file-upload";
+import { GroveUpload } from "./grove-upload";
 import { isFilCDNConfigured, UploadResult } from "@/lib/filcdn";
+import { type GroveUploadResult } from "@/lib/grove-storage";
 import { Badge } from "../ui/badge";
-import { Cloud, Zap } from "lucide-react";
+import { Cloud, Zap, Globe } from "lucide-react";
 
 // MediaPanel lets users add, view, and drag media (images, videos, audio) into the project.
 // You can upload files or drag them from your computer. Dragging from here to the timeline adds them to your video project.
@@ -49,8 +58,10 @@ export function MediaPanel() {
 
   const handleFilCDNUpload = (result: UploadResult) => {
     // When FilCDN upload completes, add the file as a media item
-    const type = result.filename.match(/\.(mp4|webm|mov|avi)$/i) ? "video" as const : "audio" as const;
-    
+    const type = result.filename.match(/\.(mp4|webm|mov|avi)$/i)
+      ? ("video" as const)
+      : ("audio" as const);
+
     const mediaItem = {
       id: crypto.randomUUID(),
       name: result.filename,
@@ -62,9 +73,33 @@ export function MediaPanel() {
       aspectRatio: 16 / 9, // Default ratio
       isFilCDN: true, // Flag to identify FilCDN content
     };
-    
+
     addMediaItem(mediaItem);
     toast.success(`Added ${result.filename} from FilCDN`);
+  };
+
+  const handleGroveUpload = (result: GroveUploadResult) => {
+    // When Grove upload completes, add the file as a media item
+    const type = result.filename.match(/\.(mp4|webm|mov|avi)$/i)
+      ? ("video" as const)
+      : result.filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+        ? ("image" as const)
+        : ("audio" as const);
+
+    const mediaItem = {
+      id: crypto.randomUUID(),
+      name: result.filename,
+      url: result.gatewayUrl, // Use Grove gateway URL for fast retrieval
+      cid: result.storageKey, // Store the storage key for later reference
+      type,
+      size: result.size,
+      duration: 0, // Will be updated when the media loads
+      aspectRatio: 16 / 9, // Default ratio
+      isGrove: true, // Flag to identify Grove/IPFS content
+    };
+
+    addMediaItem(mediaItem);
+    toast.success(`Added ${result.filename} from Grove/IPFS`);
   };
 
   const { isDragOver, dragProps } = useDragDrop({
@@ -223,8 +258,14 @@ export function MediaPanel() {
         <div className="p-2 border-b">
           {/* Media upload and generation options */}
           <div className="space-y-4">
-            <Tabs defaultValue={isFilCDNConfigured() ? "filcdn" : "local"} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+            <Tabs defaultValue="grove" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="grove" className="text-xs">
+                  <div className="flex items-center gap-1">
+                    <Globe className="h-3 w-3" />
+                    Grove
+                  </div>
+                </TabsTrigger>
                 <TabsTrigger value="filcdn" className="text-xs">
                   <div className="flex items-center gap-1">
                     <Zap className="h-3 w-3" />
@@ -238,7 +279,17 @@ export function MediaPanel() {
                   </div>
                 </TabsTrigger>
               </TabsList>
-              
+
+              <TabsContent value="grove" className="space-y-3 mt-3">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Globe className="h-3 w-3" />
+                    <span>Decentralized IPFS storage via Grove</span>
+                  </div>
+                  <GroveUpload onUploadComplete={handleGroveUpload} />
+                </div>
+              </TabsContent>
+
               <TabsContent value="filcdn" className="space-y-3 mt-3">
                 {isFilCDNConfigured() ? (
                   <div className="space-y-2">
@@ -254,9 +305,9 @@ export function MediaPanel() {
                       FilCDN not configured
                     </p>
                     <Button asChild size="sm" variant="outline">
-                      <a 
-                        href="https://fs-upload-dapp.netlify.app" 
-                        target="_blank" 
+                      <a
+                        href="https://fs-upload-dapp.netlify.app"
+                        target="_blank"
                         rel="noopener noreferrer"
                       >
                         Setup Guide
@@ -265,7 +316,7 @@ export function MediaPanel() {
                   </div>
                 )}
               </TabsContent>
-              
+
               <TabsContent value="local" className="mt-3">
                 <Button
                   variant="outline"
@@ -288,7 +339,7 @@ export function MediaPanel() {
                 </Button>
               </TabsContent>
             </Tabs>
-            
+
             <Tabs defaultValue="record" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="record">Record</TabsTrigger>

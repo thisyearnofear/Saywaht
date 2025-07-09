@@ -29,6 +29,7 @@ import {
 import { Badge } from "./ui/badge";
 import { useAccount } from "wagmi";
 import { toast } from "sonner";
+import { VideoToCoinFlow } from "./video-to-coin-flow";
 
 export function EditorHeader() {
   const { activeProject } = useProjectStore();
@@ -36,6 +37,8 @@ export function EditorHeader() {
   const { address } = useAccount();
 
   const [isExporting, setIsExporting] = useState(false);
+  const [showCoinFlow, setShowCoinFlow] = useState(false);
+  const [exportedVideoBlob, setExportedVideoBlob] = useState<Blob | null>(null);
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
 
@@ -49,48 +52,60 @@ export function EditorHeader() {
     try {
       // Calculate total duration from timeline
       const totalDuration = Math.max(
-        ...tracks.flatMap(track => 
-          track.clips.map(clip => clip.startTime + clip.duration)
+        ...tracks.flatMap((track) =>
+          track.clips.map((clip) => clip.startTime + clip.duration)
         ),
         5 // Minimum 5 seconds
       );
 
       // Dynamic import to avoid loading export utils unless needed
-      const { exportVideoWithCanvas } = await import("@/lib/canvas-export-utils");
-      
+      const { exportVideoWithCanvas } = await import(
+        "@/lib/canvas-export-utils"
+      );
+
       const blob = await exportVideoWithCanvas(
         tracks,
         mediaItems,
         totalDuration,
         (progress) => {
           toast.loading(`Exporting... ${Math.round(progress)}%`, {
-            id: 'export-progress'
+            id: "export-progress",
           });
         }
       );
+
+      // Store the blob for coin creation
+      setExportedVideoBlob(blob);
 
       // Create download link
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${activeProject.name.replace(/[^a-zA-Z0-9]/g, '_')}.webm`;
+      a.download = `${activeProject.name.replace(/[^a-zA-Z0-9]/g, "_")}.webm`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast.dismiss('export-progress');
-      toast.success("Video exported successfully!");
+      toast.dismiss("export-progress");
+      toast.success("Video exported successfully! Ready to create a coin?", {
+        action: {
+          label: "Create Coin",
+          onClick: () => setShowCoinFlow(true),
+        },
+      });
     } catch (error) {
       console.error("Export failed:", error);
-      toast.dismiss('export-progress');
-      toast.error(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.dismiss("export-progress");
+      toast.error(
+        `Export failed: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     } finally {
       setIsExporting(false);
     }
   };
 
-  const handleMint = () => {
+  const handleDeploy = () => {
     if (!activeProject) return;
     window.open(`/mint/${activeProject.id}`, "_blank");
   };
@@ -168,11 +183,11 @@ export function EditorHeader() {
           <Button
             variant="default"
             size="sm"
-            onClick={handleMint}
+            onClick={handleDeploy}
             className="text-xs font-medium bg-primary hover:bg-primary/90"
           >
             <Coins className="h-4 w-4 mr-1" />
-            Mint
+            Deploy
           </Button>
         )}
 
@@ -198,6 +213,15 @@ export function EditorHeader() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Video to Coin Creation Flow */}
+      <VideoToCoinFlow
+        isOpen={showCoinFlow}
+        onClose={() => setShowCoinFlow(false)}
+        videoBlob={exportedVideoBlob || undefined}
+        videoName={activeProject?.name}
+        projectId={activeProject?.id}
+      />
     </header>
   );
 }

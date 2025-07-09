@@ -2,7 +2,7 @@
 
 ## Overview
 
-A decentralized video commentary platform that enables users to create memetic content and mint it as tradeable Zora coins. Features FilCDN integration for low-latency content delivery and real-time video editing capabilities.
+A decentralized video commentary platform that enables users to create memetic content and deploy it as tradeable Zora coins. Features FilCDN integration for low-latency content delivery and real-time video editing capabilities.
 
 ## Commands
 
@@ -14,12 +14,21 @@ A decentralized video commentary platform that enables users to create memetic c
 
 ## Architecture
 
+### **Three-Phase Mobile-First Design**
+
+- **Phase 1**: Landing page (`/`) - Wallet auth and onboarding
+- **Phase 2**: Video editor (`/editor`) - Professional editing tools
+- **Phase 3**: Trading platform (`/trade`) - Creator coin marketplace
+
+### **Technical Stack**
+
 - **Turborepo monorepo** with apps/ and packages/
-- **Frontend**: `apps/web` - Next.js app with video editor and Zora integration
+- **Frontend**: `apps/web` - Next.js app with three distinct phases
 - **Auth**: `packages/auth` - Wallet-based authentication (Wagmi + RainbowKit)
-- **Storage**: IPFS integration for decentralized content storage
-- **Blockchain**: Zora Protocol for coin minting and trading
+- **Storage**: Grove/IPFS integration for decentralized content storage
+- **Trading**: Zora Coins SDK + Uniswap V4 for creator coin trading
 - **State Management**: Zustand with localStorage persistence
+- **Navigation**: Mobile-first, no headers, gesture-based transitions
 
 ## Key Integrations
 
@@ -35,7 +44,7 @@ A decentralized video commentary platform that enables users to create memetic c
 
 - **Real API**: Uses `@zoralabs/coins-sdk` for live coin data
 - **Discovery Feed**: Shows actual coins with market data
-- **Minting**: Complete WAGMI-based coin creation workflow
+- **Deployment**: Complete WAGMI-based coin creation workflow
 - **Implementation**: `apps/web/src/lib/zora.ts` + mint pages
 
 ### 🎬 **Video Editor**
@@ -101,7 +110,7 @@ bun run dev
 # 3. Upload video/audio files
 # 4. Files appear instantly via CDN
 # 5. Create timeline compositions
-# 6. Mint as Zora coins at /mint
+# 6. Deploy as Zora coins at /mint
 ```
 
 ## Code Style & Standards

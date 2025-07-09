@@ -68,7 +68,7 @@ export function Hero() {
           className="inline-flex items-center gap-2 mx-auto mb-8 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-sm font-medium"
         >
           <Sparkles className="w-4 h-4 text-primary" />
-          Create • Edit • Mint • Share
+          Create • Edit • Deploy • Trade
         </motion.div>
 
         <motion.div
@@ -91,8 +91,9 @@ export function Hero() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.8 }}
         >
-          Transform your thoughts into viral content. Create compelling videos, add your unique voice, 
-          and mint them as tradeable Zora Coins. Where creativity meets crypto.
+          Transform your thoughts into viral content. Create compelling videos,
+          add your unique voice, and deploy them as tradeable Zora Coins. Where
+          creativity meets crypto.
         </motion.p>
 
         {/* Feature highlights */}
@@ -108,7 +109,7 @@ export function Hero() {
           </div>
           <div className="flex items-center gap-2">
             <Coins className="w-4 h-4 text-primary" />
-            <span>Mint as NFT</span>
+            <span>Deploy as Coin</span>
           </div>
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-primary" />
@@ -123,21 +124,42 @@ export function Hero() {
           transition={{ delay: 0.6, duration: 0.8 }}
         >
           {isConnected ? (
-            <Link href="/editor">
-              <Button size="lg" className="px-8 h-12 text-base font-medium bg-primary hover:bg-primary/90 transition-all duration-200 shadow-lg hover:shadow-xl">
-                Launch App
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link href="/editor">
+                <Button
+                  size="lg"
+                  className="px-8 h-12 text-base font-medium bg-primary hover:bg-primary/90 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <Video className="mr-2 h-4 w-4" />
+                  Create Video
+                </Button>
+              </Link>
+              <Link href="/trade">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="px-8 h-12 text-base font-medium border-2 hover:bg-accent/50 transition-all duration-200"
+                >
+                  <Coins className="mr-2 h-4 w-4" />
+                  Trade Coins
+                </Button>
+              </Link>
+            </div>
           ) : (
             <div className="flex flex-col items-center gap-3">
               <ConnectButton />
-              <p className="text-xs text-muted-foreground">Connect wallet to get started</p>
+              <p className="text-xs text-muted-foreground">
+                Connect wallet to get started
+              </p>
             </div>
           )}
-          
+
           <Link href="#features">
-            <Button variant="outline" size="lg" className="px-8 h-12 text-base font-medium border-2 hover:bg-accent/50 transition-all duration-200">
+            <Button
+              variant="outline"
+              size="lg"
+              className="px-8 h-12 text-base font-medium border-2 hover:bg-accent/50 transition-all duration-200"
+            >
               Learn More
             </Button>
           </Link>

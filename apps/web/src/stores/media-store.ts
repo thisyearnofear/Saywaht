@@ -12,9 +12,10 @@ export interface MediaItem {
   duration?: number; // For video/audio duration
   aspectRatio: number; // width / height
   
-  // FilCDN specific properties
+  // Storage provider flags
   isFilCDN?: boolean; // Flag to identify FilCDN content
-  cid?: string; // Content identifier for FilCDN
+  isGrove?: boolean; // Flag to identify Grove/IPFS content
+  cid?: string; // Content identifier for FilCDN or Grove storage key
   size?: number; // File size in bytes
 }
 

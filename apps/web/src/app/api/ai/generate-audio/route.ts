@@ -1,14 +1,29 @@
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { NextResponse } from "next/server";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 
-// Rate limiting: 3 audio generations per minute
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(3, "1 m"),
-  analytics: true,
-});
+// Simple in-memory rate limiting for development
+// In production, you'd want to use Redis or a proper rate limiting service
+const requestCounts = new Map<string, { count: number; resetTime: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute
+  const maxRequests = 3;
+
+  const current = requestCounts.get(ip);
+
+  if (!current || now > current.resetTime) {
+    requestCounts.set(ip, { count: 1, resetTime: now + windowMs });
+    return true;
+  }
+
+  if (current.count >= maxRequests) {
+    return false;
+  }
+
+  current.count++;
+  return true;
+}
 
 async function streamToBuffer(stream: ReadableStream): Promise<Buffer> {
   const reader = stream.getReader();
@@ -28,9 +43,9 @@ async function streamToBuffer(stream: ReadableStream): Promise<Buffer> {
 export async function POST(request: Request) {
   // Rate limiting check
   const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
-  const { success } = await ratelimit.limit(ip);
+  const rateLimitOk = checkRateLimit(ip);
 
-  if (!success) {
+  if (!rateLimitOk) {
     return NextResponse.json(
       { error: "Too many requests. Please try again later." },
       { status: 429 }

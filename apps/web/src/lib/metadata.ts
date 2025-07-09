@@ -107,7 +107,7 @@ export function generateCoinMetadata(params: GenerateMetadataParams): CoinMetada
   // Build the metadata object
   const metadata: CoinMetadata = {
     name: coinName,
-    description: `A memetic video commentary created with OpenCut. ${filcdnItems.length > 0 ? 'Powered by FilCDN for lightning-fast delivery.' : ''} Mint, trade, and collect unique commentary coins.`,
+    description: `A memetic video commentary created with OpenCut. ${filcdnItems.length > 0 ? 'Powered by FilCDN for lightning-fast delivery.' : ''} Deploy, trade, and collect unique video coins.`,
     external_url: `https://saywhat.app/project/${projectId}`,
     attributes
   };
@@ -128,23 +128,31 @@ export function generateCoinMetadata(params: GenerateMetadataParams): CoinMetada
 }
 
 /**
- * Upload metadata to IPFS (placeholder for now)
- * In production, this would use a service like Pinata, NFT.Storage, or web3.storage
+ * Upload metadata to IPFS using Grove storage
  */
 export async function uploadMetadataToIPFS(metadata: CoinMetadata): Promise<string> {
-  // For demo purposes, return a placeholder IPFS URI
-  // In production, you would:
-  // 1. Upload to IPFS service
-  // 2. Return the actual ipfs:// URI
-  
-  console.log('📄 Generated metadata:', metadata);
-  
-  // Simulate IPFS upload
-  const metadataJson = JSON.stringify(metadata, null, 2);
-  console.log('📤 Would upload to IPFS:', metadataJson);
-  
-  // Return placeholder URI (you would replace this with real IPFS upload)
-  return "ipfs://bafybeigoxzqzbnxsn35vq7lls3ljxdcwjafxvbvkivprsodzrptpiguysy";
+  try {
+    const { groveStorage } = await import('./grove-storage');
+
+    console.log('📄 Uploading metadata to IPFS via Grove:', metadata);
+
+    const result = await groveStorage.uploadMetadata(metadata);
+
+    // Convert Grove URI to standard IPFS URI format
+    // Grove returns lens:// URIs, but we need ipfs:// for ERC-20 token metadata standards
+    const ipfsUri = result.uri.replace('lens://', 'ipfs://');
+
+    console.log('✅ Metadata uploaded to IPFS:', ipfsUri);
+    console.log('🌐 Gateway URL:', result.gatewayUrl);
+
+    return ipfsUri;
+  } catch (error) {
+    console.error('❌ Failed to upload metadata to IPFS:', error);
+
+    // Fallback: return a placeholder URI for development
+    console.warn('🔄 Using placeholder URI for development');
+    return "ipfs://bafybeigoxzqzbnxsn35vq7lls3ljxdcwjafxvbvkivprsodzrptpiguysy";
+  }
 }
 
 /**

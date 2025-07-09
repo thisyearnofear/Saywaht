@@ -8,6 +8,10 @@ import { Toaster } from "../components/ui/sonner";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { Web3Provider } from "@/components/wagmi-provider";
 import { MobileProvider } from "@/contexts/mobile-context";
+import {
+  PhaseNavigation,
+  MobilePhaseNavigation,
+} from "@/components/phase-navigation";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -61,6 +65,8 @@ export default function RootLayout({
           <ThemeProvider attribute="class" forcedTheme="dark" enableSystem>
             <MobileProvider>
               <TooltipProvider>
+                <PhaseNavigation className="hidden md:block" />
+                <MobilePhaseNavigation />
                 {children}
                 <Analytics />
                 <Toaster />

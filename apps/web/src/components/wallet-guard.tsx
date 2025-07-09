@@ -2,7 +2,13 @@
 
 import { useWalletAuth } from "@opencut/auth";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 import { Wallet, Zap, Shield, Globe } from "lucide-react";
 
 interface WalletGuardProps {
@@ -14,10 +20,10 @@ interface WalletGuardProps {
 /**
  * Component that guards content behind wallet connection
  */
-export function WalletGuard({ 
-  children, 
-  requireConnection = true, 
-  fallback 
+export function WalletGuard({
+  children,
+  requireConnection = true,
+  fallback,
 }: WalletGuardProps) {
   const { isAuthenticated } = useWalletAuth();
 
@@ -38,7 +44,8 @@ export function WalletGuard({
           </div>
           <CardTitle>Connect Your Wallet</CardTitle>
           <CardDescription>
-            Connect your wallet to start creating and editing videos with SayWhat
+            Connect your wallet to start creating and editing videos with
+            SayWhat
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -53,16 +60,17 @@ export function WalletGuard({
             </div>
             <div className="flex items-center gap-3 text-sm">
               <Globe className="h-4 w-4 text-blue-500" />
-              <span>Decentralized storage and minting</span>
+              <span>Decentralized storage and coin deployment</span>
             </div>
           </div>
-          
+
           <div className="flex justify-center">
             <ConnectButton />
           </div>
-          
+
           <p className="text-xs text-muted-foreground text-center">
-            By connecting your wallet, you agree to our terms of service and privacy policy.
+            By connecting your wallet, you agree to our terms of service and
+            privacy policy.
           </p>
         </CardContent>
       </Card>

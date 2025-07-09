@@ -44,9 +44,9 @@ const onboardingSteps = [
   },
   {
     icon: Coins,
-    title: "Mint as NFT",
+    title: "Deploy as Coin",
     description:
-      "Transform your creation into a tradeable Zora Coin. Own your commentary and earn from it.",
+      "Transform your creation into a tradeable Zora Coin. Own your content and earn from trading.",
     color: "text-orange-500",
   },
 ];

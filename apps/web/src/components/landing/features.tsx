@@ -1,16 +1,16 @@
 "use client";
 
 import { motion } from "motion/react";
-import { 
-  Video, 
-  Scissors, 
-  Coins, 
-  Zap, 
-  Shield, 
+import {
+  Video,
+  Scissors,
+  Coins,
+  Zap,
+  Shield,
   Palette,
   Users,
   Sparkles,
-  ArrowRight
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import Link from "next/link";
@@ -19,39 +19,45 @@ const features = [
   {
     icon: Video,
     title: "Timeline-Based Editing",
-    description: "Professional video editing with multi-track support, real-time preview, and intuitive drag-and-drop interface.",
-    color: "text-blue-500"
+    description:
+      "Professional video editing with multi-track support, real-time preview, and intuitive drag-and-drop interface.",
+    color: "text-blue-500",
   },
   {
     icon: Coins,
-    title: "Mint as Zora Coins",
-    description: "Transform your creative content into tradeable NFTs on the Zora network. Own your commentary.",
-    color: "text-purple-500"
+    title: "Deploy as Zora Coins",
+    description:
+      "Transform your creative content into tradeable ERC-20 coins on the Zora network. Own your content.",
+    color: "text-purple-500",
   },
   {
     icon: Zap,
     title: "No Watermarks",
-    description: "Export clean, professional videos without any branding or watermarks. Your content, your way.",
-    color: "text-yellow-500"
+    description:
+      "Export clean, professional videos without any branding or watermarks. Your content, your way.",
+    color: "text-yellow-500",
   },
   {
     icon: Shield,
     title: "Privacy First",
-    description: "All processing happens locally in your browser. Your videos never leave your device.",
-    color: "text-green-500"
+    description:
+      "All processing happens locally in your browser. Your videos never leave your device.",
+    color: "text-green-500",
   },
   {
     icon: Palette,
     title: "Creative Tools",
-    description: "Add effects, transitions, text overlays, and audio tracks to make your content stand out.",
-    color: "text-pink-500"
+    description:
+      "Add effects, transitions, text overlays, and audio tracks to make your content stand out.",
+    color: "text-pink-500",
   },
   {
     icon: Users,
     title: "Community Driven",
-    description: "Open source project built by creators, for creators. Join our growing community.",
-    color: "text-orange-500"
-  }
+    description:
+      "Open source project built by creators, for creators. Join our growing community.",
+    color: "text-orange-500",
+  },
 ];
 
 export function Features() {
@@ -73,7 +79,7 @@ export function Features() {
             Everything you need to create
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Powerful video editing tools combined with Web3 capabilities. 
+            Powerful video editing tools combined with Web3 capabilities.
             Create, edit, and monetize your content all in one place.
           </p>
         </motion.div>
@@ -88,7 +94,9 @@ export function Features() {
               viewport={{ once: true }}
               className="group p-6 bg-card border border-border rounded-xl hover:shadow-lg transition-all duration-300 hover:border-primary/20"
             >
-              <div className={`w-12 h-12 rounded-lg bg-background border border-border flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200`}>
+              <div
+                className={`w-12 h-12 rounded-lg bg-background border border-border flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200`}
+              >
                 <feature.icon className={`w-6 h-6 ${feature.color}`} />
               </div>
               <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors">
