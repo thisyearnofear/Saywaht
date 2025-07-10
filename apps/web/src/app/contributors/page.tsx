@@ -3,7 +3,7 @@ import { Header } from "@/components/header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-// import { ExternalLinkIcon } from "lucide-react";
+// import { LuExternalLink as ExternalLinkIcon } from "react-icons/lu";;;
 import Link from "next/link";
 import { GithubIcon } from "@/components/icons";
 

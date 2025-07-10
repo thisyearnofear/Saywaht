@@ -1,29 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getLatestCommentaries, Commentary } from "@/lib/zora";
+import { useEffect, useState } from "@/lib/hooks-provider";
+import { zoraCoins, type VideoCoin } from "@/lib/zora-coins";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { SimpleVideoPlayer } from "../ui/simple-video-player";
 import { Badge } from "../ui/badge";
-import { Coins, TrendingUp } from "lucide-react";
+import { Coins, TrendingUp } from "@/lib/icons-provider";
 
 export function DiscoveryFeed() {
-  const [commentaries, setCommentaries] = useState<Commentary[]>([]);
+  const [coins, setCoins] = useState<VideoCoin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCommentaries = async () => {
+    const fetchCoins = async () => {
       try {
-        const data = await getLatestCommentaries();
-        setCommentaries(data);
+        const data = await zoraCoins.getTrendingCoins();
+        setCoins(data);
       } catch (error) {
-        console.error("Failed to fetch commentaries:", error);
+        console.error("Failed to fetch coins:", error);
+        // Set some fallback data if API fails
+        setCoins([
+          {
+            address: "0x1234567890123456789012345678901234567890",
+            name: "Sample Commentary",
+            symbol: "SAMPLE",
+            creator: "0x0000000000000000000000000000000000000000",
+            videoUri: "/templates/voiceovers/animal/cheetah.mp4",
+            metadataUri: "",
+            totalSupply: "1000000",
+            price: "0.001",
+            volume24h: "0",
+            priceChange24h: 0,
+            createdAt: new Date().toISOString(),
+          },
+        ]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchCommentaries();
+    fetchCoins();
   }, []);
 
   if (isLoading) {
@@ -33,7 +49,7 @@ export function DiscoveryFeed() {
           <Coins className="h-8 w-8 text-primary" />
           <h1 className="text-3xl font-bold">Latest Commentary Coins</h1>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="animate-pulse">
@@ -61,56 +77,53 @@ export function DiscoveryFeed() {
         <Coins className="h-8 w-8 text-primary" />
         <h1 className="text-3xl font-bold">Latest Commentary Coins</h1>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {commentaries.map((commentary) => (
-          <Card key={commentary.id} className="hover:shadow-lg transition-shadow">
+        {coins.map((coin: VideoCoin) => (
+          <Card
+            key={coin.address}
+            className="hover:shadow-lg transition-shadow"
+          >
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="truncate">{commentary.name}</CardTitle>
-                <Badge variant="secondary">{commentary.symbol}</Badge>
+                <CardTitle className="truncate">{coin.name}</CardTitle>
+                <Badge variant="secondary">{coin.symbol}</Badge>
               </div>
-              {commentary.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {commentary.description}
-                </p>
-              )}
             </CardHeader>
             <CardContent>
-              {commentary.videoUrl && (
-                <SimpleVideoPlayer src={commentary.videoUrl} />
-              )}
-              
+              {coin.videoUri && <SimpleVideoPlayer src={coin.videoUri} />}
+
               <div className="flex flex-col gap-2 mt-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Creator:</span>
                   <span className="font-mono text-xs">
-                    {commentary.creatorAddress.slice(0, 6)}...{commentary.creatorAddress.slice(-4)}
+                    {String(coin.creator).slice(0, 6)}...
+                    {String(coin.creator).slice(-4)}
                   </span>
                 </div>
-                
-                {commentary.marketCap && (
+
+                {coin.price && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Market Cap:</span>
-                    <span className="font-semibold">{commentary.marketCap}</span>
+                    <span className="text-muted-foreground">Price:</span>
+                    <span className="font-semibold">{coin.price} ETH</span>
                   </div>
                 )}
-                
-                {commentary.volume24h && (
+
+                {coin.volume24h && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground flex items-center gap-1">
                       <TrendingUp className="h-3 w-3" />
                       24h Volume:
                     </span>
-                    <span className="font-semibold">{commentary.volume24h}</span>
+                    <span className="font-semibold">{coin.volume24h}</span>
                   </div>
                 )}
-                
-                {commentary.createdAt && (
+
+                {coin.createdAt && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Created:</span>
                     <span className="text-xs">
-                      {new Date(commentary.createdAt).toLocaleDateString()}
+                      {new Date(coin.createdAt).toLocaleDateString()}
                     </span>
                   </div>
                 )}
@@ -119,13 +132,13 @@ export function DiscoveryFeed() {
           </Card>
         ))}
       </div>
-      
-      {commentaries.length === 0 && !isLoading && (
+
+      {coins.length === 0 && !isLoading && (
         <div className="text-center py-12">
           <Coins className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No commentaries found</h3>
+          <h3 className="text-lg font-semibold mb-2">No coins found</h3>
           <p className="text-muted-foreground">
-            Be the first to create a commentary coin!
+            Be the first to create a video coin!
           </p>
         </div>
       )}

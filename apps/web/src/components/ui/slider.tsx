@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import React from "react";
 import { Slider as SliderPrimitive } from "radix-ui";
 
 import { cn } from "../../lib/utils";
@@ -8,7 +8,7 @@ import { cn } from "../../lib/utils";
 const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root>
->(({ className, ...props }, ref) => (
+>(({ className, ...props }: any, ref: any) => (
   <SliderPrimitive.Root
     ref={ref}
     className={cn(

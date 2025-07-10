@@ -46,6 +46,18 @@
 - `src/stores/` – State management (Zustand, etc.)
 - `src/types/` – TypeScript types
 
+## Tech Stack
+
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript (strict mode enabled)
+- **Styling**: Tailwind CSS
+- **Icons**: React Icons (Lucide variants)
+- **State Management**: Zustand
+- **Web3**: Wagmi, Viem, WalletConnect
+- **Storage**: IPFS via Grove, Upstash Redis
+- **Blockchain**: Base (Ethereum L2), Zora Protocol
+- **Package Manager**: Bun (recommended)
+
 ## Getting Started
 
 ### Prerequisites
@@ -65,47 +77,73 @@ Before you begin, ensure you have the following installed on your system:
     ```
 
 2.  **Install dependencies**
-    Install the project dependencies using `bun` (recommended) or `npm`.
 
     ```bash
-    # With bun
     bun install
-
-    # Or with npm
-    npm install
     ```
 
-3.  **Start the development server**
+3.  **Environment Setup (Optional)**
+
+    For full functionality, create `apps/web/.env.local`:
 
     ```bash
-    # With bun
-    bun run dev
+    # Core Features (Required for FilCDN + Trading)
+    NEXT_PUBLIC_FILECOIN_PRIVATE_KEY=your-filecoin-private-key
+    NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS=0xYourWalletAddress
+    NEXT_PUBLIC_ZORA_API_KEY=your-zora-api-key
 
-    # Or with npm
-    npm run dev
+    # Optional Features
+    ELEVENLABS_API_KEY=your-elevenlabs-key
+    UPSTASH_REDIS_REST_URL=your-redis-url
+    UPSTASH_REDIS_REST_TOKEN=your-redis-token
     ```
 
-4.  **Connect your wallet**
-    - Open [http://localhost:3000](http://localhost:3000)
-    - Click "Connect Wallet" to authenticate with your Web3 wallet
-    - Start creating and editing videos immediately!
+4.  **Start the development server**
 
-5.  **Explore the three-phase app**
-    - **Landing** (`/`) - Wallet authentication and onboarding
-    - **Editor** (`/editor`) - Professional video editing and creation
-    - **Trading** (`/trade`) - Creator coin trading and discovery
+    ```bash
+    bun run dev
+    ```
+
+5.  **Connect your wallet & start creating**
+    - Open [http://localhost:3000](http://localhost:3000)
+    - Connect your Web3 wallet (MetaMask, WalletConnect, etc.)
+    - Start creating and trading video coins immediately!
+
+6.  **Explore the platform**
+    - **Landing** (`/`) - Wallet connection and coin discovery
+    - **Editor** (`/editor`) - Professional video editing with FilCDN
+    - **Trading** (`/trade`) - Creator coin marketplace
 
 The application will be available at [http://localhost:3000](http://localhost:3000).
+
+## Development Status
+
+### Recent Improvements ✅
+
+- **TypeScript Strict Mode**: Full compliance with TypeScript strict mode for better type safety
+- **Icon Library Migration**: Migrated from lucide-react to react-icons for better compatibility
+- **Build Optimization**: Resolved all TypeScript compilation errors for production builds
+- **Component Type Safety**: Enhanced type definitions across all React components
+- **Production Ready**: Successfully building and deploying without errors
+
+### Current Features
+
+- ✅ **Video Editor**: Timeline-based editing with multi-track support
+- ✅ **Web3 Integration**: Wallet connection and authentication
+- ✅ **IPFS Storage**: Decentralized file storage via Grove
+- ✅ **Creator Coins**: Video tokenization using Zora Protocol
+- ✅ **Mobile Support**: Responsive design optimized for mobile devices
+- ✅ **TypeScript**: Full type safety with strict mode enabled
 
 ## 🌐 Three-Phase App Architecture
 
 SayWhat follows a **mobile-first, three-phase design**:
 
-### **Phase 1: Landing & Authentication** (`/`)
+### **Phase 1: Landing & Discovery** (`/`)
 
-- **Wallet connection** - Instant access with any Web3 wallet
-- **Creator onboarding** - Simple introduction to the platform
-- **No traditional navigation** - Mobile-optimized, gesture-based design
+- **Wallet connection** - Instant access with any Web3 wallet (MetaMask, WalletConnect)
+- **Coin discovery** - Browse and trade existing creator coins
+- **Mobile-first design** - Optimized for mobile without traditional navigation
 
 ### **Phase 2: Video Creation** (`/editor`)
 
@@ -119,6 +157,40 @@ SayWhat follows a **mobile-first, three-phase design**:
 - **Mobile-first interface** - TikTok-style vertical feed
 - **Real-time markets** - Uniswap V4 integration for liquidity
 - **Creator economy** - Supporters invest in creators, creators earn from trading
+
+## Troubleshooting
+
+### Common Issues
+
+**TypeScript Errors**
+
+- Ensure you're using TypeScript strict mode
+- All components should have proper type definitions
+- Use `react-icons/lu` for Lucide icons instead of `lucide-react`
+
+**Build Failures**
+
+- Run `bun run build` to check for TypeScript errors
+- Ensure all dependencies are properly installed with `bun install`
+- Check that environment variables are properly configured
+
+**Web3 Connection Issues**
+
+- Ensure you have a Web3 wallet installed (MetaMask, etc.)
+- Check that you're on a supported network (Base)
+- Verify wallet connection in browser developer tools
+
+**IPFS Upload Issues**
+
+- Verify `NEXT_PUBLIC_FILECOIN_PRIVATE_KEY` is set in `.env.local`
+- Check Grove API status and rate limits
+- Ensure file sizes are within acceptable limits
+
+### Getting Help
+
+- Check the [Issues](https://github.com/your-repo/issues) page for known problems
+- Review the [Docs](docs/) folder for detailed documentation
+- Join our community discussions for support
 
 ## License
 

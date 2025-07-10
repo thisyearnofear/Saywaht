@@ -1,11 +1,11 @@
 "use client";
 
-import * as React from "react";
+import { useState } from "@/lib/hooks-provider";
 import "@/app/editor/mobile-editor.css";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useMobileContext } from "@/contexts/mobile-context";
-import { Loader2, Smartphone, Monitor } from "lucide-react";
+import { Loader2, Smartphone, Monitor } from "@/lib/icons-provider";
 import { cn } from "@/lib/utils";
 import { usePanelStore } from "@/stores/panel-store";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
@@ -20,54 +20,66 @@ import dynamic from "next/dynamic";
 // Lazy load heavy components
 const EditorHeader = dynamic(
   () => import("@/components/editor-header").then((mod) => mod.EditorHeader),
-  { 
+  {
     ssr: false,
     loading: () => (
       <div className="h-14 border-b border-border bg-background/95 backdrop-blur flex items-center justify-center">
         <Loader2 className="h-4 w-4 animate-spin" />
       </div>
-    )
+    ),
   }
 );
 
 const MediaPanel = dynamic(
-  () => import("@/components/editor/media-panel").then((mod) => ({ default: mod.MediaPanel })),
-  { 
+  () =>
+    import("@/components/editor/media-panel").then((mod) => ({
+      default: mod.MediaPanel,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="h-full flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin" />
       </div>
-    )
+    ),
   }
 );
 
 const Timeline = dynamic(
-  () => import("@/components/editor/timeline").then((mod) => ({ default: mod.Timeline })),
-  { 
+  () =>
+    import("@/components/editor/timeline").then((mod) => ({
+      default: mod.Timeline,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="h-full flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin" />
       </div>
-    )
+    ),
   }
 );
 
 const PreviewPanel = dynamic(
-  () => import("@/components/editor/preview-panel").then((mod) => ({ default: mod.PreviewPanel })),
-  { 
+  () =>
+    import("@/components/editor/preview-panel").then((mod) => ({
+      default: mod.PreviewPanel,
+    })),
+  {
     ssr: false,
     loading: () => (
       <div className="h-full flex items-center justify-center bg-black/10">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
-    )
+    ),
   }
 );
 
 const QuickActions = dynamic(
-  () => import("@/components/editor/quick-actions").then((mod) => ({ default: mod.QuickActions })),
+  () =>
+    import("@/components/editor/quick-actions").then((mod) => ({
+      default: mod.QuickActions,
+    })),
   { ssr: false }
 );
 
@@ -76,13 +88,15 @@ interface MobileEditorLayoutProps {
 }
 
 export function MobileEditorLayout({ children }: MobileEditorLayoutProps) {
-  const { orientation, isEditorMobileMode, toggleEditorMobileMode } = useMobileContext();
-  const [activeTab, setActiveTab] = React.useState("preview");
-  const [timelineExpanded, setTimelineExpanded] = React.useState(false);
-  
+  const { orientation, isEditorMobileMode, toggleEditorMobileMode } =
+    useMobileContext();
+  const [activeTab, setActiveTab] = useState<string>("preview");
+  const [timelineExpanded, setTimelineExpanded] = useState<boolean>(false);
+
   // Get panel sizes from store
-  const { setToolsPanel, setPreviewPanel, setMainContent, setTimeline } = usePanelStore();
-  
+  const { setToolsPanel, setPreviewPanel, setMainContent, setTimeline } =
+    usePanelStore();
+
   // Set up playback controls
   usePlaybackControls();
 
@@ -94,36 +108,50 @@ export function MobileEditorLayout({ children }: MobileEditorLayoutProps) {
       {/* Header with mode toggle */}
       <div className="relative">
         <EditorHeader />
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="absolute right-2 top-2 clickable"
+        <Button
+          variant="outline"
+          size="icon"
+          className="absolute right-2 top-2 clickable z-10 bg-background/80 backdrop-blur-sm"
           onClick={toggleEditorMobileMode}
         >
-          {isEditorMobileMode ? <Monitor className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />}
+          {isEditorMobileMode ? (
+            <Monitor className="h-4 w-4" />
+          ) : (
+            <Smartphone className="h-4 w-4" />
+          )}
         </Button>
       </div>
 
       {/* Main content area */}
       <div className="flex-1 min-h-0 min-w-0 flex flex-col portrait-optimize">
         {/* Tabs for mobile view */}
-        <Tabs 
-          value={activeTab} 
+        <Tabs
+          value={activeTab}
           onValueChange={setActiveTab}
           className="flex-1 flex flex-col min-h-0"
         >
           <TabsList className="grid grid-cols-2 w-full rounded-none border-b no-select">
-            <TabsTrigger value="preview" className="clickable">Preview</TabsTrigger>
-            <TabsTrigger value="media" className="clickable">Media</TabsTrigger>
+            <TabsTrigger value="preview" className="clickable">
+              Preview
+            </TabsTrigger>
+            <TabsTrigger value="media" className="clickable">
+              Media
+            </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="preview" className="flex-1 min-h-0 p-0 data-[state=active]:flex data-[state=active]:flex-col gesture-area">
+
+          <TabsContent
+            value="preview"
+            className="flex-1 min-h-0 p-0 data-[state=active]:flex data-[state=active]:flex-col gesture-area"
+          >
             <div className="flex-1 min-h-0 prevent-zoom">
               <MobilePreviewPanel />
             </div>
           </TabsContent>
-          
-          <TabsContent value="media" className="flex-1 min-h-0 p-0 data-[state=active]:flex data-[state=active]:flex-col scrollable hide-scrollbar">
+
+          <TabsContent
+            value="media"
+            className="flex-1 min-h-0 p-0 data-[state=active]:flex data-[state=active]:flex-col scrollable hide-scrollbar"
+          >
             <div className="flex-1 min-h-0">
               <MobileMediaPanel />
             </div>
@@ -131,15 +159,15 @@ export function MobileEditorLayout({ children }: MobileEditorLayoutProps) {
         </Tabs>
 
         {/* Mobile Timeline with expand/collapse control */}
-        <MobileTimeline 
-          expanded={timelineExpanded} 
-          onToggleExpand={() => setTimelineExpanded(!timelineExpanded)} 
+        <MobileTimeline
+          expanded={timelineExpanded}
+          onToggleExpand={() => setTimelineExpanded(!timelineExpanded)}
         />
       </div>
 
       {/* Status Bar */}
       <StatusBar />
-      
+
       {/* Floating UI Elements */}
       <QuickActions />
     </div>

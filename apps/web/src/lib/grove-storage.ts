@@ -111,20 +111,38 @@ export class GroveStorageService {
   /**
    * Upload JSON metadata to Grove/IPFS
    */
-  async uploadMetadata(metadata: object): Promise<GroveMetadataUploadResult> {
+  async uploadMetadata(metadata: object): Promise<GroveMetadataUploadResult & { ipfsUri?: string; publicGatewayUrl?: string }> {
     try {
       console.log('📄 Uploading metadata to Grove...');
 
       const response = await this.client.uploadAsJson(metadata, { acl: this.acl });
 
-      console.log(`✅ Metadata uploaded successfully!`);
-      console.log(`  URI: ${response.uri}`);
-      console.log(`  Gateway URL: ${response.gatewayUrl}`);
+      // Convert lens:// URI to standard ipfs:// format for better compatibility
+      let ipfsUri = '';
+      let publicGatewayUrl = '';
+      
+      if (response.uri && response.uri.startsWith('lens://')) {
+        const ipfsHash = response.uri.replace('lens://', '');
+        ipfsUri = `ipfs://${ipfsHash}`;
+        publicGatewayUrl = `https://ipfs.io/ipfs/${ipfsHash}`;
+        
+        console.log(`✅ Metadata uploaded successfully!`);
+        console.log(`  Lens URI: ${response.uri}`);
+        console.log(`  IPFS URI: ${ipfsUri}`);
+        console.log(`  Grove Gateway: ${response.gatewayUrl}`);
+        console.log(`  Public Gateway: ${publicGatewayUrl}`);
+      } else {
+        console.log(`✅ Metadata uploaded successfully!`);
+        console.log(`  URI: ${response.uri}`);
+        console.log(`  Gateway URL: ${response.gatewayUrl}`);
+      }
 
       return {
-        uri: response.uri,
+        uri: ipfsUri || response.uri, // Return standard ipfs:// format
         gatewayUrl: response.gatewayUrl,
         storageKey: response.storageKey,
+        ipfsUri,
+        publicGatewayUrl
       };
     } catch (error) {
       console.error('❌ Grove metadata upload failed:', error);

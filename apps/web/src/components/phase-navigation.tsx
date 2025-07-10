@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "./ui/button";
-import { Video, TrendingUp, Home, ArrowLeft } from "lucide-react";
+import { Video, TrendingUp, Home, ArrowLeft } from "@/lib/icons-provider";
 import { motion, AnimatePresence } from "motion/react";
 import { useWalletAuth } from "@opencut/auth";
 
@@ -45,9 +45,10 @@ export function PhaseNavigation({ className = "" }: PhaseNavigationProps) {
     },
   ];
 
-  const currentPhase = phases.find(phase => 
-    pathname.startsWith(phase.path) && phase.path !== "/"
-  ) || phases[0];
+  const currentPhase =
+    phases.find(
+      (phase) => pathname.startsWith(phase.path) && phase.path !== "/"
+    ) || phases[0];
 
   const handleNavigation = (path: string) => {
     router.push(path);
@@ -95,8 +96,8 @@ export function PhaseNavigation({ className = "" }: PhaseNavigationProps) {
                   size="sm"
                   onClick={() => handleNavigation(phase.path)}
                   className={`h-8 px-3 rounded-full transition-all duration-200 ${
-                    isActive 
-                      ? "bg-primary text-primary-foreground shadow-sm" 
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm"
                       : "hover:bg-accent"
                   }`}
                 >
@@ -160,9 +161,10 @@ export function MobilePhaseNavigation() {
     },
   ];
 
-  const currentPhase = phases.find(phase => 
-    pathname.startsWith(phase.path) && phase.path !== "/"
-  ) || phases[0];
+  const currentPhase =
+    phases.find(
+      (phase) => pathname.startsWith(phase.path) && phase.path !== "/"
+    ) || phases[0];
 
   return (
     <motion.div
@@ -183,8 +185,8 @@ export function MobilePhaseNavigation() {
                 size="sm"
                 onClick={() => router.push(phase.path)}
                 className={`h-10 w-10 p-0 rounded-full transition-all duration-200 ${
-                  isActive 
-                    ? "bg-primary text-primary-foreground shadow-sm" 
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "hover:bg-accent"
                 }`}
               >

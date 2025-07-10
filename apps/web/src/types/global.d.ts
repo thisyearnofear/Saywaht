@@ -1,13 +1,13 @@
 // Type declarations for modules without type definitions
 
 declare module 'react' {
-  import * as React from 'react';
+  import * as React from '@/lib/hooks-provider';
   export = React;
   export as namespace React;
 }
 
 declare module 'next/dynamic' {
-  import { ComponentType, ReactNode } from 'react';
+  import { ComponentType, ReactNode } from '@/lib/hooks-provider';
 
   export interface DynamicOptions {
     loading?: ComponentType;
@@ -19,7 +19,7 @@ declare module 'next/dynamic' {
 }
 
 declare module 'lucide-react' {
-  import { ComponentType, SVGProps } from 'react';
+  import { ComponentType, SVGProps } from '@/lib/hooks-provider';
   export interface IconProps extends SVGProps<SVGSVGElement> {
     size?: number | string;
     color?: string;
@@ -34,7 +34,7 @@ declare module 'lucide-react' {
 }
 
 declare module 'next' {
-  import { ReactNode } from 'react';
+  import { ReactNode } from '@/lib/hooks-provider';
   export interface Metadata {
     title?: string;
     description?: string;
@@ -61,7 +61,7 @@ declare module 'next/font/google' {
 }
 
 declare module 'next-themes' {
-  import { ReactNode } from 'react';
+  import { ReactNode } from '@/lib/hooks-provider';
   export interface ThemeProviderProps {
     children: ReactNode;
     defaultTheme?: string;
@@ -77,7 +77,7 @@ declare module 'next-themes' {
 }
 
 declare module '@vercel/analytics/react' {
-  import { ReactNode } from 'react';
+  import { ReactNode } from '@/lib/hooks-provider';
   export interface AnalyticsProps {
     children?: ReactNode;
   }
@@ -85,7 +85,7 @@ declare module '@vercel/analytics/react' {
 }
 
 declare module 'next/script' {
-  import { ReactNode } from 'react';
+  import { ReactNode } from '@/lib/hooks-provider';
   export interface ScriptProps {
     src?: string;
     strategy?: 'beforeInteractive' | 'afterInteractive' | 'lazyOnload';

@@ -45,6 +45,12 @@ export async function processMediaFiles(
       // Get duration for videos and audio
       if (fileType === "video" || fileType === "audio") {
         duration = await getMediaDuration(file);
+        
+        // For audio files, ensure we have a valid duration
+        if (fileType === "audio" && (!duration || duration === 0 || !isFinite(duration))) {
+          console.error(`Invalid audio duration for ${file.name}: ${duration}`);
+          throw new Error("Failed to get audio duration");
+        }
       }
 
       processedItems.push({

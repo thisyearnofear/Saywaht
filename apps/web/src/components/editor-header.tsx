@@ -3,22 +3,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "./ui/button";
-import {
-  ArrowLeft,
-  Download,
-  Share2,
-  Settings,
-  Play,
-  Pause,
-  MoreHorizontal,
-  Coins,
-  Loader2,
-} from "lucide-react";
 import { useProjectStore } from "@/stores/project-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
-import { useState } from "react";
+import { badgeVariants } from "./ui/badge";
+import { cn } from "@/lib/utils";
+import { useAccount } from "wagmi";
+import { toast } from "sonner";
+import { useState } from "@/lib/hooks-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,19 +19,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { Badge } from "./ui/badge";
-import { useAccount } from "wagmi";
-import { toast } from "sonner";
-import { VideoToCoinFlow } from "./video-to-coin-flow";
 
 export function EditorHeader() {
   const { activeProject } = useProjectStore();
   const { isPlaying, toggle } = usePlaybackStore();
   const { address } = useAccount();
 
+  // Use imported useState hook from hooks-provider
   const [isExporting, setIsExporting] = useState(false);
-  const [showCoinFlow, setShowCoinFlow] = useState(false);
-  const [exportedVideoBlob, setExportedVideoBlob] = useState<Blob | null>(null);
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
 
@@ -74,9 +62,6 @@ export function EditorHeader() {
         }
       );
 
-      // Store the blob for coin creation
-      setExportedVideoBlob(blob);
-
       // Create download link
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -88,12 +73,7 @@ export function EditorHeader() {
       URL.revokeObjectURL(url);
 
       toast.dismiss("export-progress");
-      toast.success("Video exported successfully! Ready to create a coin?", {
-        action: {
-          label: "Create Coin",
-          onClick: () => setShowCoinFlow(true),
-        },
-      });
+      toast.success("Video exported successfully!");
     } catch (error) {
       console.error("Export failed:", error);
       toast.dismiss("export-progress");
@@ -118,7 +98,7 @@ export function EditorHeader() {
           href="/"
           className="flex items-center gap-2 hover:opacity-80 transition-opacity"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <span className="text-sm">←</span>
           <Image
             src="/logo.png"
             alt="SayWhat"
@@ -135,9 +115,11 @@ export function EditorHeader() {
           <h1 className="font-medium text-sm truncate max-w-[200px]">
             {activeProject?.name || "Untitled Project"}
           </h1>
-          <Badge variant="secondary" className="text-xs">
+          <div
+            className={cn(badgeVariants({ variant: "secondary" }), "text-xs")}
+          >
             Draft
-          </Badge>
+          </div>
         </div>
       </div>
 
@@ -150,9 +132,9 @@ export function EditorHeader() {
           className="h-8 w-8 p-0"
         >
           {isPlaying ? (
-            <Pause className="h-4 w-4" />
+            <span className="text-sm">⏸</span>
           ) : (
-            <Play className="h-4 w-4" />
+            <span className="text-sm">▶</span>
           )}
         </Button>
       </div>
@@ -168,12 +150,12 @@ export function EditorHeader() {
         >
           {isExporting ? (
             <>
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              <span className="inline-block h-4 w-4 mr-1 animate-spin">⟳</span>
               Exporting...
             </>
           ) : (
             <>
-              <Download className="h-4 w-4 mr-1" />
+              <span className="inline-block h-4 w-4 mr-1">⬇️</span>
               Export
             </>
           )}
@@ -186,7 +168,7 @@ export function EditorHeader() {
             onClick={handleDeploy}
             className="text-xs font-medium bg-primary hover:bg-primary/90"
           >
-            <Coins className="h-4 w-4 mr-1" />
+            <span className="inline-block h-4 w-4 mr-1">🪙</span>
             Deploy
           </Button>
         )}
@@ -194,16 +176,16 @@ export function EditorHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="text" size="sm" className="h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
+              <span className="text-sm">⋯</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem>
-              <Share2 className="h-4 w-4 mr-2" />
+              <span className="inline-block h-4 w-4 mr-2">↗️</span>
               Share Project
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <Settings className="h-4 w-4 mr-2" />
+              <span className="inline-block h-4 w-4 mr-2">⚙️</span>
               Project Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -213,15 +195,6 @@ export function EditorHeader() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      {/* Video to Coin Creation Flow */}
-      <VideoToCoinFlow
-        isOpen={showCoinFlow}
-        onClose={() => setShowCoinFlow(false)}
-        videoBlob={exportedVideoBlob || undefined}
-        videoName={activeProject?.name}
-        projectId={activeProject?.id}
-      />
     </header>
   );
 }

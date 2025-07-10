@@ -1,8 +1,9 @@
-import React from "react";
+import React from '@/lib/hooks-provider';
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { groveStorage } from "@/lib/grove-storage";
 import { useWalletAuth } from "@opencut/auth";
+import { useEffect } from '@/lib/hooks-provider';
 
 export interface ProjectData {
   id: string;
@@ -261,7 +262,7 @@ export function useAutoSave() {
   const { currentProject, saveToIPFS, isSaving } = useProjectIPFSStore();
   
   // Auto-save every 30 seconds if project is dirty
-  React.useEffect(() => {
+  useEffect(() => {
     if (!currentProject?.isDirty || isSaving) return;
 
     const interval = setInterval(() => {

@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "@/lib/hooks-provider";
 import { CoinCard } from "./coin-card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, RefreshCw, TrendingUp, AlertCircle } from "lucide-react";
+import {
+  Loader2,
+  RefreshCw,
+  TrendingUp,
+  AlertCircle,
+} from "@/lib/icons-provider";
 import { zoraCoins, type VideoCoin } from "@/lib/zora-coins";
 import { useWalletAuth } from "@opencut/auth";
 import { useTrading } from "@/hooks/use-trading";
@@ -58,7 +63,6 @@ export function TradingFeed() {
       toast.loading("Preparing buy order...");
 
       await buyCoin(coin.address, "0.001"); // Default 0.001 ETH
-
     } catch (error) {
       toast.dismiss();
       const errorMessage =
@@ -75,21 +79,11 @@ export function TradingFeed() {
     }
 
     try {
-      toast.loading("Preparing sell order...");
-
-      // TODO: Implement actual sell logic with amount selection
-      const txHash = await zoraCoins.sellCoin({
-        coinAddress: coin.address,
-        amount: "0.01", // Default amount for now
-      });
-
-      toast.success(`Sell order successful! TX: ${txHash.slice(0, 10)}...`);
+      // TODO: Implement actual amount selection UI
+      await sellCoin(coin.address as string, "0.01"); // Default 0.01 tokens
     } catch (error) {
-      toast.dismiss();
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      toast.error(`Trading not yet available: ${errorMessage}`);
       console.error("Sell error:", error);
+      // Error is already handled by the hook
     }
   };
 
@@ -204,7 +198,7 @@ export function TradingFeed() {
             </p>
           </div>
         ) : (
-          coins.map((coin) => (
+          coins.map((coin: VideoCoin) => (
             <CoinCard
               key={coin.address}
               coin={coin}

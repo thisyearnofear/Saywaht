@@ -1,0 +1,71 @@
+{
+  "categories": [
+    {
+      "id": "voiceovers",
+      "name": "Voiceovers",
+      "description": "Add your voice to various videos for fun and creative content",
+      "thumbnailUrl": "/templates/voiceovers/thumbnail.jpg",
+      "inspiration": {
+        "title": "Inspiration Gallery",
+        "description": "Check out these amazing examples of animal voiceovers to inspire your creativity",
+        "examples": [
+          {
+            "id": "bbc-walks-on-wild-side",
+            "title": "BBC Walk on the Wild Side",
+            "description": "A compilation of funny animal voiceovers from the BBC's Walk on the Wild Side series",
+            "thumbnailUrl": "https://i.ytimg.com/vi/EQ1HKCYJM5U/hqdefault.jpg",
+            "url": "https://youtu.be/EQ1HKCYJM5U?si=iSd_kXOnvsZmtjfp",
+            "source": "BBC",
+            "embedType": "youtube"
+          },
+          {
+            "id": "bbc-talking-animals",
+            "title": "BBC Talking Animals",
+            "description": "More hilarious animal voiceovers showcasing creative possibilities",
+            "url": "https://www.youtube.com/watch?v=xaPepCVepCg",
+            "source": "BBC",
+            "embedType": "youtube"
+          }
+        ]
+      },
+      "templates": [
+        {
+          "id": "cheetah",
+          "name": "Talking Cheetahs",
+          "description": "Give voice to two cheetahs lying in the savannah",
+          "category": "voiceovers",
+          "subcategory": "animal",
+          "thumbnailUrl": "/templates/voiceovers/animal/cheetah.mp4",
+          "videoUrl": "/templates/voiceovers/animal/cheetah.mp4",
+          "duration": 12,
+          "tags": ["cheetah", "wildlife", "savannah", "talking"],
+          "hasAudio": false
+        },
+        {
+          "id": "deer",
+          "name": "Deer Commentary",
+          "description": "Add commentary to these three deer in the bush as they glance back and walk away",
+          "category": "voiceovers",
+          "subcategory": "animal",
+          "thumbnailUrl": "/templates/voiceovers/animal/deer.mp4",
+          "videoUrl": "/templates/voiceovers/animal/deer.mp4",
+          "duration": 14,
+          "tags": ["deer", "wildlife", "forest", "commentary"],
+          "hasAudio": false
+        },
+        {
+          "id": "peacock",
+          "name": "Peacock Monologue",
+          "description": "Give voice to this peacock as it plumes its feathers in the grass",
+          "category": "voiceovers",
+          "subcategory": "animal",
+          "thumbnailUrl": "/templates/voiceovers/animal/peacock.mp4",
+          "videoUrl": "/templates/voiceovers/animal/peacock.mp4",
+          "duration": 12,
+          "tags": ["peacock", "bird", "plumage", "monologue"],
+          "hasAudio": false
+        }
+      ]
+    }
+  ]
+}

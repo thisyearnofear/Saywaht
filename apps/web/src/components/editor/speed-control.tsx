@@ -36,11 +36,11 @@ export function SpeedControl() {
             min={0.1}
             max={2.0}
             step={0.1}
-            onValueChange={(value) => setSpeed(value[0])}
+            onValueChange={(value: number[]) => setSpeed(value[0])}
             className="mt-2"
           />
         </div>
       </div>
     </div>
   );
-} 
+}

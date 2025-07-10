@@ -1,0 +1,101 @@
+{
+  "id": "talking-cat",
+  "name": "Talking Cat",
+  "description": "Turn your cat videos into hilarious talking clips. Just add your own voiceover to make your cat speak!",
+  "category": "animal-voiceovers",
+  "thumbnailUrl": "/templates/animal-voiceovers/talking-cat/thumbnail.jpg",
+  "tags": ["cat", "pets", "funny", "talking"],
+  "hasAudio": false,
+
+  "mediaItems": [
+    {
+      "id": "cat-video-1",
+      "name": "Cat Looking Around",
+      "type": "video",
+      "url": "/templates/animal-voiceovers/talking-cat/cat-video-1.mp4",
+      "thumbnailUrl": "/templates/animal-voiceovers/talking-cat/cat-video-1-thumb.jpg",
+      "duration": 12.5,
+      "aspectRatio": 1.77
+    },
+    {
+      "id": "cat-video-2",
+      "name": "Cat Meowing",
+      "type": "video",
+      "url": "/templates/animal-voiceovers/talking-cat/cat-video-2.mp4",
+      "thumbnailUrl": "/templates/animal-voiceovers/talking-cat/cat-video-2-thumb.jpg",
+      "duration": 8.2,
+      "aspectRatio": 1.77
+    },
+    {
+      "id": "background-music",
+      "name": "Playful Background Music",
+      "type": "audio",
+      "url": "/templates/animal-voiceovers/talking-cat/background-music.mp3",
+      "duration": 60.0,
+      "aspectRatio": 0
+    }
+  ],
+
+  "timelineTracks": [
+    {
+      "id": "video-track",
+      "name": "Video",
+      "type": "video",
+      "clips": [
+        {
+          "id": "clip-1",
+          "mediaId": "cat-video-1",
+          "name": "Cat Looking Around",
+          "duration": 12.5,
+          "startTime": 0,
+          "trimStart": 0,
+          "trimEnd": 0
+        },
+        {
+          "id": "clip-2",
+          "mediaId": "cat-video-2",
+          "name": "Cat Meowing",
+          "duration": 8.2,
+          "startTime": 12.5,
+          "trimStart": 0,
+          "trimEnd": 0
+        }
+      ]
+    },
+    {
+      "id": "audio-track",
+      "name": "Background Music",
+      "type": "audio",
+      "clips": [
+        {
+          "id": "music-clip",
+          "mediaId": "background-music",
+          "name": "Playful Background Music",
+          "duration": 20.7,
+          "startTime": 0,
+          "trimStart": 0,
+          "trimEnd": 39.3
+        }
+      ],
+      "muted": false
+    },
+    {
+      "id": "voiceover-track",
+      "name": "Voiceover",
+      "type": "audio",
+      "clips": [],
+      "muted": false
+    }
+  ],
+
+  "instructions": {
+    "title": "How to use this template",
+    "steps": [
+      "Record your voiceover or upload an audio file",
+      "Add your voiceover to the Voiceover track",
+      "Adjust the timing to match the cat's mouth movements",
+      "Preview your talking cat video",
+      "Export and share with friends!"
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef } from "@/lib/hooks-provider";
 
 interface SimpleVideoPlayerProps {
   src: string;

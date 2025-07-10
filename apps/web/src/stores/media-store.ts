@@ -116,18 +116,33 @@ export const getMediaDuration = (file: File): Promise<number> => {
     const element = document.createElement(
       file.type.startsWith("video/") ? "video" : "audio"
     ) as HTMLVideoElement | HTMLAudioElement;
+    
+    const blobUrl = URL.createObjectURL(file);
 
     element.addEventListener("loadedmetadata", () => {
-      resolve(element.duration);
+      const duration = element.duration;
+      console.log(`Media duration for ${file.name}: ${duration}`);
+      
+      // Clean up the blob URL
+      URL.revokeObjectURL(blobUrl);
       element.remove();
+      
+      // Ensure we have a valid duration
+      if (!duration || duration === 0 || !isFinite(duration)) {
+        reject(new Error(`Invalid duration: ${duration}`));
+      } else {
+        resolve(duration);
+      }
     });
 
-    element.addEventListener("error", () => {
+    element.addEventListener("error", (e) => {
+      console.error("Error loading media:", e);
+      URL.revokeObjectURL(blobUrl);
+      element.remove();
       reject(new Error("Could not load media"));
-      element.remove();
     });
 
-    element.src = URL.createObjectURL(file);
+    element.src = blobUrl;
     element.load();
   });
 };

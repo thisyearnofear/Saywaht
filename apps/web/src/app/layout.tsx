@@ -8,6 +8,7 @@ import { Toaster } from "../components/ui/sonner";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { Web3Provider } from "@/components/wagmi-provider";
 import { MobileProvider } from "@/contexts/mobile-context";
+import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import {
   PhaseNavigation,
   MobilePhaseNavigation,
@@ -19,20 +20,29 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "https://saywhat.vercel.app"
+  ),
   title: "SayWhat",
   description:
     "A simple but powerful video editor that gets the job done. In your browser.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "SayWhat",
+  },
   openGraph: {
     title: "SayWhat",
     description:
       "A simple but powerful video editor that gets the job done. In your browser.",
-    url: "https://saywhat.app",
+    url: "/",
     siteName: "SayWhat",
     locale: "en_US",
     type: "website",
     images: [
       {
-        url: "https://saywhat.app/opengraph-image.jpg",
+        url: "/opengraph-image.jpg",
         width: 1200,
         height: 630,
         alt: "SayWhat",
@@ -68,6 +78,7 @@ export default function RootLayout({
                 <PhaseNavigation className="hidden md:block" />
                 <MobilePhaseNavigation />
                 {children}
+                <PWAInstallPrompt />
                 <Analytics />
                 <Toaster />
                 <Script

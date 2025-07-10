@@ -16,7 +16,7 @@ import {
   Pause,
   Play,
   ArrowLeftRight,
-} from "lucide-react";
+} from "@/lib/icons-provider";
 import {
   Tooltip,
   TooltipContent,
@@ -28,7 +28,7 @@ import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { processMediaFiles } from "@/lib/media-processing";
 import { toast } from "sonner";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "@/lib/hooks-provider";
 import {
   Select,
   SelectContent,
@@ -176,12 +176,13 @@ export function Timeline() {
     if (!marquee || !marquee.active) return;
     const handleMouseMove = (e: MouseEvent) => {
       setMarquee(
-        (prev) => prev && { ...prev, endX: e.clientX, endY: e.clientY }
+        (prev: typeof marquee) =>
+          prev && { ...prev, endX: e.clientX, endY: e.clientY }
       );
     };
     const handleMouseUp = (e: MouseEvent) => {
       setMarquee(
-        (prev) =>
+        (prev: typeof marquee) =>
           prev && { ...prev, endX: e.clientX, endY: e.clientY, active: false }
       );
     };
@@ -315,6 +316,18 @@ export function Timeline() {
           toast.error("Media item not found");
           return;
         }
+
+        // Validate duration for audio files
+        if (
+          type === "audio" &&
+          (!mediaItem.duration || mediaItem.duration === 0)
+        ) {
+          toast.error(
+            "Audio file has invalid duration. Please re-record or re-upload."
+          );
+          return;
+        }
+
         // Add to video or audio track depending on type
         const trackType = type === "audio" ? "audio" : "video";
         const newTrackId = addTrack(trackType);
@@ -391,7 +404,7 @@ export function Timeline() {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.05 : 0.05;
-      setZoomLevel((prev) => Math.max(0.1, Math.min(10, prev + delta)));
+      setZoomLevel((prev: number) => Math.max(0.1, Math.min(10, prev + delta)));
     }
     // Otherwise, allow normal scrolling
   };
@@ -565,7 +578,6 @@ export function Timeline() {
     };
   }, [isInTimeline]);
 
-  console.time("Timeline Render");
   return (
     <div
       className={`h-full flex flex-col transition-colors duration-200 relative ${
@@ -722,7 +734,7 @@ export function Timeline() {
             <TooltipTrigger asChild>
               <Select
                 value={speed.toFixed(1)}
-                onValueChange={(value) => setSpeed(parseFloat(value))}
+                onValueChange={(value: string) => setSpeed(parseFloat(value))}
               >
                 <SelectTrigger className="w-[90px] h-8">
                   <SelectValue placeholder="1.0x" />

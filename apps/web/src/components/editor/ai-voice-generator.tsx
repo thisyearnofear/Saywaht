@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { useMediaStore } from "@/stores/media-store";
 import { toast } from "sonner";
+import { useState } from "@/lib/hooks-provider";
 
 export function AiVoiceGenerator() {
   const [text, setText] = useState("");
@@ -63,7 +63,7 @@ export function AiVoiceGenerator() {
     <div className="space-y-4">
       <Textarea
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e: { target: { value: string } }) => setText(e.target.value)}
         placeholder="Enter your script here..."
         rows={4}
       />

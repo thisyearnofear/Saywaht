@@ -1,13 +1,13 @@
-import * as React from "react";
+import { useState, useEffect } from "@/lib/hooks-provider";
 
 type Orientation = "portrait" | "landscape";
 
 export function useMobileOrientation() {
-  const [orientation, setOrientation] = React.useState<Orientation | undefined>(
+  const [orientation, setOrientation] = useState<Orientation | undefined>(
     undefined
   );
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Initial orientation detection
     const updateOrientation = () => {
       if (window.innerHeight > window.innerWidth) {

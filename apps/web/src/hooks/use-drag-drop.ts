@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef } from '@/lib/hooks-provider';
 
 interface UseDragDropOptions {
   onDrop?: (files: FileList) => void;

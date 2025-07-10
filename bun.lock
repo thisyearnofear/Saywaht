@@ -21,6 +21,7 @@
       "name": "saywhat",
       "version": "0.1.0",
       "dependencies": {
+        "@divvi/referral-sdk": "^2.2.0",
         "@filoz/synapse-sdk": "^0.15.0",
         "@hello-pangea/dnd": "^18.0.1",
         "@hookform/resolvers": "^3.9.1",
@@ -43,7 +44,7 @@
         "lucide-react": "^0.468.0",
         "motion": "^12.18.1",
         "next": "^15.3.4",
-        "next-themes": "^0.4.4",
+        "next-themes": "^0.4.6",
         "pg": "^8.16.2",
         "radix-ui": "^1.4.2",
         "react": "^18.2.0",
@@ -51,7 +52,7 @@
         "react-dom": "^18.2.0",
         "react-dropzone": "^14.3.8",
         "react-hook-form": "^7.54.0",
-        "react-icons": "^5.4.0",
+        "react-icons": "^5.5.0",
         "react-phone-number-input": "^3.4.11",
         "react-resizable-panels": "^2.1.7",
         "recharts": "^2.14.1",
@@ -115,6 +116,8 @@
     "@better-fetch/fetch": ["@better-fetch/fetch@1.1.18", "", {}, "sha512-rEFOE1MYIsBmoMJtQbl32PGHHXuG2hDxvEd7rUHE0vCBoFQVSDqaVs9hkZEtHCxRoY+CljXKFCOuJ8uxqw1LcA=="],
 
     "@coinbase/wallet-sdk": ["@coinbase/wallet-sdk@4.3.3", "", { "dependencies": { "@noble/hashes": "^1.4.0", "clsx": "^1.2.1", "eventemitter3": "^5.0.1", "preact": "^10.24.2" } }, "sha512-h8gMLQNvP5TIJVXFOyQZaxbi1Mg5alFR4Z2/PEIngdyXZEoQGcVhzyQGuDa3t9zpllxvqfAaKfzDhsfCo+nhSQ=="],
+
+    "@divvi/referral-sdk": ["@divvi/referral-sdk@2.2.0", "", {}, "sha512-C02v8YY+H6TunWz1lUGU04pJzaOrnjVbe12Gv/iFo1C9NNE1+o5oVR/xGuxfXqsPJ1tVlvS0s+5kqQEDAl8Blg=="],
 
     "@drizzle-team/brocli": ["@drizzle-team/brocli@0.10.2", "", {}, "sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w=="],
 

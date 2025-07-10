@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "@/lib/hooks-provider";
+import { useState, useEffect } from "@/lib/hooks-provider";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "../ui/button";
 import {
@@ -18,7 +19,7 @@ import {
   ArrowRight,
   X,
   Sparkles,
-} from "lucide-react";
+} from "@/lib/icons-provider";
 
 const onboardingSteps = [
   {
@@ -87,7 +88,7 @@ export function WelcomeModal() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              <DialogTitle>Welcome to SayWhat!</DialogTitle>
+              <DialogTitle>SayWhat?!</DialogTitle>
             </div>
             <Button
               variant="text"
@@ -98,9 +99,7 @@ export function WelcomeModal() {
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <DialogDescription>
-            Let&apos;s get you started with creating amazing content
-          </DialogDescription>
+          <DialogDescription>Let&apos;s get you started</DialogDescription>
         </DialogHeader>
 
         <div className="py-6">

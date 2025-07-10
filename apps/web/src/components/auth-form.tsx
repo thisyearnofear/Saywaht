@@ -10,12 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useState } from "react";
+import React from '@/lib/hooks-provider';
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "@/lib/icons-provider";
 import { GoogleIcon } from "@/components/icons";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +28,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { useState } from '@/lib/hooks-provider';
 
 // Zod schemas
 const loginSchema = z.object({
@@ -317,7 +318,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         onClick={() => router.back()}
         className="absolute top-6 left-6"
       >
-        <ArrowLeft className="h-5 w-5" /> Back
+        ← Back
       </Button>
 
       <Card className="w-[400px] shadow-lg border-0">

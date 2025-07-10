@@ -1,17 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useState, ChangeEvent } from "@/lib/hooks-provider";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Share2, Copy, Download, Upload, ExternalLink, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  Share2,
+  Copy,
+  Download,
+  Upload,
+  ExternalLink,
+  CheckCircle,
+  AlertCircle,
+} from "@/lib/icons-provider";
 import { useProjectIPFSStore } from "@/stores/project-ipfs-store";
 import { toast } from "sonner";
 
 export function ProjectSharing() {
-  const { currentProject, saveToIPFS, loadFromIPFS, isSaving, isLoadingFromIPFS } = useProjectIPFSStore();
+  const {
+    currentProject,
+    saveToIPFS,
+    loadFromIPFS,
+    isSaving,
+    isLoadingFromIPFS,
+  } = useProjectIPFSStore();
   const [shareUrl, setShareUrl] = useState("");
   const [loadUrl, setLoadUrl] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -21,7 +42,7 @@ export function ProjectSharing() {
 
     try {
       await saveToIPFS();
-      
+
       if (currentProject.ipfsUri) {
         // Create shareable URL
         const shareableUrl = `${window.location.origin}/project/share?ipfs=${encodeURIComponent(currentProject.ipfsUri)}`;
@@ -50,13 +71,13 @@ export function ProjectSharing() {
     try {
       // Extract IPFS URI from URL or use directly
       let ipfsUri = loadUrl.trim();
-      
-      if (loadUrl.includes('ipfs=')) {
-        const urlParams = new URLSearchParams(loadUrl.split('?')[1]);
-        ipfsUri = urlParams.get('ipfs') || '';
+
+      if (loadUrl.includes("ipfs=")) {
+        const urlParams = new URLSearchParams(loadUrl.split("?")[1]);
+        ipfsUri = urlParams.get("ipfs") || "";
       }
-      
-      if (!ipfsUri.startsWith('ipfs://') && !ipfsUri.startsWith('lens://')) {
+
+      if (!ipfsUri.startsWith("ipfs://") && !ipfsUri.startsWith("lens://")) {
         throw new Error("Invalid IPFS URI format");
       }
 
@@ -65,7 +86,9 @@ export function ProjectSharing() {
       setLoadUrl("");
       toast.success("Project loaded from IPFS!");
     } catch (error) {
-      toast.error(`Failed to load project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(
+        `Failed to load project: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   };
 
@@ -88,26 +111,32 @@ export function ProjectSharing() {
           Share Project
         </Button>
       </DialogTrigger>
-      
+
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Share Project via IPFS</DialogTitle>
           <DialogDescription>
-            Save your project to IPFS and share it with others, or load a shared project.
+            Save your project to IPFS and share it with others, or load a shared
+            project.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Save and Share Section */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">Save & Share Current Project</Label>
-            
+            <Label className="text-sm font-medium">
+              Save & Share Current Project
+            </Label>
+
             {currentProject ? (
               <div className="space-y-3">
                 <div className="p-3 bg-muted/30 rounded-lg">
-                  <div className="text-sm font-medium">{currentProject.name}</div>
+                  <div className="text-sm font-medium">
+                    {currentProject.name}
+                  </div>
                   <div className="text-xs text-muted-foreground">
-                    Last updated: {new Date(currentProject.updatedAt).toLocaleString()}
+                    Last updated:{" "}
+                    {new Date(currentProject.updatedAt).toLocaleString()}
                   </div>
                   {currentProject.isDirty && (
                     <div className="flex items-center gap-1 text-xs text-orange-600 mt-1">
@@ -117,8 +146,8 @@ export function ProjectSharing() {
                   )}
                 </div>
 
-                <Button 
-                  onClick={handleSaveAndShare} 
+                <Button
+                  onClick={handleSaveAndShare}
                   disabled={isSaving}
                   className="w-full"
                 >
@@ -139,12 +168,12 @@ export function ProjectSharing() {
                   <div className="space-y-2">
                     <Label className="text-xs">Shareable URL:</Label>
                     <div className="flex gap-2">
-                      <Input 
-                        value={shareUrl} 
-                        readOnly 
-                        className="text-xs"
-                      />
-                      <Button size="sm" variant="outline" onClick={handleCopyUrl}>
+                      <Input value={shareUrl} readOnly className="text-xs" />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCopyUrl}
+                      >
                         <Copy className="h-3 w-3" />
                       </Button>
                     </div>
@@ -155,12 +184,16 @@ export function ProjectSharing() {
                   <div className="space-y-2">
                     <Label className="text-xs">IPFS URI:</Label>
                     <div className="flex gap-2">
-                      <Input 
-                        value={currentProject.ipfsUri} 
-                        readOnly 
+                      <Input
+                        value={currentProject.ipfsUri}
+                        readOnly
                         className="text-xs font-mono"
                       />
-                      <Button size="sm" variant="outline" onClick={handleCopyIPFSUri}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCopyIPFSUri}
+                      >
                         <Copy className="h-3 w-3" />
                       </Button>
                     </div>
@@ -184,19 +217,21 @@ export function ProjectSharing() {
           {/* Load Section */}
           <div className="space-y-3 border-t pt-4">
             <Label className="text-sm font-medium">Load Shared Project</Label>
-            
+
             <div className="space-y-2">
               <Label className="text-xs">Share URL or IPFS URI:</Label>
               <Input
                 placeholder="https://saywhat.app/project/share?ipfs=... or ipfs://..."
                 value={loadUrl}
-                onChange={(e) => setLoadUrl(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setLoadUrl(e.target.value)
+                }
                 className="text-xs"
               />
             </div>
 
-            <Button 
-              onClick={handleLoadFromUrl} 
+            <Button
+              onClick={handleLoadFromUrl}
               disabled={!loadUrl.trim() || isLoadingFromIPFS}
               className="w-full"
               variant="outline"

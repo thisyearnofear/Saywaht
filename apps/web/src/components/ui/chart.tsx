@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import React from "react";
 import * as RechartsPrimitive from "recharts";
 import {
   NameType,
@@ -47,7 +47,7 @@ const ChartContainer = React.forwardRef<
       typeof RechartsPrimitive.ResponsiveContainer
     >["children"];
   }
->(({ id, className, children, config, ...props }, ref) => {
+>(({ id, className, children, config, ...props }: any, ref: any) => {
   const uniqueId = React.useId();
   const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`;
 
@@ -133,8 +133,22 @@ const ChartTooltipContent = React.forwardRef<
       color,
       nameKey,
       labelKey,
+    }: {
+      active?: boolean;
+      payload?: Payload<ValueType, NameType>[];
+      className?: string;
+      indicator?: "line" | "dot" | "dashed";
+      hideLabel?: boolean;
+      hideIndicator?: boolean;
+      label?: any;
+      labelFormatter?: any;
+      labelClassName?: string;
+      formatter?: any;
+      color?: string;
+      nameKey?: string;
+      labelKey?: string;
     },
-    ref
+    ref: React.Ref<HTMLDivElement>
   ) => {
     const { config } = useChart();
 
@@ -272,8 +286,20 @@ const ChartLegendContent = React.forwardRef<
     }
 >(
   (
-    { className, hideIcon = false, payload, verticalAlign = "bottom", nameKey },
-    ref
+    {
+      className,
+      hideIcon = false,
+      payload,
+      verticalAlign = "bottom",
+      nameKey,
+    }: {
+      className?: string;
+      hideIcon?: boolean;
+      payload?: any[];
+      verticalAlign?: "top" | "bottom";
+      nameKey?: string;
+    },
+    ref: React.Ref<HTMLDivElement>
   ) => {
     const { config } = useChart();
 

@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import React from "react";
 import { Popover as PopoverPrimitive } from "radix-ui";
 
 import { cn } from "../../lib/utils";
@@ -14,7 +14,7 @@ const PopoverAnchor = PopoverPrimitive.Anchor;
 const PopoverContent = React.forwardRef<
   React.ElementRef<typeof PopoverPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
->(({ className, align = "center", sideOffset = 4, ...props }, ref) => (
+>(({ className, align = "center", sideOffset = 4, ...props }: any, ref: any) => (
   <PopoverPrimitive.Portal>
     <PopoverPrimitive.Content
       ref={ref}

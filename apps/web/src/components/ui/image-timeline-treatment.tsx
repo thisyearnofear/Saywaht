@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState } from "@/lib/hooks-provider";
 import { cn } from "@/lib/utils";
 
 interface ImageTimelineTreatmentProps {

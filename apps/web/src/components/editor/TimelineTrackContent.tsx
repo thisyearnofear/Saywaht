@@ -1,9 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "@/lib/hooks-provider";
 import { Button } from "../ui/button";
-import { Scissors, Trash2, MoreVertical, ArrowLeftRight } from "lucide-react";
+import {
+  Scissors,
+  Trash2,
+  MoreVertical,
+  ArrowLeftRight,
+} from "@/lib/icons-provider";
 import { useTimelineStore, type TimelineTrack } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
@@ -611,13 +622,26 @@ export function TimelineTrackContent({
       return (
         <div className="w-full h-full flex items-center gap-2">
           <div className="w-8 h-8 flex-shrink-0 relative">
-            <Image
-              src={mediaItem.thumbnailUrl}
-              alt={mediaItem.name}
-              fill
-              style={{ objectFit: "cover" }}
-              className="rounded-sm"
-            />
+            {mediaItem.thumbnailUrl.endsWith(".mp4") ||
+            mediaItem.thumbnailUrl.endsWith(".webm") ||
+            mediaItem.thumbnailUrl.endsWith(".mov") ? (
+              // For video files, use a video element to show first frame
+              <video
+                src={mediaItem.thumbnailUrl}
+                className="w-full h-full object-cover rounded-sm"
+                muted
+                playsInline
+              />
+            ) : (
+              // For image thumbnails, use Next.js Image
+              <Image
+                src={mediaItem.thumbnailUrl}
+                alt={mediaItem.name}
+                fill
+                style={{ objectFit: "cover" }}
+                className="rounded-sm"
+              />
+            )}
           </div>
           <span className="text-xs text-foreground/80 truncate flex-1">
             {clip.name}
@@ -666,8 +690,14 @@ export function TimelineTrackContent({
   }, [track.id]);
 
   // Memoize the gap rendering for better performance
+  // Define the gap type
+  interface Gap {
+    startTime: number;
+    duration: number;
+  }
+
   const gapElements = useMemo(() => {
-    return gaps.map((gap, index) => {
+    return gaps.map((gap: Gap, index: number) => {
       const gapLeft = gap.startTime * 50 * zoomLevel;
       const gapWidth = gap.duration * 50 * zoomLevel;
 

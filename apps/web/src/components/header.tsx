@@ -3,11 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "./ui/button";
-import { ArrowRight, Star, Menu, X } from "lucide-react";
+import { ArrowRight, Star, Menu, X } from "@/lib/icons-provider";
 import { HeaderBase } from "./header-base";
 import { useWalletAuth } from "@opencut/auth";
 import { getStars } from "@/lib/fetchGhStars";
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "@/lib/hooks-provider";
 import { useAccount } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
@@ -50,19 +50,19 @@ export function Header() {
     <>
       {/* Desktop Navigation */}
       <nav className="hidden md:flex items-center gap-1">
-        <Link href="#features">
+        <Link href="https://hey.xyz/u/papajams" target="_blank">
           <Button variant="text" className="text-sm font-medium">
-            Features
+            Lens
           </Button>
         </Link>
-        <Link href="/contributors">
+        <Link href="https://farcaster.xyz/papa" target="_blank">
           <Button variant="text" className="text-sm font-medium">
-            Contributors
+            Farcaster
           </Button>
         </Link>
 
         {/* GitHub Star Button */}
-        <Link href="https://github.com/OpenCut-app/OpenCut" target="_blank">
+        <Link href="http://github.com/thisyearnofear/saywaht" target="_blank">
           <Button
             variant="text"
             size="sm"
@@ -109,24 +109,32 @@ export function Header() {
       {mobileMenuOpen && (
         <div className="absolute top-full left-0 right-0 bg-background border-b border-border md:hidden">
           <nav className="flex flex-col p-4 gap-2">
-            <Link href="#features" onClick={() => setMobileMenuOpen(false)}>
+            <Link
+              href="https://hey.xyz/u/papajams"
+              target="_blank"
+              onClick={() => setMobileMenuOpen(false)}
+            >
               <Button
                 variant="text"
                 className="w-full justify-start text-sm font-medium"
               >
-                Features
-              </Button>
-            </Link>
-            <Link href="/contributors" onClick={() => setMobileMenuOpen(false)}>
-              <Button
-                variant="text"
-                className="w-full justify-start text-sm font-medium"
-              >
-                Contributors
+                Lens
               </Button>
             </Link>
             <Link
-              href="https://github.com/OpenCut-app/OpenCut"
+              href="https://farcaster.xyz/papa"
+              target="_blank"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Button
+                variant="text"
+                className="w-full justify-start text-sm font-medium"
+              >
+                Farcaster
+              </Button>
+            </Link>
+            <Link
+              href="http://github.com/thisyearnofear/saywaht"
               target="_blank"
               onClick={() => setMobileMenuOpen(false)}
             >

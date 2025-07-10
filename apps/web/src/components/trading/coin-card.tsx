@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState } from "@/lib/hooks-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Play, TrendingUp, TrendingDown, Users, Volume2 } from "lucide-react";
+import {
+  Play,
+  TrendingUp,
+  TrendingDown,
+  Users,
+  Volume2,
+} from "@/lib/icons-provider";
 import { type VideoCoin } from "@/lib/zora-coins";
 import { formatEther } from "viem";
 
@@ -33,10 +39,17 @@ export function CoinCard({ coin, onBuy, onSell, onPlay }: CoinCardProps) {
   const formatPriceChange = (change: number) => {
     const isPositive = change >= 0;
     return (
-      <div className={`flex items-center gap-1 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-        {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+      <div
+        className={`flex items-center gap-1 ${isPositive ? "text-green-500" : "text-red-500"}`}
+      >
+        {isPositive ? (
+          <TrendingUp className="h-3 w-3" />
+        ) : (
+          <TrendingDown className="h-3 w-3" />
+        )}
         <span className="text-xs font-medium">
-          {isPositive ? '+' : ''}{change.toFixed(1)}%
+          {isPositive ? "+" : ""}
+          {change.toFixed(1)}%
         </span>
       </div>
     );
@@ -63,7 +76,7 @@ export function CoinCard({ coin, onBuy, onSell, onPlay }: CoinCardProps) {
               <Play className="h-8 w-8" fill="currentColor" />
             </Button>
           </div>
-          
+
           {/* Price change indicator */}
           <div className="absolute top-3 right-3">
             {formatPriceChange(coin.priceChange24h)}
@@ -93,7 +106,9 @@ export function CoinCard({ coin, onBuy, onSell, onPlay }: CoinCardProps) {
             </div>
             <div>
               <div className="text-muted-foreground text-xs">24h Volume</div>
-              <div className="font-semibold">{formatVolume(coin.volume24h)} ETH</div>
+              <div className="font-semibold">
+                {formatVolume(coin.volume24h)} ETH
+              </div>
             </div>
           </div>
 

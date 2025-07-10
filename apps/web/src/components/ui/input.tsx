@@ -1,5 +1,5 @@
-import * as React from "react";
-import { Eye, EyeOff } from "lucide-react";
+import React from "react";
+import { LuEye as Eye, LuEyeOff as EyeOff } from "react-icons/lu";;
 
 import { cn } from "../../lib/utils";
 import { Button } from "./button";
@@ -10,17 +10,14 @@ interface InputProps extends React.ComponentProps<"input"> {
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  (
-    {
+  ({ 
       className,
       type,
       showPassword,
       onShowPasswordChange,
       value,
       ...props
-    },
-    ref
-  ) => {
+     }: any, ref: any) => {
     const isPassword = type === "password";
     const showPasswordToggle = isPassword && onShowPasswordChange;
     const inputType = isPassword && showPassword ? "text" : type;
@@ -48,9 +45,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
             {showPassword ? (
-              <Eye className="h-4 w-4" />
+              <div className="h-4 w-4"><Eye /></div>
             ) : (
-              <EyeOff className="h-4 w-4" />
+              <div className="h-4 w-4"><EyeOff /></div>
             )}
           </Button>
         )}

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, ChangeEvent, KeyboardEvent } from '@/lib/hooks-provider';
 import { Input } from "../ui/input";
 import { useProjectStore } from "@/stores/project-store";
-import { Edit2, Check, X } from "lucide-react";
+import { Edit2, Check, X } from "@/lib/icons-provider";
 import { Button } from "../ui/button";
 
 interface ProjectNameEditorProps {
@@ -50,7 +50,7 @@ export function ProjectNameEditor({ className }: ProjectNameEditorProps) {
     setIsEditing(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       handleSave();
     } else if (e.key === "Escape") {
@@ -68,7 +68,9 @@ export function ProjectNameEditor({ className }: ProjectNameEditorProps) {
         <Input
           ref={inputRef}
           value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setEditValue(e.target.value)
+          }
           onKeyDown={handleKeyDown}
           className="h-7 text-sm px-3 py-1 min-w-[200px]"
           size={1}
@@ -107,4 +109,4 @@ export function ProjectNameEditor({ className }: ProjectNameEditorProps) {
       </Button>
     </div>
   );
-} 
+}

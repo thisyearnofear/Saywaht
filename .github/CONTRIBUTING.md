@@ -48,46 +48,32 @@ Thank you for your interest in contributing to OpenCut! This document provides g
 
 4. Configure required environment variables in `.env.local`:
 
-   **Required Variables:**
+   **Required Variables for Core Features:**
 
    ```bash
-   # Database (matches docker-compose.yaml)
-   DATABASE_URL="postgresql://opencut:opencutthegoat@localhost:5432/opencut"
+   # FilCDN Integration (Core hackathon feature)
+   NEXT_PUBLIC_FILECOIN_PRIVATE_KEY="your-filecoin-private-key"
+   NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS="0xYourWalletAddress"
+   
+   # Zora Coins Trading
+   NEXT_PUBLIC_ZORA_API_KEY="your-zora-api-key"
+   ```
 
-   # Generate a secure secret for Better Auth
-   BETTER_AUTH_SECRET="your-generated-secret-here"
-   BETTER_AUTH_URL="http://localhost:3000"
+   **Optional Variables for Enhanced Features:**
 
-   # Redis (matches docker-compose.yaml)
+   ```bash
+   # Rate limiting (production)
    UPSTASH_REDIS_REST_URL="http://localhost:8079"
    UPSTASH_REDIS_REST_TOKEN="example_token"
-
+   
+   # AI voice generation
+   ELEVENLABS_API_KEY="your-elevenlabs-key"
+   
    # Development
    NODE_ENV="development"
    ```
 
-   **Generate BETTER_AUTH_SECRET:**
-
-   ```bash
-   # Unix/Linux/Mac
-   openssl rand -base64 32
-
-   # Windows PowerShell (simple method)
-   [System.Web.Security.Membership]::GeneratePassword(32, 0)
-
-   # Cross-platform (using Node.js)
-   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-
-   # Or use an online generator: https://generate-secret.vercel.app/32
-   ```
-
-   **Optional Variables (for Google OAuth):**
-
-   ```bash
-   # Only needed if you want to test Google login
-   GOOGLE_CLIENT_ID="your-google-client-id"
-   GOOGLE_CLIENT_SECRET="your-google-client-secret"
-   ```
+   **Note:** This app uses Web3 wallet authentication (MetaMask, WalletConnect) - no traditional database auth needed!
 
 5. Run database migrations: `bun run db:migrate`
 6. Start the development server: `bun run dev`

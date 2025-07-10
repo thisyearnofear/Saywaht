@@ -1,0 +1,63 @@
+{
+  "id": "peacock",
+  "name": "Peacock Monologue",
+  "description": "Give voice to this peacock as it plumes its feathers in the grass",
+  "category": "voiceovers",
+  "subcategory": "animal",
+  "thumbnailUrl": "/templates/voiceovers/animal/peacock.mp4",
+  "tags": ["peacock", "bird", "plumage", "monologue"],
+  "hasAudio": false,
+  "source": {
+    "name": "Pexels",
+    "url": "https://www.pexels.com/"
+  },
+
+  "mediaItems": [
+    {
+      "id": "peacock-video",
+      "name": "Peacock Plumage Display",
+      "type": "video",
+      "url": "/templates/voiceovers/animal/peacock.mp4",
+      "thumbnailUrl": "/templates/voiceovers/animal/peacock.mp4",
+      "duration": 12.0,
+      "aspectRatio": 1.77
+    }
+  ],
+
+  "timelineTracks": [
+    {
+      "id": "video-track",
+      "name": "Video",
+      "type": "video",
+      "clips": [
+        {
+          "id": "clip-1",
+          "mediaId": "peacock-video",
+          "name": "Peacock Plumage Display",
+          "duration": 12.0,
+          "startTime": 0,
+          "trimStart": 0,
+          "trimEnd": 0
+        }
+      ]
+    },
+    {
+      "id": "voiceover-track",
+      "name": "Voiceover",
+      "type": "audio",
+      "clips": [],
+      "muted": false
+    }
+  ],
+
+  "instructions": {
+    "title": "How to use this template",
+    "steps": [
+      "Record your voiceover as if you're the peacock showing off its plumage",
+      "Add your voiceover to the Voiceover track",
+      "Adjust the timing to match the peacock's movements and display",
+      "Preview your peacock monologue video",
+      "Export and share with friends!"
+    ]
+  }
+}

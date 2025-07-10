@@ -11,7 +11,7 @@ import {
   Users,
   Sparkles,
   ArrowRight,
-} from "lucide-react";
+} from "@/lib/icons-provider";
 import { Button } from "../ui/button";
 import Link from "next/link";
 

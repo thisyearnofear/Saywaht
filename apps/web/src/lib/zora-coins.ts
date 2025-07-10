@@ -1,22 +1,18 @@
-import { createPublicClient, createWalletClient, http, parseEther } from "viem";
-import { baseSepolia } from "viem/chains";
-import { privateKeyToAccount } from "viem/accounts";
+import { createPublicClient, http, type Address } from "viem";
+import { base } from "viem/chains";
 import {
   getCoinsNew,
   getCoinsLastTraded,
   getCoinsMostValuable,
   setApiKey,
-  createCoinCall,
-  DeployCurrency
 } from "@zoralabs/coins-sdk";
-import { groveStorage } from "./grove-storage";
 
-// Zora Coins SDK types and functions
+// Zora Coins SDK types
 export interface VideoCoin {
-  address: string;
+  address: Address | string;
   name: string;
   symbol: string;
-  creator: string;
+  creator: Address | string;
   videoUri: string;
   metadataUri: string;
   totalSupply: string;
@@ -27,145 +23,36 @@ export interface VideoCoin {
   thumbnail?: string;
 }
 
-export interface CoinCreationParams {
-  name: string;
-  symbol: string;
-  videoUri: string;
-  metadataUri: string;
-  creatorAddress: string;
-  initialPrice?: string;
-}
-
 export interface TradingParams {
-  coinAddress: string;
+  coinAddress: Address | string;
   amount: string;
-  userAddress: string;
+  userAddress: Address | string;
   slippage?: number;
-  recipient?: string;
+  recipient?: Address | string;
 }
 
 export class ZoraCoinsService {
-  private publicClient;
-  private walletClient;
-  private developerAddress = "0x55A5705453Ee82c742274154136Fce8149597058";
+  private publicClient: any;
 
   constructor() {
-    // Initialize clients for Base Sepolia
+    // Always use Base Mainnet for Zora Coins
+    console.log(`🔗 Initializing Zora Coins service on Base Mainnet`);
+
+    // Initialize clients
     this.publicClient = createPublicClient({
-      chain: baseSepolia,
+      chain: base,
       transport: http(),
     });
 
     // Set up Zora API key if available
     if (process.env.NEXT_PUBLIC_ZORA_API_KEY) {
+      console.log("🔑 Setting Zora API Key");
       setApiKey(process.env.NEXT_PUBLIC_ZORA_API_KEY);
     } else {
-      console.warn("NEXT_PUBLIC_ZORA_API_KEY not set - you may hit rate limits");
-    }
-
-    // Note: In production, wallet client should be created with user's wallet
-    // For now, we'll create it when needed
-    this.walletClient = null;
-  }
-
-  /**
-   * Create a new video coin using Zora Coins SDK
-   */
-  async createVideoCoin(params: CoinCreationParams): Promise<VideoCoin> {
-    try {
-      console.log("🪙 Creating video coin:", params);
-
-      // Generate contract call for coin creation
-      const coinCall = createCoinCall({
-        name: params.name,
-        symbol: params.symbol,
-        uri: params.metadataUri as any, // Type assertion for ValidMetadataURI
-        payoutRecipient: params.creatorAddress,
-        platformReferrer: this.developerAddress, // Our developer address gets referral fees
-        chainId: baseSepolia.id,
-        currency: DeployCurrency.ETH,
-      });
-
-      console.log("📋 Generated coin creation call:", coinCall);
-
-      // Return the coin data structure (actual deployment would happen via wagmi)
-      const coin: VideoCoin = {
-        address: "pending", // Will be set after actual deployment
-        name: params.name,
-        symbol: params.symbol,
-        creator: params.creatorAddress,
-        videoUri: params.videoUri,
-        metadataUri: params.metadataUri,
-        totalSupply: "1000000", // Default supply
-        price: params.initialPrice || "0.001",
-        volume24h: "0",
-        priceChange24h: 0,
-        createdAt: new Date().toISOString(),
-      };
-
-      console.log("✅ Video coin prepared for deployment:", coin);
-      return coin;
-    } catch (error) {
-      console.error("❌ Failed to create video coin:", error);
-      throw new Error(`Failed to create video coin: ${error}`);
+      console.warn("⚠️ NEXT_PUBLIC_ZORA_API_KEY not set - you may hit rate limits");
     }
   }
 
-  /**
-   * Buy video coins
-   */
-  async buyCoin(params: TradingParams): Promise<string> {
-    try {
-      console.log("💰 Buying coin:", params);
-
-      const { tradeCoin } = await import("@zoralabs/coins-sdk");
-      
-      const tradeParameters = {
-        sell: { type: "eth" as const },
-        buy: { 
-          type: "erc20" as const, 
-          address: params.coinAddress as `0x${string}`
-        },
-        amountIn: BigInt(params.amount),
-        slippage: 0.05, // 5% slippage tolerance
-        sender: params.userAddress as `0x${string}`,
-      };
-
-      console.log("✅ Buy trade parameters prepared:", tradeParameters);
-      return JSON.stringify(tradeParameters);
-    } catch (error) {
-      console.error("❌ Failed to buy coin:", error);
-      throw new Error(`Failed to buy coin: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
-
-  /**
-   * Sell video coins
-   */
-  async sellCoin(params: TradingParams): Promise<string> {
-    try {
-      console.log("💸 Selling coin:", params);
-
-      const { tradeCoin } = await import("@zoralabs/coins-sdk");
-      
-      const tradeParameters = {
-        sell: { 
-          type: "erc20" as const, 
-          address: params.coinAddress as `0x${string}`
-        },
-        buy: { type: "eth" as const },
-        amountIn: BigInt(params.amount),
-        slippage: 0.15, // 15% slippage tolerance for selling
-        sender: params.userAddress as `0x${string}`,
-      };
-
-      console.log("✅ Sell trade parameters prepared:", tradeParameters);
-      return JSON.stringify(tradeParameters);
-    } catch (error) {
-      console.error("❌ Failed to sell coin:", error);
-      throw new Error(`Failed to sell coin: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
 
   /**
    * Get trending video coins using real Zora API
@@ -184,30 +71,82 @@ export class ZoraCoinsService {
       const allCoins: VideoCoin[] = [];
 
       // Process new coins
-      if (newCoins.status === 'fulfilled' && newCoins.value.data?.exploreList?.edges) {
+      if (newCoins.status === 'fulfilled' && newCoins.value?.data?.exploreList?.edges && Array.isArray(newCoins.value.data.exploreList.edges)) {
         for (const edge of newCoins.value.data.exploreList.edges) {
-          const coin = edge.node;
+          const coin = edge?.node;
           if (coin) {
+            // Type assertion and safe access for Zora API response
+            const coinData = coin as any; // Type assertion since API shape may vary
+            
             allCoins.push({
-              address: coin.address || `0x${Math.random().toString(16).slice(2, 42)}`,
-              name: coin.name || "Untitled Coin",
-              symbol: coin.symbol || "COIN",
-              creator: coin.creator?.address || "0x0000000000000000000000000000000000000000",
-              videoUri: coin.metadata?.animation_url || "",
-              metadataUri: coin.metadata?.uri || "",
-              totalSupply: coin.totalSupply || "1000000",
+              address: coinData.address || `0x${Math.random().toString(16).slice(2, 42)}`,
+              name: coinData.name || "Untitled Coin",
+              symbol: coinData.symbol || "COIN",
+              creator: coinData.creatorAddress || "0x0000000000000000000000000000000000000000",
+              videoUri: coinData.tokenURI || "",
+              metadataUri: coinData.tokenURI || "",
+              totalSupply: coinData.totalSupply || "1000000",
               price: "0.001", // Default price - would need market data
-              volume24h: "0", // Would need trading data
+              volume24h: coinData.volume24h || "0", // Would need trading data
               priceChange24h: 0,
-              createdAt: coin.createdAt || new Date().toISOString(),
-              thumbnail: coin.metadata?.image,
+              createdAt: coinData.createdAt || new Date().toISOString(),
+              thumbnail: coinData.image || "",
             });
           }
         }
       }
 
-      console.log("✅ Real trending coins fetched:", allCoins.length);
-      return allCoins.slice(0, 10); // Limit to 10 coins
+      // Process traded coins
+      if (tradedCoins.status === 'fulfilled' && tradedCoins.value?.data?.exploreList?.edges && Array.isArray(tradedCoins.value.data.exploreList.edges)) {
+        for (const edge of tradedCoins.value.data.exploreList.edges) {
+          const coin = edge?.node;
+          if (coin && !allCoins.find(c => c.address === coin.address)) {
+            const coinData = coin as any;
+            allCoins.push({
+              address: coinData.address || `0x${Math.random().toString(16).slice(2, 42)}`,
+              name: coinData.name || "Untitled Coin",
+              symbol: coinData.symbol || "COIN",
+              creator: coinData.creatorAddress || "0x0000000000000000000000000000000000000000",
+              videoUri: coinData.tokenURI || "",
+              metadataUri: coinData.tokenURI || "",
+              totalSupply: coinData.totalSupply || "1000000",
+              price: "0.001",
+              volume24h: coinData.volume24h || "0",
+              priceChange24h: 0,
+              createdAt: coinData.createdAt || new Date().toISOString(),
+              thumbnail: coinData.image || "",
+            });
+          }
+        }
+      }
+
+      // Process valuable coins
+      if (valuableCoins.status === 'fulfilled' && valuableCoins.value?.data?.exploreList?.edges && Array.isArray(valuableCoins.value.data.exploreList.edges)) {
+        for (const edge of valuableCoins.value.data.exploreList.edges) {
+          const coin = edge?.node;
+          if (coin && !allCoins.find(c => c.address === coin.address)) {
+            const coinData = coin as any;
+            allCoins.push({
+              address: coinData.address || `0x${Math.random().toString(16).slice(2, 42)}`,
+              name: coinData.name || "Untitled Coin",
+              symbol: coinData.symbol || "COIN",
+              creator: coinData.creatorAddress || "0x0000000000000000000000000000000000000000",
+              videoUri: coinData.tokenURI || "",
+              metadataUri: coinData.tokenURI || "",
+              totalSupply: coinData.totalSupply || "1000000",
+              price: "0.001",
+              volume24h: coinData.volume24h || "0",
+              priceChange24h: 0,
+              createdAt: coinData.createdAt || new Date().toISOString(),
+              thumbnail: coinData.image || "",
+            });
+          }
+        }
+      }
+
+      console.log("✅ Real trending coins fetched:", Array.isArray(allCoins) ? allCoins.length : 0);
+      // Make sure allCoins is an array before using slice
+      return Array.isArray(allCoins) ? allCoins.slice(0, 10) : [];
     } catch (error) {
       console.error("❌ Failed to fetch trending coins:", error);
       throw new Error(`Failed to fetch trending coins from Zora API: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -233,36 +172,6 @@ export class ZoraCoinsService {
     }
   }
 
-  /**
-   * Get coin price history for charts
-   */
-  async getCoinPriceHistory(coinAddress: string, timeframe: "1h" | "24h" | "7d" | "30d"): Promise<{
-    timestamp: number;
-    price: number;
-  }[]> {
-    try {
-      console.log("📊 Fetching price history for:", coinAddress, timeframe);
-
-      // TODO: Implement actual price history API from Zora or Uniswap
-      throw new Error("Price history not yet implemented - requires market data API integration");
-    } catch (error) {
-      console.error("❌ Failed to fetch price history:", error);
-      throw new Error(`Failed to fetch price history: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
-
-  /**
-   * Check if Zora Coins SDK is properly configured
-   */
-  async isConfigured(): Promise<boolean> {
-    try {
-      // TODO: Add actual configuration checks
-      return true;
-    } catch (error) {
-      console.error("Zora Coins SDK not configured:", error);
-      return false;
-    }
-  }
 }
 
 // Export singleton instance

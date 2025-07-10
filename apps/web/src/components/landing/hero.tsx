@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { Button } from "../ui/button";
-import { ArrowRight, Sparkles, Video, Coins, Zap } from "lucide-react";
+import { ArrowRight, Sparkles, Video, Coins, Zap } from "@/lib/icons-provider";
 import Link from "next/link";
 import { useAccount } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -154,7 +154,7 @@ export function Hero() {
             </div>
           )}
 
-          <Link href="#features">
+          <Link href="https://paragraph.xyz/@papajams.eth" target="_blank">
             <Button
               variant="outline"
               size="lg"
@@ -176,7 +176,7 @@ export function Hero() {
           <span>Currently in beta</span>
           <span className="hidden sm:inline">•</span>
           <Link
-            href="https://github.com/OpenCut-app/OpenCut"
+            href="http://github.com/thisyearnofear/saywaht"
             className="text-foreground underline hover:text-primary transition-colors"
           >
             Open source on GitHub

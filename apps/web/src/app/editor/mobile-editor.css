@@ -11,6 +11,30 @@
 .mobile-editor .clickable {
   min-height: 44px;
   min-width: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  -webkit-touch-callout: none;
+}
+
+/* Fix button interaction issues */
+.mobile-editor button:active,
+.mobile-editor .clickable:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* Ensure dropdown menus work on mobile */
+.mobile-editor [role="menuitem"],
+.mobile-editor [role="option"] {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+/* Fix tab triggers on mobile */
+.mobile-editor [role="tab"] {
+  min-height: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
 }
 
 /* Improve scrolling on mobile */

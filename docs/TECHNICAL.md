@@ -21,13 +21,13 @@ Create `apps/web/.env.local` for optional features:
 ELEVENLABS_API_KEY=your-elevenlabs-key
 NEXT_PUBLIC_ZORA_API_KEY=your-zora-api-key
 
-# Required for FilCDN (Hackathon Feature)
+# Required for Core Functionality
 NEXT_PUBLIC_FILECOIN_PRIVATE_KEY=your-filecoin-private-key
 NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS=0xYourWalletAddress
+NEXT_PUBLIC_ZORA_API_KEY=your-zora-api-key
 
 # Optional - Enhanced features
 ELEVENLABS_API_KEY=your-elevenlabs-key
-NEXT_PUBLIC_ZORA_API_KEY=your-zora-api-key
 UPSTASH_REDIS_REST_URL=your-redis-url
 UPSTASH_REDIS_REST_TOKEN=your-redis-token
 ```

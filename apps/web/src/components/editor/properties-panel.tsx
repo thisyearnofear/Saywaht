@@ -15,7 +15,7 @@ import {
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { ImageTimelineTreatment } from "@/components/ui/image-timeline-treatment";
-import { useState } from "react";
+import { useState, ChangeEvent } from '@/lib/hooks-provider';
 import { SpeedControl } from "./speed-control";
 
 export function PropertiesPanel() {
@@ -100,12 +100,16 @@ export function PropertiesPanel() {
                         id="bg-color"
                         type="color"
                         value={backgroundColor}
-                        onChange={(e) => setBackgroundColor(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          setBackgroundColor(e.target.value)
+                        }
                         className="w-16 h-10 p-1"
                       />
                       <Input
                         value={backgroundColor}
-                        onChange={(e) => setBackgroundColor(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          setBackgroundColor(e.target.value)
+                        }
                         placeholder="#000000"
                         className="flex-1"
                       />

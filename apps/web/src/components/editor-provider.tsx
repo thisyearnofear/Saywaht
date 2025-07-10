@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
-import { Loader2 } from "lucide-react";
-import { useEditorStore } from "@/stores/editor-store";
+import { useEffect } from "@/lib/hooks-provider";
+
+interface ReactNode {
+  [key: string]: any;
+}
 
 interface EditorProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function EditorProvider({ children }: EditorProviderProps) {
   const { isInitializing, isPanelsReady, initializeApp } = useEditorStore();
 
+  // Use custom useEffect hook
   useEffect(() => {
     initializeApp();
   }, [initializeApp]);
@@ -20,7 +23,7 @@ export function EditorProvider({ children }: EditorProviderProps) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="h-8 w-8 animate-spin text-muted-foreground">⟳</span>
           <p className="text-sm text-muted-foreground">Loading editor...</p>
         </div>
       </div>
@@ -30,3 +33,6 @@ export function EditorProvider({ children }: EditorProviderProps) {
   // App is ready, render children
   return <>{children}</>;
 }
+
+// Import store after defining the types to avoid ordering issues
+import { useEditorStore } from "@/stores/editor-store";

@@ -1,23 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState } from "@/lib/hooks-provider";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "../ui/button";
-import { 
-  Plus, 
-  Upload, 
-  Mic, 
-  Type, 
-  Palette, 
+import {
+  Plus,
+  Upload,
+  Mic,
+  Type,
+  Palette,
   Zap,
   X,
-  ChevronUp
-} from "lucide-react";
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "../ui/tooltip";
+  ChevronUp,
+} from "@/lib/icons-provider";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 const quickActions = [
   {
@@ -25,36 +21,36 @@ const quickActions = [
     label: "Import Media",
     description: "Add videos, images, or audio",
     action: () => console.log("Import media"),
-    color: "text-blue-500"
+    color: "text-blue-500",
   },
   {
     icon: Mic,
     label: "Record Audio",
     description: "Record voiceover or commentary",
     action: () => console.log("Record audio"),
-    color: "text-red-500"
+    color: "text-red-500",
   },
   {
     icon: Type,
     label: "Add Text",
     description: "Insert text overlay",
     action: () => console.log("Add text"),
-    color: "text-green-500"
+    color: "text-green-500",
   },
   {
     icon: Palette,
     label: "Effects",
     description: "Apply visual effects",
     action: () => console.log("Add effects"),
-    color: "text-purple-500"
+    color: "text-purple-500",
   },
   {
     icon: Zap,
     label: "Auto-Edit",
     description: "AI-powered editing suggestions",
     action: () => console.log("Auto-edit"),
-    color: "text-yellow-500"
-  }
+    color: "text-yellow-500",
+  },
 ];
 
 export function QuickActions() {
@@ -89,7 +85,9 @@ export function QuickActions() {
                     >
                       <action.icon className={`w-4 h-4 ${action.color}`} />
                       <div className="text-left">
-                        <div className="text-sm font-medium">{action.label}</div>
+                        <div className="text-sm font-medium">
+                          {action.label}
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {action.description}
                         </div>

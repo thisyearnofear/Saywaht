@@ -6,9 +6,9 @@ import { usePlaybackStore } from "@/stores/playback-store";
 import { VideoPlayer } from "@/components/ui/video-player";
 import { AudioPlayer } from "@/components/ui/audio-player";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX } from "@/lib/icons-provider";
 import Image from "next/image";
-import { useState, useRef } from "react";
+import { useState, useRef } from "@/lib/hooks-provider";
 
 // Debug flag - set to false to hide active clips info
 const SHOW_DEBUG_INFO = process.env.NODE_ENV === "development";

@@ -1,8 +1,10 @@
 "use client";
 
-import * as React from "react";
+import { useState } from "@/lib/hooks-provider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MediaPanel } from "@/components/editor/media-panel";
+import { MobileAudioPanel } from "@/components/editor/mobile-audio-panel";
+import { MobileEffectsPanel } from "@/components/editor/mobile-effects-panel";
 import { useMobileContext } from "@/contexts/mobile-context";
 import { cn } from "@/lib/utils";
 
@@ -11,13 +13,13 @@ interface MobileMediaPanelProps {
 }
 
 export function MobileMediaPanel({ className }: MobileMediaPanelProps) {
-  const [activeTab, setActiveTab] = React.useState("media");
+  const [activeTab, setActiveTab] = useState<string>("media");
   const { orientation } = useMobileContext();
 
   return (
     <div className={cn("flex flex-col h-full", className)}>
-      <Tabs 
-        value={activeTab} 
+      <Tabs
+        value={activeTab}
         onValueChange={setActiveTab}
         className="flex-1 flex flex-col min-h-0"
       >
@@ -26,33 +28,31 @@ export function MobileMediaPanel({ className }: MobileMediaPanelProps) {
           <TabsTrigger value="audio">Audio</TabsTrigger>
           <TabsTrigger value="effects">Effects</TabsTrigger>
         </TabsList>
-        
-        <TabsContent 
-          value="media" 
+
+        <TabsContent
+          value="media"
           className="flex-1 min-h-0 p-0 data-[state=active]:flex data-[state=active]:flex-col"
         >
           <div className="flex-1 min-h-0 overflow-hidden">
             <MediaPanel />
           </div>
         </TabsContent>
-        
-        <TabsContent 
-          value="audio" 
+
+        <TabsContent
+          value="audio"
           className="flex-1 min-h-0 p-0 data-[state=active]:flex data-[state=active]:flex-col"
         >
           <div className="flex-1 min-h-0 overflow-hidden">
-            {/* This would be a filtered view of MediaPanel showing only audio */}
-            <MediaPanel />
+            <MobileAudioPanel />
           </div>
         </TabsContent>
-        
-        <TabsContent 
-          value="effects" 
+
+        <TabsContent
+          value="effects"
           className="flex-1 min-h-0 p-0 data-[state=active]:flex data-[state=active]:flex-col"
         >
           <div className="flex-1 min-h-0 overflow-hidden">
-            {/* This would be a filtered view of MediaPanel showing only effects */}
-            <MediaPanel />
+            <MobileEffectsPanel />
           </div>
         </TabsContent>
       </Tabs>

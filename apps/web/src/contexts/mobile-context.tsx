@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import * as React from "@/lib/hooks-provider";
 const { createContext, useContext, useState, useEffect } = React;
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useMobileOrientation } from "@/hooks/use-mobile-orientation";

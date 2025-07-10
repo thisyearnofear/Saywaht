@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import React from "react";
 import { Tabs as TabsPrimitive } from "radix-ui";
 
 import { cn } from "../../lib/utils";
@@ -10,7 +10,7 @@ const Tabs = TabsPrimitive.Root;
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
+>(({ className, ...props }: any, ref: any) => (
   <TabsPrimitive.List
     ref={ref}
     className={cn(
@@ -25,7 +25,7 @@ TabsList.displayName = TabsPrimitive.List.displayName;
 const TabsTrigger = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => (
+>(({ className, ...props }: any, ref: any) => (
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
@@ -40,7 +40,7 @@ TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 const TabsContent = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
->(({ className, ...props }, ref) => (
+>(({ className, ...props }: any, ref: any) => (
   <TabsPrimitive.Content
     ref={ref}
     className={cn(

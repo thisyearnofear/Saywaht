@@ -12,10 +12,17 @@ import {
   Music,
   Trash2,
   Upload,
-} from "lucide-react";
+  ChevronDown,
+  ChevronUp,
+  Mic,
+  Sparkles,
+  Cloud,
+  Zap,
+  Globe,
+} from "@/lib/icons-provider";
 import Image from "next/image";
 import { useDragDrop } from "@/hooks/use-drag-drop";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, ChangeEvent } from '@/lib/hooks-provider';
 import { toast } from "sonner";
 import { VoiceoverRecorder } from "./voiceover-recorder";
 import { AiVoiceGenerator } from "./ai-voice-generator";
@@ -25,7 +32,12 @@ import { GroveUpload } from "./grove-upload";
 import { isFilCDNConfigured, UploadResult } from "@/lib/filcdn";
 import { type GroveUploadResult } from "@/lib/grove-storage";
 import { Badge } from "../ui/badge";
-import { Cloud, Zap, Globe } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "../ui/collapsible";
+import { cn } from "@/lib/utils";
 
 // MediaPanel lets users add, view, and drag media (images, videos, audio) into the project.
 // You can upload files or drag them from your computer. Dragging from here to the timeline adds them to your video project.
@@ -34,6 +46,8 @@ export function MediaPanel() {
   const { mediaItems, addMediaItem, removeMediaItem } = useMediaStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAudioOpen, setIsAudioOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"upload" | "audio">("upload");
 
   const processFiles = async (files: FileList | File[]) => {
     // If no files, do nothing
@@ -130,12 +144,14 @@ export function MediaPanel() {
 
   const startDrag = (e: React.DragEvent, item: any) => {
     // When dragging a media item, set drag data for timeline to read
+    console.log("Starting drag for item:", item);
     e.dataTransfer.setData(
       "application/x-media-item",
       JSON.stringify({
         id: item.id,
         type: item.type,
         name: item.name,
+        duration: item.duration, // Include duration in drag data
       })
     );
     e.dataTransfer.effectAllowed = "copy";
@@ -171,13 +187,26 @@ export function MediaPanel() {
             className="relative w-full h-full cursor-grab active:cursor-grabbing"
             {...baseDragProps}
           >
-            <Image
-              src={item.thumbnailUrl}
-              alt={item.name}
-              fill
-              style={{ objectFit: "cover" }}
-              className="rounded"
-            />
+            {item.thumbnailUrl.endsWith(".mp4") ||
+            item.thumbnailUrl.endsWith(".webm") ||
+            item.thumbnailUrl.endsWith(".mov") ? (
+              // For video files, use a video element to show first frame
+              <video
+                src={item.thumbnailUrl}
+                className="absolute inset-0 w-full h-full object-cover rounded"
+                muted
+                playsInline
+              />
+            ) : (
+              // For image thumbnails, use Next.js Image
+              <Image
+                src={item.thumbnailUrl}
+                alt={item.name}
+                fill
+                style={{ objectFit: "cover" }}
+                className="rounded"
+              />
+            )}
             <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded">
               <Video className="h-6 w-6 text-white drop-shadow-md" />
             </div>
@@ -208,17 +237,18 @@ export function MediaPanel() {
     if (item.type === "audio") {
       return (
         <div
-          className="w-full h-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex flex-col items-center justify-center text-muted-foreground rounded border border-green-500/20 cursor-grab active:cursor-grabbing"
+          className="w-full h-full min-h-[48px] bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center gap-3 text-muted-foreground rounded border border-green-500/20 cursor-grab active:cursor-grabbing p-3"
           {...baseDragProps}
         >
-          <Music className="h-6 w-6 mb-1" />
-          <span className="text-xs">Audio</span>
-          {item.duration && (
-            <span className="text-xs opacity-70">
-              {formatDuration(item.duration)}
-            </span>
-          )}
-          <audio src={item.url} className="w-full mt-2" controls />
+          <Music className="h-5 w-5 flex-shrink-0 text-green-600" />
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-medium truncate">{item.name}</div>
+            {item.duration && (
+              <div className="text-xs opacity-70">
+                {formatDuration(item.duration)}
+              </div>
+            )}
+          </div>
         </div>
       );
     }
@@ -255,156 +285,227 @@ export function MediaPanel() {
         {/* Show overlay when dragging files over the panel */}
         <DragOverlay isVisible={isDragOver} />
 
-        <div className="p-2 border-b">
-          {/* Media upload and generation options */}
-          <div className="space-y-4">
-            <Tabs defaultValue="grove" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="grove" className="text-xs">
-                  <div className="flex items-center gap-1">
-                    <Globe className="h-3 w-3" />
-                    Grove
-                  </div>
-                </TabsTrigger>
-                <TabsTrigger value="filcdn" className="text-xs">
-                  <div className="flex items-center gap-1">
-                    <Zap className="h-3 w-3" />
-                    FilCDN
-                  </div>
-                </TabsTrigger>
-                <TabsTrigger value="local" className="text-xs">
-                  <div className="flex items-center gap-1">
-                    <Upload className="h-3 w-3" />
-                    Local
-                  </div>
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="grove" className="space-y-3 mt-3">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Globe className="h-3 w-3" />
-                    <span>Decentralized IPFS storage via Grove</span>
-                  </div>
-                  <GroveUpload onUploadComplete={handleGroveUpload} />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="filcdn" className="space-y-3 mt-3">
-                {isFilCDNConfigured() ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Cloud className="h-3 w-3" />
-                      <span>Powered by Filecoin PDP + CDN</span>
-                    </div>
-                    <FileUpload onUploadComplete={handleFilCDNUpload} />
-                  </div>
-                ) : (
-                  <div className="p-3 bg-muted/30 rounded-lg text-center">
-                    <p className="text-xs text-muted-foreground mb-2">
-                      FilCDN not configured
-                    </p>
-                    <Button asChild size="sm" variant="outline">
-                      <a
-                        href="https://fs-upload-dapp.netlify.app"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Setup Guide
-                      </a>
-                    </Button>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="local" className="mt-3">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleFileSelect}
-                  disabled={isProcessing}
-                  className="w-full"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Upload className="h-4 w-4 animate-spin mr-2" />
-                      <span>Processing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Video className="h-4 w-4 mr-2" />
-                      <span>Upload Local Files</span>
-                    </>
-                  )}
-                </Button>
-              </TabsContent>
-            </Tabs>
-
-            <Tabs defaultValue="record" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="record">Record</TabsTrigger>
-                <TabsTrigger value="generate">Generate</TabsTrigger>
-              </TabsList>
-              <TabsContent value="record">
-                <VoiceoverRecorder />
-              </TabsContent>
-              <TabsContent value="generate">
-                <AiVoiceGenerator />
-              </TabsContent>
-            </Tabs>
-          </div>
+        {/* Header with toggle buttons */}
+        <div className="flex border-b">
+          <Button
+            variant={activeTab === "upload" ? "secondary" : "ghost"}
+            size="sm"
+            className="flex-1 rounded-none"
+            onClick={() => setActiveTab("upload")}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload
+          </Button>
+          <Button
+            variant={activeTab === "audio" ? "secondary" : "ghost"}
+            size="sm"
+            className="flex-1 rounded-none"
+            onClick={() => setActiveTab("audio")}
+          >
+            <Mic className="h-4 w-4 mr-2" />
+            Audio
+          </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2">
-          {/* Show message if no media, otherwise show media grid */}
-          {filteredMediaItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center h-full">
-              <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
-                <ImageIcon className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                No media in project
-              </p>
-              <p className="text-xs text-muted-foreground/70 mt-1">
-                Drag files here or use the button above
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2">
-              {/* Render each media item as a draggable button */}
-              {filteredMediaItems.map((item) => (
-                <div key={item.id} className="relative group">
-                  <Button
-                    variant="outline"
-                    className="flex flex-col gap-2 p-2 h-auto w-full relative"
-                  >
-                    <AspectRatio ratio={item.aspectRatio}>
-                      {renderPreview(item)}
-                    </AspectRatio>
-                    <span
-                      className="text-xs truncate px-1 max-w-full"
-                      aria-label={item.name}
-                      title={item.name}
-                    >
-                      {item.name.length > 8
-                        ? `${item.name.slice(0, 4)}...${item.name.slice(-3)}`
-                        : item.name}
-                    </span>
-                  </Button>
+        {/* Content sections */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {activeTab === "upload" && (
+            <>
+              {/* Upload section */}
+              <div className="p-3 border-b bg-muted/5">
+                <Tabs defaultValue="local" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3 h-8">
+                    <TabsTrigger value="local" className="text-xs">
+                      <Upload className="h-3 w-3 mr-1" />
+                      Local
+                    </TabsTrigger>
+                    <TabsTrigger value="grove" className="text-xs">
+                      <Globe className="h-3 w-3 mr-1" />
+                      Grove
+                    </TabsTrigger>
+                    <TabsTrigger value="filcdn" className="text-xs">
+                      <Zap className="h-3 w-3 mr-1" />
+                      FilCDN
+                    </TabsTrigger>
+                  </TabsList>
 
-                  {/* Show remove button on hover */}
-                  <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <TabsContent value="local" className="mt-3">
                     <Button
-                      variant="destructive"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={(e) => handleRemove(e, item.id)}
+                      variant="outline"
+                      size="sm"
+                      onClick={handleFileSelect}
+                      disabled={isProcessing}
+                      className="w-full"
                     >
-                      <Trash2 className="h-3 w-3" />
+                      {isProcessing ? (
+                        <>
+                          <Upload className="h-4 w-4 animate-spin mr-2" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-2" />
+                          <span>Add Files</span>
+                        </>
+                      )}
                     </Button>
+                  </TabsContent>
+
+                  <TabsContent value="grove" className="mt-3">
+                    <GroveUpload onUploadComplete={handleGroveUpload} />
+                  </TabsContent>
+
+                  <TabsContent value="filcdn" className="mt-3">
+                    {isFilCDNConfigured() ? (
+                      <FileUpload onUploadComplete={handleFilCDNUpload} />
+                    ) : (
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground mb-2">
+                          FilCDN not configured
+                        </p>
+                        <Button asChild size="sm" variant="outline">
+                          <a
+                            href="https://fs-upload-dapp.netlify.app"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Setup Guide
+                          </a>
+                        </Button>
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              {/* Media library */}
+              <div className="flex-1 overflow-y-auto p-3">
+                {filteredMediaItems.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center h-full">
+                    <div className="w-12 h-12 rounded-full bg-muted/30 flex items-center justify-center mb-3">
+                      <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      No media in project
+                    </p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">
+                      Drag files here or click Add Files
+                    </p>
                   </div>
-                </div>
-              ))}
+                ) : (
+                  <div className="space-y-2">
+                    {/* Separate audio items for better visibility */}
+                    {filteredMediaItems.filter((item) => item.type === "audio")
+                      .length > 0 && (
+                      <>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">
+                          Audio
+                        </div>
+                        <div className="space-y-1 mb-3">
+                          {filteredMediaItems
+                            .filter((item) => item.type === "audio")
+                            .map((item) => (
+                              <div key={item.id} className="relative group">
+                                <Button
+                                  variant="outline"
+                                  className="flex flex-col gap-1 p-2 h-auto w-full relative overflow-hidden"
+                                >
+                                  <div className="w-full">
+                                    {renderPreview(item)}
+                                  </div>
+                                </Button>
+                                {/* Show remove button on hover */}
+                                <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button
+                                    variant="destructive"
+                                    size="icon"
+                                    className="h-5 w-5"
+                                    onClick={(e: React.MouseEvent) =>
+                                      handleRemove(e, item.id)
+                                    }
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Grid for video/image items */}
+                    {filteredMediaItems.filter((item) => item.type !== "audio")
+                      .length > 0 && (
+                      <>
+                        <div className="text-xs font-medium text-muted-foreground mb-1">
+                          Media
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {filteredMediaItems
+                            .filter((item) => item.type !== "audio")
+                            .map((item) => (
+                              <div key={item.id} className="relative group">
+                                <Button
+                                  variant="outline"
+                                  className="flex flex-col gap-1 p-2 h-auto w-full relative overflow-hidden"
+                                >
+                                  <AspectRatio ratio={item.aspectRatio}>
+                                    {renderPreview(item)}
+                                  </AspectRatio>
+                                  <span
+                                    className="text-xs truncate px-1 max-w-full"
+                                    aria-label={item.name}
+                                    title={item.name}
+                                  >
+                                    {item.name.length > 12
+                                      ? `${item.name.slice(0, 8)}...${item.name.slice(-3)}`
+                                      : item.name}
+                                  </span>
+                                </Button>
+                                {/* Show remove button on hover */}
+                                <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button
+                                    variant="destructive"
+                                    size="icon"
+                                    className="h-5 w-5"
+                                    onClick={(e: React.MouseEvent) =>
+                                      handleRemove(e, item.id)
+                                    }
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {activeTab === "audio" && (
+            <div className="flex-1 overflow-y-auto p-3">
+              <Tabs defaultValue="record" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="record" className="text-sm">
+                    <Mic className="h-3 w-3 mr-1" />
+                    Record
+                  </TabsTrigger>
+                  <TabsTrigger value="generate" className="text-sm">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Generate
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="record" className="mt-4">
+                  <VoiceoverRecorder />
+                </TabsContent>
+                <TabsContent value="generate" className="mt-4">
+                  <AiVoiceGenerator />
+                </TabsContent>
+              </Tabs>
             </div>
           )}
         </div>

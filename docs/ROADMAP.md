@@ -58,6 +58,10 @@
 - [ ] **User Profiles** - Enhanced user dashboard and portfolio views
 - [ ] **Community Integration** - Farcaster integration for sharing and discussions
 - [ ] **Testing Suite** - Add unit and integration tests for critical paths
+- [ ] **Component Reorganization** - Restructure components directory for better maintainability
+  - Break down large files (timeline.tsx 1,146 lines, auth-form.tsx 398 lines)
+  - Organize editor components by functionality (core, mobile, media, controls, ai)
+  - Create dedicated folders for auth, flows, and layout components
 
 ### **Future Enhancements**
 

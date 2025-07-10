@@ -1,5 +1,7 @@
 import { MediaItem } from "@/stores/media-store";
 import { TimelineTrack } from "@/stores/timeline-store";
+import { validateMetadataJSON } from "@zoralabs/coins-sdk";
+import { processThumbnailForMetadata } from "./thumbnail-upload";
 
 export interface CoinMetadata {
   name: string;
@@ -25,7 +27,7 @@ export interface GenerateMetadataParams {
 /**
  * Generate metadata for a coin based on project content
  */
-export function generateCoinMetadata(params: GenerateMetadataParams): CoinMetadata {
+export async function generateCoinMetadata(params: GenerateMetadataParams): Promise<CoinMetadata> {
   const {
     coinName,
     coinSymbol,
@@ -104,24 +106,32 @@ export function generateCoinMetadata(params: GenerateMetadataParams): CoinMetada
     value: mediaItems.length.toString()
   });
 
+  // Find the best image source
+  let imageSource = "";
+  
+  if (primaryMedia) {
+    if (primaryMedia.thumbnailUrl) {
+      imageSource = primaryMedia.thumbnailUrl;
+    } else if (primaryMedia.type === 'image') {
+      imageSource = primaryMedia.url;
+    }
+  }
+  
+  // Process the thumbnail to ensure we have a valid HTTPS URL
+  const imageUrl = await processThumbnailForMetadata(imageSource);
+
   // Build the metadata object
   const metadata: CoinMetadata = {
     name: coinName,
     description: `A memetic video commentary created with OpenCut. ${filcdnItems.length > 0 ? 'Powered by FilCDN for lightning-fast delivery.' : ''} Deploy, trade, and collect unique video coins.`,
+    image: imageUrl, // Always set the image
     external_url: `https://saywhat.app/project/${projectId}`,
     attributes
   };
 
-  // Add primary media URLs if available
-  if (primaryMedia) {
-    if (primaryMedia.type === 'video') {
-      metadata.animation_url = primaryMedia.isFilCDN ? primaryMedia.url : undefined;
-    }
-    
-    // Use thumbnail as image if available
-    if (primaryMedia.thumbnailUrl) {
-      metadata.image = primaryMedia.thumbnailUrl;
-    }
+  // Add animation URL for videos
+  if (primaryMedia && primaryMedia.type === 'video' && primaryMedia.isFilCDN) {
+    metadata.animation_url = primaryMedia.url;
   }
 
   return metadata;
@@ -159,6 +169,11 @@ export async function uploadMetadataToIPFS(metadata: CoinMetadata): Promise<stri
  * Generate metadata specifically highlighting FilCDN integration
  */
 export function getFilCDNHighlights(mediaItems: MediaItem[]): string[] {
+  // Handle undefined or empty mediaItems
+  if (!mediaItems || mediaItems.length === 0) {
+    return [];
+  }
+  
   const filcdnItems = mediaItems.filter(item => item.isFilCDN);
   const highlights: string[] = [];
   
@@ -174,4 +189,94 @@ export function getFilCDNHighlights(mediaItems: MediaItem[]): string[] {
   }
   
   return highlights;
+}
+
+/**
+ * Generate simplified metadata for a video coin without requiring full project data
+ */
+export interface SimpleCoinMetadataParams {
+  name: string;
+  symbol: string;
+  description?: string;
+  videoUri: string;
+  creatorAddress: string;
+  projectId?: string;
+  thumbnailUrl?: string;
+}
+
+export function generateCoinMetadataFromVideo(params: SimpleCoinMetadataParams): CoinMetadata {
+  const {
+    name,
+    symbol,
+    videoUri,
+    creatorAddress,
+    projectId,
+    thumbnailUrl: providedThumbnailUrl,
+    description = `A video coin created with SayWhat`,
+  } = params;
+
+  // We need to properly handle IPFS URIs
+  let ipfsHash = '';
+  if (videoUri.startsWith('ipfs://')) {
+    ipfsHash = videoUri.substring(7);
+  } else if (videoUri.startsWith('lens://')) {
+    ipfsHash = videoUri.substring(7);
+  }
+  
+  // Create a public gateway URL for the video
+  const publicGatewayUrl = ipfsHash ? `https://ipfs.io/ipfs/${ipfsHash}` : videoUri;
+  
+  // Use provided thumbnail if available, otherwise use a default
+  // Ensure we always have a valid HTTPS URL for Zora validation
+  let thumbnailUrl = providedThumbnailUrl;
+  
+  if (!thumbnailUrl) {
+    // Use SayWhat's default image as fallback
+    thumbnailUrl = "https://saywhat.app/opengraph-image.jpg";
+  }
+  
+  // Ensure the URL is absolute
+  if (thumbnailUrl.startsWith('/')) {
+    thumbnailUrl = `https://saywhat.app${thumbnailUrl}`;
+  }
+  
+  // Build the metadata object following Zora's exact format
+  const metadata: any = {
+    name,
+    description,
+    // Use a dynamic thumbnail URL generated from the video
+    image: thumbnailUrl,
+    // For video content
+    animation_url: videoUri,
+    // Zora's extended format for better indexing
+    content: {
+      mime: "video/webm",
+      uri: videoUri
+    },
+    // Use properties instead of attributes (Zora's format)
+    properties: {
+      category: "video",
+      creator: creatorAddress,
+      symbol: symbol,
+      platform: "SayWhat"
+    }
+  };
+
+  // Add external URL if project ID is available
+  if (projectId) {
+    metadata.external_url = `https://saywhat.app/project/${projectId}`;
+  }
+
+  console.log("📄 Generated metadata for Zora validation:", metadata);
+  
+  // Validate metadata before returning
+  try {
+    validateMetadataJSON(metadata);
+    console.log("✅ Metadata validation passed");
+  } catch (error) {
+    console.error("❌ Metadata validation failed:", error);
+    throw new Error(`Invalid metadata format: ${error}`);
+  }
+  
+  return metadata;
 }
