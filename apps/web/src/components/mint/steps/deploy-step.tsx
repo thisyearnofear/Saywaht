@@ -116,7 +116,8 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
     data.deployedCoin,
     data.coinName,
     data.coinSymbol,
-    // Remove contractCallParams and updateData from dependencies to prevent infinite loop
+    contractCallParams,
+    // updateData is intentionally excluded to prevent infinite loop
   ]);
 
   // Auto-deploy when simulation is ready
@@ -256,7 +257,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
     data.coinSymbol,
     address,
     publicClient,
-    // Remove updateData from dependencies to prevent infinite loop
+    // updateData is intentionally excluded to prevent infinite loop
   ]);
 
   const getStatusInfo = () => {

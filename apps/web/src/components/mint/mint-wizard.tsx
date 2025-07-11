@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "@/lib/hooks-provider";
+import { useState, useCallback } from "@/lib/hooks-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -74,9 +74,20 @@ export function MintWizard() {
     deployedCoin: null,
   });
 
-  const updateWizardData = (updates: Partial<MintWizardData>) => {
+  const updateWizardData = useCallback((updates: Partial<MintWizardData>) => {
     setWizardData((prev: MintWizardData) => ({ ...prev, ...updates }));
-  };
+  }, []);
+
+  // Trigger confetti when deployment is complete
+  useEffect(() => {
+    if (wizardData.deployedCoin) {
+      const timer = setTimeout(() => {
+        triggerCelebration();
+      }, 500); // Delay to let the animation settle
+
+      return () => clearTimeout(timer);
+    }
+  }, [wizardData.deployedCoin]);
 
   const canProceedToNext = () => {
     switch (currentStep) {
@@ -131,15 +142,6 @@ export function MintWizard() {
 
   // If deployment is complete, show success state
   if (wizardData.deployedCoin) {
-    // Trigger confetti when success screen is shown
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        triggerCelebration();
-      }, 500); // Delay to let the animation settle
-
-      return () => clearTimeout(timer);
-    }, []);
-
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
