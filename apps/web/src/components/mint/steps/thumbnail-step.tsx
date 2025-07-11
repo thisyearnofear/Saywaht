@@ -22,7 +22,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [customPrompt, setCustomPrompt] = useState(
     data.thumbnailPrompt ||
-      "Create an eye-catching thumbnail for my video commentary"
+      "[PLACEHOLDER] Describe your video content for AI thumbnail generation"
   );
 
   const { mediaItems } = useMediaStore();

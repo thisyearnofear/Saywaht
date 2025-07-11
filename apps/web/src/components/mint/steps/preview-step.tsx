@@ -38,16 +38,19 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
       try {
         // Upload thumbnail to Grove if it's a data URL
         let finalThumbnailUrl = data.thumbnail;
+        let thumbnailDisplayUrl = data.thumbnail; // Keep original for display
         if (data.thumbnail && data.thumbnail.startsWith("data:")) {
           try {
             const { uploadThumbnailToGrove } = await import(
               "@/lib/thumbnail-upload"
             );
-            finalThumbnailUrl = await uploadThumbnailToGrove(data.thumbnail);
+            const result = await uploadThumbnailToGrove(data.thumbnail);
+            finalThumbnailUrl = result.metadataUrl; // IPFS URL for metadata
+            thumbnailDisplayUrl = result.displayUrl; // Gateway URL for display
             console.log("📸 Thumbnail uploaded to Grove:", finalThumbnailUrl);
 
-            // Update the wizard data with the Grove URL
-            updateData({ thumbnail: finalThumbnailUrl });
+            // Update the wizard data with the display URL (so user can still see it)
+            updateData({ thumbnail: thumbnailDisplayUrl });
           } catch (error) {
             console.error("Failed to upload thumbnail to Grove:", error);
             // Continue with data URL if Grove upload fails
@@ -55,12 +58,12 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
         }
 
         // Create modified mediaItems with custom thumbnail
-        const modifiedMediaItems = finalThumbnailUrl
+        const modifiedMediaItems = thumbnailDisplayUrl
           ? mediaItems.map((item, index) => {
               if (index === 0 && item.type === "video") {
                 return {
                   ...item,
-                  thumbnailUrl: finalThumbnailUrl || undefined,
+                  thumbnailUrl: thumbnailDisplayUrl || undefined, // Use gateway URL for metadata
                 };
               }
               return item;

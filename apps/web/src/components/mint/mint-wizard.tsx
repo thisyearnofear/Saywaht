@@ -17,6 +17,8 @@ import { ThumbnailStep } from "./steps/thumbnail-step";
 import { CoinDetailsStep } from "./steps/coin-details-step";
 import { PreviewStep } from "./steps/preview-step";
 import { DeployStep } from "./steps/deploy-step";
+import { triggerCelebration } from "@/lib/confetti";
+import { useEffect } from "@/lib/hooks-provider";
 
 export interface MintWizardData {
   // Thumbnail data
@@ -33,7 +35,7 @@ export interface MintWizardData {
 
   // Deploy status
   isDeploying: boolean;
-  deployedCoin: { name: string; symbol: string } | null;
+  deployedCoin: { name: string; symbol: string; address?: string } | null;
 }
 
 const STEPS = [
@@ -129,6 +131,15 @@ export function MintWizard() {
 
   // If deployment is complete, show success state
   if (wizardData.deployedCoin) {
+    // Trigger confetti when success screen is shown
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        triggerCelebration();
+      }, 500); // Delay to let the animation settle
+
+      return () => clearTimeout(timer);
+    }, []);
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -145,14 +156,37 @@ export function MintWizard() {
 
         <div>
           <h2 className="text-2xl font-bold mb-2">Coin Deployed! 🎉</h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-3">
             Your video &quot;{wizardData.deployedCoin.name}&quot; (
             {wizardData.deployedCoin.symbol}) is now a tradeable Zora Coin.
           </p>
+          {wizardData.deployedCoin.address && (
+            <div className="bg-muted/50 rounded-lg p-3 text-sm">
+              <div className="text-muted-foreground mb-1">
+                Contract Address:
+              </div>
+              <div className="font-mono text-xs break-all">
+                {wizardData.deployedCoin.address}
+              </div>
+              <button
+                onClick={() =>
+                  navigator.clipboard.writeText(
+                    wizardData.deployedCoin.address!
+                  )
+                }
+                className="text-primary hover:underline text-xs mt-1"
+              >
+                Copy Address
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-3 max-w-sm mx-auto">
           <Button asChild className="w-full">
+            <a href="/trade">🚀 Start Trading</a>
+          </Button>
+          <Button asChild variant="outline" className="w-full">
             <a
               href="https://zora.co/"
               target="_blank"

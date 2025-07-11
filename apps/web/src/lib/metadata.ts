@@ -148,14 +148,25 @@ export async function uploadMetadataToIPFS(metadata: CoinMetadata): Promise<stri
 
     const result = await groveStorage.uploadMetadata(metadata);
 
-    // Convert Grove URI to standard IPFS URI format
-    // Grove returns lens:// URIs, but we need ipfs:// for ERC-20 token metadata standards
+    // Wait for IPFS propagation to ensure content is available
+    try {
+      console.log('⏳ Waiting for IPFS propagation...');
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds for propagation
+      console.log('✅ IPFS propagation wait complete');
+    } catch (error) {
+      console.warn('⚠️ Propagation wait failed, but continuing:', error);
+    }
+
+    // Use Grove gateway URL for better reliability with Zora's validation service
+    // Grove gateway URLs are immediately available and more reliable than IPFS URLs
+    const gatewayUrl = result.gatewayUrl;
     const ipfsUri = result.uri.replace('lens://', 'ipfs://');
 
     console.log('✅ Metadata uploaded to IPFS:', ipfsUri);
-    console.log('🌐 Gateway URL:', result.gatewayUrl);
+    console.log('🌐 Gateway URL:', gatewayUrl);
+    console.log('🔗 Using gateway URL for metadata URI to ensure Zora validation works');
 
-    return ipfsUri;
+    return gatewayUrl; // Return gateway URL instead of IPFS URI for better compatibility
   } catch (error) {
     console.error('❌ Failed to upload metadata to IPFS:', error);
 

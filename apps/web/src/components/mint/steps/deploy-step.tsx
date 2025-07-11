@@ -8,14 +8,22 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
   useSimulateContract,
+  usePublicClient,
 } from "wagmi";
 import { toast } from "sonner";
-import { createCoinCall, DeployCurrency, setApiKey } from "@zoralabs/coins-sdk";
+import {
+  createCoinCall,
+  DeployCurrency,
+  setApiKey,
+  validateMetadataURIContent,
+  getCoinCreateFromLogs,
+} from "@zoralabs/coins-sdk";
 import { submitReferral } from "@divvi/referral-sdk";
 import { MintWizardData } from "../mint-wizard";
 import { base } from "viem/chains";
 import type { ValidMetadataURI } from "@zoralabs/coins-sdk";
 import { PLATFORM_ADDRESS } from "@/lib/constants";
+import { triggerCoinCelebration } from "@/lib/confetti";
 
 // Set Zora API key if available
 if (process.env.NEXT_PUBLIC_ZORA_API_KEY) {
@@ -29,6 +37,7 @@ interface DeployStepProps {
 
 export function DeployStep({ data, updateData }: DeployStepProps) {
   const { address } = useAccount();
+  const publicClient = usePublicClient();
 
   // Prepare contract call parameters
   const [contractCallParams, setContractCallParams] = useState<any>(null);
@@ -59,6 +68,22 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
     const prepareCall = async () => {
       try {
         console.log("🪙 Preparing coin creation on Zora Protocol...");
+
+        // Validate metadata URI content before proceeding
+        console.log("🔍 Validating metadata URI content...");
+        try {
+          await validateMetadataURIContent(
+            data.metadataUri as ValidMetadataURI
+          );
+          console.log("✅ Metadata validation passed");
+        } catch (validationError) {
+          console.error("❌ Metadata validation failed:", validationError);
+          toast.error(
+            "Metadata validation failed. Please try regenerating your metadata."
+          );
+          updateData({ isDeploying: false });
+          return;
+        }
 
         // Create the coin call parameters
         const coinParams = {
@@ -91,8 +116,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
     data.deployedCoin,
     data.coinName,
     data.coinSymbol,
-    contractCallParams,
-    updateData,
+    // Remove contractCallParams and updateData from dependencies to prevent infinite loop
   ]);
 
   // Auto-deploy when simulation is ready
@@ -143,13 +167,44 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
 
   // Handle transaction confirmation
   useEffect(() => {
-    if (isSuccess && txHash && address) {
-      toast.dismiss();
-      toast.success("Content coin created successfully! 🎉");
-      updateData({
-        deployedCoin: { name: data.coinName, symbol: data.coinSymbol },
-        isDeploying: false,
-      });
+    if (isSuccess && txHash && address && publicClient) {
+      const handleSuccess = async () => {
+        try {
+          // Get transaction receipt to extract coin address
+          const receipt = await publicClient.getTransactionReceipt({
+            hash: txHash,
+          });
+          const coinDeployment = getCoinCreateFromLogs(receipt);
+
+          console.log("🪙 Coin deployed successfully!");
+          console.log("📍 Coin address:", coinDeployment?.coin);
+
+          // Trigger celebration confetti
+          triggerCoinCelebration();
+
+          toast.dismiss();
+          toast.success("Content coin created successfully! 🎉");
+          updateData({
+            deployedCoin: {
+              name: data.coinName,
+              symbol: data.coinSymbol,
+              address: coinDeployment?.coin || undefined,
+            },
+            isDeploying: false,
+          });
+        } catch (error) {
+          console.error("Failed to extract coin address:", error);
+          // Still mark as successful even if we can't extract the address
+          toast.dismiss();
+          toast.success("Content coin created successfully! 🎉");
+          updateData({
+            deployedCoin: { name: data.coinName, symbol: data.coinSymbol },
+            isDeploying: false,
+          });
+        }
+      };
+
+      handleSuccess();
 
       // Submit Divvi referral tracking (optional, non-blocking)
       const submitDivviTracking = async () => {
@@ -200,7 +255,8 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
     data.coinName,
     data.coinSymbol,
     address,
-    updateData,
+    publicClient,
+    // Remove updateData from dependencies to prevent infinite loop
   ]);
 
   const getStatusInfo = () => {
