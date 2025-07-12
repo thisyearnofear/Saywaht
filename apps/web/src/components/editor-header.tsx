@@ -27,7 +27,7 @@ export function EditorHeader() {
 
   // Use imported useState hook from hooks-provider
   const [isExporting, setIsExporting] = useState(false);
-  const { tracks } = useTimelineStore();
+  const { tracks, getTotalDuration } = useTimelineStore();
   const { mediaItems } = useMediaStore();
 
   const handleExport = async () => {
@@ -38,20 +38,14 @@ export function EditorHeader() {
 
     setIsExporting(true);
     try {
-      // Calculate total duration from timeline
-      const totalDuration = Math.max(
-        ...tracks.flatMap((track) =>
-          track.clips.map((clip) => clip.startTime + clip.duration)
-        ),
-        5 // Minimum 5 seconds
-      );
+      // Calculate total duration from timeline using proper timeline calculation
+      const totalDuration = Math.max(getTotalDuration(), 5); // Minimum 5 seconds
+      console.log(`📏 Export duration: ${totalDuration}s`);
 
       // Dynamic import to avoid loading export utils unless needed
-      const { exportVideoWithCanvas } = await import(
-        "@/lib/canvas-export-utils"
-      );
+      const { exportVideo } = await import("@/lib/canvas-export-utils");
 
-      const blob = await exportVideoWithCanvas(
+      const blob = await exportVideo(
         tracks,
         mediaItems,
         totalDuration,
@@ -59,6 +53,13 @@ export function EditorHeader() {
           toast.loading(`Exporting... ${Math.round(progress)}%`, {
             id: "export-progress",
           });
+        },
+        {
+          format: "portrait", // Default mobile-first format
+          quality: "medium",
+          includeAudio: true,
+          method: "auto", // Phase 2: Auto-select best export method
+          outputFormat: "mp4", // Phase 2: MP4 for better compatibility
         }
       );
 
@@ -66,7 +67,7 @@ export function EditorHeader() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${activeProject.name.replace(/[^a-zA-Z0-9]/g, "_")}.webm`;
+      a.download = `${activeProject.name.replace(/[^a-zA-Z0-9]/g, "_")}.mp4`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

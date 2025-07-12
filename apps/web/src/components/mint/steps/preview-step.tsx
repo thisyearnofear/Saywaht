@@ -49,19 +49,18 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
 
         if (tracks.length > 0 && mediaItems.length > 0) {
           try {
-            // Calculate total duration from timeline
-            const totalDuration = Math.max(
-              ...tracks.flatMap((track) =>
-                track.clips.map((clip) => clip.startTime + clip.duration)
-              ),
-              5 // Minimum 5 seconds
+            // Calculate total duration from timeline using proper timeline calculation
+            const { useTimelineStore } = await import(
+              "@/stores/timeline-store"
             );
+            const { getTotalDuration } = useTimelineStore.getState();
+            const totalDuration = Math.max(getTotalDuration(), 5); // Minimum 5 seconds
 
-            // Export video using canvas with selected format
-            const { exportVideoWithCanvas } = await import(
-              "@/lib/canvas-export-utils"
-            );
-            const videoBlob = await exportVideoWithCanvas(
+            console.log(`📏 Calculated timeline duration: ${totalDuration}s`);
+
+            // Export video using Phase 2 (FFmpeg) with selected format
+            const { exportVideo } = await import("@/lib/canvas-export-utils");
+            const videoBlob = await exportVideo(
               tracks,
               mediaItems,
               totalDuration,
@@ -71,6 +70,9 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               {
                 format: data.videoFormat,
                 quality: "medium",
+                includeAudio: true,
+                method: "auto", // Phase 2: Auto-select best export method
+                outputFormat: "mp4", // Phase 2: MP4 for better compatibility
               }
             );
 
@@ -92,9 +94,9 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               const { groveStorage } = await import("@/lib/grove-storage");
               const videoFile = new File(
                 [videoBlob],
-                `${data.coinName.replace(/[^a-zA-Z0-9]/g, "_")}.webm`,
+                `${data.coinName.replace(/[^a-zA-Z0-9]/g, "_")}.mp4`,
                 {
-                  type: "video/webm",
+                  type: "video/mp4",
                 }
               );
 
@@ -124,21 +126,17 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           }
         }
 
-        // Step 2: Upload thumbnail to Grove if it's a data URL
+        // Step 2: Prepare thumbnail for metadata (keep in-memory version for display)
         let finalThumbnailUrl = data.thumbnail;
-        let thumbnailDisplayUrl = data.thumbnail; // Keep original for display
         if (data.thumbnail && data.thumbnail.startsWith("data:")) {
           try {
             const { uploadThumbnailToGrove } = await import(
               "@/lib/thumbnail-upload"
             );
             const result = await uploadThumbnailToGrove(data.thumbnail);
-            finalThumbnailUrl = result.metadataUrl; // IPFS URL for metadata
-            thumbnailDisplayUrl = result.displayUrl; // Gateway URL for display
+            finalThumbnailUrl = result.metadataUrl; // IPFS URL for metadata only
             console.log("📸 Thumbnail uploaded to Grove:", finalThumbnailUrl);
-
-            // Update the wizard data with the display URL (so user can still see it)
-            updateData({ thumbnail: thumbnailDisplayUrl });
+            // DON'T update the wizard data - keep the working in-memory version for display
           } catch (error) {
             console.error("Failed to upload thumbnail to Grove:", error);
             // Continue with data URL if Grove upload fails
@@ -159,12 +157,12 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
             duration: 0, // Duration not critical for metadata
             aspectRatio: 16 / 9,
             isGrove: true,
-            thumbnailUrl: thumbnailDisplayUrl || undefined,
+            thumbnailUrl: data.thumbnail || undefined, // Use original thumbnail
           };
 
           // Insert at the beginning to make it the primary media
           modifiedMediaItems.unshift(exportedVideoItem);
-        } else if (thumbnailDisplayUrl) {
+        } else if (data.thumbnail) {
           // If no exported video, at least update the first video with custom thumbnail
           const firstVideoIndex = modifiedMediaItems.findIndex(
             (item) => item.type === "video"
@@ -172,7 +170,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           if (firstVideoIndex >= 0) {
             modifiedMediaItems[firstVideoIndex] = {
               ...modifiedMediaItems[firstVideoIndex],
-              thumbnailUrl: thumbnailDisplayUrl,
+              thumbnailUrl: data.thumbnail,
             };
           }
         }
@@ -185,12 +183,22 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           tracks,
           projectId: activeProject.id,
           exportedVideoUrl: exportedVideoUrl || undefined, // Include the exported video URL
+          thumbnailUrl: finalThumbnailUrl || undefined, // Use the Grove-uploaded thumbnail for metadata
         });
 
         // Add custom description if provided
         if (data.coinDescription) {
           metadata.description = data.coinDescription;
         }
+
+        // Log the metadata structure to verify it includes content field
+        console.log("📋 Generated metadata structure:", {
+          name: metadata.name,
+          hasImage: !!metadata.image,
+          hasAnimationUrl: !!metadata.animation_url,
+          hasContent: !!(metadata as any).content,
+          contentMime: (metadata as any).content?.mime,
+        });
 
         const uri = await uploadMetadataToIPFS(metadata);
         updateData({ metadataUri: uri });
@@ -207,13 +215,12 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
     data.coinName,
     data.coinSymbol,
     data.coinDescription,
-    data.thumbnail,
     data.videoFormat,
-    activeProject,
-    mediaItems,
-    tracks,
+    activeProject?.id, // Only depend on project ID, not the whole object
+    mediaItems.length, // Only depend on length to avoid unnecessary re-runs
+    tracks.length, // Only depend on length to avoid unnecessary re-runs
     data.metadataUri,
-    updateData,
+    // Remove data.thumbnail and updateData from dependencies to prevent loops
   ]);
 
   return (

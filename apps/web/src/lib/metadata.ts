@@ -27,6 +27,7 @@ export interface GenerateMetadataParams {
   tracks: TimelineTrack[];
   projectId: string;
   exportedVideoUrl?: string; // Optional exported video URL from canvas export
+  thumbnailUrl?: string; // Optional custom thumbnail URL (for metadata)
 }
 
 /**
@@ -40,7 +41,8 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
     mediaItems,
     tracks,
     projectId,
-    exportedVideoUrl
+    exportedVideoUrl,
+    thumbnailUrl
   } = params;
 
   // Find the primary video/media content (first FilCDN item or first video)
@@ -117,17 +119,17 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
     value: mediaItems.length.toString()
   });
 
-  // Find the best image source
-  let imageSource = "";
-  
-  if (primaryMedia) {
+  // Use provided thumbnail URL or find the best image source
+  let imageSource = thumbnailUrl || "";
+
+  if (!imageSource && primaryMedia) {
     if (primaryMedia.thumbnailUrl) {
       imageSource = primaryMedia.thumbnailUrl;
     } else if (primaryMedia.type === 'image') {
       imageSource = primaryMedia.url;
     }
   }
-  
+
   // Process the thumbnail to ensure we have a valid HTTPS URL
   const imageUrl = await processThumbnailForMetadata(imageSource);
 
