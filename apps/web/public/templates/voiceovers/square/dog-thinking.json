@@ -1,0 +1,65 @@
+{
+  "id": "dog-thinking",
+  "name": "Dog Thinking",
+  "description": "Give voice to this thoughtful dog's inner monologue",
+  "category": "voiceovers",
+  "subcategory": "square",
+  "thumbnailUrl": "/templates/voiceovers/square/dog-thinking.mp4",
+  "tags": ["dog", "thinking", "monologue", "contemplative"],
+  "hasAudio": false,
+  "aspectRatio": "square",
+  "recommendedFormat": "square",
+  "source": {
+    "name": "Pexels",
+    "url": "https://www.pexels.com/"
+  },
+
+  "mediaItems": [
+    {
+      "id": "dog-thinking-video",
+      "name": "Dog Thinking",
+      "type": "video",
+      "url": "/templates/voiceovers/square/dog-thinking.mp4",
+      "thumbnailUrl": "/templates/voiceovers/square/dog-thinking.mp4",
+      "duration": 12.0,
+      "aspectRatio": 1.0
+    }
+  ],
+
+  "timelineTracks": [
+    {
+      "id": "video-track",
+      "name": "Video",
+      "type": "video",
+      "clips": [
+        {
+          "id": "clip-1",
+          "mediaId": "dog-thinking-video",
+          "name": "Dog Thinking",
+          "duration": 12.0,
+          "startTime": 0,
+          "trimStart": 0,
+          "trimEnd": 0
+        }
+      ]
+    },
+    {
+      "id": "voiceover-track",
+      "name": "Voiceover",
+      "type": "audio",
+      "clips": [],
+      "muted": false
+    }
+  ],
+
+  "instructions": {
+    "title": "How to use this template",
+    "steps": [
+      "Record your voiceover as the dog's deep philosophical thoughts",
+      "Add your voiceover to the Voiceover track",
+      "Adjust the timing to match the dog's contemplative expressions",
+      "Preview your thoughtful dog video",
+      "Export in square format for universal platform compatibility!"
+    ]
+  }
+}

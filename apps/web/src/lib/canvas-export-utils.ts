@@ -1,6 +1,19 @@
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
 
+export type VideoFormat = "landscape" | "portrait" | "square";
+
+export interface ExportOptions {
+  format: VideoFormat;
+  quality: "low" | "medium" | "high";
+}
+
+const FORMAT_DIMENSIONS = {
+  portrait: { width: 1080, height: 1920 },  // 9:16 (mobile-first) - Higher quality
+  square: { width: 1080, height: 1080 },     // 1:1 (universal)
+  landscape: { width: 1920, height: 1080 }, // 16:9 (traditional)
+} as const;
+
 /**
  * Export video using HTML5 Canvas and MediaRecorder API.
  * This approach avoids external dependencies like FFmpeg and uses native browser capabilities.
@@ -9,12 +22,16 @@ export const exportVideoWithCanvas = async (
   tracks: TimelineTrack[],
   mediaItems: MediaItem[],
   totalDuration: number,
-  onProgress: (progress: number) => void
+  onProgress: (progress: number) => void,
+  options: ExportOptions = { format: "portrait", quality: "medium" }
 ): Promise<Blob> => {
+  // Get dimensions based on selected format
+  const dimensions = FORMAT_DIMENSIONS[options.format];
+
   // Create a canvas element to render video frames
   const canvas = document.createElement("canvas");
-  canvas.width = 1280; // Reduced resolution for better performance
-  canvas.height = 720;
+  canvas.width = dimensions.width;
+  canvas.height = dimensions.height;
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     throw new Error("Failed to get canvas context");
@@ -53,19 +70,33 @@ export const exportVideoWithCanvas = async (
           if (mediaItem && mediaItem.type === "video") {
             // Create a video element to draw the current frame
             const video = document.createElement("video");
-            
+
             // Handle both local files and FilCDN URLs
-            if (mediaItem.file) {
-              video.src = URL.createObjectURL(mediaItem.file);
-            } else {
+            if (mediaItem.file && mediaItem.file instanceof File) {
+              try {
+                video.src = URL.createObjectURL(mediaItem.file);
+              } catch (error) {
+                console.warn(`Failed to create object URL for file:`, error);
+                // Fallback to URL if available
+                if (mediaItem.url) {
+                  video.src = mediaItem.url;
+                  video.crossOrigin = "anonymous";
+                } else {
+                  continue; // Skip this clip if no valid source
+                }
+              }
+            } else if (mediaItem.url) {
               video.src = mediaItem.url; // Use FilCDN URL directly
               video.crossOrigin = "anonymous"; // Allow cross-origin for FilCDN
-              
+
               // Add fallback for CORS issues
               video.onerror = () => {
                 console.warn(`CORS issue with ${mediaItem.url}, using proxy or fallback`);
                 // For demo purposes, we could add a proxy route if needed
               };
+            } else {
+              console.warn(`No valid video source for media item:`, mediaItem);
+              continue; // Skip this clip if no valid source
             }
             
             video.currentTime = time - clip.startTime + clip.trimStart;
@@ -73,7 +104,28 @@ export const exportVideoWithCanvas = async (
               video.onloadeddata = resolve;
               video.onerror = () => resolve(null);
             });
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Calculate proper scaling to maintain aspect ratio while filling the canvas
+            const videoAspect = video.videoWidth / video.videoHeight;
+            const canvasAspect = canvas.width / canvas.height;
+
+            let drawWidth, drawHeight, drawX, drawY;
+
+            if (videoAspect > canvasAspect) {
+              // Video is wider than canvas - crop sides
+              drawHeight = canvas.height;
+              drawWidth = drawHeight * videoAspect;
+              drawX = (canvas.width - drawWidth) / 2;
+              drawY = 0;
+            } else {
+              // Video is taller than canvas - crop top/bottom
+              drawWidth = canvas.width;
+              drawHeight = drawWidth / videoAspect;
+              drawX = 0;
+              drawY = (canvas.height - drawHeight) / 2;
+            }
+
+            ctx.drawImage(video, drawX, drawY, drawWidth, drawHeight);
             
             // Only revoke object URLs, not external URLs
             if (mediaItem.file) {

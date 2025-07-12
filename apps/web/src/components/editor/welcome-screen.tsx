@@ -1,6 +1,6 @@
 "use client";
 
-import React from '@/lib/hooks-provider';
+import React from "@/lib/hooks-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { Template } from "@/types/template";
 import { HoverVideoPreview } from "@/components/templates/hover-video-preview";
 import Image from "next/image";
-import { useEffect, useMemo } from '@/lib/hooks-provider';
+import { useEffect, useMemo } from "@/lib/hooks-provider";
 
 // Interface for templates with category name
 interface FeaturedTemplate extends Template {
@@ -44,20 +44,24 @@ export function WelcomeScreen() {
       }))
     );
 
-    // Prioritize animal voiceovers templates
+    // Prioritize portrait templates first (mobile-first), then other formats
     return templates
       .sort((a, b) => {
-        // Sort animal templates first (supporting both old and new structure)
-        const aIsAnimal =
-          (a.category === "voiceovers" && a.subcategory === "animal") ||
-          a.category === "animal-voiceovers";
+        // First priority: Portrait templates (mobile-first for Zora)
+        const aIsPortrait = a.aspectRatio === "portrait";
+        const bIsPortrait = b.aspectRatio === "portrait";
 
-        const bIsAnimal =
-          (b.category === "voiceovers" && b.subcategory === "animal") ||
-          b.category === "animal-voiceovers";
+        if (aIsPortrait && !bIsPortrait) return -1;
+        if (!aIsPortrait && bIsPortrait) return 1;
 
-        if (aIsAnimal && !bIsAnimal) return -1;
-        if (!aIsAnimal && bIsAnimal) return 1;
+        // Second priority: Square templates (universal)
+        const aIsSquare = a.aspectRatio === "square";
+        const bIsSquare = b.aspectRatio === "square";
+
+        if (aIsSquare && !bIsSquare) return -1;
+        if (!aIsSquare && bIsSquare) return 1;
+
+        // Third priority: Landscape templates
         return 0;
       })
       .slice(0, 4); // Get top 4 templates

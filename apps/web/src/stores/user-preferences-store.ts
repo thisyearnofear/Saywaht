@@ -16,6 +16,7 @@ export interface UserPreferences {
   // Export preferences
   defaultExportFormat: "mp4" | "webm";
   defaultQuality: "720p" | "1080p" | "4k";
+  defaultVideoFormat: "portrait" | "landscape" | "square";
   
   // Wallet-specific data
   walletAddress?: string;
@@ -41,8 +42,9 @@ const defaultPreferences: UserPreferences = {
   timelineZoom: 1,
   trackHeight: 80,
   showTimecodes: true,
-  defaultExportFormat: "mp4",
+  defaultExportFormat: "webm", // WebM for better web compatibility
   defaultQuality: "1080p",
+  defaultVideoFormat: "portrait", // Default to mobile-first format
   recentProjects: [],
   favoriteAssets: [],
 };

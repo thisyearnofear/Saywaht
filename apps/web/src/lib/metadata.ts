@@ -22,6 +22,7 @@ export interface GenerateMetadataParams {
   mediaItems: MediaItem[];
   tracks: TimelineTrack[];
   projectId: string;
+  exportedVideoUrl?: string; // Optional exported video URL from canvas export
 }
 
 /**
@@ -34,7 +35,8 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
     creatorAddress,
     mediaItems,
     tracks,
-    projectId
+    projectId,
+    exportedVideoUrl
   } = params;
 
   // Find the primary video/media content (first FilCDN item or first video)
@@ -43,9 +45,10 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
                       mediaItems.find(item => item.isFilCDN) ||
                       mediaItems[0];
 
-  // Count FilCDN vs local content
+  // Count FilCDN vs Grove vs local content
   const filcdnItems = mediaItems.filter(item => item.isFilCDN);
-  const localItems = mediaItems.filter(item => !item.isFilCDN);
+  const groveItems = mediaItems.filter(item => item.isGrove);
+  const localItems = mediaItems.filter(item => !item.isFilCDN && !item.isGrove);
 
   // Calculate total project duration
   const totalDuration = Math.max(
@@ -71,7 +74,11 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
     },
     {
       trait_type: "Storage Type",
-      value: filcdnItems.length > 0 ? "FilCDN + Local" : "Local"
+      value: filcdnItems.length > 0
+        ? "FilCDN + IPFS"
+        : groveItems.length > 0
+          ? "IPFS"
+          : "Local"
     },
     {
       trait_type: "Content Type",
@@ -129,8 +136,12 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
     attributes
   };
 
-  // Add animation URL for videos
-  if (primaryMedia && primaryMedia.type === 'video' && primaryMedia.isFilCDN) {
+  // Add animation URL for videos - prioritize exported video, then FilCDN/Grove content
+  if (exportedVideoUrl) {
+    // Use the exported video from canvas export (highest priority)
+    metadata.animation_url = exportedVideoUrl;
+  } else if (primaryMedia && primaryMedia.type === 'video' && (primaryMedia.isFilCDN || primaryMedia.isGrove)) {
+    // Fallback to original media content
     metadata.animation_url = primaryMedia.url;
   }
 

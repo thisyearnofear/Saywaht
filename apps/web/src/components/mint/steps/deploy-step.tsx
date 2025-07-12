@@ -18,7 +18,7 @@ import {
   validateMetadataURIContent,
   getCoinCreateFromLogs,
 } from "@zoralabs/coins-sdk";
-import { submitReferral } from "@divvi/referral-sdk";
+import { submitReferral, getReferralTag } from "@divvi/referral-sdk";
 import { MintWizardData } from "../mint-wizard";
 import { base } from "viem/chains";
 import type { ValidMetadataURI } from "@zoralabs/coins-sdk";
@@ -100,7 +100,29 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         const callParams = await createCoinCall(coinParams);
         console.log("📋 Contract call prepared:", callParams);
 
-        setContractCallParams(callParams);
+        // Generate Divvi referral tag and append to calldata
+        try {
+          const referralTag = getReferralTag({
+            user: address, // User's address
+            consumer: PLATFORM_ADDRESS, // Your Divvi consumer address
+          });
+
+          // Append referral tag to the transaction calldata using dataSuffix
+          const modifiedCallParams = {
+            ...callParams,
+            dataSuffix: referralTag as `0x${string}`,
+          };
+
+          console.log("📋 Divvi referral tag appended to calldata");
+          setContractCallParams(modifiedCallParams);
+        } catch (referralError) {
+          console.warn(
+            "⚠️ Failed to generate Divvi referral tag:",
+            referralError
+          );
+          // Continue without referral tag if it fails
+          setContractCallParams(callParams);
+        }
       } catch (err) {
         console.error("Failed to prepare coin creation:", err);
         toast.error("Failed to prepare coin creation");

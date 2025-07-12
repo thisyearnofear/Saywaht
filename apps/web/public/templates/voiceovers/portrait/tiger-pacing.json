@@ -1,0 +1,65 @@
+{
+  "id": "tiger-pacing",
+  "name": "Tiger Pacing",
+  "description": "Add your voice to this majestic tiger as it paces back and forth",
+  "category": "voiceovers",
+  "subcategory": "portrait",
+  "thumbnailUrl": "/templates/voiceovers/portrait/tiger-pacing.mp4",
+  "tags": ["tiger", "wildlife", "pacing", "majestic"],
+  "hasAudio": false,
+  "aspectRatio": "portrait",
+  "recommendedFormat": "portrait",
+  "source": {
+    "name": "Pexels",
+    "url": "https://www.pexels.com/"
+  },
+
+  "mediaItems": [
+    {
+      "id": "tiger-video",
+      "name": "Tiger Pacing",
+      "type": "video",
+      "url": "/templates/voiceovers/portrait/tiger-pacing.mp4",
+      "thumbnailUrl": "/templates/voiceovers/portrait/tiger-pacing.mp4",
+      "duration": 15.0,
+      "aspectRatio": 0.56
+    }
+  ],
+
+  "timelineTracks": [
+    {
+      "id": "video-track",
+      "name": "Video",
+      "type": "video",
+      "clips": [
+        {
+          "id": "clip-1",
+          "mediaId": "tiger-video",
+          "name": "Tiger Pacing",
+          "duration": 15.0,
+          "startTime": 0,
+          "trimStart": 0,
+          "trimEnd": 0
+        }
+      ]
+    },
+    {
+      "id": "voiceover-track",
+      "name": "Voiceover",
+      "type": "audio",
+      "clips": [],
+      "muted": false
+    }
+  ],
+
+  "instructions": {
+    "title": "How to use this template",
+    "steps": [
+      "Record your voiceover as if you're the tiger's inner thoughts while pacing",
+      "Add your voiceover to the Voiceover track",
+      "Adjust the timing to match the tiger's movements and rhythm",
+      "Preview your tiger monologue video",
+      "Export in portrait format for mobile-first sharing!"
+    ]
+  }
+}

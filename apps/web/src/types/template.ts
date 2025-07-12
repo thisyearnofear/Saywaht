@@ -7,7 +7,7 @@ export interface Template {
   name: string;
   description: string;
   category: string;
-  subcategory?: string; // For hierarchical organization like "animal" within "voiceovers"
+  subcategory?: string; // For hierarchical organization like "landscape", "portrait", "square"
   thumbnailUrl: string;
   videoUrl?: string; // Direct link to video for previewing
   duration?: number; // Duration in seconds
@@ -18,7 +18,11 @@ export interface Template {
     url?: string;    // Link to source
     author?: string; // Original creator if known
   };
-  
+
+  // Aspect ratio metadata for format-aware selection
+  aspectRatio: "landscape" | "portrait" | "square"; // Primary aspect ratio of the template
+  recommendedFormat?: "landscape" | "portrait" | "square"; // Recommended export format
+
   // Template content references
   mediaItems: TemplateMediaItem[];
   timelineTracks?: TemplateTimelineTrack[]; // Optional timeline setup

@@ -76,7 +76,7 @@ export const useProjectIPFSStore = create<ProjectIPFSStore>()(
           settings: {
             duration: 30,
             fps: 30,
-            resolution: { width: 1920, height: 1080 },
+            resolution: { width: 1080, height: 1920 }, // Default to 9:16 Portrait for mobile-first
           },
           isDirty: true,
         };

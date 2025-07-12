@@ -1,13 +1,15 @@
 "use client";
 
-import React from '@/lib/hooks-provider';
+import React from "@/lib/hooks-provider";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Template } from "@/types/template";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useTemplateStore } from "@/stores/template-store";
 import { HoverVideoPreview } from "./hover-video-preview";
+import { LuSmartphone, LuSquare, LuMonitor } from "react-icons/lu";
 
 interface TemplateCategoryCardProps {
   template: Template;
@@ -27,6 +29,34 @@ export function TemplateCategoryCard({ template }: TemplateCategoryCardProps) {
     selectTemplate(template.id);
     router.push(`/templates/${template.id}/use`);
   };
+
+  // Get aspect ratio info for display
+  const getAspectRatioInfo = () => {
+    const aspectRatio = template.aspectRatio || "landscape"; // fallback for older templates
+    switch (aspectRatio) {
+      case "portrait":
+        return {
+          icon: LuSmartphone,
+          label: "Portrait",
+          color: "bg-green-500/20 text-green-300",
+        };
+      case "square":
+        return {
+          icon: LuSquare,
+          label: "Square",
+          color: "bg-blue-500/20 text-blue-300",
+        };
+      case "landscape":
+      default:
+        return {
+          icon: LuMonitor,
+          label: "Landscape",
+          color: "bg-orange-500/20 text-orange-300",
+        };
+    }
+  };
+
+  const aspectRatioInfo = getAspectRatioInfo();
 
   return (
     <Card
@@ -69,6 +99,16 @@ export function TemplateCategoryCard({ template }: TemplateCategoryCardProps) {
             </svg>
           </div>
         )}
+
+        {/* Aspect Ratio Badge */}
+        <div className="absolute top-2 right-2">
+          <Badge
+            className={`${aspectRatioInfo.color} border-0 text-xs flex items-center gap-1`}
+          >
+            <aspectRatioInfo.icon size={12} />
+            {aspectRatioInfo.label}
+          </Badge>
+        </div>
       </div>
 
       <CardContent className="p-4">

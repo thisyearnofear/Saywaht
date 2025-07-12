@@ -15,10 +15,12 @@ import {
 // Step components
 import { ThumbnailStep } from "./steps/thumbnail-step";
 import { CoinDetailsStep } from "./steps/coin-details-step";
+import { FormatStep } from "./steps/format-step";
 import { PreviewStep } from "./steps/preview-step";
 import { DeployStep } from "./steps/deploy-step";
 import { triggerCelebration } from "@/lib/confetti";
 import { useEffect } from "@/lib/hooks-provider";
+import type { VideoFormat } from "@/lib/canvas-export-utils";
 
 export interface MintWizardData {
   // Thumbnail data
@@ -32,6 +34,9 @@ export interface MintWizardData {
 
   // Metadata
   metadataUri: string | null;
+
+  // Export settings
+  videoFormat: VideoFormat;
 
   // Deploy status
   isDeploying: boolean;
@@ -48,6 +53,11 @@ const STEPS = [
     id: "details",
     title: "Coin Details",
     description: "Set your coin name, symbol, and description",
+  },
+  {
+    id: "format",
+    title: "Video Format",
+    description: "Choose the optimal format for your content",
   },
   {
     id: "preview",
@@ -70,6 +80,7 @@ export function MintWizard() {
     coinSymbol: "",
     coinDescription: "",
     metadataUri: null,
+    videoFormat: "portrait", // Default to mobile-first format
     isDeploying: false,
     deployedCoin: null,
   });
@@ -98,9 +109,11 @@ export function MintWizard() {
           wizardData.coinName.trim() !== "" &&
           wizardData.coinSymbol.trim() !== ""
         );
-      case 2: // Preview step
+      case 2: // Format step
+        return wizardData.videoFormat !== undefined;
+      case 3: // Preview step
         return true; // Can always proceed from preview
-      case 3: // Deploy step
+      case 4: // Deploy step
         return wizardData.deployedCoin !== null;
       default:
         return false;
@@ -132,8 +145,17 @@ export function MintWizard() {
           <CoinDetailsStep data={wizardData} updateData={updateWizardData} />
         );
       case 2:
-        return <PreviewStep data={wizardData} updateData={updateWizardData} />;
+        return (
+          <FormatStep
+            data={wizardData}
+            updateData={updateWizardData}
+            onNext={nextStep}
+            onBack={prevStep}
+          />
+        );
       case 3:
+        return <PreviewStep data={wizardData} updateData={updateWizardData} />;
+      case 4:
         return <DeployStep data={wizardData} updateData={updateWizardData} />;
       default:
         return null;

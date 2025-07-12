@@ -18,7 +18,7 @@ export function PreviewPanel() {
   const { mediaItems } = useMediaStore();
   const { isPlaying, toggle, currentTime, muted, toggleMute, volume } =
     usePlaybackStore();
-  const [canvasSize, setCanvasSize] = useState({ width: 1920, height: 1080 });
+  const [canvasSize, setCanvasSize] = useState({ width: 1080, height: 1920 }); // Default to 9:16 Portrait for mobile-first
   const [showDebug, setShowDebug] = useState(SHOW_DEBUG_INFO);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -122,12 +122,12 @@ export function PreviewPanel() {
     return null;
   };
 
-  // Canvas presets
+  // Canvas presets - Portrait first for mobile-first approach
   const canvasPresets = [
+    { name: "9:16 Portrait", width: 1080, height: 1920 }, // Mobile-first default
+    { name: "1:1 Square", width: 1080, height: 1080 },
     { name: "16:9 HD", width: 1920, height: 1080 },
     { name: "16:9 4K", width: 3840, height: 2160 },
-    { name: "9:16 Mobile", width: 1080, height: 1920 },
-    { name: "1:1 Square", width: 1080, height: 1080 },
     { name: "4:3 Standard", width: 1440, height: 1080 },
   ];
 

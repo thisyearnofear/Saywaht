@@ -36,7 +36,58 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
     const generateMetadata = async () => {
       setIsGeneratingMetadata(true);
       try {
-        // Upload thumbnail to Grove if it's a data URL
+        // Step 1: Export timeline content as video
+        console.log("🎬 Exporting timeline content...");
+        let exportedVideoUrl = "";
+
+        if (tracks.length > 0 && mediaItems.length > 0) {
+          try {
+            // Calculate total duration from timeline
+            const totalDuration = Math.max(
+              ...tracks.flatMap((track) =>
+                track.clips.map((clip) => clip.startTime + clip.duration)
+              ),
+              5 // Minimum 5 seconds
+            );
+
+            // Export video using canvas with selected format
+            const { exportVideoWithCanvas } = await import(
+              "@/lib/canvas-export-utils"
+            );
+            const videoBlob = await exportVideoWithCanvas(
+              tracks,
+              mediaItems,
+              totalDuration,
+              (progress) => {
+                console.log(`Export progress: ${Math.round(progress)}%`);
+              },
+              {
+                format: data.videoFormat,
+                quality: "medium",
+              }
+            );
+
+            // Upload exported video to Grove
+            const { groveStorage } = await import("@/lib/grove-storage");
+            const videoFile = new File(
+              [videoBlob],
+              `${data.coinName.replace(/[^a-zA-Z0-9]/g, "_")}.webm`,
+              {
+                type: "video/webm",
+              }
+            );
+
+            console.log("📤 Uploading exported video to Grove...");
+            const videoUploadResult = await groveStorage.uploadFile(videoFile);
+            exportedVideoUrl = videoUploadResult.gatewayUrl;
+            console.log("✅ Video uploaded to Grove:", exportedVideoUrl);
+          } catch (error) {
+            console.error("Failed to export/upload video:", error);
+            // Continue without video if export fails
+          }
+        }
+
+        // Step 2: Upload thumbnail to Grove if it's a data URL
         let finalThumbnailUrl = data.thumbnail;
         let thumbnailDisplayUrl = data.thumbnail; // Keep original for display
         if (data.thumbnail && data.thumbnail.startsWith("data:")) {
@@ -57,18 +108,37 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           }
         }
 
-        // Create modified mediaItems with custom thumbnail
-        const modifiedMediaItems = thumbnailDisplayUrl
-          ? mediaItems.map((item, index) => {
-              if (index === 0 && item.type === "video") {
-                return {
-                  ...item,
-                  thumbnailUrl: thumbnailDisplayUrl || undefined, // Use gateway URL for metadata
-                };
-              }
-              return item;
-            })
-          : mediaItems;
+        // Step 3: Create modified mediaItems with exported video and custom thumbnail
+        const modifiedMediaItems = [...mediaItems];
+
+        // Add the exported video as the primary media item
+        if (exportedVideoUrl) {
+          const exportedVideoItem = {
+            id: crypto.randomUUID(),
+            name: `${data.coinName} - Exported`,
+            url: exportedVideoUrl,
+            type: "video" as const,
+            size: 0, // Size not critical for metadata
+            duration: 0, // Duration not critical for metadata
+            aspectRatio: 16 / 9,
+            isGrove: true,
+            thumbnailUrl: thumbnailDisplayUrl || undefined,
+          };
+
+          // Insert at the beginning to make it the primary media
+          modifiedMediaItems.unshift(exportedVideoItem);
+        } else if (thumbnailDisplayUrl) {
+          // If no exported video, at least update the first video with custom thumbnail
+          const firstVideoIndex = modifiedMediaItems.findIndex(
+            (item) => item.type === "video"
+          );
+          if (firstVideoIndex >= 0) {
+            modifiedMediaItems[firstVideoIndex] = {
+              ...modifiedMediaItems[firstVideoIndex],
+              thumbnailUrl: thumbnailDisplayUrl,
+            };
+          }
+        }
 
         const metadata = await generateCoinMetadata({
           coinName: data.coinName,
@@ -77,6 +147,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           mediaItems: modifiedMediaItems,
           tracks,
           projectId: activeProject.id,
+          exportedVideoUrl: exportedVideoUrl || undefined, // Include the exported video URL
         });
 
         // Add custom description if provided
@@ -100,6 +171,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
     data.coinSymbol,
     data.coinDescription,
     data.thumbnail,
+    data.videoFormat,
     activeProject,
     mediaItems,
     tracks,
