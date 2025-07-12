@@ -52,12 +52,21 @@ export function PreviewPanel() {
     return activeClips;
   };
 
+  // Check if there are separated audio tracks for any video
+  const hasSeparatedAudio = (videoMediaId: string) => {
+    return tracks.some(
+      (track) =>
+        track.type === "audio" &&
+        track.clips.some((clip) => clip.mediaId === videoMediaId)
+    );
+  };
+
   const activeClips = getActiveClips();
   const aspectRatio = canvasSize.width / canvasSize.height;
 
   // Render a clip
   const renderClip = (clipData: any, index: number) => {
-    const { clip, mediaItem } = clipData;
+    const { clip, track, mediaItem } = clipData;
 
     // Test clips
     if (!mediaItem || clip.mediaId === "test") {
@@ -74,8 +83,24 @@ export function PreviewPanel() {
       );
     }
 
-    // Video clips
+    // Handle video clips based on track type
     if (mediaItem.type === "video") {
+      // If video is on an audio track, only play audio (no visual)
+      if (track.type === "audio") {
+        return (
+          <AudioPlayer
+            key={clip.id}
+            src={mediaItem.url}
+            clipStartTime={clip.startTime}
+            trimStart={clip.trimStart}
+            trimEnd={clip.trimEnd}
+            clipDuration={clip.duration}
+          />
+        );
+      }
+
+      // If video is on a video track, show video (mute audio if separated)
+      const shouldMuteAudio = hasSeparatedAudio(clip.mediaId);
       return (
         <div key={clip.id} className="absolute inset-0">
           <VideoPlayer
@@ -85,6 +110,7 @@ export function PreviewPanel() {
             trimStart={clip.trimStart}
             trimEnd={clip.trimEnd}
             clipDuration={clip.duration}
+            muteAudio={shouldMuteAudio}
           />
         </div>
       );

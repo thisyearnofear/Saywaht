@@ -21,15 +21,30 @@ export function MobileProvider({ children }: { children: React.ReactNode }) {
   const orientation = useMobileOrientation();
   const [isEditorMobileMode, setIsEditorMobileMode] = useState(false);
 
-  // Auto-enable mobile mode when on mobile devices
+  // Auto-enable mobile mode when on mobile devices, but allow desktop users to choose
   useEffect(() => {
     if (isMobile) {
       setIsEditorMobileMode(true);
+    } else {
+      // On desktop, check if user has a preference stored
+      const savedPreference = localStorage.getItem("editor-mobile-mode");
+      if (savedPreference !== null) {
+        setIsEditorMobileMode(savedPreference === "true");
+      }
+      // If no preference, default to desktop mode
     }
   }, [isMobile]);
 
+  // Save user preference when they manually toggle
   const toggleEditorMobileMode = () => {
-    setIsEditorMobileMode((prev: boolean) => !prev);
+    setIsEditorMobileMode((prev: boolean) => {
+      const newValue = !prev;
+      if (!isMobile) {
+        // Only save preference on desktop
+        localStorage.setItem("editor-mobile-mode", newValue.toString());
+      }
+      return newValue;
+    });
   };
 
   const enableEditorMobileMode = () => {

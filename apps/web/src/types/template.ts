@@ -26,6 +26,12 @@ export interface Template {
   // Template content references
   mediaItems: TemplateMediaItem[];
   timelineTracks?: TemplateTimelineTrack[]; // Optional timeline setup
+
+  // Instructions for using the template
+  instructions?: {
+    title: string;
+    steps: string[];
+  };
 }
 
 // Media item in a template

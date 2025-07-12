@@ -1,8 +1,8 @@
 "use client";
 
-import React from '@/lib/hooks-provider';
+import React from "@/lib/hooks-provider";
 import { Button } from "@/components/ui/button";
-import { useState, useRef } from '@/lib/hooks-provider';
+import { useState, useRef } from "@/lib/hooks-provider";
 
 interface VideoPreviewProps {
   src: string;
@@ -38,7 +38,7 @@ export function VideoPreview({ src, title }: VideoPreviewProps) {
   };
 
   return (
-    <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
+    <div className="relative w-full h-full overflow-hidden bg-black">
       <video
         ref={videoRef}
         className="w-full h-full object-cover"

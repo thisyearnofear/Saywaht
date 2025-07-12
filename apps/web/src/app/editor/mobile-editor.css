@@ -96,3 +96,92 @@
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* Optimized split view layout for video-while-recording */
+.mobile-editor .split-view-preview {
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+/* Video preview optimization */
+.mobile-editor .split-view-preview::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* Highlight video when recording */
+.mobile-editor .recording .split-view-preview::after {
+  opacity: 1;
+  border-color: rgba(239, 68, 68, 0.5);
+  animation: pulse-recording 2s infinite;
+}
+
+@keyframes pulse-recording {
+  0%, 100% { border-color: rgba(239, 68, 68, 0.3); }
+  50% { border-color: rgba(239, 68, 68, 0.7); }
+}
+
+/* Recording interface optimization */
+.mobile-editor .recording-focused {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
+}
+
+/* Better tab styling */
+.mobile-editor [data-state="active"] {
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Optimize for landscape orientation on mobile */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+  .mobile-editor .split-view-preview {
+    margin: 4px;
+  }
+  
+  .mobile-editor .landscape-optimize {
+    flex-direction: row;
+  }
+  
+  /* Reduce header height on landscape mobile */
+  .mobile-editor .mobile-header {
+    min-height: 48px;
+  }
+}
+
+/* Desktop override - ensure desktop users get full functionality */
+@media screen and (min-width: 1024px) {
+  .mobile-editor {
+    /* Allow desktop users to access mobile mode but with desktop optimizations */
+    touch-action: auto;
+  }
+  
+  .mobile-editor button,
+  .mobile-editor .clickable {
+    min-height: 36px; /* Smaller touch targets for desktop */
+    min-width: 36px;
+  }
+  
+  /* Show scrollbars on desktop */
+  .mobile-editor .hide-scrollbar::-webkit-scrollbar {
+    display: block;
+    width: 8px;
+  }
+  
+  .mobile-editor .hide-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+}

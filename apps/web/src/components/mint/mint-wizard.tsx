@@ -112,7 +112,9 @@ export function MintWizard() {
       case 2: // Format step
         return wizardData.videoFormat !== undefined;
       case 3: // Preview step
-        return true; // Can always proceed from preview
+        // Allow proceeding if metadata is ready, regardless of video upload status
+        // This allows users to deploy with thumbnail only if video upload fails
+        return wizardData.metadataUri !== null;
       case 4: // Deploy step
         return wizardData.deployedCoin !== null;
       default:
@@ -145,14 +147,7 @@ export function MintWizard() {
           <CoinDetailsStep data={wizardData} updateData={updateWizardData} />
         );
       case 2:
-        return (
-          <FormatStep
-            data={wizardData}
-            updateData={updateWizardData}
-            onNext={nextStep}
-            onBack={prevStep}
-          />
-        );
+        return <FormatStep data={wizardData} updateData={updateWizardData} />;
       case 3:
         return <PreviewStep data={wizardData} updateData={updateWizardData} />;
       case 4:

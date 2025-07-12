@@ -131,6 +131,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
     };
 
     prepareCall();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     address,
     data.metadataUri,
@@ -270,6 +271,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
 
       updateData({ isDeploying: false });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isSuccess,
     txHash,

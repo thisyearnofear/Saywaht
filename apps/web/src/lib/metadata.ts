@@ -9,6 +9,10 @@ export interface CoinMetadata {
   image?: string;
   animation_url?: string;
   external_url?: string;
+  content?: {
+    mime: string;
+    uri: string;
+  };
   attributes: Array<{
     trait_type: string;
     value: string | number;
@@ -140,9 +144,19 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
   if (exportedVideoUrl) {
     // Use the exported video from canvas export (highest priority)
     metadata.animation_url = exportedVideoUrl;
+    // Add Zora's content field for proper video display
+    metadata.content = {
+      mime: "video/webm",
+      uri: exportedVideoUrl
+    };
   } else if (primaryMedia && primaryMedia.type === 'video' && (primaryMedia.isFilCDN || primaryMedia.isGrove)) {
     // Fallback to original media content
     metadata.animation_url = primaryMedia.url;
+    // Add Zora's content field for proper video display
+    metadata.content = {
+      mime: primaryMedia.url.endsWith('.mp4') ? "video/mp4" : "video/webm",
+      uri: primaryMedia.url
+    };
   }
 
   return metadata;

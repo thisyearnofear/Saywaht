@@ -45,6 +45,7 @@ export const {
   Edit2,
   Check,
   X,
+  RotateCcw,
   Type,
   Palette,
   Clock,

@@ -10,8 +10,6 @@ import { MintWizardData } from "../mint-wizard";
 interface FormatStepProps {
   data: MintWizardData;
   updateData: (updates: Partial<MintWizardData>) => void;
-  onNext: () => void;
-  onBack: () => void;
 }
 
 const FORMAT_OPTIONS = [
@@ -61,12 +59,7 @@ const FORMAT_OPTIONS = [
   },
 ];
 
-export function FormatStep({
-  data,
-  updateData,
-  onNext,
-  onBack,
-}: FormatStepProps) {
+export function FormatStep({ data, updateData }: FormatStepProps) {
   const handleFormatSelect = (format: VideoFormat) => {
     updateData({ videoFormat: format });
   };
@@ -181,15 +174,6 @@ export function FormatStep({
             </p>
           </div>
         </div>
-      </div>
-
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={onBack}>
-          Back
-        </Button>
-        <Button onClick={onNext} disabled={!canProceed}>
-          Continue
-        </Button>
       </div>
     </div>
   );

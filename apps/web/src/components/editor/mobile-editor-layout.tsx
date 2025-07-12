@@ -13,6 +13,10 @@ import { StatusBar } from "@/components/editor/status-bar";
 import { MobileTimeline } from "@/components/editor/mobile-timeline";
 import { MobileMediaPanel } from "@/components/editor/mobile-media-panel";
 import { MobilePreviewPanel } from "@/components/editor/mobile-preview-panel";
+import {
+  MobileOnboardingOverlay,
+  useMobileOnboarding,
+} from "@/components/editor/mobile-onboarding-overlay";
 
 // Import components dynamically to match the main editor page
 import dynamic from "next/dynamic";
@@ -92,6 +96,11 @@ export function MobileEditorLayout({ children }: MobileEditorLayoutProps) {
     useMobileContext();
   const [activeTab, setActiveTab] = useState<string>("preview");
   const [timelineExpanded, setTimelineExpanded] = useState<boolean>(false);
+  const [splitViewMode, setSplitViewMode] = useState<boolean>(true); // Default to split view for better UX
+
+  // Onboarding state
+  const { showOnboarding, completeOnboarding, skipOnboarding } =
+    useMobileOnboarding();
 
   // Get panel sizes from store
   const { setToolsPanel, setPreviewPanel, setMainContent, setTimeline } =
@@ -124,39 +133,90 @@ export function MobileEditorLayout({ children }: MobileEditorLayoutProps) {
 
       {/* Main content area */}
       <div className="flex-1 min-h-0 min-w-0 flex flex-col portrait-optimize">
-        {/* Tabs for mobile view */}
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="flex-1 flex flex-col min-h-0"
-        >
-          <TabsList className="grid grid-cols-2 w-full rounded-none border-b no-select">
-            <TabsTrigger value="preview" className="clickable">
-              Preview
-            </TabsTrigger>
-            <TabsTrigger value="media" className="clickable">
-              Media
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent
-            value="preview"
-            className="flex-1 min-h-0 p-0 data-[state=active]:flex data-[state=active]:flex-col gesture-area"
-          >
-            <div className="flex-1 min-h-0 prevent-zoom">
+        {/* Mobile interface optimized for video-while-recording workflow */}
+        {splitViewMode ? (
+          /* Primary UX: Split View - Always see video while recording */
+          <div className="flex-1 min-h-0 flex flex-col">
+            {/* Video preview - prominent but not overwhelming */}
+            <div className="flex-shrink-0 h-40 sm:h-48 prevent-zoom border-b split-view-preview">
               <MobilePreviewPanel />
             </div>
-          </TabsContent>
 
-          <TabsContent
-            value="media"
-            className="flex-1 min-h-0 p-0 data-[state=active]:flex data-[state=active]:flex-col scrollable hide-scrollbar"
-          >
-            <div className="flex-1 min-h-0">
-              <MobileMediaPanel />
+            {/* Recording tools - streamlined for primary workflow */}
+            <div className="flex-1 min-h-0 flex flex-col">
+              <div className="flex items-center justify-between border-b px-3 py-2 bg-background/95 backdrop-blur-sm">
+                <h3 className="text-sm font-medium text-foreground">
+                  🎤 Record Audio
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="clickable px-2 text-xs"
+                    onClick={() => setSplitViewMode(false)}
+                    title="Switch to full screen tabs"
+                  >
+                    📱 Tabs
+                  </Button>
+                </div>
+              </div>
+              <div className="flex-1 min-h-0 scrollable hide-scrollbar">
+                <MobileMediaPanel />
+              </div>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        ) : (
+          /* Secondary UX: Tab View - For when full screen is needed */
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="flex-1 flex flex-col min-h-0"
+          >
+            <div className="flex items-center border-b no-select bg-background/95 backdrop-blur-sm">
+              <TabsList className="grid grid-cols-2 flex-1 rounded-none border-0 bg-transparent">
+                <TabsTrigger
+                  value="preview"
+                  className="clickable data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  🎬 Preview
+                </TabsTrigger>
+                <TabsTrigger
+                  value="media"
+                  className="clickable data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  🎤 Record
+                </TabsTrigger>
+              </TabsList>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="clickable px-3 text-xs font-medium"
+                onClick={() => setSplitViewMode(true)}
+                title="Split view - see video while recording"
+              >
+                ⚡ Split
+              </Button>
+            </div>
+
+            <TabsContent
+              value="preview"
+              className="flex-1 min-h-0 p-0 data-[state=active]:flex data-[state=active]:flex-col gesture-area"
+            >
+              <div className="flex-1 min-h-0 prevent-zoom">
+                <MobilePreviewPanel />
+              </div>
+            </TabsContent>
+
+            <TabsContent
+              value="media"
+              className="flex-1 min-h-0 p-0 data-[state=active]:flex data-[state=active]:flex-col scrollable hide-scrollbar"
+            >
+              <div className="flex-1 min-h-0">
+                <MobileMediaPanel />
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
 
         {/* Mobile Timeline with expand/collapse control */}
         <MobileTimeline
@@ -170,6 +230,17 @@ export function MobileEditorLayout({ children }: MobileEditorLayoutProps) {
 
       {/* Floating UI Elements */}
       <QuickActions />
+
+      {/* Mobile Onboarding Overlay */}
+      <MobileOnboardingOverlay
+        isOpen={showOnboarding}
+        onClose={skipOnboarding}
+        onStartRecording={() => {
+          completeOnboarding();
+          // Switch to media tab and audio subtab to show recording interface
+          setActiveTab("media");
+        }}
+      />
     </div>
   );
 }

@@ -1,13 +1,13 @@
 "use client";
 
-import React from '@/lib/hooks-provider';
+import React from "@/lib/hooks-provider";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useTemplateStore } from "@/stores/template-store";
 import { Button } from "@/components/ui/button";
 import { VideoPreview } from "./video-preview";
 import { VideoThumbnailSimple } from "./video-thumbnail-simple";
-import { useState, useEffect } from '@/lib/hooks-provider';
+import { useState, useEffect } from "@/lib/hooks-provider";
 
 interface TemplateDetailsProps {
   templateId: string;
@@ -111,8 +111,16 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          {/* Preview section */}
-          <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
+          {/* Preview section - adaptive aspect ratio */}
+          <div
+            className={`relative overflow-hidden rounded-lg bg-black ${
+              selectedTemplate.aspectRatio === "portrait"
+                ? "aspect-[9/16] max-w-md mx-auto"
+                : selectedTemplate.aspectRatio === "square"
+                  ? "aspect-square max-w-md mx-auto"
+                  : "aspect-video"
+            }`}
+          >
             {selectedTemplate.videoUrl ||
             (selectedTemplate.thumbnailUrl &&
               selectedTemplate.thumbnailUrl.endsWith(".mp4")) ? (
@@ -145,6 +153,39 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
                 </svg>
               </div>
             )}
+          </div>
+
+          {/* Mobile-first: Quick context */}
+          <div className="lg:hidden p-4 bg-white/5 rounded-lg">
+            <p className="text-white/80 text-sm mb-3">
+              {selectedTemplate.description}
+            </p>
+
+            {/* Simple next step hint */}
+            <div className="flex items-center gap-2 text-xs text-blue-300">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+              <span>Record your voice, sync to video, export & share</span>
+            </div>
+          </div>
+
+          {/* Mobile-first: Quick action button */}
+          <div className="lg:hidden">
+            <Button
+              onClick={handleApplyTemplate}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 text-lg font-semibold"
+            >
+              Start Creating with This Template
+            </Button>
           </div>
 
           {/* Timeline preview */}
@@ -206,6 +247,28 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
         </div>
 
         <div className="space-y-6">
+          {/* Quick guide - desktop version */}
+          <div className="hidden lg:block p-4 bg-white/5 rounded-lg">
+            <h3 className="text-md font-medium text-white mb-2 flex items-center gap-2">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="text-blue-400"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+              Quick Start
+            </h3>
+            <p className="text-white/70 text-sm">
+              Record your voice, sync to video, export & share
+            </p>
+          </div>
+
           {/* Template info */}
           <div className="p-4 bg-white/5 rounded-lg">
             <h3 className="text-md font-medium text-white mb-2">
@@ -361,7 +424,7 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
           <div className="flex flex-col gap-2">
             <Button
               onClick={handleApplyTemplate}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white hidden lg:flex"
             >
               Use This Template
             </Button>

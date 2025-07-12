@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, ChangeEvent } from '@/lib/hooks-provider';
+import { useState, useRef, ChangeEvent } from "@/lib/hooks-provider";
 import {
   Card,
   CardContent,
@@ -21,7 +21,9 @@ import {
   Download,
 } from "@/lib/icons-provider";
 import { useMediaStore } from "@/stores/media-store";
+import { useTimelineStore } from "@/stores/timeline-store";
 import { useMobileContext } from "@/contexts/mobile-context";
+import { MobileRecordingInterface } from "./mobile-recording-interface";
 import { cn } from "@/lib/utils";
 
 interface MobileAudioPanelProps {
@@ -30,7 +32,9 @@ interface MobileAudioPanelProps {
 
 export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
   const { orientation } = useMobileContext();
-  const { mediaItems } = useMediaStore();
+  const { mediaItems, addMediaItem } = useMediaStore();
+  const { addClipToTrack } = useTimelineStore();
+  const [showMobileRecording, setShowMobileRecording] = useState(false);
 
   // Filter for audio files only
   const audioFiles = mediaItems.filter(
@@ -46,8 +50,39 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
   };
 
   const handleVoiceoverRecord = () => {
-    // Handle voiceover recording
-    console.log("Start voiceover recording");
+    setShowMobileRecording(true);
+  };
+
+  const handleRecordingComplete = (audioBlob: Blob) => {
+    // Create a new audio media item
+    const audioFile = new File([audioBlob], `voiceover-${Date.now()}.webm`, {
+      type: "audio/webm",
+    });
+
+    const audioItem = {
+      id: `audio-${Date.now()}`,
+      name: `Voiceover ${new Date().toLocaleTimeString()}`,
+      type: "audio" as const,
+      file: audioFile,
+      url: URL.createObjectURL(audioFile),
+      duration: 0, // Will be calculated when loaded
+      thumbnailUrl: "",
+      aspectRatio: 1, // Audio files don't have aspect ratio, but required by MediaItem type
+      isLocal: true,
+    };
+
+    // Add to media store
+    addMediaItem(audioItem);
+
+    // Add to timeline
+    addClipToTrack("voiceover-track", {
+      mediaId: audioItem.id,
+      name: audioItem.name,
+      startTime: 0,
+      duration: audioItem.duration || 10, // Default duration
+      trimStart: 0,
+      trimEnd: 0,
+    });
   };
 
   const handleMusicLibrary = () => {
@@ -72,15 +107,17 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
 
       {/* Quick Actions */}
       <div className="p-4 border-b border-border">
+        {/* Primary Record Button */}
+        <Button
+          className="h-16 w-full bg-red-500 hover:bg-red-600 text-white font-semibold text-lg mb-4"
+          onClick={handleVoiceoverRecord}
+        >
+          <Mic className="h-6 w-6 mr-3" />
+          🎤 Record Your Voice
+        </Button>
+
+        {/* Secondary Actions */}
         <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-            className="h-12 flex flex-col gap-1"
-            onClick={handleVoiceoverRecord}
-          >
-            <Mic className="h-4 w-4" />
-            <span className="text-xs">Record</span>
-          </Button>
           <Button
             variant="outline"
             className="h-12 flex flex-col gap-1"
@@ -89,6 +126,21 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
             <Music className="h-4 w-4" />
             <span className="text-xs">Music</span>
           </Button>
+          <Button
+            variant="outline"
+            className="h-12 flex flex-col gap-1"
+            onClick={() => document.getElementById("audio-upload")?.click()}
+          >
+            <Upload className="h-4 w-4" />
+            <span className="text-xs">Upload</span>
+          </Button>
+        </div>
+
+        {/* Helpful hint for recording */}
+        <div className="px-4 pb-2">
+          <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded text-center">
+            💡 Tap the red button above to start recording your voiceover!
+          </div>
         </div>
       </div>
 
@@ -126,6 +178,13 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
         multiple
         onChange={handleAudioUpload}
         className="hidden"
+      />
+
+      {/* Mobile Recording Interface */}
+      <MobileRecordingInterface
+        isOpen={showMobileRecording}
+        onClose={() => setShowMobileRecording(false)}
+        onComplete={handleRecordingComplete}
       />
     </div>
   );

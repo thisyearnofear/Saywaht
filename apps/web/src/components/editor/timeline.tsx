@@ -113,9 +113,17 @@ export function Timeline() {
     }
   }, [contextMenu]);
 
-  // Keyboard event for deleting selected clips
+  // Keyboard event for deleting selected clips and other shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input field
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
       if (
         (e.key === "Delete" || e.key === "Backspace") &&
         selectedClips.length > 0
@@ -124,6 +132,12 @@ export function Timeline() {
           removeClipFromTrack(trackId, clipId);
         });
         clearSelectedClips();
+      } else if (e.key.toLowerCase() === "e" && selectedClips.length > 0) {
+        e.preventDefault();
+        handleSeparateAudio();
+      } else if (e.key.toLowerCase() === "s" && selectedClips.length > 0) {
+        e.preventDefault();
+        handleSplitSelected();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -558,6 +572,50 @@ export function Timeline() {
     toast.success("Deleted selected clip(s)");
   };
 
+  const handleSeparateAudio = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+
+    let separatedCount = 0;
+    selectedClips.forEach(({ trackId, clipId }) => {
+      const track = tracks.find((t) => t.id === trackId);
+      const clip = track?.clips.find((c) => c.id === clipId);
+
+      if (!clip || !track) return;
+
+      // Only separate audio from video clips on video tracks
+      const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
+      if (!mediaItem || mediaItem.type !== "video" || track.type !== "video") {
+        return; // Skip non-video clips or clips not on video tracks
+      }
+
+      // Create a new audio track for the separated audio
+      const audioTrackId = addTrack("audio");
+
+      // Add the same media item to the audio track (renderer will handle audio-only playback)
+      addClipToTrack(audioTrackId, {
+        mediaId: clip.mediaId, // Same media item, no duplication
+        name: clip.name + " (audio)",
+        duration: clip.duration,
+        startTime: clip.startTime,
+        trimStart: clip.trimStart,
+        trimEnd: clip.trimEnd,
+      });
+
+      separatedCount++;
+    });
+
+    if (separatedCount > 0) {
+      toast.success(
+        `Separated audio from ${separatedCount} video clip(s) - audio tracks created`
+      );
+    } else {
+      toast.error("No video clips selected to separate audio from");
+    }
+  };
+
   // Prevent explorer zooming in/out when in timeline
   useEffect(() => {
     const preventZoom = (e: WheelEvent) => {
@@ -689,7 +747,7 @@ export function Timeline() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="text" size="icon">
+              <Button variant="text" size="icon" onClick={handleSeparateAudio}>
                 <SplitSquareHorizontal className="h-4 w-4" />
               </Button>
             </TooltipTrigger>

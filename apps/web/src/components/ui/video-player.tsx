@@ -11,6 +11,7 @@ interface VideoPlayerProps {
   trimStart: number;
   trimEnd: number;
   clipDuration: number;
+  muteAudio?: boolean; // New prop to mute video audio when separated
 }
 
 export function VideoPlayer({
@@ -21,6 +22,7 @@ export function VideoPlayer({
   trimStart,
   trimEnd,
   clipDuration,
+  muteAudio = false,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { isPlaying, currentTime, volume, speed, muted } = usePlaybackStore();
@@ -108,10 +110,10 @@ export function VideoPlayer({
     const video = videoRef.current;
     if (!video) return;
 
-    video.volume = volume;
-    video.muted = muted;
+    video.volume = muteAudio ? 0 : volume;
+    video.muted = muteAudio || muted;
     video.playbackRate = speed;
-  }, [volume, speed, muted]);
+  }, [volume, speed, muted, muteAudio]);
 
   return (
     <video
