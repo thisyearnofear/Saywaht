@@ -1,16 +1,17 @@
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
-import { exportVideoWithFFmpeg } from "./ffmpeg-export-utils";
+import { exportVideoWithEnhancedCanvas } from "./enhanced-canvas-export";
+import { exportVideoOptimized, shouldUseOptimizedExport } from "./optimized-export";
 
 export type VideoFormat = "landscape" | "portrait" | "square";
-export type ExportMethod = "canvas" | "ffmpeg" | "auto";
+export type ExportMethod = "canvas" | "enhanced" | "optimized" | "auto";
 
 export interface ExportOptions {
   format: VideoFormat;
   quality: "low" | "medium" | "high";
   includeAudio?: boolean;
   method?: ExportMethod; // Phase 2: Choose export method
-  outputFormat?: 'mp4' | 'webm' | 'mov'; // Phase 2: Output format options
+  outputFormat?: 'mp4' | 'webm'; // Phase 2: Output format options (Enhanced Canvas supports mp4/webm)
 }
 
 interface AudioTrackData {
@@ -26,8 +27,8 @@ const FORMAT_DIMENSIONS = {
 } as const;
 
 /**
- * Main export function - intelligently chooses between Canvas (Phase 1) and FFmpeg (Phase 2)
- * Phase 2: Professional-grade export with FFmpeg.wasm integration
+ * Main export function - intelligently chooses between Standard Canvas (Phase 1) and Enhanced Canvas (Phase 2)
+ * Phase 2: Professional-grade export with Enhanced Canvas rendering and advanced audio processing
  */
 export const exportVideo = async (
   tracks: TimelineTrack[],
@@ -46,28 +47,54 @@ export const exportVideo = async (
   
   // Auto-select method based on complexity and requirements
   if (method === "auto") {
-    const shouldUseFFmpeg = shouldUseFFmpegExport(tracks, mediaItems, options, totalDuration);
-    if (shouldUseFFmpeg) {
-      console.log("🎬 Auto-selected FFmpeg export for professional quality");
-      return exportVideoWithFFmpeg(tracks, mediaItems, totalDuration, onProgress, {
+    const shouldUseOptimized = shouldUseOptimizedExport(tracks, mediaItems, options, totalDuration);
+    if (shouldUseOptimized) {
+      console.log("🚀 Auto-selected Optimized export for best performance and quality");
+      return exportVideoOptimized(tracks, mediaItems, totalDuration, onProgress, {
         ...options,
         outputFormat: options.outputFormat || 'mp4',
-        videoCodec: 'h264',
-        audioCodec: 'aac'
+        frameRate: 30,
+        videoBitrate: getQualityBitrate(options.quality || 'medium'),
+        audioBitrate: 192000
       });
     } else {
-      console.log("🎬 Auto-selected Canvas export for speed");
-      return exportVideoWithCanvas(tracks, mediaItems, totalDuration, onProgress, options);
+      const shouldUseEnhanced = shouldUseEnhancedExport(tracks, mediaItems, options, totalDuration);
+      if (shouldUseEnhanced) {
+        console.log("🎬 Auto-selected Enhanced Canvas export for professional quality");
+        return exportVideoWithEnhancedCanvas(tracks, mediaItems, totalDuration, onProgress, {
+          ...options,
+          outputFormat: options.outputFormat || 'mp4',
+          frameRate: 30,
+          videoBitrate: getQualityBitrate(options.quality || 'medium'),
+          audioBitrate: 192000
+        });
+      } else {
+        console.log("🎬 Auto-selected Standard Canvas export for speed");
+        return exportVideoWithCanvas(tracks, mediaItems, totalDuration, onProgress, options);
+      }
     }
   }
   
   // Manual method selection
-  if (method === "ffmpeg") {
-    return exportVideoWithFFmpeg(tracks, mediaItems, totalDuration, onProgress, {
+  if (method === "optimized") {
+    console.log("🚀 Using Optimized export (Phase 3A)");
+    return exportVideoOptimized(tracks, mediaItems, totalDuration, onProgress, {
       ...options,
       outputFormat: options.outputFormat || 'mp4',
-      videoCodec: 'h264',
-      audioCodec: 'aac'
+      frameRate: 30,
+      videoBitrate: getQualityBitrate(options.quality || 'medium'),
+      audioBitrate: 192000
+    });
+  }
+  
+  if (method === "enhanced") {
+    console.log("🎬 Using Enhanced Canvas export (Phase 2)");
+    return exportVideoWithEnhancedCanvas(tracks, mediaItems, totalDuration, onProgress, {
+      ...options,
+      outputFormat: options.outputFormat || 'mp4',
+      frameRate: 30,
+      videoBitrate: getQualityBitrate(options.quality || 'medium'),
+      audioBitrate: 192000
     });
   }
   
@@ -76,21 +103,21 @@ export const exportVideo = async (
 };
 
 /**
- * Determine if FFmpeg export should be used based on project complexity
+ * Determine if Enhanced Canvas export should be used based on project complexity
  */
-function shouldUseFFmpegExport(
+function shouldUseEnhancedExport(
   tracks: TimelineTrack[],
   mediaItems: MediaItem[],
   options: ExportOptions,
   totalDuration: number
 ): boolean {
-  // Use FFmpeg for high quality exports
+  // Use Enhanced Canvas for high quality exports
   if (options.quality === "high") return true;
   
-  // Use FFmpeg for MP4 output (better compatibility)
+  // Use Enhanced Canvas for MP4 output (better compatibility)
   if (options.outputFormat === "mp4") return true;
   
-  // Use FFmpeg for complex projects (multiple video tracks, many clips)
+  // Use Enhanced Canvas for complex projects (multiple video tracks, many clips)
   const videoTracks = tracks.filter(track =>
     track.clips.some(clip => {
       const mediaItem = mediaItems.find(item => item.id === clip.mediaId);
@@ -103,10 +130,22 @@ function shouldUseFFmpegExport(
   const totalClips = tracks.reduce((sum, track) => sum + track.clips.length, 0);
   if (totalClips > 5) return true;
   
-  // Use FFmpeg for long videos (better memory management)
+  // Use Enhanced Canvas for long videos (better memory management)
   if (totalDuration > 60) return true; // 1 minute+
   
   return false;
+}
+
+/**
+ * Get video bitrate based on quality setting
+ */
+function getQualityBitrate(quality: string): number {
+  switch (quality) {
+    case 'low': return 2000000;    // 2 Mbps
+    case 'medium': return 5000000; // 5 Mbps
+    case 'high': return 8000000;   // 8 Mbps
+    default: return 5000000;
+  }
 }
 
 /**

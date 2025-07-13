@@ -39,6 +39,20 @@ const nextConfig = {
       },
     ];
   },
+  // FFmpeg.wasm webpack configuration
+  webpack: (config: any, { isServer }: any) => {
+    // Handle FFmpeg.wasm dynamic imports and workers
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        crypto: false,
+      };
+    }
+
+    return config;
+  },
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
