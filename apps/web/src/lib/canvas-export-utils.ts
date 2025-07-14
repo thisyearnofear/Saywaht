@@ -1,17 +1,21 @@
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
-import { exportVideoWithEnhancedCanvas } from "./enhanced-canvas-export";
-import { exportVideoOptimized, shouldUseOptimizedExport } from "./optimized-export";
+import { exportVideoTrueOffline, shouldUseTrueOfflineExport } from "./optimized-export";
+import { exportVideoWithWebCodecs, shouldUseWebCodecs, isWebCodecsSupported, WebCodecsExportOptions } from "./webcodecs-export";
+import { FORMAT_DIMENSIONS, VideoFormat, getQualityBitrate, hasVideoContent } from "./video-utils";
 
-export type VideoFormat = "landscape" | "portrait" | "square";
-export type ExportMethod = "canvas" | "enhanced" | "optimized" | "auto";
+export type ExportMethod = "canvas" | "offline" | "webcodecs" | "auto";
+export type { VideoFormat }; // Re-export for backward compatibility
 
 export interface ExportOptions {
   format: VideoFormat;
   quality: "low" | "medium" | "high";
   includeAudio?: boolean;
-  method?: ExportMethod; // Phase 2: Choose export method
-  outputFormat?: 'mp4' | 'webm'; // Phase 2: Output format options (Enhanced Canvas supports mp4/webm)
+  method?: ExportMethod; // Choose export method
+  outputFormat?: 'mp4' | 'webm'; // Output format options
+  frameRate?: number; // Frame rate for export
+  videoBitrate?: number; // Custom video bitrate
+  audioBitrate?: number; // Custom audio bitrate
 }
 
 interface AudioTrackData {
@@ -20,15 +24,11 @@ interface AudioTrackData {
   sourceNode: MediaElementAudioSourceNode;
 }
 
-const FORMAT_DIMENSIONS = {
-  portrait: { width: 1080, height: 1920 },  // 9:16 (mobile-first) - Higher quality
-  square: { width: 1080, height: 1080 },     // 1:1 (universal)
-  landscape: { width: 1920, height: 1080 }, // 16:9 (traditional)
-} as const;
+// FORMAT_DIMENSIONS moved to video-utils.ts for DRY code
 
 /**
- * Main export function - intelligently chooses between Standard Canvas (Phase 1) and Enhanced Canvas (Phase 2)
- * Phase 2: Professional-grade export with Enhanced Canvas rendering and advanced audio processing
+ * Main export function - intelligently chooses between WebCodecs, Offline, and Canvas export methods
+ * Prioritizes performance and quality based on browser support and project complexity
  */
 export const exportVideo = async (
   tracks: TimelineTrack[],
@@ -45,60 +45,64 @@ export const exportVideo = async (
 ): Promise<Blob> => {
   const method = options.method || "auto";
   
-  // Auto-select method based on complexity and requirements
+  // Auto-select method based on browser support and content type
   if (method === "auto") {
-    const shouldUseOptimized = shouldUseOptimizedExport(tracks, mediaItems, options, totalDuration);
-    if (shouldUseOptimized) {
-      console.log("🚀 Auto-selected Optimized export for best performance and quality");
-      return exportVideoOptimized(tracks, mediaItems, totalDuration, onProgress, {
+    // 1. Prefer WebCodecs for best performance (10x faster)
+    if (shouldUseWebCodecs(tracks, mediaItems, options)) {
+      console.log("🚀 Auto-selected WebCodecs export for optimal performance");
+      return exportVideoWithWebCodecs(tracks, mediaItems, totalDuration, onProgress, {
         ...options,
         outputFormat: options.outputFormat || 'mp4',
-        frameRate: 30,
-        videoBitrate: getQualityBitrate(options.quality || 'medium'),
-        audioBitrate: 192000
-      });
-    } else {
-      const shouldUseEnhanced = shouldUseEnhancedExport(tracks, mediaItems, options, totalDuration);
-      if (shouldUseEnhanced) {
-        console.log("🎬 Auto-selected Enhanced Canvas export for professional quality");
-        return exportVideoWithEnhancedCanvas(tracks, mediaItems, totalDuration, onProgress, {
-          ...options,
-          outputFormat: options.outputFormat || 'mp4',
-          frameRate: 30,
-          videoBitrate: getQualityBitrate(options.quality || 'medium'),
-          audioBitrate: 192000
-        });
-      } else {
-        console.log("🎬 Auto-selected Standard Canvas export for speed");
-        return exportVideoWithCanvas(tracks, mediaItems, totalDuration, onProgress, options);
-      }
+        frameRate: options.frameRate || 30,
+        videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
+        audioBitrate: options.audioBitrate || 192000
+      } as WebCodecsExportOptions);
     }
+    
+    // 2. Fallback to offline export for video content
+    if (shouldUseTrueOfflineExport(tracks, mediaItems)) {
+      console.log("🚀 Auto-selected Offline export (WebCodecs not available)");
+      return exportVideoTrueOffline(tracks, mediaItems, totalDuration, onProgress, {
+        ...options,
+        outputFormat: options.outputFormat || 'mp4',
+        frameRate: options.frameRate || 30,
+        videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
+        audioBitrate: options.audioBitrate || 192000
+      });
+    }
+    
+    // 3. Final fallback to canvas export for simple projects
+    console.log("🎬 Auto-selected Canvas export for simple content");
+    return exportVideoWithCanvas(tracks, mediaItems, totalDuration, onProgress, options);
   }
   
   // Manual method selection
-  if (method === "optimized") {
-    console.log("🚀 Using Optimized export (Phase 3A)");
-    return exportVideoOptimized(tracks, mediaItems, totalDuration, onProgress, {
+  if (method === "webcodecs") {
+    if (!isWebCodecsSupported()) {
+      throw new Error("WebCodecs API is not supported in this browser");
+    }
+    console.log("🚀 Using WebCodecs export - Maximum performance");
+    return exportVideoWithWebCodecs(tracks, mediaItems, totalDuration, onProgress, {
       ...options,
       outputFormat: options.outputFormat || 'mp4',
-      frameRate: 30,
-      videoBitrate: getQualityBitrate(options.quality || 'medium'),
-      audioBitrate: 192000
+      frameRate: options.frameRate || 30,
+      videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
+      audioBitrate: options.audioBitrate || 192000
+    } as WebCodecsExportOptions);
+  }
+  
+  if (method === "offline") {
+    console.log("🚀 Using Offline export - Maximum reliability");
+    return exportVideoTrueOffline(tracks, mediaItems, totalDuration, onProgress, {
+      ...options,
+      outputFormat: options.outputFormat || 'mp4',
+      frameRate: options.frameRate || 30,
+      videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
+      audioBitrate: options.audioBitrate || 192000
     });
   }
   
-  if (method === "enhanced") {
-    console.log("🎬 Using Enhanced Canvas export (Phase 2)");
-    return exportVideoWithEnhancedCanvas(tracks, mediaItems, totalDuration, onProgress, {
-      ...options,
-      outputFormat: options.outputFormat || 'mp4',
-      frameRate: 30,
-      videoBitrate: getQualityBitrate(options.quality || 'medium'),
-      audioBitrate: 192000
-    });
-  }
-  
-  // Default to canvas method (Phase 1)
+  // Default to canvas method
   return exportVideoWithCanvas(tracks, mediaItems, totalDuration, onProgress, options);
 };
 
@@ -136,17 +140,7 @@ function shouldUseEnhancedExport(
   return false;
 }
 
-/**
- * Get video bitrate based on quality setting
- */
-function getQualityBitrate(quality: string): number {
-  switch (quality) {
-    case 'low': return 2000000;    // 2 Mbps
-    case 'medium': return 5000000; // 5 Mbps
-    case 'high': return 8000000;   // 8 Mbps
-    default: return 5000000;
-  }
-}
+// getQualityBitrate function moved to video-utils.ts for DRY code
 
 /**
  * Export video using HTML5 Canvas and MediaRecorder API with Web Audio API integration.
@@ -236,7 +230,7 @@ export const exportVideoWithCanvas = async (
     if (mediaItem.type === "video") {
       const video = document.createElement("video");
       // Only mute if we're handling audio separately, otherwise preserve audio
-      video.muted = options.includeAudio && audioContext ? true : false;
+      video.muted = !!(options.includeAudio && audioContext);
       video.preload = "metadata";
 
       if (mediaItem.file && mediaItem.file instanceof File) {

@@ -23,6 +23,19 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
     "pending" | "success" | "failed" | "size_exceeded"
   >("pending");
   const [videoUploadError, setVideoUploadError] = useState<string | null>(null);
+
+  // Detailed export progress tracking
+  const [exportProgress, setExportProgress] = useState<{
+    phase:
+      | "extracting"
+      | "composing"
+      | "encoding"
+      | "uploading"
+      | "complete"
+      | null;
+    percentage: number;
+    message: string;
+  }>({ phase: null, percentage: 0, message: "" });
   const { activeProject } = useProjectStore();
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
@@ -66,6 +79,28 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               totalDuration,
               (progress) => {
                 console.log(`Export progress: ${Math.round(progress)}%`);
+
+                // Update detailed progress based on percentage
+                let phase: "extracting" | "composing" | "encoding" =
+                  "extracting";
+                let message = "";
+
+                if (progress < 40) {
+                  phase = "extracting";
+                  message = `Extracting video frames... ${Math.round(progress)}%`;
+                } else if (progress < 70) {
+                  phase = "composing";
+                  message = `Composing timeline... ${Math.round(progress)}%`;
+                } else {
+                  phase = "encoding";
+                  message = `Encoding video... ${Math.round(progress)}%`;
+                }
+
+                setExportProgress({
+                  phase,
+                  percentage: Math.round(progress),
+                  message,
+                });
               },
               {
                 format: data.videoFormat,
@@ -91,6 +126,12 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               // Continue without video upload but show warning
             } else {
               // Upload exported video to Grove
+              setExportProgress({
+                phase: "uploading",
+                percentage: 100,
+                message: "Uploading video to IPFS...",
+              });
+
               const { groveStorage } = await import("@/lib/grove-storage");
               const videoFile = new File(
                 [videoBlob],
@@ -106,10 +147,20 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               exportedVideoUrl = videoUploadResult.gatewayUrl;
               console.log("✅ Video uploaded to Grove:", exportedVideoUrl);
               setVideoUploadStatus("success");
+              setExportProgress({
+                phase: "complete",
+                percentage: 100,
+                message: "Video export complete!",
+              });
             }
           } catch (error) {
             console.error("Failed to export/upload video:", error);
             setVideoUploadStatus("failed");
+            setExportProgress({
+              phase: null,
+              percentage: 0,
+              message: "Export failed. Please try again.",
+            });
 
             // Check if it's a Grove size limit error
             if (error instanceof Error && error.message.includes("8.00MB")) {
@@ -301,9 +352,27 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
                       <div className="w-4 h-4 animate-spin">
                         <Loader2 />
                       </div>
-                      <span className="text-sm text-muted-foreground">
-                        Uploading video...
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">
+                          {exportProgress.message ||
+                            "Preparing video export..."}
+                        </span>
+                        {exportProgress.percentage > 0 && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="w-32 h-1 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-blue-500 transition-all duration-300"
+                                style={{
+                                  width: `${exportProgress.percentage}%`,
+                                }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {exportProgress.percentage}%
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </>
                   ) : videoUploadStatus === "success" ? (
                     <>

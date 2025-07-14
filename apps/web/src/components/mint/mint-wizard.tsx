@@ -20,7 +20,7 @@ import { PreviewStep } from "./steps/preview-step";
 import { DeployStep } from "./steps/deploy-step";
 import { triggerCelebration } from "@/lib/confetti";
 import { useEffect } from "@/lib/hooks-provider";
-import type { VideoFormat } from "@/lib/canvas-export-utils";
+import type { VideoFormat } from "@/lib/video-utils";
 
 export interface MintWizardData {
   // Thumbnail data

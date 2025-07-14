@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LuSmartphone, LuSquare, LuMonitor } from "react-icons/lu";
-import type { VideoFormat } from "@/lib/canvas-export-utils";
+import type { VideoFormat } from "@/lib/video-utils";
 import { MintWizardData } from "../mint-wizard";
 
 interface FormatStepProps {
