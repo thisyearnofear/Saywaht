@@ -21,6 +21,7 @@
     "@rainbow-me/rainbowkit": "^2.2.8",
     "@zoralabs/coins-sdk": "^0.2.5",
     "dotenv": "^17.0.0",
+    "mp4box": "^1.4.2",
     "next": "^15.3.4",
     "viem": "^2.31.6",
     "wagmi": "^2.15.6"

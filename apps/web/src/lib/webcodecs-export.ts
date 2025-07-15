@@ -39,6 +39,7 @@ export interface WebCodecsExportOptions extends ExportOptions {
 
 interface WebCodecsConfig extends WebCodecsVideoEncoderConfig {
   keyInterval?: number;
+  avc?: { format: 'avc' | 'annexb' };
 }
 
 interface EncodedChunk {
@@ -72,9 +73,14 @@ export function getWebCodecsConfig(
 ): WebCodecsConfig {
   const frameRate = options.frameRate || 30;
   const bitrates = getWebCodecsBitrates(dimensions.width, dimensions.height, options.quality || 'medium', frameRate);
-  const codecs = getOptimalWebCodecsCodec(options.outputFormat || 'mp4', options.quality || 'medium');
+  const codecs = getOptimalWebCodecsCodec(
+    options.outputFormat || 'mp4', 
+    options.quality || 'medium', 
+    dimensions,
+    frameRate
+  );
   
-  return {
+  const config: WebCodecsConfig = {
     codec: codecs.video,
     width: dimensions.width,
     height: dimensions.height,
@@ -82,6 +88,12 @@ export function getWebCodecsConfig(
     framerate: frameRate,
     keyInterval: options.keyframeInterval || calculateKeyframeInterval(frameRate, 0) // Duration set later
   };
+
+  if (config.codec.startsWith('avc1')) {
+    config.avc = { format: 'avc' };
+  }
+
+  return config;
 }
 
 /**
@@ -118,6 +130,7 @@ async function createVideoEncoder(
         height: config.height,
         bitrate: config.bitrate,
         framerate: config.framerate,
+        ...(config.avc && { avc: config.avc }),
         ...(config.keyInterval && { keyInterval: config.keyInterval })
       });
       
@@ -339,9 +352,9 @@ async function muxChunks(
 }
 
 /**
- * Main WebCodecs export function
+ * Main WebCodecs export function, now running in a worker.
  */
-export async function exportVideoWithWebCodecs(
+async function exportVideoWithWebCodecs(
   tracks: TimelineTrack[],
   mediaItems: MediaItem[],
   totalDuration: number,
@@ -356,167 +369,49 @@ export async function exportVideoWithWebCodecs(
     audioBitrate: 192000
   }
 ): Promise<Blob> {
-  if (!isWebCodecsSupported()) {
-    throw new Error('WebCodecs API is not supported in this browser');
-  }
+  // This function will be moved to the worker
+  return new Blob();
+}
 
-  console.log('🚀 Starting WebCodecs export...');
-  const exportStartTime = performance.now();
-
-  const dimensions = FORMAT_DIMENSIONS[options.format];
-  const config = getWebCodecsConfig(options, dimensions);
-  const frameRate = config.framerate || 30;
-  const totalFrames = Math.ceil(totalDuration * frameRate);
-
-  // Create rendering context using optimized WebCodecs canvas
-  const { canvas, ctx } = createWebCodecsCanvas(dimensions.width, dimensions.height);
-
-  // Initialize WebCodecs context
-  const context: WebCodecsContext = {
-    videoEncoder: await createVideoEncoder(config, (chunk) => {
-      context.videoChunks.push(chunk);
-    }),
-    videoChunks: [],
-    audioChunks: [],
-    canvas,
-    ctx
-  };
-
-  // Setup audio encoder if needed
-  if (options.includeAudio) {
-    context.audioEncoder = await createAudioEncoder(
-      48000, // Sample rate
-      options.audioBitrate || 192000,
-      (chunk) => {
-        context.audioChunks.push(chunk);
-      }
-    );
-  }
-
-  let cleanup: (() => Promise<void>) | null = null;
-
-  try {
-    // Phase 1: Pre-load video elements (5% progress)
-    onProgress(2);
-    const videoElements = await preloadVideoElements(mediaItems);
-    onProgress(5);
-
-    // Phase 2: Render and encode audio (5-15% progress)
-    if (options.includeAudio && context.audioEncoder) {
-      console.log('🎵 Encoding audio with WebCodecs...');
-      const audioResult = await createOfflineAudioStream(tracks, mediaItems, totalDuration, (progress) => {
-        onProgress(5 + (progress * 0.10)); // 5-15%
-      });
-      
-      // Convert audio stream to AudioData for WebCodecs
-      // Note: This is a simplified approach - in production you'd want proper audio processing
-      cleanup = audioResult.cleanup;
-      onProgress(15);
-    }
-
-    // Phase 3: Render and encode video frames (15-95% progress)
-    console.log(`🎬 Encoding ${totalFrames} frames with WebCodecs...`);
-    
-    for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-      const timestamp = frameIndex / frameRate;
-      const timestampMicros = Math.floor(timestamp * 1_000_000);
-
-      // Render frame
-      const hasContent = await renderFrameAtTime(
-        tracks,
-        mediaItems,
-        timestamp,
-        ctx,
-        canvas,
-        videoElements
-      );
-
-      if (hasContent) {
-        try {
-          // Create VideoFrame from canvas
-          const { VideoFrame } = getWebCodecsAPI();
-          const videoFrame = new VideoFrame(canvas, {
-            timestamp: timestampMicros,
-            duration: Math.floor(1_000_000 / frameRate)
-          });
-
-          // Encode frame
-          const keyFrame = frameIndex % (config.keyInterval || 60) === 0;
-          context.videoEncoder.encode(videoFrame, { keyFrame });
-          
-          // Clean up frame
-          videoFrame.close();
-        } catch (error) {
-          console.error('Failed to create/encode video frame:', error);
-          // Continue with next frame instead of failing completely
-        }
-      }
-
-      // Update progress
-      const progress = 15 + ((frameIndex / totalFrames) * 80); // 15-95%
-      onProgress(progress);
-
-      // Yield to browser every 5 frames
-      if (frameIndex % 5 === 0) {
-        await yieldToBrowser();
-      }
-    }
-
-    // Phase 4: Finalize encoding (95-100% progress)
-    onProgress(95);
-    
-    // Flush encoders
-    await context.videoEncoder.flush();
-    if (context.audioEncoder) {
-      await context.audioEncoder.flush();
-    }
-
-    // Mux chunks into final blob
-    const blob = await muxChunks(
-      context.videoChunks,
-      context.audioChunks,
-      options.outputFormat || 'mp4'
-    );
-
-    onProgress(100);
-    
-    const exportEndTime = performance.now();
-    const totalExportTime = (exportEndTime - exportStartTime) / 1000;
-    
-    console.log(`✅ WebCodecs export complete!`);
-    console.log(`📊 Export stats:`);
-    console.log(`   • File size: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
-    console.log(`   • Duration: ${totalDuration.toFixed(2)}s`);
-    console.log(`   • Export time: ${totalExportTime.toFixed(1)}s`);
-    console.log(`   • Speed ratio: ${(totalDuration / totalExportTime).toFixed(2)}x realtime`);
-    console.log(`   • Frames: ${totalFrames} at ${frameRate}fps`);
-
-    // Cleanup video elements
-    videoElements.forEach(video => {
-      if (video.src.startsWith('blob:')) {
-        URL.revokeObjectURL(video.src);
-      }
+/**
+ * Kicks off the export process in a Web Worker.
+ */
+export async function exportVideoWithWorker(
+  tracks: TimelineTrack[],
+  mediaItems: MediaItem[],
+  totalDuration: number,
+  onProgress: (progress: number) => void,
+  options: WebCodecsExportOptions
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('./export-worker.ts', import.meta.url), {
+      type: 'module'
     });
 
-    return blob;
+    worker.onmessage = (event) => {
+      const { type, payload } = event.data;
 
-  } catch (error) {
-    console.error('❌ WebCodecs export failed:', error);
-    throw error;
-  } finally {
-    // Cleanup encoders
-    if (context.videoEncoder.state !== 'closed') {
-      context.videoEncoder.close();
-    }
-    if (context.audioEncoder && context.audioEncoder.state !== 'closed') {
-      context.audioEncoder.close();
-    }
-    
-    // Cleanup audio resources
-    if (cleanup) {
-      await cleanup();
-    }
-  }
+      if (type === 'progress') {
+        onProgress(payload);
+      } else if (type === 'success') {
+        resolve(payload);
+        worker.terminate();
+      } else if (type === 'error') {
+        reject(new Error(payload));
+        worker.terminate();
+      }
+    };
+
+    worker.onerror = (error) => {
+      reject(error);
+      worker.terminate();
+    };
+
+    worker.postMessage({
+      type: 'start',
+      payload: { tracks, mediaItems, totalDuration, options }
+    });
+  });
 }
 
 /**

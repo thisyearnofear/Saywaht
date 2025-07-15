@@ -1,7 +1,7 @@
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
 import { exportVideoTrueOffline, shouldUseTrueOfflineExport } from "./optimized-export";
-import { exportVideoWithWebCodecs, shouldUseWebCodecs, isWebCodecsSupported, WebCodecsExportOptions } from "./webcodecs-export";
+import { exportVideoWithWorker, shouldUseWebCodecs, isWebCodecsSupported, WebCodecsExportOptions } from "./webcodecs-export";
 import { FORMAT_DIMENSIONS, VideoFormat, getQualityBitrate, hasVideoContent } from "./video-utils";
 
 export type ExportMethod = "canvas" | "offline" | "webcodecs" | "auto";
@@ -50,7 +50,7 @@ export const exportVideo = async (
     // 1. Prefer WebCodecs for best performance (10x faster)
     if (shouldUseWebCodecs(tracks, mediaItems, options)) {
       console.log("🚀 Auto-selected WebCodecs export for optimal performance");
-      return exportVideoWithWebCodecs(tracks, mediaItems, totalDuration, onProgress, {
+      return exportVideoWithWorker(tracks, mediaItems, totalDuration, onProgress, {
         ...options,
         outputFormat: options.outputFormat || 'mp4',
         frameRate: options.frameRate || 30,
@@ -82,7 +82,7 @@ export const exportVideo = async (
       throw new Error("WebCodecs API is not supported in this browser");
     }
     console.log("🚀 Using WebCodecs export - Maximum performance");
-    return exportVideoWithWebCodecs(tracks, mediaItems, totalDuration, onProgress, {
+    return exportVideoWithWorker(tracks, mediaItems, totalDuration, onProgress, {
       ...options,
       outputFormat: options.outputFormat || 'mp4',
       frameRate: options.frameRate || 30,

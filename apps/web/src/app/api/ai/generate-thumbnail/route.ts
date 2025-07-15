@@ -65,33 +65,49 @@ export async function POST(request: Request) {
     if (process.env.VENICE_API_KEY) {
       console.log("Using Venice AI for thumbnail generation");
       
-      const response = await fetch('https://api.venice.ai/api/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.VENICE_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'default',
-          prompt: `${prompt}. Style: modern, vibrant, professional video thumbnail, eye-catching, high quality`,
-          size: '1024x1024',
-          response_format: 'b64_json',
-          n: 1
-        })
-      });
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
-      if (response.ok) {
-        const data = await response.json();
-        const thumbnailUrl = `data:image/png;base64,${data.data[0].b64_json}`;
-        
-        return NextResponse.json({
-          success: true,
-          thumbnailUrl,
-          method: "venice_ai"
+      try {
+        const response = await fetch('https://api.venice.ai/api/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.VENICE_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'default',
+            prompt: `${prompt}. Style: modern, vibrant, professional video thumbnail, eye-catching, high quality`,
+            size: '1024x1024',
+            response_format: 'b64_json',
+            n: 1
+          }),
+          signal: controller.signal
         });
-      } else {
-        console.error("Venice AI API error:", await response.text());
-        throw new Error("Venice AI request failed");
+        
+        clearTimeout(timeoutId);
+      
+        if (response.ok) {
+          const data = await response.json();
+          const thumbnailUrl = `data:image/png;base64,${data.data[0].b64_json}`;
+          
+          return NextResponse.json({
+            success: true,
+            thumbnailUrl,
+            method: "venice_ai"
+          });
+        } else {
+          console.error("Venice AI API error:", await response.text());
+          throw new Error("Venice AI request failed");
+        }
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          console.error("Venice AI request timed out");
+          throw new Error("Venice AI request timed out");
+        }
+        throw error;
       }
     }
     

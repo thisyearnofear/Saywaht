@@ -5,9 +5,18 @@
  * across different browsers and environments
  */
 
-// Extend the global Window interface to include WebCodecs
+// Extend the global Window and WorkerGlobalScope interfaces to include WebCodecs
 declare global {
   interface Window {
+    VideoEncoder?: typeof VideoEncoder;
+    AudioEncoder?: typeof AudioEncoder;
+    VideoFrame?: typeof VideoFrame;
+    AudioData?: typeof AudioData;
+    VideoDecoder?: typeof VideoDecoder;
+    AudioDecoder?: typeof AudioDecoder;
+  }
+  
+  interface WorkerGlobalScope {
     VideoEncoder?: typeof VideoEncoder;
     AudioEncoder?: typeof AudioEncoder;
     VideoFrame?: typeof VideoFrame;
@@ -151,44 +160,80 @@ export interface AudioEncoderSupport {
   config: AudioEncoderConfig;
 }
 
-// Check if WebCodecs is available
+// Check if WebCodecs is available (works in both window and worker contexts)
 export function isWebCodecsAvailable(): boolean {
-  return typeof window !== 'undefined' && 
-         'VideoEncoder' in window && 
-         'AudioEncoder' in window &&
-         'VideoFrame' in window &&
-         'AudioData' in window;
+  // Check if we're in a worker context by checking for self
+  if (typeof self !== 'undefined' && typeof window === 'undefined') {
+    return 'VideoEncoder' in self &&
+           'AudioEncoder' in self &&
+           'VideoFrame' in self &&
+           'AudioData' in self;
+  }
+  
+  // Check if we're in a window context
+  if (typeof window !== 'undefined') {
+    return 'VideoEncoder' in window &&
+           'AudioEncoder' in window &&
+           'VideoFrame' in window &&
+           'AudioData' in window;
+  }
+  
+  return false;
 }
 
-// Safe WebCodecs feature detection
+// Safe WebCodecs feature detection (works in both window and worker contexts)
 export function getWebCodecsSupport() {
-  if (typeof window === 'undefined') {
+  // Check if we're in a worker context
+  if (typeof self !== 'undefined' && typeof window === 'undefined') {
     return {
-      VideoEncoder: false,
-      AudioEncoder: false,
-      VideoFrame: false,
-      AudioData: false,
-      VideoDecoder: false,
-      AudioDecoder: false
+      VideoEncoder: 'VideoEncoder' in self,
+      AudioEncoder: 'AudioEncoder' in self,
+      VideoFrame: 'VideoFrame' in self,
+      AudioData: 'AudioData' in self,
+      VideoDecoder: 'VideoDecoder' in self,
+      AudioDecoder: 'AudioDecoder' in self
+    };
+  }
+  
+  // Check if we're in a window context
+  if (typeof window !== 'undefined') {
+    return {
+      VideoEncoder: 'VideoEncoder' in window,
+      AudioEncoder: 'AudioEncoder' in window,
+      VideoFrame: 'VideoFrame' in window,
+      AudioData: 'AudioData' in window,
+      VideoDecoder: 'VideoDecoder' in window,
+      AudioDecoder: 'AudioDecoder' in window
     };
   }
 
   return {
-    VideoEncoder: 'VideoEncoder' in window,
-    AudioEncoder: 'AudioEncoder' in window,
-    VideoFrame: 'VideoFrame' in window,
-    AudioData: 'AudioData' in window,
-    VideoDecoder: 'VideoDecoder' in window,
-    AudioDecoder: 'AudioDecoder' in window
+    VideoEncoder: false,
+    AudioEncoder: false,
+    VideoFrame: false,
+    AudioData: false,
+    VideoDecoder: false,
+    AudioDecoder: false
   };
 }
 
-// Type-safe WebCodecs API access
+// Type-safe WebCodecs API access (works in both window and worker contexts)
 export function getWebCodecsAPI() {
   if (!isWebCodecsAvailable()) {
     throw new Error('WebCodecs API is not available in this browser');
   }
 
+  // Check if we're in a worker context
+  if (typeof self !== 'undefined' && typeof window === 'undefined') {
+    return {
+      VideoEncoder: (self as any).VideoEncoder!,
+      AudioEncoder: (self as any).AudioEncoder!,
+      VideoFrame: (self as any).VideoFrame!,
+      AudioData: (self as any).AudioData!
+    };
+  }
+
+  // We're in a window context
   return {
     VideoEncoder: window.VideoEncoder!,
     AudioEncoder: window.AudioEncoder!,

@@ -38,3 +38,17 @@ export function useIsMobile() {
 
   return !!isMobile;
 }
+
+/**
+ * Hook to determine if the component has mounted.
+ * Useful for preventing hydration mismatches.
+ */
+export const useMounted = () => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  return mounted;
+};

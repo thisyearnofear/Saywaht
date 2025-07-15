@@ -6,6 +6,8 @@ import { Video, TrendingUp, Home, ArrowLeft } from "@/lib/icons-provider";
 import { motion, AnimatePresence } from "motion/react";
 import { useWalletAuth } from "@opencut/auth";
 
+import { useMounted } from "@/hooks/use-mobile";
+
 interface PhaseNavigationProps {
   className?: string;
 }
@@ -14,12 +16,11 @@ export function PhaseNavigation({ className = "" }: PhaseNavigationProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated } = useWalletAuth();
+  const isMounted = useMounted();
 
-  // Only show for authenticated users
-  if (!isAuthenticated) return null;
-
-  // Don't show on landing page
-  if (pathname === "/") return null;
+  if (!isMounted || !isAuthenticated || pathname === "/") {
+    return null;
+  }
 
   const phases = [
     {
@@ -133,12 +134,11 @@ export function MobilePhaseNavigation() {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated } = useWalletAuth();
+  const isMounted = useMounted();
 
-  // Only show for authenticated users
-  if (!isAuthenticated) return null;
-
-  // Don't show on landing page
-  if (pathname === "/") return null;
+  if (!isMounted || !isAuthenticated || pathname === "/") {
+    return null;
+  }
 
   const phases = [
     {
