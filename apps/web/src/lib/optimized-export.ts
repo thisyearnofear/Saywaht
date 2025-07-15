@@ -84,7 +84,13 @@ export const exportVideoTrueOffline = async (
       const audioResult = await createOfflineAudioStream(tracks, mediaItems, totalDuration, (progress) => {
         onProgress(70 + (progress * 0.10)); // 70-80%
       });
-      audioStream = audioResult.audioStream;
+      const audioContext = new AudioContext();
+      const source = audioContext.createBufferSource();
+      source.buffer = audioResult.audioBuffer;
+      const destination = audioContext.createMediaStreamDestination();
+      source.connect(destination);
+      source.start(0);
+      audioStream = destination.stream;
       audioCleanup = audioResult.cleanup;
     }
 

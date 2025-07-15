@@ -130,7 +130,9 @@ export class OfflineAudioRenderer {
   /**
    * Load and decode audio buffer from media item
    */
-  private async loadAudioBuffer(mediaItem: MediaItem): Promise<AudioBuffer> {
+  private async loadAudioBuffer(
+    mediaItem: MediaItem
+  ): Promise<AudioBuffer> {
     let audioData: ArrayBuffer;
 
     if (mediaItem.file && mediaItem.file instanceof File) {
@@ -215,15 +217,14 @@ export async function createOfflineAudioStream(
   mediaItems: MediaItem[],
   totalDuration: number,
   onProgress?: (progress: number) => void
-): Promise<{ audioStream: MediaStream; cleanup: () => Promise<void> }> {
+): Promise<{ audioBuffer: AudioBuffer; cleanup: () => Promise<void> }> {
   const renderer = new OfflineAudioRenderer();
   
   try {
     const audioBuffer = await renderer.renderAudioTracks(tracks, mediaItems, totalDuration, onProgress);
-    const audioStream = renderer.createAudioStream(audioBuffer);
     
     return {
-      audioStream,
+      audioBuffer,
       cleanup: () => renderer.cleanup()
     };
   } catch (error) {

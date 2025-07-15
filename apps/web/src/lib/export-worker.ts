@@ -24,6 +24,7 @@ interface WebCodecsContext {
   audioEncoder?: any;
   canvas: OffscreenCanvas;
   ctx: OffscreenCanvasRenderingContext2D;
+  videoFrames: ImageData[];
 }
 
 async function createVideoEncoder(
@@ -114,7 +115,8 @@ async function renderFrameAtTime(
   timestamp: number,
   ctx: OffscreenCanvasRenderingContext2D,
   canvas: OffscreenCanvas,
-  videoElements: Map<string, any>
+  videoFrames: ImageData[],
+  options: WebCodecsExportOptions // Add options to access frameRate
 ): Promise<boolean> {
   clearCanvas(ctx, canvas.width, canvas.height);
   
@@ -132,10 +134,12 @@ async function renderFrameAtTime(
         
         if (mediaItem) {
           if (mediaItem.type === 'video') {
-            // In worker context, we need to handle video frames differently
-            // For now, skip video rendering in workers
-            console.warn('Video rendering in worker context needs VideoFrame API implementation');
-            hasContent = true;
+            const frameIndex = Math.floor(timestamp * (options.frameRate || 30));
+            const videoFrame = videoFrames[frameIndex];
+            if (videoFrame) {
+              ctx.putImageData(videoFrame, 0, 0);
+              hasContent = true;
+            }
           } else if (mediaItem.type === 'image') {
             try {
               const response = await fetch(mediaItem.url);
@@ -191,12 +195,7 @@ function calculateAspectRatioDimensions(
 
 // In a worker context, we can't use HTMLVideoElement directly
 // This function needs to be refactored to work with OffscreenCanvas or VideoFrame
-async function preloadVideoElements(mediaItems: MediaItem[]): Promise<Map<string, any>> {
-  // For now, return an empty map as video preloading needs to be handled differently in workers
-  // The actual video processing will need to be done using VideoFrame API
-  console.warn('Video preloading in worker context needs to be implemented using VideoFrame API');
-  return new Map();
-}
+
 
 async function muxChunks(
   videoChunks: EncodedChunk[],
@@ -216,7 +215,8 @@ async function exportVideoWithWebCodecs(
   mediaItems: MediaItem[],
   totalDuration: number,
   onProgress: (progress: number) => void,
-  options: WebCodecsExportOptions
+  options: WebCodecsExportOptions,
+  videoFrames: ImageData[]
 ): Promise<Blob> {
   if (!isWebCodecsAvailable()) {
     throw new Error('WebCodecs API is not supported in this browser');
@@ -246,7 +246,8 @@ async function exportVideoWithWebCodecs(
     videoChunks: [],
     audioChunks: [],
     canvas,
-    ctx
+    ctx,
+    videoFrames: videoFrames // Pass videoFrames to context
   };
 
   if (options.includeAudio) {
@@ -263,7 +264,7 @@ async function exportVideoWithWebCodecs(
 
   try {
     onProgress(2);
-    const videoElements = await preloadVideoElements(mediaItems);
+    // const videoElements = await preloadVideoElements(mediaItems); // Removed
     onProgress(5);
 
     if (options.includeAudio && context.audioEncoder) {
@@ -273,6 +274,37 @@ async function exportVideoWithWebCodecs(
       
       cleanup = audioResult.cleanup;
       onProgress(15);
+
+      const audioBuffer = audioResult.audioBuffer;
+      const sampleRate = audioBuffer.sampleRate;
+      const numberOfChannels = audioBuffer.numberOfChannels;
+      const numberOfFrames = audioBuffer.length;
+      const frameDuration = 1024; // Process in chunks of 1024 frames
+
+      for (let i = 0; i < numberOfFrames; i += frameDuration) {
+        const currentFrameCount = Math.min(frameDuration, numberOfFrames - i);
+        const audioData = new AudioData({
+          format: 'f32-planar',
+          sampleRate: sampleRate,
+          numberOfChannels: numberOfChannels,
+          numberOfFrames: currentFrameCount,
+          timestamp: (i / sampleRate) * 1_000_000,
+          data: new Float32Array(currentFrameCount * numberOfChannels).buffer
+        });
+
+        for (let channel = 0; channel < numberOfChannels; channel++) {
+          const channelData = new Float32Array(currentFrameCount);
+          audioBuffer.copyFromChannel(channelData, channel, i);
+          audioData.copyTo(channelData, { planeIndex: channel });
+        }
+
+        if (context.audioEncoder.state === 'configured') {
+          context.audioEncoder.encode(audioData);
+        } else {
+          console.warn('Skipping audio data, audio encoder is not configured');
+        }
+        audioData.close();
+      }
     }
 
     for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
@@ -285,7 +317,8 @@ async function exportVideoWithWebCodecs(
         timestamp,
         ctx,
         canvas,
-        videoElements
+        videoFrames, // Pass videoFrames directly
+        options
       );
 
       if (hasContent) {
@@ -343,12 +376,6 @@ async function exportVideoWithWebCodecs(
     console.log(`   • Speed ratio: ${(totalDuration / totalExportTime).toFixed(2)}x realtime`);
     console.log(`   • Frames: ${totalFrames} at ${frameRate}fps`);
 
-    videoElements.forEach(video => {
-      if (video.src.startsWith('blob:')) {
-        URL.revokeObjectURL(video.src);
-      }
-    });
-
     return blob;
 
   } catch (error) {
@@ -372,13 +399,13 @@ self.onmessage = async (event) => {
   const { type, payload } = event.data;
 
   if (type === 'start') {
-    const { tracks, mediaItems, totalDuration, options } = payload;
+    const { tracks, mediaItems, totalDuration, options, videoFrames } = payload;
 
     try {
       // Check if we should use MP4Muxer for MP4 output
       if (options.outputFormat === 'mp4' && isWebCodecsAvailable()) {
         // Use MP4Muxer for proper MP4 output
-        await exportWithMP4Muxer(tracks, mediaItems, totalDuration, options);
+        await exportWithMP4Muxer(tracks, mediaItems, totalDuration, options, videoFrames);
       } else {
         // Fallback to WebM export
         const blob = await exportVideoWithWebCodecs(
@@ -388,7 +415,8 @@ self.onmessage = async (event) => {
           (progress) => {
             self.postMessage({ type: 'progress', payload: progress });
           },
-          options
+          options,
+          videoFrames
         );
         
         self.postMessage({ type: 'success', payload: blob });
@@ -406,7 +434,8 @@ async function exportWithMP4Muxer(
   tracks: TimelineTrack[],
   mediaItems: MediaItem[],
   totalDuration: number,
-  options: WebCodecsExportOptions
+  options: WebCodecsExportOptions,
+  videoFrames: ImageData[]
 ) {
   const dimensions = FORMAT_DIMENSIONS[options.format as keyof typeof FORMAT_DIMENSIONS];
   const codecs = getOptimalWebCodecsCodec(
@@ -456,8 +485,6 @@ async function exportWithMP4Muxer(
       throw new Error('Failed to get 2D context from OffscreenCanvas');
     }
 
-    const videoElements = await preloadVideoElements(mediaItems);
-
     // Process video frames
     for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
       const timestamp = frameIndex / frameRate;
@@ -469,7 +496,8 @@ async function exportWithMP4Muxer(
         timestamp,
         ctx,
         canvas,
-        videoElements
+        videoFrames,
+        options
       );
 
       if (hasContent) {
@@ -501,8 +529,36 @@ async function exportWithMP4Muxer(
         // Audio progress is handled separately
       });
 
-      // TODO: Encode audio data with audioEncoder
-      // This requires adapting createOfflineAudioStream to yield AudioData
+      const audioBuffer = audioResult.audioBuffer;
+      const sampleRate = audioBuffer.sampleRate;
+      const numberOfChannels = audioBuffer.numberOfChannels;
+      const numberOfFrames = audioBuffer.length;
+      const frameDuration = 1024; // Process in chunks of 1024 frames
+
+      for (let i = 0; i < numberOfFrames; i += frameDuration) {
+        const currentFrameCount = Math.min(frameDuration, numberOfFrames - i);
+        const audioData = new AudioData({
+          format: 'f32-planar',
+          sampleRate: sampleRate,
+          numberOfChannels: numberOfChannels,
+          numberOfFrames: currentFrameCount,
+          timestamp: (i / sampleRate) * 1_000_000,
+          data: new Float32Array(currentFrameCount * numberOfChannels).buffer
+        });
+
+        for (let channel = 0; channel < numberOfChannels; channel++) {
+          const channelData = new Float32Array(currentFrameCount);
+          audioBuffer.copyFromChannel(channelData, channel, i);
+          audioData.copyTo(channelData, { planeIndex: channel });
+        }
+
+        if (audioEncoder.state === 'configured') {
+          audioEncoder.encode(audioData);
+        } else {
+          console.warn('Skipping audio data, audio encoder is not configured');
+        }
+        audioData.close();
+      }
 
       if (audioResult.cleanup) {
         await audioResult.cleanup();

@@ -14,6 +14,7 @@ import {
   calculateKeyframeInterval
 } from "./video-utils";
 import { createOfflineAudioStream } from "./offline-audio-renderer";
+import { OfflineVideoRenderer } from "./offline-video-renderer";
 import { 
   isWebCodecsAvailable, 
   getWebCodecsAPI,
@@ -383,16 +384,37 @@ export async function exportVideoWithWorker(
   onProgress: (progress: number) => void,
   options: WebCodecsExportOptions
 ): Promise<Blob> {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const worker = new Worker(new URL('./export-worker.ts', import.meta.url), {
       type: 'module'
     });
+
+    // Pre-render video frames on the main thread
+    const dimensions = FORMAT_DIMENSIONS[options.format as keyof typeof FORMAT_DIMENSIONS];
+    const frameRate = options.frameRate || 30;
+    const videoRenderer = new OfflineVideoRenderer(dimensions.width, dimensions.height);
+
+    onProgress(2); // Initial progress for video rendering setup
+    await videoRenderer.initialize(tracks, mediaItems, (progress) => {
+      onProgress(2 + (progress * 0.20)); // 2-22% for video extraction
+    });
+    await videoRenderer.preComposeAllFrames(totalDuration, frameRate, (progress) => {
+      onProgress(22 + (progress * 0.20)); // 22-42% for video composition
+    });
+    const videoFrames: ImageData[] = [];
+    for (let i = 0; i < Math.ceil(totalDuration * frameRate); i++) {
+      const frame = videoRenderer.getComposedFrame(i);
+      if (frame) {
+        videoFrames.push(frame);
+      }
+    }
+    videoRenderer.cleanup(); // Clean up renderer resources
 
     worker.onmessage = (event) => {
       const { type, payload } = event.data;
 
       if (type === 'progress') {
-        onProgress(payload);
+        onProgress(42 + (payload * 0.58)); // Scale worker progress (42-100%)
       } else if (type === 'success') {
         resolve(payload);
         worker.terminate();
@@ -409,7 +431,7 @@ export async function exportVideoWithWorker(
 
     worker.postMessage({
       type: 'start',
-      payload: { tracks, mediaItems, totalDuration, options }
+      payload: { tracks, mediaItems, totalDuration, options, videoFrames }
     });
   });
 }
