@@ -36,38 +36,20 @@ export interface WebCodecsExportOptions extends ExportOptions {
   videoBitrate?: number;
   audioBitrate?: number;
   keyframeInterval?: number;
+  useGpuAcceleration?: boolean; // Add this option
 }
 
-interface WebCodecsConfig extends WebCodecsVideoEncoderConfig {
+export interface WebCodecsConfig extends WebCodecsVideoEncoderConfig {
   keyInterval?: number;
   avc?: { format: 'avc' | 'annexb' };
 }
 
-interface EncodedChunk {
+export interface EncodedChunk {
   data: Uint8Array;
   timestamp: number;
   type: 'key' | 'delta';
 }
 
-interface WebCodecsContext {
-  videoEncoder: any; // Use any for now to avoid complex type issues
-  audioEncoder?: any;
-  videoChunks: EncodedChunk[];
-  audioChunks: EncodedChunk[];
-  canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
-}
-
-/**
- * Check if WebCodecs API is supported in the current browser
- */
-export function isWebCodecsSupported(): boolean {
-  return isWebCodecsAvailable() && detectWebCodecsSupport().fullSupport;
-}
-
-/**
- * Get optimal WebCodecs configuration for export
- */
 export function getWebCodecsConfig(
   options: WebCodecsExportOptions,
   dimensions: { width: number; height: number }
@@ -95,6 +77,22 @@ export function getWebCodecsConfig(
   }
 
   return config;
+}
+
+interface WebCodecsContext {
+  videoEncoder: any; // Use any for now to avoid complex type issues
+  audioEncoder?: any;
+  videoChunks: EncodedChunk[];
+  audioChunks: EncodedChunk[];
+  canvas: HTMLCanvasElement;
+  ctx: CanvasRenderingContext2D;
+}
+
+/**
+ * Check if WebCodecs API is supported in the current browser
+ */
+export function isWebCodecsSupported(): boolean {
+  return isWebCodecsAvailable() && detectWebCodecsSupport().fullSupport;
 }
 
 /**
