@@ -305,6 +305,30 @@ export class OfflineVideoRenderer {
   }
 
   /**
+   * Compose a single frame at a specific index
+   */
+  async composeSingleFrame(
+    frameIndex: number,
+    frameRate: number
+  ): Promise<ImageData | null> {
+    // Check if already composed
+    const existing = this.compositeFrames.get(frameIndex);
+    if (existing) {
+      return existing;
+    }
+
+    // Compose the frame
+    const timestamp = frameIndex / frameRate;
+    const compositeFrame = await this.composeFrameAtTime(timestamp);
+    
+    if (compositeFrame) {
+      this.compositeFrames.set(frameIndex, compositeFrame);
+    }
+
+    return compositeFrame;
+  }
+
+  /**
    * Compose a single frame at timestamp from pre-extracted video data
    */
   private async composeFrameAtTime(timestamp: number): Promise<ImageData | null> {

@@ -1,7 +1,8 @@
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
 import { exportVideoTrueOffline, shouldUseTrueOfflineExport } from "./optimized-export";
-import { exportVideoWithWorker, shouldUseWebCodecs, isWebCodecsSupported, WebCodecsExportOptions } from "./webcodecs-export";
+import { shouldUseWebCodecs, isWebCodecsSupported, WebCodecsExportOptions } from "./webcodecs-export";
+import { exportVideoWithTransferableFrames } from "./webcodecs-streaming-export";
 import { FORMAT_DIMENSIONS, VideoFormat, getQualityBitrate, hasVideoContent } from "./video-utils";
 
 export type ExportMethod = "canvas" | "offline" | "webcodecs" | "auto";
@@ -49,10 +50,10 @@ export const exportVideo = async (
   if (method === "auto") {
     // 1. Prefer WebCodecs for best performance (10x faster)
     if (shouldUseWebCodecs(tracks, mediaItems, options)) {
-      console.log("🚀 Auto-selected WebCodecs export for optimal performance");
-      return exportVideoWithWorker(tracks, mediaItems, totalDuration, onProgress, {
+      console.log("🚀 Auto-selected WebCodecs streaming export for optimal performance");
+      return exportVideoWithTransferableFrames(tracks, mediaItems, totalDuration, onProgress, {
         ...options,
-        outputFormat: options.outputFormat || 'mp4',
+        outputFormat: 'webm', // Use WebM for now as it's simpler
         frameRate: options.frameRate || 30,
         videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
         audioBitrate: options.audioBitrate || 192000
@@ -81,10 +82,10 @@ export const exportVideo = async (
     if (!isWebCodecsSupported()) {
       throw new Error("WebCodecs API is not supported in this browser");
     }
-    console.log("🚀 Using WebCodecs export - Maximum performance");
-    return exportVideoWithWorker(tracks, mediaItems, totalDuration, onProgress, {
+    console.log("🚀 Using WebCodecs streaming export - Maximum performance");
+    return exportVideoWithTransferableFrames(tracks, mediaItems, totalDuration, onProgress, {
       ...options,
-      outputFormat: options.outputFormat || 'mp4',
+      outputFormat: 'webm', // Use WebM for now as it's simpler
       frameRate: options.frameRate || 30,
       videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
       audioBitrate: options.audioBitrate || 192000

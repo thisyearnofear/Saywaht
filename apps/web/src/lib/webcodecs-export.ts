@@ -387,32 +387,22 @@ export async function exportVideoWithWorker(
       type: 'module'
     });
 
-    // Pre-render video frames on the main thread
-    const dimensions = FORMAT_DIMENSIONS[options.format as keyof typeof FORMAT_DIMENSIONS];
-    const frameRate = options.frameRate || 30;
-    const videoRenderer = new OfflineVideoRenderer(dimensions.width, dimensions.height);
-
-    onProgress(2); // Initial progress for video rendering setup
-    await videoRenderer.initialize(tracks, mediaItems, (progress) => {
-      onProgress(2 + (progress * 0.20)); // 2-22% for video extraction
-    });
-    await videoRenderer.preComposeAllFrames(totalDuration, frameRate, (progress) => {
-      onProgress(22 + (progress * 0.20)); // 22-42% for video composition
-    });
-    const videoFrames: ImageData[] = [];
-    for (let i = 0; i < Math.ceil(totalDuration * frameRate); i++) {
-      const frame = videoRenderer.getComposedFrame(i);
-      if (frame) {
-        videoFrames.push(frame);
-      }
-    }
-    videoRenderer.cleanup(); // Clean up renderer resources
+    // Convert media items to serializable format
+    const serializableMediaItems = mediaItems.map(item => ({
+      id: item.id,
+      name: item.name,
+      type: item.type,
+      url: item.url,
+      duration: item.duration,
+      aspectRatio: item.aspectRatio,
+      // Don't send File objects, just URLs
+    }));
 
     worker.onmessage = (event) => {
       const { type, payload } = event.data;
 
       if (type === 'progress') {
-        onProgress(42 + (payload * 0.58)); // Scale worker progress (42-100%)
+        onProgress(payload);
       } else if (type === 'success') {
         resolve(payload);
         worker.terminate();
@@ -427,9 +417,15 @@ export async function exportVideoWithWorker(
       worker.terminate();
     };
 
+    // Send minimal data to worker - no pre-composed frames
     worker.postMessage({
       type: 'start',
-      payload: { tracks, mediaItems, totalDuration, options, videoFrames }
+      payload: {
+        tracks,
+        mediaItems: serializableMediaItems,
+        totalDuration,
+        options
+      }
     });
   });
 }
