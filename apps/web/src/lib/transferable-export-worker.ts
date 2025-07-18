@@ -1,5 +1,3 @@
-import { isWebCodecsAvailable, getWebCodecsAPI } from "./webcodecs-types";
-
 interface InitMessage {
   type: 'init';
   payload: {
@@ -65,11 +63,13 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 async function handleInit(config: InitMessage['payload']) {
   console.log('🎬 Initializing transferable export worker:', config);
   
-  if (!isWebCodecsAvailable()) {
+  // Check for WebCodecs availability directly in worker context
+  if (!('VideoEncoder' in self)) {
     throw new Error('WebCodecs API not available in worker');
   }
 
-  const { VideoEncoder } = getWebCodecsAPI();
+  // Access VideoEncoder directly from self
+  const VideoEncoder = (self as any).VideoEncoder;
   
   // Create encoder
   encoder = new VideoEncoder({
@@ -84,8 +84,8 @@ async function handleInit(config: InitMessage['payload']) {
     }
   });
 
-  // Configure encoder based on output format
-  const codec = config.outputFormat === 'mp4' ? 'avc1.42E01E' : 'vp8';
+  // Configure encoder with optimized settings
+  const codec = config.outputFormat === 'mp4' ? 'avc1.42001E' : 'vp8';
   
   encoderConfig = {
     codec,
@@ -93,10 +93,15 @@ async function handleInit(config: InitMessage['payload']) {
     height: config.height,
     bitrate: config.bitrate,
     framerate: config.frameRate,
+    // Add performance optimizations
+    latencyMode: 'realtime' as const,
+    hardwareAcceleration: 'prefer-hardware' as const,
   };
 
   if (codec.startsWith('avc1')) {
     encoderConfig.avc = { format: 'avc' };
+    // Add H.264 specific optimizations
+    encoderConfig.bitrateMode = 'variable' as const;
   }
 
   encoder.configure(encoderConfig);
@@ -118,14 +123,9 @@ async function handleFrame(frameData: FrameMessage['payload']) {
   );
 
   // Create VideoFrame from ImageData
-  // Note: VideoFrame constructor might not be available in all workers
-  // We need to check and handle this
-  try {
+  // Check if VideoFrame is available in worker context
+  if ('VideoFrame' in self) {
     const VideoFrame = (self as any).VideoFrame;
-    if (!VideoFrame) {
-      throw new Error('VideoFrame not available in worker');
-    }
-
     const videoFrame = new VideoFrame(imageData, {
       timestamp: frameData.timestamp,
       codedWidth: frameData.width,
@@ -133,14 +133,13 @@ async function handleFrame(frameData: FrameMessage['payload']) {
     });
 
     // Encode frame
-    encoder.encode(videoFrame, { 
-      keyFrame: frameData.isKeyFrame 
+    encoder.encode(videoFrame, {
+      keyFrame: frameData.isKeyFrame
     });
     
     // Clean up
     videoFrame.close();
-  } catch (error) {
-    console.error('Failed to create/encode VideoFrame:', error);
+  } else {
     // Fallback: Try using canvas if available
     await encodeUsingCanvas(imageData, frameData);
   }
@@ -153,9 +152,12 @@ async function encodeUsingCanvas(
   imageData: ImageData, 
   frameData: FrameMessage['payload']
 ) {
-  // Create OffscreenCanvas
+  // Create OffscreenCanvas with performance optimizations
   const canvas = new OffscreenCanvas(frameData.width, frameData.height);
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', {
+    willReadFrequently: false, // We're writing, not reading
+    alpha: false // No transparency needed
+  });
   
   if (!ctx) {
     throw new Error('Failed to get 2D context');
@@ -196,8 +198,9 @@ async function handleFinish() {
   // Create final blob
   const mimeType = encoderConfig.codec.startsWith('avc') ? 'video/mp4' : 'video/webm';
   
-  // For proper MP4/WebM, we'd need a muxer here
-  // For now, create a simple blob
+  // Create final blob with proper MIME type
+  // Note: For proper MP4/WebM, we'd need a muxer like mp4box.js
+  // This creates a raw stream that may not play in all players
   const finalBlob = new Blob(videoChunks, { type: mimeType });
   
   console.log(`✅ Export completed in worker: ${(finalBlob.size / 1024 / 1024).toFixed(2)}MB`);

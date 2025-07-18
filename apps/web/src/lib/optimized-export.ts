@@ -4,6 +4,7 @@ import { ExportOptions } from "./canvas-export-utils";
 import { createOfflineAudioStream } from "./offline-audio-renderer";
 import { OfflineVideoRenderer } from "./offline-video-renderer";
 import { FORMAT_DIMENSIONS, getVideoBitrate, hasVideoContent } from "./video-utils";
+import { FrameRateController, scheduleNextFrame } from "./frame-rate-controller";
 
 interface TrueOfflineExportOptions extends ExportOptions {
   outputFormat?: 'mp4' | 'webm';
@@ -59,30 +60,21 @@ export const exportVideoTrueOffline = async (
     onProgress(2);
     videoRenderer = new OfflineVideoRenderer(dimensions.width, dimensions.height);
 
-    // Phase 2: Extract ALL video frames upfront (5-40% progress)
-    console.log('🎬 Extracting all video frames offline...');
-    await videoRenderer.initialize(tracks, mediaItems, (progress) => {
-      const currentProgress = 5 + (progress * 0.35); // 5-40%
-      console.log(`📊 Frame extraction progress: ${progress.toFixed(1)}% (overall: ${currentProgress.toFixed(1)}%)`);
-      onProgress(currentProgress);
+    // Phase 2: Initialize video renderer (5-10% progress)
+    console.log('🎬 Initializing video renderer...');
+    await videoRenderer.initialize(tracks, mediaItems, () => {
+      // No progress reporting needed for initialization
     });
+    onProgress(10);
 
-    // Phase 3: Pre-compose ALL timeline frames (40-70% progress)
-    console.log('🎨 Pre-composing all timeline frames...');
-    await videoRenderer.preComposeAllFrames(totalDuration, frameRate, (progress) => {
-      const currentProgress = 40 + (progress * 0.30); // 40-70%
-      console.log(`🎨 Frame composition progress: ${progress.toFixed(1)}% (overall: ${currentProgress.toFixed(1)}%)`);
-      onProgress(currentProgress);
-    });
-
-    // Phase 4: Render offline audio (70-80% progress)
-    onProgress(70);
+    // Phase 3: Render offline audio (10-20% progress)
+    onProgress(10);
     let audioStream: MediaStream | null = null;
 
     if (options.includeAudio) {
       console.log('🎵 Rendering audio offline...');
       const audioResult = await createOfflineAudioStream(tracks, mediaItems, totalDuration, (progress) => {
-        onProgress(70 + (progress * 0.10)); // 70-80%
+        onProgress(10 + (progress * 0.10)); // 10-20%
       });
       const audioContext = new AudioContext();
       const source = audioContext.createBufferSource();
@@ -94,10 +86,11 @@ export const exportVideoTrueOffline = async (
       audioCleanup = audioResult.cleanup;
     }
 
-    // Phase 5: Setup MediaRecorder with pre-rendered content (80% progress)
-    onProgress(80);
+    // Phase 4: Setup MediaRecorder (20% progress)
+    onProgress(20);
     const canvas = videoRenderer.getCanvas();
-    const videoStream = canvas.captureStream(frameRate); // Use actual frame rate for consistent timing
+    // Use captureStream() without frame rate for manual frame control
+    const videoStream = canvas.captureStream(); // Manual frame control
 
     let combinedStream: MediaStream;
     if (audioStream) {
@@ -109,10 +102,16 @@ export const exportVideoTrueOffline = async (
       combinedStream = videoStream;
     }
 
-    // Setup MediaRecorder
+    // Setup MediaRecorder with optimized settings
     const mimeType = options.outputFormat === 'mp4' ? 'video/mp4' : 'video/webm';
+    
+    // Use higher quality codec settings for better output
+    const codecOptions = options.outputFormat === 'mp4'
+      ? 'video/mp4;codecs=avc1.42E01E' // H.264 Baseline Profile
+      : 'video/webm;codecs=vp9,opus';   // VP9 for better quality
+    
     const recorder = new MediaRecorder(combinedStream, {
-      mimeType: mimeType,
+      mimeType: codecOptions,
       videoBitsPerSecond: videoBitrate,
       audioBitsPerSecond: audioBitrate
     });
@@ -124,7 +123,7 @@ export const exportVideoTrueOffline = async (
       }
     };
 
-    // Phase 6: Playback pre-composed frames (80-95% progress)
+    // Phase 5: Render and encode frames on-demand (20-95% progress)
     recorder.start(100);
 
     const totalFrames = Math.ceil(totalDuration * frameRate);
@@ -132,42 +131,74 @@ export const exportVideoTrueOffline = async (
     console.log(`📊 Expected playback time: ${(totalFrames / frameRate).toFixed(2)}s`);
 
     await new Promise<void>((resolve) => {
-      let currentFrame = 0;
-      const frameInterval = 1000 / frameRate;
-      const startTime = performance.now();
+      const frameController = new FrameRateController(frameRate);
+      frameController.start();
+      
+      let processedFrames = 0;
 
-      const playNextFrame = () => {
-        if (currentFrame >= totalFrames) {
+      // Use frame controller for precise timing
+      const playNextFrame = async () => {
+        if (processedFrames >= totalFrames) {
+          const stats = frameController.getStats();
+          console.log(`📊 Frame timing stats:
+            • Total frames: ${stats.totalFrames}
+            • Dropped frames: ${stats.droppedFrames}
+            • Average frame time: ${stats.averageFrameTime.toFixed(2)}ms
+            • Target frame time: ${stats.targetFrameTime.toFixed(2)}ms
+            • Efficiency: ${stats.efficiency.toFixed(1)}%`);
+          
+          if (stats.droppedFrames > 0) {
+            console.warn(`⚠️ Dropped ${stats.droppedFrames} frames during export`);
+          }
           resolve();
           return;
         }
 
-        // Render pre-composed frame (instant - no seeking!)
-        const success = videoRenderer!.renderComposedFrame(currentFrame);
-        if (!success) {
-          console.warn(`⚠️ Failed to render frame ${currentFrame}`);
+        const timing = frameController.getNextFrameTiming();
+        
+        // Skip frames if needed to maintain timing
+        if (timing.framesToSkip > 0) {
+          console.warn(`⏩ Skipping ${timing.framesToSkip} frames to maintain timing`);
+          processedFrames += timing.framesToSkip;
+        }
+        
+        const frameStartTime = performance.now();
+        
+        // Render frame on-demand (with video seeking as needed)
+        const frameData = await videoRenderer!.composeSingleFrame(timing.currentFrame, frameRate);
+        if (frameData) {
+          // Render the frame to canvas
+          const canvas = videoRenderer!.getCanvas();
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.putImageData(frameData, 0, 0);
+            // Manually trigger frame capture for MediaRecorder
+            const videoTrack = videoStream.getVideoTracks()[0];
+            if ('requestFrame' in videoTrack) {
+              (videoTrack as any).requestFrame();
+            }
+          }
+        } else {
+          console.warn(`⚠️ No content for frame ${timing.currentFrame}`);
         }
 
-        // Note: No manual frame triggering needed since we're using captureStream(frameRate)
+        // Mark frame as completed
+        frameController.frameCompleted();
+        processedFrames++;
 
         // Update progress
-        const progress = 80 + ((currentFrame / totalFrames) * 15); // 80-95%
+        const progress = 20 + ((processedFrames / totalFrames) * 75); // 20-95%
         onProgress(Math.min(progress, 95));
 
-        currentFrame++;
-
-        // Schedule next frame with precise timing
-        const expectedTime = startTime + (currentFrame * frameInterval);
-        const currentTime = performance.now();
-        const delay = Math.max(0, expectedTime - currentTime);
-
-        setTimeout(playNextFrame, delay);
+        // Schedule next frame with optimal timing
+        scheduleNextFrame(playNextFrame, timing.delay);
       };
 
-      playNextFrame();
+      // Start with requestAnimationFrame for smooth start
+      requestAnimationFrame(playNextFrame);
     });
 
-    // Phase 7: Finalize recording (95-100% progress)
+    // Phase 6: Finalize recording (95-100% progress)
     onProgress(95);
     recorder.stop();
 

@@ -62,9 +62,21 @@ export function drawWithAspectRatio(
   );
 
   ctx.save();
+  
+  // Use high-quality rendering settings
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
+  
+  // Clear the area first for cleaner compositing
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+  
+  // Fill with black background for letterboxing/pillarboxing
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+  
+  // Draw the video/canvas with high quality
   ctx.drawImage(source, drawX, drawY, drawWidth, drawHeight);
+  
   ctx.restore();
 }
 
@@ -74,11 +86,12 @@ export function drawWithAspectRatio(
 export function getVideoBitrate(quality: "low" | "medium" | "high", customBitrate?: number): number {
   if (customBitrate) return customBitrate;
   
+  // Higher bitrates for better quality
   switch (quality) {
-    case "low": return 2000000;    // 2 Mbps
-    case "medium": return 5000000; // 5 Mbps  
-    case "high": return 8000000;   // 8 Mbps
-    default: return 5000000;
+    case "low": return 3000000;     // 3 Mbps (increased from 2)
+    case "medium": return 6000000;  // 6 Mbps (increased from 5)
+    case "high": return 10000000;   // 10 Mbps (increased from 8)
+    default: return 6000000;
   }
 }
 
@@ -93,13 +106,22 @@ export function getQualityBitrate(quality: "low" | "medium" | "high"): number {
  * Setup high-quality canvas context
  */
 export function setupHighQualityCanvas(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', {
+    alpha: false, // Opaque canvas for better performance
+    desynchronized: true, // Allow async rendering
+    willReadFrequently: false // Optimize for drawing
+  });
+  
   if (!ctx) {
     throw new Error('Failed to get 2D context from canvas');
   }
   
+  // Set high quality rendering
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
+  
+  // Additional quality settings
+  (ctx as any).filter = 'none'; // Disable browser filtering
   
   return ctx;
 }
@@ -306,7 +328,8 @@ export function createWebCodecsCanvas(
   const ctx = canvas.getContext('2d', {
     alpha: false, // Opaque canvas for better performance
     desynchronized: true, // Allow async rendering
-    willReadFrequently: false // Optimize for drawing, not reading
+    willReadFrequently: false, // Optimize for drawing, not reading
+    colorSpace: 'srgb' // Ensure consistent color space
   });
   
   if (!ctx) {
@@ -316,6 +339,10 @@ export function createWebCodecsCanvas(
   // Optimize for video rendering
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
+  
+  // Additional quality optimizations
+  (ctx as any).filter = 'none';
+  (ctx as any).pixelFormat = 'rgba8'; // Ensure 8-bit color depth
   
   return { canvas, ctx };
 }

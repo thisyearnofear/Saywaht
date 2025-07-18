@@ -51,13 +51,25 @@ export const exportVideo = async (
     // 1. Prefer WebCodecs for best performance (10x faster)
     if (shouldUseWebCodecs(tracks, mediaItems, options)) {
       console.log("🚀 Auto-selected WebCodecs streaming export for optimal performance");
-      return exportVideoWithTransferableFrames(tracks, mediaItems, totalDuration, onProgress, {
-        ...options,
-        outputFormat: 'webm', // Use WebM for now as it's simpler
-        frameRate: options.frameRate || 30,
-        videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
-        audioBitrate: options.audioBitrate || 192000
-      } as WebCodecsExportOptions);
+      try {
+        return await exportVideoWithTransferableFrames(tracks, mediaItems, totalDuration, onProgress, {
+          ...options,
+          outputFormat: 'webm', // Use WebM for now as it's simpler
+          frameRate: options.frameRate || 30,
+          videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
+          audioBitrate: options.audioBitrate || 192000
+        } as WebCodecsExportOptions);
+      } catch (error) {
+        console.error("WebCodecs export failed, falling back to offline export:", error);
+        // Fallback to offline export
+        return exportVideoTrueOffline(tracks, mediaItems, totalDuration, onProgress, {
+          ...options,
+          outputFormat: options.outputFormat || 'mp4',
+          frameRate: options.frameRate || 30,
+          videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
+          audioBitrate: options.audioBitrate || 192000
+        });
+      }
     }
     
     // 2. Fallback to offline export for video content
@@ -83,13 +95,18 @@ export const exportVideo = async (
       throw new Error("WebCodecs API is not supported in this browser");
     }
     console.log("🚀 Using WebCodecs streaming export - Maximum performance");
-    return exportVideoWithTransferableFrames(tracks, mediaItems, totalDuration, onProgress, {
-      ...options,
-      outputFormat: 'webm', // Use WebM for now as it's simpler
-      frameRate: options.frameRate || 30,
-      videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
-      audioBitrate: options.audioBitrate || 192000
-    } as WebCodecsExportOptions);
+    try {
+      return await exportVideoWithTransferableFrames(tracks, mediaItems, totalDuration, onProgress, {
+        ...options,
+        outputFormat: 'webm', // Use WebM for now as it's simpler
+        frameRate: options.frameRate || 30,
+        videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
+        audioBitrate: options.audioBitrate || 192000
+      } as WebCodecsExportOptions);
+    } catch (error) {
+      console.error("WebCodecs export failed:", error);
+      throw error;
+    }
   }
   
   if (method === "offline") {

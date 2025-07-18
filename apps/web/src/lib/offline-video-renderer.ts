@@ -42,17 +42,23 @@ export class OfflineVideoRenderer {
 
     // Use shared utility for high-quality canvas setup
     this.ctx = setupHighQualityCanvas(this.canvas);
+    
+    // Additional optimizations for video rendering
+    this.ctx.imageSmoothingEnabled = true;
+    this.ctx.imageSmoothingQuality = 'high';
+    // Ensure we're using the best possible rendering
+    (this.ctx as any).filter = 'none'; // Disable any browser filtering
   }
 
   /**
-   * Phase 1: Extract all video frames upfront (no real-time seeking)
+   * Initialize video elements for on-demand rendering (no pre-extraction)
    */
   async initialize(
-    tracks: TimelineTrack[], 
-    mediaItems: MediaItem[], 
+    tracks: TimelineTrack[],
+    mediaItems: MediaItem[],
     onProgress?: (progress: number) => void
   ): Promise<void> {
-    console.log('🎬 Starting offline video frame extraction...');
+    console.log('🎬 Initializing video renderer...');
     
     // Find all video clips in timeline
     const videoClips: Array<{
@@ -80,38 +86,51 @@ export class OfflineVideoRenderer {
       }
     }
 
-    console.log(`📹 Found ${videoClips.length} video clips to extract`);
+    console.log(`📹 Found ${videoClips.length} video clips`);
 
-    // Extract frames from each unique video file
+    // Store clip data without extracting frames
+    for (const clipInfo of videoClips) {
+      this.videoClips.push({
+        ...clipInfo,
+        extractedFrames: {
+          frames: [], // No pre-extracted frames
+          duration: clipInfo.mediaItem.duration || 0,
+          frameRate: 30
+        }
+      });
+    }
+
+    // Pre-load video elements for faster seeking
     const uniqueVideos = new Map<string, MediaItem>();
     videoClips.forEach(clip => {
       uniqueVideos.set(clip.mediaItem.id, clip.mediaItem);
     });
 
-    let processedVideos = 0;
-    const totalVideos = uniqueVideos.size;
-
-    for (const [videoId, mediaItem] of Array.from(uniqueVideos)) {
-      console.log(`🎬 Extracting frames from: ${mediaItem.name}`);
+    const loadPromises = Array.from(uniqueVideos.values()).map(async (mediaItem) => {
+      const video = document.createElement('video');
+      video.crossOrigin = 'anonymous';
+      video.preload = 'auto'; // Full preload for better performance
+      video.muted = true;
       
-      const extractedFrames = await this.extractAllVideoFrames(mediaItem, (extractProgress) => {
-        const overallProgress = ((processedVideos + (extractProgress / 100)) / totalVideos) * 100;
-        onProgress?.(overallProgress);
+      return new Promise<void>((resolve, reject) => {
+        // Wait for video to be fully ready with enough data
+        video.oncanplaythrough = () => {
+          // Store video element for reuse
+          (mediaItem as any)._videoElement = video;
+          console.log(`✅ Video ready: ${mediaItem.name} (readyState: ${video.readyState})`);
+          resolve();
+        };
+        
+        video.onerror = () => reject(new Error(`Failed to load video: ${mediaItem.name}`));
+        
+        // Start loading
+        video.src = mediaItem.url;
+        video.load(); // Explicitly start loading
       });
+    });
 
-      // Create video clip data for all clips using this video
-      const clipsUsingThisVideo = videoClips.filter(clip => clip.mediaItem.id === videoId);
-      for (const clipInfo of clipsUsingThisVideo) {
-        this.videoClips.push({
-          ...clipInfo,
-          extractedFrames
-        });
-      }
-
-      processedVideos++;
-    }
-
-    console.log(`✅ Extracted frames from ${totalVideos} videos`);
+    await Promise.all(loadPromises);
+    console.log(`✅ Pre-loaded ${uniqueVideos.size} videos with full data`);
   }
 
   /**
@@ -131,7 +150,11 @@ export class OfflineVideoRenderer {
       video.preload = 'metadata';
       
       const extractionCanvas = document.createElement('canvas');
-      const extractionCtx = extractionCanvas.getContext('2d');
+      const extractionCtx = extractionCanvas.getContext('2d', {
+        willReadFrequently: true, // Fix the performance warning
+        alpha: false, // No transparency needed for video
+        desynchronized: true // Allow async rendering
+      });
       
       if (!extractionCtx) {
         reject(new Error('Failed to create extraction canvas context'));
@@ -148,12 +171,8 @@ export class OfflineVideoRenderer {
         extractionCanvas.width = video.videoWidth;
         extractionCanvas.height = video.videoHeight;
 
-        // Optimize canvas for frequent reads
+        // Optimize canvas for extraction
         extractionCtx.imageSmoothingEnabled = false; // Faster extraction
-        if ('willReadFrequently' in extractionCanvas) {
-          // @ts-ignore - willReadFrequently is newer API
-          extractionCanvas.willReadFrequently = true;
-        }
         
         const totalFrames = Math.ceil(video.duration * targetFrameRate);
         
@@ -183,18 +202,10 @@ export class OfflineVideoRenderer {
             const nextTimestamp = currentFrameIndex / targetFrameRate;
 
             if (nextTimestamp < video.duration) {
-              // Yield to browser every 5 frames to prevent stalling
-              if (currentFrameIndex % 5 === 0) {
-                setTimeout(() => {
-                  video.currentTime = nextTimestamp;
-                  // @ts-ignore - requestVideoFrameCallback not in types yet
-                  video.requestVideoFrameCallback(extractFrame);
-                }, 0);
-              } else {
-                video.currentTime = nextTimestamp;
-                // @ts-ignore - requestVideoFrameCallback not in types yet
-                video.requestVideoFrameCallback(extractFrame);
-              }
+              // Seek to next frame
+              video.currentTime = nextTimestamp;
+              // @ts-ignore - requestVideoFrameCallback not in types yet
+              video.requestVideoFrameCallback(extractFrame);
             } else {
               // Extraction complete
               clearTimeout(timeout);
@@ -305,27 +316,116 @@ export class OfflineVideoRenderer {
   }
 
   /**
-   * Compose a single frame at a specific index
+   * Compose a single frame at a specific index (on-demand rendering)
    */
   async composeSingleFrame(
     frameIndex: number,
     frameRate: number
   ): Promise<ImageData | null> {
-    // Check if already composed
-    const existing = this.compositeFrames.get(frameIndex);
-    if (existing) {
-      return existing;
-    }
-
-    // Compose the frame
     const timestamp = frameIndex / frameRate;
-    const compositeFrame = await this.composeFrameAtTime(timestamp);
     
-    if (compositeFrame) {
-      this.compositeFrames.set(frameIndex, compositeFrame);
+    // Clear canvas
+    clearCanvas(this.ctx, this.canvas.width, this.canvas.height);
+    
+    let hasContent = false;
+
+    // Find active clips at this timestamp
+    for (const clip of this.videoClips) {
+      if (timestamp >= clip.startTime && timestamp < clip.endTime) {
+        const videoTime = Math.max(0, timestamp - clip.startTime + clip.trimStart);
+        const video = (clip.mediaItem as any)._videoElement as HTMLVideoElement;
+        
+        if (video) {
+          // More precise seeking threshold (1 frame at 30fps = 0.033s)
+          const seekThreshold = 1 / 30;
+          
+          // Seek if necessary
+          if (Math.abs(video.currentTime - videoTime) > seekThreshold) {
+            video.currentTime = videoTime;
+            
+            // Wait for seek to complete with better error handling
+            await new Promise<void>((resolve) => {
+              let seekTimeout: NodeJS.Timeout;
+              let canPlayTimeout: NodeJS.Timeout;
+              
+              const cleanup = () => {
+                video.removeEventListener('seeked', onSeeked);
+                video.removeEventListener('error', onError);
+                video.removeEventListener('canplay', onCanPlay);
+                clearTimeout(seekTimeout);
+                clearTimeout(canPlayTimeout);
+              };
+              
+              const onSeeked = () => {
+                // Wait a bit more for data to be ready after seek
+                canPlayTimeout = setTimeout(() => {
+                  cleanup();
+                  resolve();
+                }, 10);
+              };
+              
+              const onCanPlay = () => {
+                cleanup();
+                resolve();
+              };
+              
+              const onError = () => {
+                cleanup();
+                console.warn(`Seek error at time ${videoTime}`);
+                resolve();
+              };
+              
+              video.addEventListener('seeked', onSeeked);
+              video.addEventListener('canplay', onCanPlay);
+              video.addEventListener('error', onError);
+              
+              // Timeout fallback - slightly longer for data to load
+              seekTimeout = setTimeout(() => {
+                cleanup();
+                resolve();
+              }, 100);
+            });
+          }
+          
+          // Wait for video to have current frame data
+          if (video.readyState < 2) {
+            // Try to wait for data
+            await new Promise<void>((resolve) => {
+              const checkReady = () => {
+                if (video.readyState >= 2) {
+                  resolve();
+                } else {
+                  setTimeout(checkReady, 10);
+                }
+              };
+              
+              // Start checking, but don't wait forever
+              checkReady();
+              setTimeout(resolve, 50); // Max wait 50ms
+            });
+          }
+          
+          // Ensure video is ready before drawing
+          if (video.readyState >= 2) { // HAVE_CURRENT_DATA
+            // Draw video frame with high quality
+            drawWithAspectRatio(this.ctx, video, this.canvas.width, this.canvas.height);
+            hasContent = true;
+          } else {
+            console.warn(`Video not ready at time ${videoTime}, readyState: ${video.readyState}`);
+            // Try to force a frame update
+            video.play();
+            video.pause();
+          }
+        }
+      }
     }
 
-    return compositeFrame;
+    if (!hasContent) {
+      return null;
+    }
+
+    // Return composed frame
+    return this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
   }
 
   /**
