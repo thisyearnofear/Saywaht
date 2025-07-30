@@ -3,7 +3,8 @@
 import { useState, useEffect } from "@/lib/hooks-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LuLoader as Loader2 } from "react-icons/lu";
+import { Button } from "@/components/ui/button";
+import { Loader2, AlertCircle, CheckCircle } from "@/lib/icons-provider";
 import Image from "next/image";
 import { MintVideoPreview } from "../video-preview";
 import { useProjectStore } from "@/stores/project-store";
@@ -11,6 +12,10 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { generateCoinMetadata, uploadMetadataToIPFS } from "@/lib/metadata";
 import { MintWizardData } from "../mint-wizard";
+import { unifiedExport, ExportProgress, checkExportFeasibility } from "@/lib/unified-export";
+import { storageManager, StorageErrorType } from "@/lib/storage-manager";
+import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
 
 interface PreviewStepProps {
   data: MintWizardData;
@@ -20,221 +25,207 @@ interface PreviewStepProps {
 export function PreviewStep({ data, updateData }: PreviewStepProps) {
   const [isGeneratingMetadata, setIsGeneratingMetadata] = useState(false);
   const [videoUploadStatus, setVideoUploadStatus] = useState<
-    "pending" | "success" | "failed" | "size_exceeded"
-  >("pending");
+    "idle" | "preparing" | "exporting" | "uploading" | "success" | "warning" | "failed"
+  >("idle");
   const [videoUploadError, setVideoUploadError] = useState<string | null>(null);
+  const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
+  const [exportedVideoUrl, setExportedVideoUrl] = useState<string | null>(null);
+  const [storageProvider, setStorageProvider] = useState<string>("grove");
+  const [showSizeWarning, setShowSizeWarning] = useState(false);
+  const [estimatedSize, setEstimatedSize] = useState<number | null>(null);
+  const [adjustedSettings, setAdjustedSettings] = useState<{
+    quality: string;
+    frameRate: number;
+    videoBitrate?: number;
+  } | null>(null);
 
-  // Detailed export progress tracking
-  const [exportProgress, setExportProgress] = useState<{
-    phase:
-      | "extracting"
-      | "composing"
-      | "encoding"
-      | "uploading"
-      | "complete"
-      | null;
-    percentage: number;
-    message: string;
-  }>({ phase: null, percentage: 0, message: "" });
   const { activeProject } = useProjectStore();
-  const { tracks } = useTimelineStore();
+  const { tracks, getTotalDuration } = useTimelineStore();
   const { mediaItems } = useMediaStore();
 
   // Generate metadata when component mounts or data changes
   useEffect(() => {
-    if (
-      !data.coinName ||
-      !data.coinSymbol ||
-      !activeProject ||
-      data.metadataUri
-    )
-      return;
+    if (!data.coinName || !data.coinSymbol || !activeProject || data.metadataUri) return;
 
     const generateMetadata = async () => {
       setIsGeneratingMetadata(true);
-      setVideoUploadStatus("pending");
+      setVideoUploadStatus("preparing");
       setVideoUploadError(null);
 
       try {
-        // Step 1: Export timeline content as video
+        // Step 1: Check export feasibility and estimate file size
+        const totalDuration = Math.max(getTotalDuration(), 5); // Minimum 5 seconds
+        console.log(`📏 Calculated timeline duration: ${totalDuration}s`);
+
+        // Check if export is feasible within size limits
+        const feasibility = await checkExportFeasibility(
+          tracks,
+          mediaItems,
+          totalDuration,
+          8, // Grove's 8MB limit
+          data.videoFormat
+        );
+
+        setEstimatedSize(feasibility.estimatedSize);
+        
+        if (!feasibility.feasible) {
+          // Show warning but continue with adjusted settings
+          setShowSizeWarning(true);
+          setAdjustedSettings(feasibility.recommendedSettings ? {
+            quality: feasibility.recommendedSettings.quality,
+            frameRate: feasibility.recommendedSettings.frameRate,
+            videoBitrate: feasibility.recommendedSettings.videoBitrate
+          } : null);
+          
+          console.warn(`⚠️ ${feasibility.message}`);
+          
+          // If size is way too large, show warning but don't attempt export
+          if (feasibility.estimatedSize > 15) { // If over 15MB, probably won't work even with adjustments
+            setVideoUploadStatus("warning");
+            setVideoUploadError(feasibility.message);
+            // Still generate metadata without video
+            await generateMetadataOnly();
+            return;
+          }
+        }
+
+        // Step 2: Export timeline content as video
+        setVideoUploadStatus("exporting");
         console.log("🎬 Exporting timeline content...");
-        let exportedVideoUrl = "";
-
-        if (tracks.length > 0 && mediaItems.length > 0) {
-          try {
-            // Calculate total duration from timeline using proper timeline calculation
-            const { useTimelineStore } = await import(
-              "@/stores/timeline-store"
-            );
-            const { getTotalDuration } = useTimelineStore.getState();
-            const totalDuration = Math.max(getTotalDuration(), 5); // Minimum 5 seconds
-
-            console.log(`📏 Calculated timeline duration: ${totalDuration}s`);
-
-            // Export video using Phase 2 (FFmpeg) with selected format
-            const { exportVideo } = await import("@/lib/canvas-export-utils");
-            const videoBlob = await exportVideo(
-              tracks,
-              mediaItems,
-              totalDuration,
-              (progress) => {
-                console.log(`Export progress: ${Math.round(progress)}%`);
-
-                // Update detailed progress based on percentage
-                let phase: "extracting" | "composing" | "encoding" =
-                  "extracting";
-                let message = "";
-
-                if (progress < 40) {
-                  phase = "extracting";
-                  message = `Extracting video frames... ${Math.round(progress)}%`;
-                } else if (progress < 70) {
-                  phase = "composing";
-                  message = `Composing timeline... ${Math.round(progress)}%`;
-                } else {
-                  phase = "encoding";
-                  message = `Encoding video... ${Math.round(progress)}%`;
-                }
-
-                setExportProgress({
-                  phase,
-                  percentage: Math.round(progress),
-                  message,
-                });
-              },
-              {
-                format: data.videoFormat,
-                quality: "medium",
-                includeAudio: true,
-                method: "auto", // Phase 2: Auto-select best export method
-                outputFormat: "mp4", // Phase 2: MP4 for better compatibility
+        
+        try {
+          const videoBlob = await unifiedExport(
+            tracks,
+            mediaItems,
+            totalDuration,
+            (progress) => {
+              setExportProgress(progress);
+            },
+            {
+              format: data.videoFormat,
+              quality: feasibility.recommendedSettings?.quality || "medium",
+              includeAudio: true,
+              outputFormat: "mp4",
+              frameRate: feasibility.recommendedSettings?.frameRate || 30,
+              videoBitrate: feasibility.recommendedSettings?.videoBitrate,
+              maxFileSizeMB: 7.5, // Target 7.5MB to be safe with Grove's 8MB limit
+              onSizeEstimate: async (estimatedSize, maxSize) => {
+                // Always continue, but with adjusted settings
+                return true;
               }
-            );
+            }
+          );
 
-            // Check file size before upload (Grove limit is 8MB)
-            const fileSizeMB = videoBlob.size / (1024 * 1024);
-            console.log(`📊 Video file size: ${fileSizeMB.toFixed(2)}MB`);
+          // Step 3: Upload video using storage manager
+          setVideoUploadStatus("uploading");
+          
+          const videoFile = new File(
+            [videoBlob],
+            `${data.coinName.replace(/[^a-zA-Z0-9]/g, "_")}.mp4`,
+            { type: "video/mp4" }
+          );
 
-            if (fileSizeMB > 8) {
-              console.warn(
-                `⚠️ Video file (${fileSizeMB.toFixed(2)}MB) exceeds Grove's 8MB limit`
-              );
-              setVideoUploadStatus("size_exceeded");
-              setVideoUploadError(
-                `Video file is ${fileSizeMB.toFixed(2)}MB, but Grove's limit is 8MB. Please trim your video or use a different storage option.`
-              );
-              // Continue without video upload but show warning
-            } else {
-              // Upload exported video to Grove
+          const uploadResult = await storageManager.uploadFile(videoFile, {
+            preferredProvider: "grove",
+            allowFallback: true,
+            onProgress: (progress) => {
               setExportProgress({
                 phase: "uploading",
-                percentage: 100,
-                message: "Uploading video to IPFS...",
+                percentage: progress,
+                message: `Uploading to ${storageProvider}... ${Math.round(progress)}%`
               });
-
-              const { groveStorage } = await import("@/lib/grove-storage");
-              const videoFile = new File(
-                [videoBlob],
-                `${data.coinName.replace(/[^a-zA-Z0-9]/g, "_")}.mp4`,
-                {
-                  type: "video/mp4",
-                }
-              );
-
-              console.log("📤 Uploading exported video to Grove...");
-              const videoUploadResult =
-                await groveStorage.uploadFile(videoFile);
-              exportedVideoUrl = videoUploadResult.gatewayUrl;
-              console.log("✅ Video uploaded to Grove:", exportedVideoUrl);
-              setVideoUploadStatus("success");
-              setExportProgress({
-                phase: "complete",
-                percentage: 100,
-                message: "Video export complete!",
-              });
+            },
+            onProviderFallback: async (from, to, reason) => {
+              setStorageProvider(to);
+              toast.info(`Switching to ${to} storage: ${reason}`);
+              return true; // Allow fallback
             }
-          } catch (error) {
-            console.error("Failed to export/upload video:", error);
-            setVideoUploadStatus("failed");
-            setExportProgress({
-              phase: null,
-              percentage: 0,
-              message: "Export failed. Please try again.",
-            });
+          });
 
-            // Check if it's a Grove size limit error
-            if (error instanceof Error && error.message.includes("8.00MB")) {
+          setExportedVideoUrl(uploadResult.url);
+          setStorageProvider(uploadResult.provider);
+          setVideoUploadStatus("success");
+          
+          // Step 4: Generate metadata with the uploaded video
+          await generateMetadataWithVideo(uploadResult.url);
+          
+        } catch (error) {
+          console.error("Failed to export/upload video:", error);
+          
+          // Handle storage-specific errors
+          if (error && typeof error === 'object' && 'type' in error) {
+            const storageError = error as { type: StorageErrorType, message: string };
+            
+            if (storageError.type === StorageErrorType.SIZE_EXCEEDED) {
+              setVideoUploadStatus("warning");
               setVideoUploadError(
-                "Video file exceeds Grove's 8MB limit. Please trim your video or consider using a different storage option."
+                `Video file exceeds storage limit. Please trim your video or use lower quality settings.`
               );
-              setVideoUploadStatus("size_exceeded");
             } else {
+              setVideoUploadStatus("failed");
               setVideoUploadError(
+                storageManager.getErrorMessage(error as any) || 
                 `Failed to upload video: ${error instanceof Error ? error.message : "Unknown error"}`
               );
             }
-            // Continue without video if export fails
+          } else {
+            setVideoUploadStatus("failed");
+            setVideoUploadError(
+              `Export failed: ${error instanceof Error ? error.message : "Unknown error"}`
+            );
           }
+          
+          // Still generate metadata without video
+          await generateMetadataOnly();
         }
+      } catch (error) {
+        console.error("Failed to generate metadata:", error);
+        setIsGeneratingMetadata(false);
+      }
+    };
 
-        // Step 2: Prepare thumbnail for metadata (keep in-memory version for display)
+    // Generate metadata with video URL
+    async function generateMetadataWithVideo(videoUrl: string) {
+      try {
+        // Prepare thumbnail for metadata
         let finalThumbnailUrl = data.thumbnail;
         if (data.thumbnail && data.thumbnail.startsWith("data:")) {
           try {
-            const { uploadThumbnailToGrove } = await import(
-              "@/lib/thumbnail-upload"
+            const result = await storageManager.uploadFile(
+              dataURLtoFile(data.thumbnail, "thumbnail.png"),
+              { preferredProvider: "grove" }
             );
-            const result = await uploadThumbnailToGrove(data.thumbnail);
-            finalThumbnailUrl = result.metadataUrl; // IPFS URL for metadata only
-            console.log("📸 Thumbnail uploaded to Grove:", finalThumbnailUrl);
-            // DON'T update the wizard data - keep the working in-memory version for display
+            finalThumbnailUrl = result.ipfsUrl || result.url;
+            console.log("📸 Thumbnail uploaded:", finalThumbnailUrl);
           } catch (error) {
-            console.error("Failed to upload thumbnail to Grove:", error);
-            // Continue with data URL if Grove upload fails
+            console.error("Failed to upload thumbnail:", error);
+            // Continue with data URL if upload fails
           }
         }
 
-        // Step 3: Create modified mediaItems with exported video and custom thumbnail
+        // Create modified mediaItems with exported video
         const modifiedMediaItems = [...mediaItems];
-
-        // Add the exported video as the primary media item
-        if (exportedVideoUrl) {
-          const exportedVideoItem = {
-            id: crypto.randomUUID(),
-            name: `${data.coinName} - Exported`,
-            url: exportedVideoUrl,
-            type: "video" as const,
-            size: 0, // Size not critical for metadata
-            duration: 0, // Duration not critical for metadata
-            aspectRatio: 16 / 9,
-            isGrove: true,
-            thumbnailUrl: data.thumbnail || undefined, // Use original thumbnail
-          };
-
-          // Insert at the beginning to make it the primary media
-          modifiedMediaItems.unshift(exportedVideoItem);
-        } else if (data.thumbnail) {
-          // If no exported video, at least update the first video with custom thumbnail
-          const firstVideoIndex = modifiedMediaItems.findIndex(
-            (item) => item.type === "video"
-          );
-          if (firstVideoIndex >= 0) {
-            modifiedMediaItems[firstVideoIndex] = {
-              ...modifiedMediaItems[firstVideoIndex],
-              thumbnailUrl: data.thumbnail,
-            };
-          }
-        }
+        const exportedVideoItem = {
+          id: crypto.randomUUID(),
+          name: `${data.coinName} - Exported`,
+          url: videoUrl,
+          type: "video" as const,
+          size: 0,
+          duration: getTotalDuration(),
+          aspectRatio: 16 / 9,
+          thumbnailUrl: finalThumbnailUrl || undefined,
+        };
+        modifiedMediaItems.unshift(exportedVideoItem);
 
         const metadata = await generateCoinMetadata({
           coinName: data.coinName,
           coinSymbol: data.coinSymbol,
-          creatorAddress: "0x0000000000000000000000000000000000000000", // Will be set during deploy
+          creatorAddress: "0x0000000000000000000000000000000000000000",
           mediaItems: modifiedMediaItems,
           tracks,
-          projectId: activeProject.id,
-          exportedVideoUrl: exportedVideoUrl || undefined, // Include the exported video URL
-          thumbnailUrl: finalThumbnailUrl || undefined, // Use the Grove-uploaded thumbnail for metadata
+          projectId: activeProject?.id || '',
+          exportedVideoUrl: videoUrl,
+          thumbnailUrl: finalThumbnailUrl || undefined,
         });
 
         // Add custom description if provided
@@ -242,23 +233,69 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           metadata.description = data.coinDescription;
         }
 
-        // Log the metadata structure to verify it includes content field
-        console.log("📋 Generated metadata structure:", {
-          name: metadata.name,
-          hasImage: !!metadata.image,
-          hasAnimationUrl: !!metadata.animation_url,
-          hasContent: !!(metadata as any).content,
-          contentMime: (metadata as any).content?.mime,
+        const uri = await uploadMetadataToIPFS(metadata);
+        updateData({ metadataUri: uri });
+        setIsGeneratingMetadata(false);
+      } catch (error) {
+        console.error("Failed to generate metadata with video:", error);
+        setIsGeneratingMetadata(false);
+      }
+    }
+
+    // Generate metadata without video (fallback)
+    async function generateMetadataOnly() {
+      try {
+        // Prepare thumbnail for metadata
+        let finalThumbnailUrl = data.thumbnail;
+        if (data.thumbnail && data.thumbnail.startsWith("data:")) {
+          try {
+            const result = await storageManager.uploadFile(
+              dataURLtoFile(data.thumbnail, "thumbnail.png"),
+              { preferredProvider: "grove" }
+            );
+            finalThumbnailUrl = result.ipfsUrl || result.url;
+          } catch (error) {
+            console.error("Failed to upload thumbnail:", error);
+            // Continue with data URL if upload fails
+          }
+        }
+
+        const metadata = await generateCoinMetadata({
+          coinName: data.coinName,
+          coinSymbol: data.coinSymbol,
+          creatorAddress: "0x0000000000000000000000000000000000000000",
+          mediaItems: mediaItems,
+          tracks,
+          projectId: activeProject?.id || '',
+          thumbnailUrl: finalThumbnailUrl || undefined,
         });
+
+        // Add custom description if provided
+        if (data.coinDescription) {
+          metadata.description = data.coinDescription;
+        }
 
         const uri = await uploadMetadataToIPFS(metadata);
         updateData({ metadataUri: uri });
       } catch (error) {
-        console.error("Failed to generate metadata:", error);
+        console.error("Failed to generate metadata without video:", error);
       } finally {
         setIsGeneratingMetadata(false);
       }
-    };
+    }
+
+    // Convert data URL to File object
+    function dataURLtoFile(dataurl: string, filename: string): File {
+      const arr = dataurl.split(',');
+      const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new File([u8arr], filename, { type: mime });
+    }
 
     const timeout = setTimeout(generateMetadata, 500);
     return () => clearTimeout(timeout);
@@ -267,12 +304,36 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
     data.coinSymbol,
     data.coinDescription,
     data.videoFormat,
-    activeProject?.id, // Only depend on project ID, not the whole object
-    mediaItems.length, // Only depend on length to avoid unnecessary re-runs
-    tracks.length, // Only depend on length to avoid unnecessary re-runs
+    activeProject?.id,
     data.metadataUri,
-    // Remove data.thumbnail and updateData from dependencies to prevent loops
+    data.thumbnail,
+    updateData,
+    tracks,
+    mediaItems,
+    getTotalDuration
   ]);
+
+  // Render progress indicator
+  function renderProgressIndicator() {
+    if (!exportProgress) return null;
+    
+    return (
+      <div className="space-y-2 mt-2">
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>{exportProgress.message}</span>
+          <span>{Math.round(exportProgress.percentage)}%</span>
+        </div>
+        <Progress value={exportProgress.percentage} className="h-1" />
+        {exportProgress.estimatedTimeRemaining !== undefined && (
+          <div className="text-xs text-muted-foreground text-right">
+            {exportProgress.estimatedTimeRemaining > 60 
+              ? `${Math.round(exportProgress.estimatedTimeRemaining / 60)} min remaining`
+              : `${Math.round(exportProgress.estimatedTimeRemaining)} sec remaining`}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -343,56 +404,75 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               </div>
 
               <div>
-                <h4 className="font-medium mb-2">Upload Status</h4>
+                <h4 className="font-medium mb-2">Export Status</h4>
 
-                {/* Video Upload Status */}
+                {/* Video Export Status */}
                 <div className="flex items-center gap-2 mb-2">
-                  {videoUploadStatus === "pending" ? (
+                  {videoUploadStatus === "idle" ? (
                     <>
-                      <div className="w-4 h-4 animate-spin">
+                      <div className="w-2 h-2 bg-gray-300 rounded-full" />
+                      <span className="text-sm text-muted-foreground">
+                        Waiting to start...
+                      </span>
+                    </>
+                  ) : videoUploadStatus === "preparing" ? (
+                    <>
+                      <div className="w-4 h-4 animate-spin text-primary">
+                        <Loader2 />
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        Preparing export...
+                      </span>
+                    </>
+                  ) : videoUploadStatus === "exporting" ? (
+                    <>
+                      <div className="w-4 h-4 animate-spin text-primary">
                         <Loader2 />
                       </div>
                       <div className="flex flex-col">
                         <span className="text-sm text-muted-foreground">
-                          {exportProgress.message ||
-                            "Preparing video export..."}
+                          {exportProgress?.message || "Exporting video..."}
                         </span>
-                        {exportProgress.percentage > 0 && (
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="w-32 h-1 bg-gray-200 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-blue-500 transition-all duration-300"
-                                style={{
-                                  width: `${exportProgress.percentage}%`,
-                                }}
-                              />
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {exportProgress.percentage}%
-                            </span>
-                          </div>
-                        )}
+                        {renderProgressIndicator()}
+                      </div>
+                    </>
+                  ) : videoUploadStatus === "uploading" ? (
+                    <>
+                      <div className="w-4 h-4 animate-spin text-primary">
+                        <Loader2 />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">
+                          Uploading to {storageProvider}...
+                        </span>
+                        {renderProgressIndicator()}
                       </div>
                     </>
                   ) : videoUploadStatus === "success" ? (
                     <>
-                      <div className="w-2 h-2 bg-green-500 rounded-full" />
+                      <div className="w-4 h-4 text-green-500">
+                        <CheckCircle />
+                      </div>
                       <span className="text-sm text-green-600">
-                        Video uploaded
+                        Video uploaded to {storageProvider}
                       </span>
                     </>
-                  ) : videoUploadStatus === "size_exceeded" ? (
+                  ) : videoUploadStatus === "warning" ? (
                     <>
-                      <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                      <div className="w-4 h-4 text-orange-500">
+                        <AlertCircle />
+                      </div>
                       <span className="text-sm text-orange-600">
-                        Video too large for Grove
+                        Video processing issue
                       </span>
                     </>
                   ) : videoUploadStatus === "failed" ? (
                     <>
-                      <div className="w-2 h-2 bg-red-500 rounded-full" />
+                      <div className="w-4 h-4 text-red-500">
+                        <AlertCircle />
+                      </div>
                       <span className="text-sm text-red-600">
-                        Video upload failed
+                        Video export failed
                       </span>
                     </>
                   ) : null}
@@ -402,7 +482,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
                 <div className="flex items-center gap-2">
                   {isGeneratingMetadata ? (
                     <>
-                      <div className="w-4 h-4 animate-spin">
+                      <div className="w-4 h-4 animate-spin text-primary">
                         <Loader2 />
                       </div>
                       <span className="text-sm text-muted-foreground">
@@ -411,14 +491,18 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
                     </>
                   ) : data.metadataUri ? (
                     <>
-                      <div className="w-2 h-2 bg-green-500 rounded-full" />
+                      <div className="w-4 h-4 text-green-500">
+                        <CheckCircle />
+                      </div>
                       <span className="text-sm text-green-600">
                         Metadata ready
                       </span>
                     </>
                   ) : (
                     <>
-                      <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+                      <div className="w-4 h-4 text-yellow-500">
+                        <AlertCircle />
+                      </div>
                       <span className="text-sm text-yellow-600">
                         Preparing metadata...
                       </span>
@@ -446,35 +530,62 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
         </CardContent>
       </Card>
 
+      {/* Size Warning */}
+      {showSizeWarning && estimatedSize && (
+        <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <div className="w-5 h-5 text-blue-600 mt-0.5">
+                <AlertCircle />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  Video Size Optimization
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  Your video has an estimated size of {estimatedSize.toFixed(2)}MB, which exceeds the 8MB limit for Grove storage.
+                  We&apos;ve automatically adjusted the export settings for optimal quality within size constraints.
+                </p>
+                {adjustedSettings && (
+                  <div className="text-xs text-blue-700 dark:text-blue-300">
+                    <p className="font-medium">Adjusted settings:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li>Quality: {adjustedSettings.quality}</li>
+                      <li>Frame rate: {adjustedSettings.frameRate} fps</li>
+                      {adjustedSettings.videoBitrate && (
+                        <li>Bitrate: {Math.round(adjustedSettings.videoBitrate / 1000)} Kbps</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Video Upload Warning */}
       {videoUploadError && (
         <Card className="bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
               <div className="w-5 h-5 text-orange-600 mt-0.5">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                  />
-                </svg>
+                <AlertCircle />
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium text-orange-900 dark:text-orange-100">
-                  Video Upload Issue
+                  Video Processing Issue
                 </p>
                 <p className="text-xs text-orange-700 dark:text-orange-300">
                   {videoUploadError}
                 </p>
-                {videoUploadStatus === "size_exceeded" && (
+                {videoUploadStatus === "warning" && (
                   <div className="text-xs text-orange-700 dark:text-orange-300 space-y-1">
                     <p className="font-medium">Suggested solutions:</p>
                     <ul className="list-disc list-inside space-y-1 ml-2">
                       <li>Trim your video to reduce file size</li>
                       <li>Use a lower quality export setting</li>
-                      <li>Consider using FileCoin storage as an alternative</li>
+                      <li>Split your content into multiple shorter videos</li>
                     </ul>
                   </div>
                 )}
@@ -497,14 +608,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
             <div
               className={`w-5 h-5 mt-0.5 ${videoUploadError ? "text-orange-600" : "text-primary"}`}
             >
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <AlertCircle />
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium">
@@ -515,7 +619,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               <p className="text-xs text-muted-foreground">
                 {videoUploadError
                   ? "Your coin will deploy with the thumbnail only. You can add video content later or try a different storage solution."
-                  : "Once deployed, your video becomes a tradeable Zora Coin. You'll earn from trading activity and can share it across social platforms."}
+                  : "You&apos;ll earn from trading activity and can share it across social platforms."}
               </p>
             </div>
           </div>
