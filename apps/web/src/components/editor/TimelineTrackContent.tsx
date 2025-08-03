@@ -18,6 +18,7 @@ import {
 import { useTimelineStore, type TimelineTrack } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
+import { useTimelineClipResize } from "@/hooks/use-timeline-clip-resize";
 import { toast } from "sonner";
 
 export function TimelineTrackContent({
@@ -68,13 +69,6 @@ export function TimelineTrackContent({
   const [snapTarget, setSnapTarget] = useState<number | null>(null);
   const [snapSourceClip, setSnapSourceClip] = useState<string | null>(null);
   const [timeIndicator, setTimeIndicator] = useState<number | null>(null);
-  const [resizing, setResizing] = useState<{
-    clipId: string;
-    side: "left" | "right";
-    startX: number;
-    initialTrimStart: number;
-    initialTrimEnd: number;
-  } | null>(null);
   const dragCounterRef = useRef(0);
   const [clipMenuOpen, setClipMenuOpen] = useState<string | null>(null);
 
@@ -83,63 +77,7 @@ export function TimelineTrackContent({
     removeClipFromTrack(track.id, clipId);
   };
 
-  const handleResizeStart = (
-    e: React.MouseEvent,
-    clipId: string,
-    side: "left" | "right"
-  ) => {
-    e.stopPropagation();
-    e.preventDefault();
-
-    const clip = track.clips.find((c) => c.id === clipId);
-    if (!clip) return;
-
-    setResizing({
-      clipId,
-      side,
-      startX: e.clientX,
-      initialTrimStart: clip.trimStart,
-      initialTrimEnd: clip.trimEnd,
-    });
-  };
-
-  const updateTrimFromMouseMove = (e: { clientX: number }) => {
-    if (!resizing) return;
-
-    const clip = track.clips.find((c) => c.id === resizing.clipId);
-    if (!clip) return;
-
-    const deltaX = e.clientX - resizing.startX;
-    const deltaTime = deltaX / (50 * zoomLevel);
-
-    if (resizing.side === "left") {
-      const newTrimStart = Math.max(
-        0,
-        Math.min(
-          clip.duration - clip.trimEnd - 0.1,
-          resizing.initialTrimStart + deltaTime
-        )
-      );
-      updateClipTrim(track.id, clip.id, newTrimStart, clip.trimEnd);
-    } else {
-      const newTrimEnd = Math.max(
-        0,
-        Math.min(
-          clip.duration - clip.trimStart - 0.1,
-          resizing.initialTrimEnd - deltaTime
-        )
-      );
-      updateClipTrim(track.id, clip.id, clip.trimStart, newTrimEnd);
-    }
-  };
-
-  const handleResizeMove = (e: React.MouseEvent) => {
-    updateTrimFromMouseMove(e);
-  };
-
-  const handleResizeEnd = () => {
-    setResizing(null);
-  };
+  // This will be replaced by individual clip resize hooks
 
   const handleClipDragStart = (e: React.DragEvent, clip: any) => {
     const dragData = { clipId: clip.id, trackId: track.id, name: clip.name };
@@ -748,9 +686,6 @@ export function TimelineTrackContent({
       onDragEnter={handleTrackDragEnter}
       onDragLeave={handleTrackDragLeave}
       onDrop={handleTrackDrop}
-      onMouseMove={handleResizeMove}
-      onMouseUp={handleResizeEnd}
-      onMouseLeave={handleResizeEnd}
     >
       <div className="h-full relative track-clips-container min-w-full">
         {/* Render gaps between clips */}
@@ -787,116 +722,60 @@ export function TimelineTrackContent({
           </div>
         ) : (
           <>
-            {track.clips.map((clip) => {
-              const effectiveDuration =
-                clip.duration - clip.trimStart - clip.trimEnd;
-              const clipWidth = Math.max(
-                80,
-                effectiveDuration * 50 * zoomLevel
-              );
-              const clipLeft = clip.startTime * 50 * zoomLevel;
-              const isSelected = selectedClips.some(
-                (c) => c.trackId === track.id && c.clipId === clip.id
-              );
-              return (
-                <div
-                  key={clip.id}
-                  className={`timeline-clip absolute h-full border transition-all duration-200 ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg ${isSelected ? "ring-2 ring-blue-500 z-10" : ""}`}
-                  style={{
-                    width: `${clipWidth}px`,
-                    left: `${clipLeft}px`,
-                    transform: "translateZ(0)",
-                    willChange: "transform",
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
+            {track.clips.map((clip) => (
+              <TimelineClipComponent
+                key={clip.id}
+                clip={clip}
+                track={track}
+                zoomLevel={zoomLevel}
+                isSelected={selectedClips.some(
+                  (c) => c.trackId === track.id && c.clipId === clip.id
+                )}
+                onClipClick={(e) => {
+                  e.stopPropagation();
 
-                    // Close context menu if it's open
-                    if (contextMenu) {
-                      setContextMenu(null);
-                      return; // Don't handle selection when closing context menu
-                    }
+                  // Close context menu if it's open
+                  if (contextMenu) {
+                    setContextMenu(null);
+                    return; // Don't handle selection when closing context menu
+                  }
 
-                    const isSelected = selectedClips.some(
-                      (c) => c.trackId === track.id && c.clipId === clip.id
-                    );
+                  const isSelected = selectedClips.some(
+                    (c) => c.trackId === track.id && c.clipId === clip.id
+                  );
 
-                    if (e.metaKey || e.ctrlKey || e.shiftKey) {
-                      // Multi-selection mode: toggle the clip
-                      selectClip(track.id, clip.id, true);
-                    } else if (isSelected) {
-                      // If clip is already selected, deselect it
-                      deselectClip(track.id, clip.id);
-                    } else {
-                      // If clip is not selected, select it (replacing other selections)
-                      selectClip(track.id, clip.id, false);
-                    }
-                  }}
-                  tabIndex={0}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setContextMenu({
-                      type: "clip",
-                      trackId: track.id,
-                      clipId: clip.id,
-                      x: e.clientX,
-                      y: e.clientY,
-                    });
-                  }}
-                >
-                  {/* Left trim handle */}
-                  <div
-                    className="absolute left-0 top-0 bottom-0 w-2 cursor-w-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
-                    onMouseDown={(e) => handleResizeStart(e, clip.id, "left")}
-                  ></div>
-                  {/* Clip content */}
-                  <div
-                    className="flex-1 cursor-grab active:cursor-grabbing relative"
-                    draggable={true}
-                    onDragStart={(e) => handleClipDragStart(e, clip)}
-                    onDragEnd={handleClipDragEnd}
-                  >
-                    {renderClipContent(clip)}
-                    {/* Clip options menu */}
-                    <div className="absolute top-1 right-1 z-10">
-                      <Button
-                        variant="text"
-                        size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => setClipMenuOpen(clip.id)}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                      {clipMenuOpen === clip.id && (
-                        <div className="absolute right-0 mt-2 w-32 bg-white border rounded shadow z-50">
-                          <button
-                            className="flex items-center w-full px-3 py-2 text-sm hover:bg-muted/30"
-                            onClick={() => {
-                              handleSplitClip(clip);
-                              setClipMenuOpen(null);
-                            }}
-                          >
-                            <Scissors className="h-4 w-4 mr-2" /> Split
-                          </button>
-                          <button
-                            className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                            onClick={() => handleDeleteClip(clip.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" /> Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {/* Right trim handle */}
-                  <div
-                    className="absolute right-0 top-0 bottom-0 w-2 cursor-e-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
-                    onMouseDown={(e) => handleResizeStart(e, clip.id, "right")}
-                  ></div>
-                </div>
-              );
-            })}
+                  if (e.metaKey || e.ctrlKey || e.shiftKey) {
+                    // Multi-selection mode: toggle the clip
+                    selectClip(track.id, clip.id, true);
+                  } else if (isSelected) {
+                    // If clip is already selected, deselect it
+                    deselectClip(track.id, clip.id);
+                  } else {
+                    // If clip is not selected, select it (replacing other selections)
+                    selectClip(track.id, clip.id, false);
+                  }
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setContextMenu({
+                    type: "clip",
+                    trackId: track.id,
+                    clipId: clip.id,
+                    x: e.clientX,
+                    y: e.clientY,
+                  });
+                }}
+                onClipDragStart={handleClipDragStart}
+                onClipDragEnd={handleClipDragEnd}
+                renderClipContent={renderClipContent}
+                clipMenuOpen={clipMenuOpen}
+                setClipMenuOpen={setClipMenuOpen}
+                handleSplitClip={handleSplitClip}
+                handleDeleteClip={handleDeleteClip}
+                getTrackColor={getTrackColor}
+              />
+            ))}
 
             {/* Drop position indicator */}
             {isDraggedOver && dropPosition !== null && (
@@ -936,6 +815,119 @@ export function TimelineTrackContent({
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// Individual clip component with improved resizing
+function TimelineClipComponent({
+  clip,
+  track,
+  zoomLevel,
+  isSelected,
+  onClipClick,
+  onContextMenu,
+  onClipDragStart,
+  onClipDragEnd,
+  renderClipContent,
+  clipMenuOpen,
+  setClipMenuOpen,
+  handleSplitClip,
+  handleDeleteClip,
+  getTrackColor,
+}: {
+  clip: any;
+  track: TimelineTrack;
+  zoomLevel: number;
+  isSelected: boolean;
+  onClipClick: (e: React.MouseEvent) => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+  onClipDragStart: (e: React.DragEvent, clip: any) => void;
+  onClipDragEnd: (e: React.DragEvent) => void;
+  renderClipContent: (clip: any) => React.ReactNode;
+  clipMenuOpen: string | null;
+  setClipMenuOpen: (clipId: string | null) => void;
+  handleSplitClip: (clip: any) => void;
+  handleDeleteClip: (clipId: string) => void;
+  getTrackColor: (type: string) => string;
+}) {
+  // Use our improved resize hook
+  const { handleResizeStart } = useTimelineClipResize({
+    clip,
+    track,
+    zoomLevel,
+  });
+
+  const effectiveDuration = clip.duration - clip.trimStart - clip.trimEnd;
+  const clipWidth = Math.max(80, effectiveDuration * 50 * zoomLevel);
+  const clipLeft = clip.startTime * 50 * zoomLevel;
+
+  return (
+    <div
+      className={`timeline-clip absolute h-full border transition-all duration-200 ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg ${isSelected ? "ring-2 ring-blue-500 z-10" : ""}`}
+      style={{
+        width: `${clipWidth}px`,
+        left: `${clipLeft}px`,
+        transform: "translateZ(0)",
+        willChange: "transform",
+      }}
+      onClick={onClipClick}
+      tabIndex={0}
+      onContextMenu={onContextMenu}
+      data-clip-id={clip.id}
+      data-track-id={track.id}
+    >
+      {/* Left trim handle with improved frame-based resizing */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-2 cursor-w-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
+        onMouseDown={(e) => handleResizeStart(e, clip.id, "left")}
+      ></div>
+
+      {/* Clip content */}
+      <div
+        className="flex-1 cursor-grab active:cursor-grabbing relative"
+        draggable={true}
+        onDragStart={(e) => onClipDragStart(e, clip)}
+        onDragEnd={onClipDragEnd}
+      >
+        {renderClipContent(clip)}
+        {/* Clip options menu */}
+        <div className="absolute top-1 right-1 z-10">
+          <Button
+            variant="text"
+            size="icon"
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => setClipMenuOpen(clip.id)}
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+          {clipMenuOpen === clip.id && (
+            <div className="absolute right-0 mt-2 w-32 bg-white border rounded shadow z-50">
+              <button
+                className="flex items-center w-full px-3 py-2 text-sm hover:bg-muted/30"
+                onClick={() => {
+                  handleSplitClip(clip);
+                  setClipMenuOpen(null);
+                }}
+              >
+                <Scissors className="h-4 w-4 mr-2" /> Split
+              </button>
+              <button
+                className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                onClick={() => handleDeleteClip(clip.id)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" /> Delete
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right trim handle with improved frame-based resizing */}
+      <div
+        className="absolute right-0 top-0 bottom-0 w-2 cursor-e-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
+        onMouseDown={(e) => handleResizeStart(e, clip.id, "right")}
+      ></div>
     </div>
   );
 }

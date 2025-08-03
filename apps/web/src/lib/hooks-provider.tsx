@@ -27,6 +27,7 @@ export type RefAttributes<T> = React.RefAttributes<T>;
 export type CSSProperties = React.CSSProperties;
 export type ForwardedRef<T> = React.ForwardedRef<T>;
 export type Ref<T> = React.Ref<T>;
+export type RefObject<T> = React.RefObject<T>;
 
 // Export React methods
 export const forwardRef = React.forwardRef;
