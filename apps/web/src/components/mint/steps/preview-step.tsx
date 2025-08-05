@@ -12,7 +12,11 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { generateCoinMetadata, uploadMetadataToIPFS } from "@/lib/metadata";
 import { MintWizardData } from "../mint-wizard";
-import { unifiedExport, ExportProgress, checkExportFeasibility } from "@/lib/unified-export";
+import {
+  unifiedExport,
+  ExportProgress,
+  checkExportFeasibility,
+} from "@/lib/unified-export";
 import { storageManager, StorageErrorType } from "@/lib/storage-manager";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
@@ -25,10 +29,18 @@ interface PreviewStepProps {
 export function PreviewStep({ data, updateData }: PreviewStepProps) {
   const [isGeneratingMetadata, setIsGeneratingMetadata] = useState(false);
   const [videoUploadStatus, setVideoUploadStatus] = useState<
-    "idle" | "preparing" | "exporting" | "uploading" | "success" | "warning" | "failed"
+    | "idle"
+    | "preparing"
+    | "exporting"
+    | "uploading"
+    | "success"
+    | "warning"
+    | "failed"
   >("idle");
   const [videoUploadError, setVideoUploadError] = useState<string | null>(null);
-  const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
+  const [exportProgress, setExportProgress] = useState<ExportProgress | null>(
+    null
+  );
   const [exportedVideoUrl, setExportedVideoUrl] = useState<string | null>(null);
   const [storageProvider, setStorageProvider] = useState<string>("grove");
   const [showSizeWarning, setShowSizeWarning] = useState(false);
@@ -45,7 +57,13 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
 
   // Generate metadata when component mounts or data changes
   useEffect(() => {
-    if (!data.coinName || !data.coinSymbol || !activeProject || data.metadataUri) return;
+    if (
+      !data.coinName ||
+      !data.coinSymbol ||
+      !activeProject ||
+      data.metadataUri
+    )
+      return;
 
     const generateMetadata = async () => {
       setIsGeneratingMetadata(true);
@@ -67,20 +85,25 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
         );
 
         setEstimatedSize(feasibility.estimatedSize);
-        
+
         if (!feasibility.feasible) {
           // Show warning but continue with adjusted settings
           setShowSizeWarning(true);
-          setAdjustedSettings(feasibility.recommendedSettings ? {
-            quality: feasibility.recommendedSettings.quality,
-            frameRate: feasibility.recommendedSettings.frameRate,
-            videoBitrate: feasibility.recommendedSettings.videoBitrate
-          } : null);
-          
+          setAdjustedSettings(
+            feasibility.recommendedSettings
+              ? {
+                  quality: feasibility.recommendedSettings.quality,
+                  frameRate: feasibility.recommendedSettings.frameRate,
+                  videoBitrate: feasibility.recommendedSettings.videoBitrate,
+                }
+              : null
+          );
+
           console.warn(`⚠️ ${feasibility.message}`);
-          
+
           // If size is way too large, show warning but don't attempt export
-          if (feasibility.estimatedSize > 15) { // If over 15MB, probably won't work even with adjustments
+          if (feasibility.estimatedSize > 15) {
+            // If over 15MB, probably won't work even with adjustments
             setVideoUploadStatus("warning");
             setVideoUploadError(feasibility.message);
             // Still generate metadata without video
@@ -92,7 +115,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
         // Step 2: Export timeline content as video
         setVideoUploadStatus("exporting");
         console.log("🎬 Exporting timeline content...");
-        
+
         try {
           const videoBlob = await unifiedExport(
             tracks,
@@ -112,13 +135,13 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               onSizeEstimate: async (estimatedSize, maxSize) => {
                 // Always continue, but with adjusted settings
                 return true;
-              }
+              },
             }
           );
 
           // Step 3: Upload video using storage manager
           setVideoUploadStatus("uploading");
-          
+
           const videoFile = new File(
             [videoBlob],
             `${data.coinName.replace(/[^a-zA-Z0-9]/g, "_")}.mp4`,
@@ -132,30 +155,32 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               setExportProgress({
                 phase: "uploading",
                 percentage: progress,
-                message: `Uploading to ${storageProvider}... ${Math.round(progress)}%`
+                message: `Uploading to ${storageProvider}... ${Math.round(progress)}%`,
               });
             },
             onProviderFallback: async (from, to, reason) => {
               setStorageProvider(to);
               toast.info(`Switching to ${to} storage: ${reason}`);
               return true; // Allow fallback
-            }
+            },
           });
 
           setExportedVideoUrl(uploadResult.url);
           setStorageProvider(uploadResult.provider);
           setVideoUploadStatus("success");
-          
+
           // Step 4: Generate metadata with the uploaded video
           await generateMetadataWithVideo(uploadResult.url);
-          
         } catch (error) {
           console.error("Failed to export/upload video:", error);
-          
+
           // Handle storage-specific errors
-          if (error && typeof error === 'object' && 'type' in error) {
-            const storageError = error as { type: StorageErrorType, message: string };
-            
+          if (error && typeof error === "object" && "type" in error) {
+            const storageError = error as {
+              type: StorageErrorType;
+              message: string;
+            };
+
             if (storageError.type === StorageErrorType.SIZE_EXCEEDED) {
               setVideoUploadStatus("warning");
               setVideoUploadError(
@@ -164,8 +189,8 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
             } else {
               setVideoUploadStatus("failed");
               setVideoUploadError(
-                storageManager.getErrorMessage(error as any) || 
-                `Failed to upload video: ${error instanceof Error ? error.message : "Unknown error"}`
+                storageManager.getErrorMessage(error as any) ||
+                  `Failed to upload video: ${error instanceof Error ? error.message : "Unknown error"}`
               );
             }
           } else {
@@ -174,7 +199,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               `Export failed: ${error instanceof Error ? error.message : "Unknown error"}`
             );
           }
-          
+
           // Still generate metadata without video
           await generateMetadataOnly();
         }
@@ -223,7 +248,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           creatorAddress: "0x0000000000000000000000000000000000000000",
           mediaItems: modifiedMediaItems,
           tracks,
-          projectId: activeProject?.id || '',
+          projectId: activeProject?.id || "",
           exportedVideoUrl: videoUrl,
           thumbnailUrl: finalThumbnailUrl || undefined,
         });
@@ -266,7 +291,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           creatorAddress: "0x0000000000000000000000000000000000000000",
           mediaItems: mediaItems,
           tracks,
-          projectId: activeProject?.id || '',
+          projectId: activeProject?.id || "",
           thumbnailUrl: finalThumbnailUrl || undefined,
         });
 
@@ -286,8 +311,8 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
 
     // Convert data URL to File object
     function dataURLtoFile(dataurl: string, filename: string): File {
-      const arr = dataurl.split(',');
-      const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+      const arr = dataurl.split(",");
+      const mime = arr[0].match(/:(.*?);/)?.[1] || "image/png";
       const bstr = atob(arr[1]);
       let n = bstr.length;
       const u8arr = new Uint8Array(n);
@@ -310,13 +335,15 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
     updateData,
     tracks,
     mediaItems,
-    getTotalDuration
+    getTotalDuration,
+    activeProject,
+    storageProvider,
   ]);
 
   // Render progress indicator
   function renderProgressIndicator() {
     if (!exportProgress) return null;
-    
+
     return (
       <div className="space-y-2 mt-2">
         <div className="flex justify-between text-xs text-muted-foreground">
@@ -326,7 +353,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
         <Progress value={exportProgress.percentage} className="h-1" />
         {exportProgress.estimatedTimeRemaining !== undefined && (
           <div className="text-xs text-muted-foreground text-right">
-            {exportProgress.estimatedTimeRemaining > 60 
+            {exportProgress.estimatedTimeRemaining > 60
               ? `${Math.round(exportProgress.estimatedTimeRemaining / 60)} min remaining`
               : `${Math.round(exportProgress.estimatedTimeRemaining)} sec remaining`}
           </div>
@@ -543,8 +570,10 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
                   Video Size Optimization
                 </p>
                 <p className="text-xs text-blue-700 dark:text-blue-300">
-                  Your video has an estimated size of {estimatedSize.toFixed(2)}MB, which exceeds the 8MB limit for Grove storage.
-                  We&apos;ve automatically adjusted the export settings for optimal quality within size constraints.
+                  Your video has an estimated size of {estimatedSize.toFixed(2)}
+                  MB, which exceeds the 8MB limit for Grove storage. We&apos;ve
+                  automatically adjusted the export settings for optimal quality
+                  within size constraints.
                 </p>
                 {adjustedSettings && (
                   <div className="text-xs text-blue-700 dark:text-blue-300">
@@ -553,7 +582,11 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
                       <li>Quality: {adjustedSettings.quality}</li>
                       <li>Frame rate: {adjustedSettings.frameRate} fps</li>
                       {adjustedSettings.videoBitrate && (
-                        <li>Bitrate: {Math.round(adjustedSettings.videoBitrate / 1000)} Kbps</li>
+                        <li>
+                          Bitrate:{" "}
+                          {Math.round(adjustedSettings.videoBitrate / 1000)}{" "}
+                          Kbps
+                        </li>
                       )}
                     </ul>
                   </div>

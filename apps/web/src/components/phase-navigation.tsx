@@ -19,7 +19,7 @@ import {
 } from "motion/react";
 import { useWalletAuth } from "@opencut/auth";
 import { useMounted } from "@/hooks/use-mobile";
-import { useState, useEffect } from "@/lib/hooks-provider";
+import { useState, useEffect, useCallback } from "@/lib/hooks-provider";
 
 interface PhaseNavigationProps {
   className?: string;
@@ -58,16 +58,16 @@ export function PhaseNavigation({ className = "" }: PhaseNavigationProps) {
   }, []);
 
   // Save preferences
-  const savePreferences = () => {
+  const savePreferences = useCallback(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("nav-collapsed", isCollapsed.toString());
       localStorage.setItem("nav-position", JSON.stringify(position));
     }
-  };
+  }, [isCollapsed, position]);
 
   useEffect(() => {
     savePreferences();
-  }, [isCollapsed, position]);
+  }, [savePreferences]);
 
   if (!isMounted || !isAuthenticated || pathname === "/") {
     return null;
