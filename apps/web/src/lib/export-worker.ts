@@ -179,7 +179,7 @@ async function handleExportStart(data: ExportWorkerData): Promise<void> {
   }
 
   // Configure video encoder
-  const videoChunks: Uint8Array[] = [];
+  const videoChunks: BlobPart[] = [];
   const encoder = new VideoEncoder({
     output: (chunk: any) => {
       const data = new Uint8Array(chunk.byteLength);
