@@ -17,14 +17,8 @@
 
 # Secrets scanning configuration
 [build.processing.secrets]
-  # Omit .env.example files and build output from secrets scanning
-  omit_paths = [
-    ".env.example",
-    ".netlify/**/*",
-    ".next/**/*"
-  ]
-  # Omit known public environment variables
-  omit_keys = ["NEXT_PUBLIC_DATABUDDY_CLIENT_ID"]
+  # Omit .env.example files from secrets scanning
+  omit_paths = [".env.example"]
 
 # Next.js on Netlify requires the Essential Next.js plugin
 [[plugins]]

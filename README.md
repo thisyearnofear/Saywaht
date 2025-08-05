@@ -35,7 +35,6 @@
 - **Wallet-based authentication** - No accounts, just connect your Web3 wallet
 - **No watermarks or subscriptions** - Completely free and open source
 - **Mobile-first design** - Optimized for mobile without traditional navigation
-- Analytics provided by [Databuddy](https://www.databuddy.cc?utm_source=saywhat), 100% Anonymized & Non-invasive.
 
 ## Project Structure
 
@@ -96,6 +95,11 @@ Before you begin, ensure you have the following installed on your system:
     ELEVENLABS_API_KEY=your-elevenlabs-key
     UPSTASH_REDIS_REST_URL=your-redis-url
     UPSTASH_REDIS_REST_TOKEN=your-redis-token
+
+    # Analytics (Optional)
+    # DataBuddy - 100% Anonymized & Non-invasive analytics
+    # Get your client ID from: https://www.databuddy.cc
+    NEXT_PUBLIC_DATABUDDY_CLIENT_ID=your-databuddy-client-id
     ```
 
 4.  **Start the development server**
