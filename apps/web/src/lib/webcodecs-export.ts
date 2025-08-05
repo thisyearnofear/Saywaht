@@ -342,9 +342,9 @@ async function muxChunks(
 ): Promise<Blob> {
   // For now, create a simple container
   // In production, you'd want to use a proper muxer like MP4Box.js
-  const allChunks = [...videoChunks, ...audioChunks]
+  const allChunks: BlobPart[] = [...videoChunks, ...audioChunks]
     .sort((a, b) => a.timestamp - b.timestamp)
-    .map(chunk => chunk.data);
+    .map(chunk => chunk.data as BlobPart);
 
   const mimeType = outputFormat === 'mp4' ? 'video/mp4' : 'video/webm';
   return new Blob(allChunks, { type: mimeType });

@@ -28,7 +28,7 @@ interface FinishMessage {
 type WorkerMessage = InitMessage | FrameMessage | FinishMessage;
 
 let encoder: any = null;
-const videoChunks: Uint8Array[] = [];
+const videoChunks: BlobPart[] = [];
 let encoderConfig: any = null;
 
 self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
