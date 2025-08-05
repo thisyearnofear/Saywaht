@@ -65,11 +65,28 @@ export async function exportVideoWithStreamingWebCodecs(
     Format: ${outputFormat}
   `);
 
-  // Initialize video renderer
+  // Initialize video renderer with pre-extraction for reliability
   const videoRenderer = new OfflineVideoRenderer(dimensions.width, dimensions.height);
-  
+
   onProgress(2);
+  console.log('🎬 Initializing video renderer...');
   await videoRenderer.initialize(tracks, mediaItems, () => {});
+
+  // Phase 1: Extract all video frames upfront (no seeking during export)
+  console.log('🎬 Extracting all video frames...');
+  onProgress(5);
+  await videoRenderer.extractAllFrames((progress) => {
+    // Map extraction progress to 5-30% of total progress
+    onProgress(5 + (progress * 0.25));
+  });
+
+  // Phase 2: Pre-compose all timeline frames from extracted data
+  console.log('🎨 Pre-composing all frames for reliable export...');
+  onProgress(30);
+  await videoRenderer.preComposeAllFrames(totalDuration, frameRate, (progress) => {
+    // Map pre-composition progress to 30-50% of total progress
+    onProgress(30 + (progress * 0.20));
+  });
 
   // Get canvas for rendering
   const canvas = videoRenderer.getCanvas();
@@ -154,25 +171,22 @@ export async function exportVideoWithStreamingWebCodecs(
       return;
     }
 
-    // Render frame
-    const frameData = await videoRenderer.composeSingleFrame(frameIndex, frameRate);
-    if (frameData) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.putImageData(frameData, 0, 0);
-        
-        // Manually trigger frame capture
-        const videoTrack = videoStream.getVideoTracks()[0];
-        if ('requestFrame' in videoTrack) {
-          (videoTrack as any).requestFrame();
-        }
+    // Use pre-composed frame (no seeking required - instant access)
+    const success = videoRenderer.renderComposedFrame(frameIndex);
+    if (success) {
+      // Manually trigger frame capture
+      const videoTrack = videoStream.getVideoTracks()[0];
+      if ('requestFrame' in videoTrack) {
+        (videoTrack as any).requestFrame();
       }
+    } else {
+      console.warn(`⚠️ No pre-composed frame available for frame ${frameIndex}`);
     }
 
     frameIndex++;
 
-    // Update progress
-    const progress = 10 + ((frameIndex / totalFrames) * 80); // 10-90%
+    // Update progress (50-90% for frame rendering, since pre-composition took 5-50%)
+    const progress = 50 + ((frameIndex / totalFrames) * 40); // 50-90%
     onProgress(Math.min(progress, 90));
 
     // Calculate next frame time

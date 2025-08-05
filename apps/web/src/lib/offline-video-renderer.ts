@@ -111,18 +111,61 @@ export class OfflineVideoRenderer {
       video.crossOrigin = 'anonymous';
       video.preload = 'auto'; // Full preload for better performance
       video.muted = true;
-      
+      video.playsInline = true; // Better mobile support
+      video.disablePictureInPicture = true; // Prevent interference
+
       return new Promise<void>((resolve, reject) => {
+        let resolved = false;
+
+        const cleanup = () => {
+          if (resolved) return;
+          resolved = true;
+          video.removeEventListener('canplaythrough', onCanPlayThrough);
+          video.removeEventListener('error', onError);
+          video.removeEventListener('loadeddata', onLoadedData);
+        };
+
         // Wait for video to be fully ready with enough data
-        video.oncanplaythrough = () => {
+        const onCanPlayThrough = () => {
           // Store video element for reuse
           (mediaItem as any)._videoElement = video;
           console.log(`✅ Video ready: ${mediaItem.name} (readyState: ${video.readyState})`);
+          cleanup();
           resolve();
         };
-        
-        video.onerror = () => reject(new Error(`Failed to load video: ${mediaItem.name}`));
-        
+
+        const onLoadedData = () => {
+          // Fallback if canplaythrough doesn't fire
+          if (video.readyState >= 2) {
+            (mediaItem as any)._videoElement = video;
+            console.log(`✅ Video ready: ${mediaItem.name} (readyState: ${video.readyState})`);
+            cleanup();
+            resolve();
+          }
+        };
+
+        const onError = () => {
+          cleanup();
+          reject(new Error(`Failed to load video: ${mediaItem.name}`));
+        };
+
+        video.addEventListener('canplaythrough', onCanPlayThrough);
+        video.addEventListener('loadeddata', onLoadedData);
+        video.addEventListener('error', onError);
+
+        // Timeout fallback
+        setTimeout(() => {
+          if (!resolved && video.readyState >= 2) {
+            (mediaItem as any)._videoElement = video;
+            console.log(`✅ Video ready: ${mediaItem.name} (readyState: ${video.readyState})`);
+            cleanup();
+            resolve();
+          } else if (!resolved) {
+            cleanup();
+            reject(new Error(`Video load timeout: ${mediaItem.name}`));
+          }
+        }, 10000); // 10 second timeout
+
         // Start loading
         video.src = mediaItem.url;
         video.load(); // Explicitly start loading
@@ -285,6 +328,43 @@ export class OfflineVideoRenderer {
   }
 
   /**
+   * Phase 1: Extract all frames from video clips
+   */
+  async extractAllFrames(onProgress?: (progress: number) => void): Promise<void> {
+    console.log('🎬 Starting frame extraction for all video clips...');
+
+    const uniqueVideos = new Map<string, MediaItem>();
+    this.videoClips.forEach(clip => {
+      uniqueVideos.set(clip.mediaItem.id, clip.mediaItem);
+    });
+
+    const videoArray = Array.from(uniqueVideos.values());
+    let completedVideos = 0;
+
+    for (const mediaItem of videoArray) {
+      console.log(`🎬 Extracting frames from: ${mediaItem.name}`);
+
+      const extractedFrames = await this.extractAllVideoFrames(mediaItem, (videoProgress) => {
+        // Calculate overall progress
+        const overallProgress = ((completedVideos / videoArray.length) * 100) +
+                               ((videoProgress / videoArray.length));
+        onProgress?.(overallProgress);
+      });
+
+      // Update all clips that use this video
+      this.videoClips.forEach(clip => {
+        if (clip.mediaItem.id === mediaItem.id) {
+          clip.extractedFrames = extractedFrames;
+        }
+      });
+
+      completedVideos++;
+    }
+
+    console.log(`✅ Frame extraction completed for ${videoArray.length} videos`);
+  }
+
+  /**
    * Phase 2: Pre-compose all timeline frames from extracted data
    */
   async preComposeAllFrames(
@@ -293,13 +373,13 @@ export class OfflineVideoRenderer {
     onProgress?: (progress: number) => void
   ): Promise<void> {
     console.log('🎨 Starting offline frame composition...');
-    
+
     const totalFrames = Math.ceil(totalDuration * frameRate);
-    
+
     for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
       const timestamp = frameIndex / frameRate;
       const compositeFrame = await this.composeFrameAtTime(timestamp);
-      
+
       if (compositeFrame) {
         this.compositeFrames.set(frameIndex, compositeFrame);
       }
@@ -338,70 +418,71 @@ export class OfflineVideoRenderer {
         if (video) {
           // More precise seeking threshold (1 frame at 30fps = 0.033s)
           const seekThreshold = 1 / 30;
-          
+
           // Seek if necessary
           if (Math.abs(video.currentTime - videoTime) > seekThreshold) {
-            video.currentTime = videoTime;
-            
-            // Wait for seek to complete with better error handling
+            // Store the target time to avoid race conditions
+            const targetTime = videoTime;
+            video.currentTime = targetTime;
+
+            // Wait for seek to complete with simplified logic
             await new Promise<void>((resolve) => {
               let seekTimeout: NodeJS.Timeout;
-              let canPlayTimeout: NodeJS.Timeout;
-              
+              let resolved = false;
+
               const cleanup = () => {
+                if (resolved) return;
+                resolved = true;
                 video.removeEventListener('seeked', onSeeked);
-                video.removeEventListener('error', onError);
-                video.removeEventListener('canplay', onCanPlay);
+                video.removeEventListener('loadeddata', onLoadedData);
                 clearTimeout(seekTimeout);
-                clearTimeout(canPlayTimeout);
               };
-              
+
               const onSeeked = () => {
-                // Wait a bit more for data to be ready after seek
-                canPlayTimeout = setTimeout(() => {
+                // Check if we're at the right time (within threshold)
+                if (Math.abs(video.currentTime - targetTime) <= seekThreshold) {
                   cleanup();
                   resolve();
-                }, 10);
+                }
               };
-              
-              const onCanPlay = () => {
-                cleanup();
-                resolve();
+
+              const onLoadedData = () => {
+                // Data is available, check if we're at the right time
+                if (Math.abs(video.currentTime - targetTime) <= seekThreshold) {
+                  cleanup();
+                  resolve();
+                }
               };
-              
-              const onError = () => {
-                cleanup();
-                console.warn(`Seek error at time ${videoTime}`);
-                resolve();
-              };
-              
+
               video.addEventListener('seeked', onSeeked);
-              video.addEventListener('canplay', onCanPlay);
-              video.addEventListener('error', onError);
-              
-              // Timeout fallback - slightly longer for data to load
+              video.addEventListener('loadeddata', onLoadedData);
+
+              // Shorter timeout to avoid blocking
               seekTimeout = setTimeout(() => {
                 cleanup();
                 resolve();
-              }, 100);
+              }, 50);
             });
           }
           
-          // Wait for video to have current frame data
+          // Wait for video to have current frame data with improved logic
           if (video.readyState < 2) {
-            // Try to wait for data
+            // Try to wait for data with better timeout handling
             await new Promise<void>((resolve) => {
+              let attempts = 0;
+              const maxAttempts = 5;
+
               const checkReady = () => {
-                if (video.readyState >= 2) {
+                attempts++;
+                if (video.readyState >= 2 || attempts >= maxAttempts) {
                   resolve();
                 } else {
-                  setTimeout(checkReady, 10);
+                  // Shorter intervals for faster response
+                  setTimeout(checkReady, 5);
                 }
               };
-              
-              // Start checking, but don't wait forever
+
               checkReady();
-              setTimeout(resolve, 50); // Max wait 50ms
             });
           }
           
@@ -412,9 +493,29 @@ export class OfflineVideoRenderer {
             hasContent = true;
           } else {
             console.warn(`Video not ready at time ${videoTime}, readyState: ${video.readyState}`);
-            // Try to force a frame update
-            video.play();
-            video.pause();
+            // Wait for video to be ready - this is critical for quality
+            await new Promise<void>((resolve) => {
+              let attempts = 0;
+              const maxAttempts = 20; // More attempts for better reliability
+
+              const checkReady = () => {
+                attempts++;
+                if (video.readyState >= 2) {
+                  // Video is ready, draw the frame
+                  drawWithAspectRatio(this.ctx, video, this.canvas.width, this.canvas.height);
+                  hasContent = true;
+                  resolve();
+                } else if (attempts >= maxAttempts) {
+                  console.error(`Video failed to become ready after ${maxAttempts} attempts at time ${videoTime}`);
+                  resolve();
+                } else {
+                  // Wait a bit longer for video to be ready
+                  setTimeout(checkReady, 10);
+                }
+              };
+
+              checkReady();
+            });
           }
         }
       }

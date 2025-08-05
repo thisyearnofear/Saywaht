@@ -160,29 +160,80 @@ export class FilCDNService {
 // Singleton instance
 let filcdnService: FilCDNService | null = null;
 
-export function getFilCDNService(): FilCDNService {
-  if (!filcdnService) {
-    filcdnService = new FilCDNService({
-      privateKey: process.env.NEXT_PUBLIC_FILECOIN_PRIVATE_KEY,
-      walletAddress: process.env.NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS,
-    });
+// Updated to use secure server-side API
+export class SecureFilCDNService {
+  async uploadFile(file: File): Promise<UploadResult> {
+    // Check file size limit (254 MiB)
+    const maxSize = 254 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new Error(`File size ${(file.size / 1024 / 1024).toFixed(1)}MB exceeds FilCDN limit of 254MB`);
+    }
+
+    try {
+      console.log(`📤 Uploading ${file.name} via secure API...`);
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/filecoin/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      console.log(`✅ File uploaded successfully via secure API!`);
+      return data.data;
+    } catch (error) {
+      console.error('❌ Upload failed:', error);
+      throw error;
+    }
   }
-  return filcdnService;
+
+  // Legacy methods for compatibility
+  async downloadFile(cid: string): Promise<Uint8Array> {
+    throw new Error('Download functionality moved to server-side for security');
+  }
+
+  async getDownloadUrl(cid: string): Promise<string> {
+    throw new Error('Download URL generation moved to server-side for security');
+  }
+
+  getWalletAddress(): string | null {
+    return null; // Wallet address is now server-side only
+  }
+
+  isInitialized(): boolean {
+    return true; // Always ready since we use API routes
+  }
+}
+
+export function getFilCDNService(): SecureFilCDNService {
+  if (!filcdnService) {
+    filcdnService = new SecureFilCDNService() as any;
+  }
+  return filcdnService as any;
 }
 
 // Helper function to initialize the service
-export async function initializeFilCDN(): Promise<FilCDNService> {
+export async function initializeFilCDN(): Promise<SecureFilCDNService> {
   const service = getFilCDNService();
-  if (!service.isInitialized()) {
-    await service.initialize();
-  }
+  // No initialization needed for secure API-based service
   return service;
 }
 
 // Helper to check if FilCDN is properly configured
 export function isFilCDNConfigured(): boolean {
-  return !!(
-    process.env.NEXT_PUBLIC_FILECOIN_PRIVATE_KEY || 
-    process.env.NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS
-  );
+  // For client-side, we assume it's configured if the API route exists
+  // The actual validation happens server-side
+  return true;
 }

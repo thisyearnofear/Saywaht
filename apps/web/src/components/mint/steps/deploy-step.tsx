@@ -14,8 +14,6 @@ import { toast } from "sonner";
 import {
   createCoinCall,
   DeployCurrency,
-  setApiKey,
-  validateMetadataURIContent,
   getCoinCreateFromLogs,
 } from "@zoralabs/coins-sdk";
 import { submitReferral, getReferralTag } from "@divvi/referral-sdk";
@@ -24,11 +22,7 @@ import { base } from "viem/chains";
 import type { ValidMetadataURI } from "@zoralabs/coins-sdk";
 import { PLATFORM_ADDRESS } from "@/lib/constants";
 import { triggerCoinCelebration } from "@/lib/confetti";
-
-// Set Zora API key if available
-if (process.env.NEXT_PUBLIC_ZORA_API_KEY) {
-  setApiKey(process.env.NEXT_PUBLIC_ZORA_API_KEY);
-}
+import { zoraCoins } from "@/lib/zora-coins";
 
 interface DeployStepProps {
   data: MintWizardData;
@@ -69,12 +63,13 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
       try {
         console.log("🪙 Preparing coin creation on Zora Protocol...");
 
-        // Validate metadata URI content before proceeding
+        // Validate metadata URI content before proceeding using secure server-side API
         console.log("🔍 Validating metadata URI content...");
         try {
-          await validateMetadataURIContent(
-            data.metadataUri as ValidMetadataURI
-          );
+          if (!data.metadataUri) {
+            throw new Error("Metadata URI is required");
+          }
+          await zoraCoins.validateMetadataURI(data.metadataUri);
           console.log("✅ Metadata validation passed");
         } catch (validationError) {
           console.error("❌ Metadata validation failed:", validationError);

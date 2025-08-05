@@ -60,6 +60,7 @@ export const {
   Copy,
   SplitSquareHorizontal,
   MoreVertical,
+  GripVertical,
   ArrowLeftRight,
   Square,
   Save,

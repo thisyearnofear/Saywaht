@@ -47,15 +47,9 @@ export function FileUpload({
 
         const filcdnService = getFilCDNService();
 
-        // Initialize service if not already done
-        if (!filcdnService.isInitialized()) {
-          setUploadProgress(20);
-          await filcdnService.initialize();
-        }
+        setUploadProgress(20);
 
-        setUploadProgress(40);
-
-        // Upload to FilCDN
+        // Upload to FilCDN via secure API
         const result = await filcdnService.uploadFile(file);
 
         setUploadProgress(100);

@@ -1,0 +1,95 @@
+import {
+  getCoinsNew,
+  getCoinsLastTraded,
+  getCoinsMostValuable,
+  validateMetadataURIContent,
+} from "@zoralabs/coins-sdk";
+import type { ValidMetadataURI } from "@zoralabs/coins-sdk";
+import { ApiKeyManager } from "./middleware";
+
+export interface ZoraCoin {
+  address: string;
+  name: string;
+  symbol: string;
+  creator: string;
+  videoUri: string;
+  metadataUri: string;
+  totalSupply: string;
+  price: string;
+  volume24h: string;
+  priceChange24h: number;
+  createdAt: string;
+  thumbnail?: string;
+}
+
+export class ZoraApiService {
+  constructor() {
+    // Ensure API key is set
+    ApiKeyManager.setZoraKey();
+  }
+
+  async getTrendingCoins(): Promise<ZoraCoin[]> {
+    console.log("📈 Fetching trending coins from Zora...");
+
+    // Fetch latest coins from Zora in parallel
+    const [newCoins, tradedCoins, valuableCoins] = await Promise.allSettled([
+      getCoinsNew({ count: 10 }),
+      getCoinsLastTraded({ count: 10 }),
+      getCoinsMostValuable({ count: 10 })
+    ]);
+
+    const allCoins: ZoraCoin[] = [];
+
+    // Process results with unified logic
+    this.processCoinsResult(newCoins, allCoins);
+    this.processCoinsResult(tradedCoins, allCoins);
+    this.processCoinsResult(valuableCoins, allCoins);
+
+    console.log("✅ Trending coins fetched:", allCoins.length);
+    return allCoins.slice(0, 10); // Return top 10
+  }
+
+  async validateMetadata(metadataUri: string): Promise<void> {
+    console.log("🔍 Validating metadata URI content...");
+    await validateMetadataURIContent(metadataUri as ValidMetadataURI);
+    console.log("✅ Metadata validation passed");
+  }
+
+  private processCoinsResult(
+    result: PromiseSettledResult<any>,
+    allCoins: ZoraCoin[]
+  ): void {
+    if (
+      result.status === 'fulfilled' &&
+      result.value?.data?.exploreList?.edges &&
+      Array.isArray(result.value.data.exploreList.edges)
+    ) {
+      for (const edge of result.value.data.exploreList.edges) {
+        const coin = edge?.node;
+        if (coin && !allCoins.find(c => c.address === coin.address)) {
+          allCoins.push(this.transformCoinData(coin));
+        }
+      }
+    }
+  }
+
+  private transformCoinData(coinData: any): ZoraCoin {
+    return {
+      address: coinData.address || `0x${Math.random().toString(16).slice(2, 42)}`,
+      name: coinData.name || "Untitled Coin",
+      symbol: coinData.symbol || "COIN",
+      creator: coinData.creatorAddress || "0x0000000000000000000000000000000000000000",
+      videoUri: coinData.tokenURI || "",
+      metadataUri: coinData.tokenURI || "",
+      totalSupply: coinData.totalSupply || "1000000",
+      price: "0.001",
+      volume24h: coinData.volume24h || "0",
+      priceChange24h: 0,
+      createdAt: coinData.createdAt || new Date().toISOString(),
+      thumbnail: coinData.image || "",
+    };
+  }
+}
+
+// Singleton instance
+export const zoraApiService = new ZoraApiService();
