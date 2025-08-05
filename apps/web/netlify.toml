@@ -1,13 +1,24 @@
 [build]
-  base = "../.."
-  command = "bun install && bunx turbo build --filter=opencut"
-  publish = "apps/web/.next"
+  # Install dependencies at root and build the Next.js app
+  command = "cd ../.. && bun install && cd apps/web && bun run build"
+  
+  # Publish directory (Next.js build output)
+  publish = ".next"
+  
+  # Base directory for the build (apps/web)
+  base = "apps/web"
 
+[build.environment]
+  # Node.js version
+  NODE_VERSION = "18"
+  
+  # Bun version
+  BUN_VERSION = "1.2.17"
+
+# Install Bun during build
+[[plugins]]
+  package = "netlify-plugin-bun"
+
+# Next.js on Netlify requires the Essential Next.js plugin
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-
-[[redirects]]
-  from = "https://appcut.app/*"
-  to = "https://opencut.app/:splat"
-  status = 301
-  force = true
