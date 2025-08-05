@@ -3,7 +3,17 @@
     "tasks": {
       "build": {
         "dependsOn": ["^build"],
-        "outputs": [".next/**", "!.next/cache/**"]
+        "outputs": [".next/**", "!.next/cache/**"],
+        "env": [
+          "FILECOIN_PRIVATE_KEY",
+          "FILECOIN_WALLET_ADDRESS",
+          "ZORA_API_KEY",
+          "DATABASE_URL",
+          "UPSTASH_REDIS_REST_URL",
+          "UPSTASH_REDIS_REST_TOKEN",
+          "ELEVENLABS_API_KEY",
+          "VENICE_API_KEY"
+        ]
       },
       "check-types": {
         "dependsOn": ["^check-types"]
