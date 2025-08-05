@@ -9,7 +9,7 @@
     "apps/*",
     "packages/*"
   ],
-  "resolutions": {
+  "overrides": {
     "viem": "^2.33.2"
   },
   "scripts": {

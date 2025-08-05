@@ -1,0 +1,24 @@
+[build]
+  # Install dependencies and build the Next.js app
+  command = "bun install && cd apps/web && bun run build"
+  
+  # Publish directory (Next.js build output)
+  publish = "apps/web/.next"
+  
+  # Base directory for the build
+  base = "."
+
+[build.environment]
+  # Node.js version
+  NODE_VERSION = "18"
+  
+  # Bun version
+  BUN_VERSION = "1.2.17"
+
+# Install Bun during build
+[[plugins]]
+  package = "netlify-plugin-bun"
+
+# Next.js on Netlify requires the Essential Next.js plugin
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

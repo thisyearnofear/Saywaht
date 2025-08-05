@@ -46,7 +46,7 @@ export function useTrading() {
       const receipt = await tradeCoin({
         tradeParameters,
         walletClient: walletClient as any,
-        account: walletClient.account!,
+        account: walletClient.account! as any,
         publicClient: publicClient as any,
       });
 
@@ -91,7 +91,7 @@ export function useTrading() {
       const receipt = await tradeCoin({
         tradeParameters,
         walletClient: walletClient as any,
-        account: walletClient.account!,
+        account: walletClient.account! as any,
         publicClient: publicClient as any,
       });
 
