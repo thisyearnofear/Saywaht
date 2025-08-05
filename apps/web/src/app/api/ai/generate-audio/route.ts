@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     const buffer = await streamToBuffer(audioStream);
 
-    return new NextResponse(buffer, {
+    return new NextResponse(buffer as BodyInit, {
       headers: {
         "Content-Type": "audio/mpeg",
       },
