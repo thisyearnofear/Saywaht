@@ -81,15 +81,17 @@ export default function RootLayout({
                 <PWAInstallPrompt />
                 <Analytics />
                 <Toaster />
-                <Script
-                  src="https://app.databuddy.cc/databuddy.js"
-                  strategy="afterInteractive"
-                  data-client-id="UP-Wcoy5arxFeK7oyjMMZ"
-                  data-track-attributes={true}
-                  data-track-errors={true}
-                  data-track-outgoing-links={true}
-                  data-track-web-vitals={true}
-                />
+                {process.env.NEXT_PUBLIC_DATABUDDY_CLIENT_ID && (
+                  <Script
+                    src="https://app.databuddy.cc/databuddy.js"
+                    strategy="afterInteractive"
+                    data-client-id={process.env.NEXT_PUBLIC_DATABUDDY_CLIENT_ID}
+                    data-track-attributes={true}
+                    data-track-errors={true}
+                    data-track-outgoing-links={true}
+                    data-track-web-vitals={true}
+                  />
+                )}
               </TooltipProvider>
             </MobileProvider>
           </ThemeProvider>

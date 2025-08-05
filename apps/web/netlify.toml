@@ -15,6 +15,13 @@
   # Bun version
   BUN_VERSION = "1.2.17"
 
+# Secrets scanning configuration
+[build.processing.secrets]
+  # Omit .env.example files from secrets scanning
+  omit_paths = [".env.example"]
+  # Omit known public environment variables
+  omit_keys = ["NEXT_PUBLIC_DATABUDDY_CLIENT_ID"]
+
 # Next.js on Netlify requires the Essential Next.js plugin
 [[plugins]]
   package = "@netlify/plugin-nextjs"
