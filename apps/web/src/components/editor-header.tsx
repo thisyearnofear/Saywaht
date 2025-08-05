@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { getExportErrorMessage } from "@/lib/export-error-handler";
 
 export function EditorHeader() {
   const { activeProject } = useProjectStore();
@@ -58,8 +59,8 @@ export function EditorHeader() {
           format: "portrait", // Default mobile-first format
           quality: "medium",
           includeAudio: true,
-          method: "auto", // Phase 2: Auto-select best export method
-          outputFormat: "mp4", // Phase 2: MP4 for better compatibility
+          method: "auto", // Auto-select best method with improved fallback handling
+          outputFormat: "mp4", // MP4 for better compatibility
         }
       );
 
@@ -78,9 +79,23 @@ export function EditorHeader() {
     } catch (error) {
       console.error("Export failed:", error);
       toast.dismiss("export-progress");
-      toast.error(
-        `Export failed: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
+
+      // Use centralized error handler
+      const errorMessage = getExportErrorMessage(error);
+
+      toast.error(errorMessage, {
+        duration: 6000,
+        action: {
+          label: "View Diagnostics",
+          onClick: () => {
+            // Log diagnostics to console for debugging
+            console.log("=== Export Diagnostics ===");
+            if ((window as any).exportDiagnostics) {
+              (window as any).exportDiagnostics.getReport();
+            }
+          },
+        },
+      });
     } finally {
       setIsExporting(false);
     }

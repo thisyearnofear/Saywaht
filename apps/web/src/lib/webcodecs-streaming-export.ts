@@ -8,6 +8,7 @@ import {
   isWebCodecsAvailable,
   getWebCodecsAPI,
 } from "./webcodecs-types";
+import { getExportTimeout } from "./export-config";
 
 /**
  * Simplified and Reliable WebCodecs Export
@@ -157,17 +158,30 @@ export async function exportVideoWithStreamingWebCodecs(
     }
   };
 
+  // Add error handling for MediaRecorder
+  recorder.onerror = (event) => {
+    console.error('MediaRecorder error:', event);
+  };
+
   // Start recording
   recorder.start(100); // Get data every 100ms
 
   // Render frames with precise timing
   const startTime = performance.now();
   let frameIndex = 0;
+  let renderingComplete = false;
 
   const renderFrame = async () => {
     if (frameIndex >= totalFrames) {
       // Finished rendering
-      recorder.stop();
+      renderingComplete = true;
+      
+      // Add a small delay before stopping to ensure all data is captured
+      setTimeout(() => {
+        if (recorder.state === 'recording') {
+          recorder.stop();
+        }
+      }, 500);
       return;
     }
 
@@ -203,12 +217,45 @@ export async function exportVideoWithStreamingWebCodecs(
   // Start rendering
   renderFrame();
 
-  // Wait for recording to finish
-  const blob = await new Promise<Blob>((resolve) => {
+  // Wait for recording to finish with timeout
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    let timeoutId: NodeJS.Timeout;
+    
     recorder.onstop = () => {
-      const finalBlob = new Blob(chunks, { type: selectedCodec });
-      resolve(finalBlob);
+      clearTimeout(timeoutId);
+      onProgress(95); // Update progress when recorder stops
+      
+      try {
+        const finalBlob = new Blob(chunks, { type: selectedCodec });
+        onProgress(98); // Update progress when blob is created
+        resolve(finalBlob);
+      } catch (error) {
+        console.error('Error creating blob:', error);
+        reject(new Error('Failed to create video blob'));
+      }
     };
+
+    // Add timeout to prevent hanging at 90%
+    const timeoutDuration = getExportTimeout(totalDuration);
+    timeoutId = setTimeout(() => {
+      if (!renderingComplete || recorder.state === 'recording') {
+        console.error('Export timeout - forcing completion');
+        if (recorder.state === 'recording') {
+          recorder.stop();
+        }
+        
+        // Still try to create a blob with what we have
+        setTimeout(() => {
+          if (chunks.length > 0) {
+            const partialBlob = new Blob(chunks, { type: selectedCodec });
+            console.warn('Created partial blob due to timeout');
+            resolve(partialBlob);
+          } else {
+            reject(new Error('Export timeout with no data'));
+          }
+        }, 1000);
+      }
+    }, timeoutDuration);
   });
 
   // Cleanup

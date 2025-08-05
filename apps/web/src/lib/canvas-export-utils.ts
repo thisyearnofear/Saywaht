@@ -4,6 +4,9 @@ import { exportVideoTrueOffline, shouldUseTrueOfflineExport } from "./optimized-
 import { shouldUseWebCodecs, isWebCodecsSupported, WebCodecsExportOptions } from "./webcodecs-export";
 import { exportVideoWithTransferableFrames } from "./webcodecs-streaming-export";
 import { FORMAT_DIMENSIONS, VideoFormat, getQualityBitrate, hasVideoContent } from "./video-utils";
+import { selectBestExportMethod, recordWebCodecsFailure, recordWebCodecsSuccess, getExportMethodRecommendation } from "./export-method-selector";
+import { exportDiagnostics } from "./export-diagnostics";
+import { getExportConfig, getWebCodecsConfig, getExportTimeout } from "./export-config";
 
 export type ExportMethod = "canvas" | "offline" | "webcodecs" | "auto";
 export type { VideoFormat }; // Re-export for backward compatibility
@@ -46,82 +49,142 @@ export const exportVideo = async (
 ): Promise<Blob> => {
   const method = options.method || "auto";
   
-  // Auto-select method based on browser support and content type
-  if (method === "auto") {
-    // 1. Prefer WebCodecs for best performance (10x faster)
-    if (shouldUseWebCodecs(tracks, mediaItems, options)) {
-      console.log("🚀 Auto-selected WebCodecs streaming export for optimal performance");
-      try {
-        return await exportVideoWithTransferableFrames(tracks, mediaItems, totalDuration, onProgress, {
-          ...options,
-          outputFormat: 'webm', // Use WebM for now as it's simpler
-          frameRate: options.frameRate || 30,
-          videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
-          audioBitrate: options.audioBitrate || 192000
-        } as WebCodecsExportOptions);
-      } catch (error) {
-        console.error("WebCodecs export failed, falling back to offline export:", error);
-        // Fallback to offline export
-        return exportVideoTrueOffline(tracks, mediaItems, totalDuration, onProgress, {
-          ...options,
-          outputFormat: options.outputFormat || 'mp4',
-          frameRate: options.frameRate || 30,
-          videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
-          audioBitrate: options.audioBitrate || 192000
-        });
-      }
-    }
-    
-    // 2. Fallback to offline export for video content
-    if (shouldUseTrueOfflineExport(tracks, mediaItems)) {
-      console.log("🚀 Auto-selected Offline export (WebCodecs not available)");
-      return exportVideoTrueOffline(tracks, mediaItems, totalDuration, onProgress, {
-        ...options,
-        outputFormat: options.outputFormat || 'mp4',
-        frameRate: options.frameRate || 30,
-        videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
-        audioBitrate: options.audioBitrate || 192000
-      });
-    }
-    
-    // 3. Final fallback to canvas export for simple projects
-    console.log("🎬 Auto-selected Canvas export for simple content");
-    return exportVideoWithCanvas(tracks, mediaItems, totalDuration, onProgress, options);
-  }
+  // Start diagnostics tracking
+  const selectedMethod = method === "auto"
+    ? selectBestExportMethod(tracks, mediaItems, options, totalDuration).method
+    : method;
   
-  // Manual method selection
-  if (method === "webcodecs") {
-    if (!isWebCodecsSupported()) {
-      throw new Error("WebCodecs API is not supported in this browser");
+  exportDiagnostics.startExport(selectedMethod, tracks, mediaItems, totalDuration);
+  
+  // Wrap progress callback to track in diagnostics
+  const trackedProgress = (progress: number) => {
+    exportDiagnostics.updateProgress(progress);
+    onProgress(progress);
+  };
+  
+  // Helper function to execute export with method
+  const executeExport = async (
+    exportMethod: "webcodecs" | "offline" | "canvas",
+    progress: (p: number) => void
+  ): Promise<Blob> => {
+    switch (exportMethod) {
+      case "webcodecs": {
+        const config = getWebCodecsConfig(options);
+        return exportVideoWithTransferableFrames(
+          tracks,
+          mediaItems,
+          totalDuration,
+          progress,
+          { ...options, ...config } as WebCodecsExportOptions
+        );
+      }
+      
+      case "offline": {
+        const config = getExportConfig(options);
+        return exportVideoTrueOffline(
+          tracks,
+          mediaItems,
+          totalDuration,
+          progress,
+          { ...options, ...config }
+        );
+      }
+      
+      case "canvas":
+      default:
+        return exportVideoWithCanvas(tracks, mediaItems, totalDuration, progress, options);
     }
-    console.log("🚀 Using WebCodecs streaming export - Maximum performance");
+  };
+
+  // Helper function to handle WebCodecs with timeout and fallback
+  const executeWebCodecsWithFallback = async (progress: (p: number) => void): Promise<Blob> => {
     try {
-      return await exportVideoWithTransferableFrames(tracks, mediaItems, totalDuration, onProgress, {
-        ...options,
-        outputFormat: 'webm', // Use WebM for now as it's simpler
-        frameRate: options.frameRate || 30,
-        videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
-        audioBitrate: options.audioBitrate || 192000
-      } as WebCodecsExportOptions);
+      const webCodecsPromise = executeExport("webcodecs", progress);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('WebCodecs export timeout')), getExportTimeout(totalDuration));
+      });
+      
+      const result = await Promise.race([webCodecsPromise, timeoutPromise]);
+      recordWebCodecsSuccess();
+      return result;
     } catch (error) {
       console.error("WebCodecs export failed:", error);
-      throw error;
+      recordWebCodecsFailure();
+      exportDiagnostics.recordError(error instanceof Error ? error : new Error(String(error)));
+      
+      // Fallback to offline export
+      console.log("🔄 Falling back to offline export");
+      progress(0); // Reset progress
+      return executeExport("offline", progress);
     }
-  }
+  };
+
+  try {
+    // Auto-select method based on intelligent analysis
+    if (method === "auto") {
+      const methodInfo = selectBestExportMethod(tracks, mediaItems, options, totalDuration);
+      const recommendation = getExportMethodRecommendation(tracks, mediaItems, options, totalDuration);
+      
+      console.log("🤖 Export Method Analysis:");
+      console.log(recommendation);
+      console.log(`📊 Selected: ${methodInfo.method} (${Math.round(methodInfo.confidence * 100)}% confidence)`);
+      
+      // Execute based on selected method
+      if (methodInfo.method === "webcodecs") {
+        console.log("🚀 Using WebCodecs export for optimal performance");
+        const result = await executeWebCodecsWithFallback(trackedProgress);
+        exportDiagnostics.stopExport(true);
+        return result;
+      }
+      
+      if (methodInfo.method === "offline") {
+        console.log("🎯 Using offline export for reliability");
+        const result = await executeExport("offline", trackedProgress);
+        exportDiagnostics.stopExport(true);
+        return result;
+      }
+      
+      // Canvas export for simple content
+      console.log("🎨 Using canvas export for simple content");
+      const result = await executeExport("canvas", trackedProgress);
+      exportDiagnostics.stopExport(true);
+      return result;
+    }
+    
+    // Manual method selection
+    if (method === "webcodecs") {
+      if (!isWebCodecsSupported()) {
+        console.warn("WebCodecs not supported, falling back to offline export");
+        const result = await executeExport("offline", trackedProgress);
+        exportDiagnostics.stopExport(true);
+        return result;
+      }
+      
+      console.log("🚀 Using WebCodecs streaming export - Maximum performance");
+      const result = await executeWebCodecsWithFallback(trackedProgress);
+      exportDiagnostics.stopExport(true);
+      return result;
+    }
+    
+    if (method === "offline") {
+      console.log("🚀 Using Offline export - Maximum reliability");
+      const result = await executeExport("offline", trackedProgress);
+      exportDiagnostics.stopExport(true);
+      return result;
+    }
+    
+    // Default to canvas method
+    const result = await executeExport("canvas", trackedProgress);
+    exportDiagnostics.stopExport(true);
+    return result;
   
-  if (method === "offline") {
-    console.log("🚀 Using Offline export - Maximum reliability");
-    return exportVideoTrueOffline(tracks, mediaItems, totalDuration, onProgress, {
-      ...options,
-      outputFormat: options.outputFormat || 'mp4',
-      frameRate: options.frameRate || 30,
-      videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || 'medium'),
-      audioBitrate: options.audioBitrate || 192000
-    });
+  } catch (error) {
+    // Catch any unhandled errors
+    console.error("Export failed with error:", error);
+    exportDiagnostics.recordError(error instanceof Error ? error : new Error(String(error)));
+    exportDiagnostics.stopExport(false);
+    throw error;
   }
-  
-  // Default to canvas method
-  return exportVideoWithCanvas(tracks, mediaItems, totalDuration, onProgress, options);
 };
 
 /**
