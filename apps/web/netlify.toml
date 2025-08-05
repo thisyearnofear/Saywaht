@@ -15,10 +15,6 @@
   # Bun version
   BUN_VERSION = "1.2.17"
 
-# Install Bun during build
-[[plugins]]
-  package = "netlify-plugin-bun"
-
 # Next.js on Netlify requires the Essential Next.js plugin
 [[plugins]]
   package = "@netlify/plugin-nextjs"
