@@ -3,6 +3,7 @@ import { MediaItem } from "@/stores/media-store";
 import { FORMAT_DIMENSIONS, VideoFormat, getQualityBitrate } from "./video-utils";
 import { createOfflineAudioStream } from "./offline-audio-renderer";
 import { OfflineVideoRenderer } from "./offline-video-renderer";
+import { exportVideo } from "./canvas-export-utils";
 import { FrameRateController, scheduleNextFrame } from "./frame-rate-controller";
 
 /**
@@ -138,7 +139,7 @@ export function adjustSettingsForFileSize(
 
 /**
  * Main unified export function
- * Implements a single, reliable export pipeline with pre-processing and offline rendering
+ * Now uses intelligent export method selection with backend export prioritized for Zora coin deployment
  */
 export async function unifiedExport(
   tracks: TimelineTrack[],
@@ -147,10 +148,10 @@ export async function unifiedExport(
   onProgress: (progress: ExportProgress) => void,
   options: Partial<UnifiedExportOptions> = {}
 ): Promise<Blob> {
-  const exportStartTime = performance.now();
-  
-  // Default options
-  const exportOptions: UnifiedExportOptions = {
+  console.log("🪙 Starting Zora coin export with intelligent method selection...");
+
+  // Convert UnifiedExportOptions to ExportOptions for our smart export system
+  const exportOptions = {
     format: options.format || "portrait",
     quality: options.quality || "medium",
     includeAudio: options.includeAudio !== false,
@@ -158,47 +159,40 @@ export async function unifiedExport(
     frameRate: options.frameRate || 30,
     videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || "medium"),
     audioBitrate: options.audioBitrate || 192000,
-    maxFileSizeMB: options.maxFileSizeMB || 0, // 0 means no limit
-    onSizeEstimate: options.onSizeEstimate
+    method: "auto" as const, // Use intelligent method selection
+    maxFileSizeMB: options.maxFileSizeMB || 8 // Default to Grove's 8MB limit
   };
   
-  // Get dimensions based on format
-  const dimensions = FORMAT_DIMENSIONS[exportOptions.format];
-  
-  // Initialize progress tracking
-  const updateProgress = (
-    phase: ExportProgress['phase'],
-    percentage: number,
-    message: string
-  ) => {
-    const currentTime = performance.now();
-    const elapsedMs = currentTime - exportStartTime;
-    const estimatedTotalMs = percentage > 0 ? (elapsedMs / (percentage / 100)) : undefined;
-    const estimatedTimeRemaining = estimatedTotalMs ? (estimatedTotalMs - elapsedMs) / 1000 : undefined;
-    
+  // Convert progress callback to simple percentage for our export system
+  const progressCallback = (percentage: number) => {
+    const phase = percentage < 10 ? 'initializing' :
+                  percentage < 30 ? 'preloading' :
+                  percentage < 50 ? 'extracting' :
+                  percentage < 70 ? 'encoding' :
+                  percentage < 90 ? 'finalizing' : 'finalizing';
+
     onProgress({
       phase,
       percentage,
-      message,
-      estimatedTimeRemaining
+      message: `${phase.charAt(0).toUpperCase() + phase.slice(1)}... ${Math.round(percentage)}%`
     });
   };
-  
+
   try {
-    // PHASE 1: Initialization and size estimation (0-5%)
-    updateProgress('initializing', 0, 'Initializing export...');
-    
-    // Estimate file size
-    const estimatedSizeMB = estimateExportFileSize(
+    console.log("🎬 Using intelligent export method selection for Zora coin...");
+
+    // Use our smart export system which will automatically choose the best method
+    // Backend export will be prioritized for Zora coin deployment
+    const blob = await exportVideo(
+      tracks,
+      mediaItems,
       totalDuration,
-      dimensions.width,
-      dimensions.height,
-      exportOptions.videoBitrate || getQualityBitrate(exportOptions.quality),
-      exportOptions.audioBitrate || 192000,
-      exportOptions.includeAudio
+      progressCallback,
+      exportOptions
     );
-    
-    console.log(`📊 Estimated export size: ${estimatedSizeMB.toFixed(2)}MB`);
+
+    console.log(`✅ Zora coin export completed: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
+    return blob;
     
     // Check if size exceeds limit and prompt user if needed
     if (exportOptions.maxFileSizeMB && exportOptions.maxFileSizeMB > 0 && estimatedSizeMB > exportOptions.maxFileSizeMB) {
@@ -478,8 +472,8 @@ export async function unifiedExport(
     return finalBlob;
     
   } catch (error) {
-    console.error('❌ Unified export failed:', error);
-    throw new Error(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('❌ Zora coin export failed:', error);
+    throw new Error(`Zora coin export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

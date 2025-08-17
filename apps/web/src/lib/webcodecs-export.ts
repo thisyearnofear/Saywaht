@@ -350,85 +350,8 @@ async function muxChunks(
   return new Blob(allChunks, { type: mimeType });
 }
 
-/**
- * Main WebCodecs export function, now running in a worker.
- */
-async function exportVideoWithWebCodecs(
-  tracks: TimelineTrack[],
-  mediaItems: MediaItem[],
-  totalDuration: number,
-  onProgress: (progress: number) => void,
-  options: WebCodecsExportOptions = {
-    format: "portrait",
-    quality: "medium",
-    includeAudio: true,
-    outputFormat: 'mp4',
-    frameRate: 30,
-    videoBitrate: 5000000,
-    audioBitrate: 192000
-  }
-): Promise<Blob> {
-  // This function will be moved to the worker
-  return new Blob();
-}
-
-/**
- * Kicks off the export process in a Web Worker.
- */
-export async function exportVideoWithWorker(
-  tracks: TimelineTrack[],
-  mediaItems: MediaItem[],
-  totalDuration: number,
-  onProgress: (progress: number) => void,
-  options: WebCodecsExportOptions
-): Promise<Blob> {
-  return new Promise(async (resolve, reject) => {
-    const worker = new Worker(new URL('./export-worker.ts', import.meta.url), {
-      type: 'module'
-    });
-
-    // Convert media items to serializable format
-    const serializableMediaItems = mediaItems.map(item => ({
-      id: item.id,
-      name: item.name,
-      type: item.type,
-      url: item.url,
-      duration: item.duration,
-      aspectRatio: item.aspectRatio,
-      // Don't send File objects, just URLs
-    }));
-
-    worker.onmessage = (event) => {
-      const { type, payload } = event.data;
-
-      if (type === 'progress') {
-        onProgress(payload);
-      } else if (type === 'success') {
-        resolve(payload);
-        worker.terminate();
-      } else if (type === 'error') {
-        reject(new Error(payload));
-        worker.terminate();
-      }
-    };
-
-    worker.onerror = (error) => {
-      reject(error);
-      worker.terminate();
-    };
-
-    // Send minimal data to worker - no pre-composed frames
-    worker.postMessage({
-      type: 'start',
-      payload: {
-        tracks,
-        mediaItems: serializableMediaItems,
-        totalDuration,
-        options
-      }
-    });
-  });
-}
+// Removed unused WebCodecs worker implementation
+// WebCodecs export is now handled by webcodecs-streaming-export.ts
 
 /**
  * Check if WebCodecs should be used for export

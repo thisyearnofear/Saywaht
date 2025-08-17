@@ -201,22 +201,7 @@ class ExportDiagnosticsCollector {
     return report;
   }
 
-  // Debug helper to simulate stuck export
-  simulateStuckExport(): void {
-    console.warn("🔧 Simulating stuck export at 90%...");
-    this.startExport("test", [], [], 10);
-    
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 10;
-      this.updateProgress(progress);
-      
-      if (progress >= 90) {
-        clearInterval(interval);
-        console.warn("🔧 Export simulation stuck at 90%");
-      }
-    }, 500);
-  }
+  // Removed debug simulation - not needed in production
 }
 
 // Global instance
@@ -227,13 +212,11 @@ if (typeof window !== 'undefined') {
   (window as any).exportDiagnostics = {
     getReport: () => console.log(exportDiagnostics.generateReport()),
     getLastExport: () => exportDiagnostics.getLastExportDiagnostics(),
-    getAllExports: () => exportDiagnostics.getAllDiagnostics(),
-    simulateStuck: () => exportDiagnostics.simulateStuckExport()
+    getAllExports: () => exportDiagnostics.getAllDiagnostics()
   };
-  
+
   console.log("💡 Export diagnostics available in console:");
   console.log("- exportDiagnostics.getReport() - View diagnostic report");
   console.log("- exportDiagnostics.getLastExport() - Get last export details");
   console.log("- exportDiagnostics.getAllExports() - Get all export history");
-  console.log("- exportDiagnostics.simulateStuck() - Simulate stuck export");
 }

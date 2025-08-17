@@ -22,6 +22,11 @@
 - **Multi-track support** - Layer videos, audio, and effects
 - **Real-time preview** - See changes instantly
 - **IPFS storage** - Decentralized, permanent content storage via Grove
+- **Intelligent export** - Multiple export methods with automatic optimization:
+  - **Backend export** - Professional FFmpeg processing for maximum quality
+  - **WebCodecs** - Hardware-accelerated browser encoding
+  - **Offline rendering** - Reliable browser-based processing
+  - **Auto-selection** - Intelligently chooses the best method for your content
 
 ### **🪙 Creator Economy**
 
@@ -55,6 +60,8 @@
 - **Web3**: Wagmi, Viem, WalletConnect
 - **Storage**: IPFS via Grove, Upstash Redis
 - **Blockchain**: Base (Ethereum L2), Zora Protocol
+- **Video Processing**: FFmpeg (backend), WebCodecs API (frontend)
+- **Backend Service**: Node.js + Express for video export processing
 - **Package Manager**: Bun (recommended)
 
 ## Getting Started
@@ -90,6 +97,9 @@ Before you begin, ensure you have the following installed on your system:
     NEXT_PUBLIC_FILECOIN_PRIVATE_KEY=your-filecoin-private-key
     NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS=0xYourWalletAddress
     NEXT_PUBLIC_ZORA_API_KEY=your-zora-api-key
+
+    # Backend Export Service (Optional - enables server-side video processing)
+    NEXT_PUBLIC_BACKEND_EXPORT_URL=http://157.180.36.156:3001
 
     # Optional Features
     ELEVENLABS_API_KEY=your-elevenlabs-key

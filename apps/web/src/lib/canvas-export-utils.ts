@@ -1,14 +1,15 @@
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
-import { exportVideoTrueOffline, shouldUseTrueOfflineExport } from "./optimized-export";
-import { shouldUseWebCodecs, isWebCodecsSupported, WebCodecsExportOptions } from "./webcodecs-export";
+import { exportVideoTrueOffline } from "./optimized-export";
+import { isWebCodecsSupported, WebCodecsExportOptions } from "./webcodecs-export";
 import { exportVideoWithTransferableFrames } from "./webcodecs-streaming-export";
-import { FORMAT_DIMENSIONS, VideoFormat, getQualityBitrate, hasVideoContent } from "./video-utils";
+import { FORMAT_DIMENSIONS, VideoFormat } from "./video-utils";
 import { selectBestExportMethod, recordWebCodecsFailure, recordWebCodecsSuccess, getExportMethodRecommendation } from "./export-method-selector";
 import { exportDiagnostics } from "./export-diagnostics";
 import { getExportConfig, getWebCodecsConfig, getExportTimeout } from "./export-config";
+import { exportVideoBackend, BackendExportOptions } from "./backend-export";
 
-export type ExportMethod = "canvas" | "offline" | "webcodecs" | "auto";
+export type ExportMethod = "backend" | "canvas" | "offline" | "webcodecs" | "auto";
 export type { VideoFormat }; // Re-export for backward compatibility
 
 export interface ExportOptions {
@@ -48,12 +49,14 @@ export const exportVideo = async (
   }
 ): Promise<Blob> => {
   const method = options.method || "auto";
-  
-  // Start diagnostics tracking
-  const selectedMethod = method === "auto"
-    ? selectBestExportMethod(tracks, mediaItems, options, totalDuration).method
-    : method;
-  
+
+  // Start diagnostics tracking - determine method first
+  let selectedMethod = method;
+  if (method === "auto") {
+    const methodInfo = await selectBestExportMethod(tracks, mediaItems, options, totalDuration);
+    selectedMethod = methodInfo.method;
+  }
+
   exportDiagnostics.startExport(selectedMethod, tracks, mediaItems, totalDuration);
   
   // Wrap progress callback to track in diagnostics
@@ -64,10 +67,26 @@ export const exportVideo = async (
   
   // Helper function to execute export with method
   const executeExport = async (
-    exportMethod: "webcodecs" | "offline" | "canvas",
+    exportMethod: "backend" | "webcodecs" | "offline" | "canvas",
     progress: (p: number) => void
   ): Promise<Blob> => {
     switch (exportMethod) {
+      case "backend": {
+        const backendOptions: BackendExportOptions = {
+          ...options,
+          maxFileSizeMB: 50,
+          timeout: 300000 // 5 minutes
+        };
+        const result = await exportVideoBackend(
+          tracks,
+          mediaItems,
+          totalDuration,
+          progress,
+          backendOptions
+        );
+        return result.blob;
+      }
+
       case "webcodecs": {
         const config = getWebCodecsConfig(options);
         return exportVideoWithTransferableFrames(
@@ -78,7 +97,7 @@ export const exportVideo = async (
           { ...options, ...config } as WebCodecsExportOptions
         );
       }
-      
+
       case "offline": {
         const config = getExportConfig(options);
         return exportVideoTrueOffline(
@@ -89,7 +108,7 @@ export const exportVideo = async (
           { ...options, ...config }
         );
       }
-      
+
       case "canvas":
       default:
         return exportVideoWithCanvas(tracks, mediaItems, totalDuration, progress, options);
@@ -122,36 +141,50 @@ export const exportVideo = async (
   try {
     // Auto-select method based on intelligent analysis
     if (method === "auto") {
-      const methodInfo = selectBestExportMethod(tracks, mediaItems, options, totalDuration);
-      const recommendation = getExportMethodRecommendation(tracks, mediaItems, options, totalDuration);
-      
+      const methodInfo = await selectBestExportMethod(tracks, mediaItems, options, totalDuration);
+      const recommendation = await getExportMethodRecommendation(tracks, mediaItems, options, totalDuration);
+
       console.log("🤖 Export Method Analysis:");
       console.log(recommendation);
       console.log(`📊 Selected: ${methodInfo.method} (${Math.round(methodInfo.confidence * 100)}% confidence)`);
-      
+
       // Execute based on selected method
+      if (methodInfo.method === "backend") {
+        console.log("⚡ Using Pro Export for maximum quality and speed");
+        const result = await executeExport("backend", trackedProgress);
+        exportDiagnostics.stopExport(true);
+        return result;
+      }
+
       if (methodInfo.method === "webcodecs") {
-        console.log("🚀 Using WebCodecs export for optimal performance");
+        console.log("🚀 Using Quick Export for fast processing");
         const result = await executeWebCodecsWithFallback(trackedProgress);
         exportDiagnostics.stopExport(true);
         return result;
       }
-      
+
       if (methodInfo.method === "offline") {
-        console.log("🎯 Using offline export for reliability");
+        console.log("🎯 Using Reliable Export for maximum compatibility");
         const result = await executeExport("offline", trackedProgress);
         exportDiagnostics.stopExport(true);
         return result;
       }
-      
+
       // Canvas export for simple content
-      console.log("🎨 Using canvas export for simple content");
+      console.log("🎨 Using Basic Export for simple content");
       const result = await executeExport("canvas", trackedProgress);
       exportDiagnostics.stopExport(true);
       return result;
     }
     
     // Manual method selection
+    if (method === "backend") {
+      console.log("⚡ Using Pro Export - Maximum quality and speed");
+      const result = await executeExport("backend", trackedProgress);
+      exportDiagnostics.stopExport(true);
+      return result;
+    }
+
     if (method === "webcodecs") {
       if (!isWebCodecsSupported()) {
         console.warn("WebCodecs not supported, falling back to offline export");
@@ -159,20 +192,20 @@ export const exportVideo = async (
         exportDiagnostics.stopExport(true);
         return result;
       }
-      
-      console.log("🚀 Using WebCodecs streaming export - Maximum performance");
+
+      console.log("🚀 Using Quick Export - Fast processing");
       const result = await executeWebCodecsWithFallback(trackedProgress);
       exportDiagnostics.stopExport(true);
       return result;
     }
-    
+
     if (method === "offline") {
-      console.log("🚀 Using Offline export - Maximum reliability");
+      console.log("🎯 Using Reliable Export - Works on any device");
       const result = await executeExport("offline", trackedProgress);
       exportDiagnostics.stopExport(true);
       return result;
     }
-    
+
     // Default to canvas method
     const result = await executeExport("canvas", trackedProgress);
     exportDiagnostics.stopExport(true);
@@ -187,41 +220,7 @@ export const exportVideo = async (
   }
 };
 
-/**
- * Determine if Enhanced Canvas export should be used based on project complexity
- */
-function shouldUseEnhancedExport(
-  tracks: TimelineTrack[],
-  mediaItems: MediaItem[],
-  options: ExportOptions,
-  totalDuration: number
-): boolean {
-  // Use Enhanced Canvas for high quality exports
-  if (options.quality === "high") return true;
-  
-  // Use Enhanced Canvas for MP4 output (better compatibility)
-  if (options.outputFormat === "mp4") return true;
-  
-  // Use Enhanced Canvas for complex projects (multiple video tracks, many clips)
-  const videoTracks = tracks.filter(track =>
-    track.clips.some(clip => {
-      const mediaItem = mediaItems.find(item => item.id === clip.mediaId);
-      return mediaItem?.type === "video";
-    })
-  );
-  
-  if (videoTracks.length > 2) return true;
-  
-  const totalClips = tracks.reduce((sum, track) => sum + track.clips.length, 0);
-  if (totalClips > 5) return true;
-  
-  // Use Enhanced Canvas for long videos (better memory management)
-  if (totalDuration > 60) return true; // 1 minute+
-  
-  return false;
-}
-
-// getQualityBitrate function moved to video-utils.ts for DRY code
+// Removed shouldUseEnhancedExport - complexity analysis now handled by export-method-selector.ts
 
 /**
  * Export video using HTML5 Canvas and MediaRecorder API with Web Audio API integration.

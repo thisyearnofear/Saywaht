@@ -2,59 +2,85 @@ import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
 import { ExportOptions } from "./canvas-export-utils";
 import { detectWebCodecsSupport } from "./video-utils";
+import { isBackendExportAvailable } from "./backend-export";
 
 export interface ExportMethodInfo {
-  method: "webcodecs" | "offline" | "canvas";
+  method: "backend" | "webcodecs" | "offline" | "canvas";
   reason: string;
   confidence: number; // 0-1, higher is better
 }
 
 /**
  * Intelligently selects the best export method based on:
+ * - Backend service availability
  * - Browser capabilities
  * - Content complexity
  * - Previous failure history
  * - System performance
  */
-export function selectBestExportMethod(
+export async function selectBestExportMethod(
   tracks: TimelineTrack[],
   mediaItems: MediaItem[],
-  options: ExportOptions,
+  _options: ExportOptions,
   totalDuration: number
-): ExportMethodInfo {
+): Promise<ExportMethodInfo> {
+  // Check if backend export is available
+  const backendAvailable = await isBackendExportAvailable();
+
+  // Analyze content complexity
+  const complexity = analyzeContentComplexity(tracks, mediaItems, totalDuration);
+
+  // Check system performance
+  const systemPerformance = checkSystemPerformance();
+
   // Check if we've had recent WebCodecs failures
   const recentFailures = getRecentWebCodecsFailures();
   const hasRecentFailures = recentFailures > 2;
-  
+
   // Detect browser capabilities
   const webCodecsSupport = detectWebCodecsSupport();
   const hasFullWebCodecsSupport = webCodecsSupport.fullSupport && !hasRecentFailures;
-  
-  // Analyze content complexity
-  const complexity = analyzeContentComplexity(tracks, mediaItems, totalDuration);
-  
-  // Check system performance
-  const systemPerformance = checkSystemPerformance();
-  
-  // Decision matrix
+
+  // Decision matrix - prioritize backend for complex content
+  if (backendAvailable) {
+    // Pro Export is ideal for complex content, long videos, or when browser performance is limited
+    if (complexity.score > 0.6 || totalDuration > 60 || !systemPerformance.isGood) {
+      return {
+        method: "backend",
+        reason: `Pro Export recommended for ${complexity.reason || 'best quality and speed'}`,
+        confidence: 0.95
+      };
+    }
+
+    // Pro Export is also good for medium complexity content
+    if (complexity.score > 0.4 || totalDuration > 30) {
+      return {
+        method: "backend",
+        reason: "Pro Export for fastest processing of medium complexity content",
+        confidence: 0.85
+      };
+    }
+  }
+
+  // Frontend methods for simpler content or when backend unavailable
   if (hasFullWebCodecsSupport && complexity.score < 0.7 && systemPerformance.isGood) {
     // WebCodecs is suitable for simpler content on capable systems
     return {
       method: "webcodecs",
       reason: "WebCodecs available with good system performance for moderate complexity content",
-      confidence: 0.8 - (recentFailures * 0.1)
+      confidence: backendAvailable ? 0.7 : 0.8 - (recentFailures * 0.1)
     };
   }
-  
+
   if (complexity.hasVideo || complexity.hasMultipleTracks || totalDuration > 30) {
-    // Offline export for complex projects
+    // Offline export for complex projects when backend unavailable
     return {
       method: "offline",
       reason: `Offline export selected for ${complexity.reason}`,
-      confidence: 0.95
+      confidence: backendAvailable ? 0.75 : 0.95
     };
   }
-  
+
   // Canvas export for simple projects
   return {
     method: "canvas",
@@ -200,31 +226,38 @@ function getRecentWebCodecsFailures(): number {
 /**
  * Get export method recommendation with detailed reasoning
  */
-export function getExportMethodRecommendation(
+export async function getExportMethodRecommendation(
   tracks: TimelineTrack[],
   mediaItems: MediaItem[],
   options: ExportOptions,
   totalDuration: number
-): string {
-  const methodInfo = selectBestExportMethod(tracks, mediaItems, options, totalDuration);
+): Promise<string> {
+  const methodInfo = await selectBestExportMethod(tracks, mediaItems, options, totalDuration);
   const complexity = analyzeContentComplexity(tracks, mediaItems, totalDuration);
   const performance = checkSystemPerformance();
-  
-  let recommendation = `Export Method: ${methodInfo.method.toUpperCase()}\n`;
+
+  const methodNames = {
+    backend: "Pro Export",
+    webcodecs: "Quick Export",
+    offline: "Reliable Export",
+    canvas: "Basic Export"
+  };
+
+  let recommendation = `Export Method: ${methodNames[methodInfo.method as keyof typeof methodNames] || methodInfo.method.toUpperCase()}\n`;
   recommendation += `Confidence: ${Math.round(methodInfo.confidence * 100)}%\n`;
   recommendation += `Reason: ${methodInfo.reason}\n\n`;
-  
+
   recommendation += `Content Analysis:\n`;
   recommendation += `- Complexity Score: ${Math.round(complexity.score * 100)}%\n`;
   recommendation += `- Video Tracks: ${complexity.hasVideo ? "Yes" : "No"}\n`;
   recommendation += `- Audio Tracks: ${complexity.hasAudio ? "Yes" : "No"}\n`;
   recommendation += `- Total Clips: ${complexity.totalClips}\n`;
   recommendation += `- Duration: ${Math.round(totalDuration)}s\n\n`;
-  
+
   recommendation += `System Performance:\n`;
   recommendation += `- Memory: ${performance.memory}GB\n`;
   recommendation += `- CPU Cores: ${performance.cores}\n`;
   recommendation += `- Performance: ${performance.isGood ? "Good" : "Limited"}\n`;
-  
+
   return recommendation;
 }

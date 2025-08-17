@@ -11,7 +11,7 @@ import { badgeVariants } from "./ui/badge";
 import { cn } from "@/lib/utils";
 import { useAccount } from "wagmi";
 import { toast } from "sonner";
-import { useState } from "@/lib/hooks-provider";
+import { useState, useEffect } from "@/lib/hooks-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,8 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { getExportErrorMessage } from "@/lib/export-error-handler";
+import { isBackendExportAvailable } from "@/lib/backend-export";
+import { ExportMethod } from "@/lib/canvas-export-utils";
 
 export function EditorHeader() {
   const { activeProject } = useProjectStore();
@@ -28,13 +30,32 @@ export function EditorHeader() {
 
   // Use imported useState hook from hooks-provider
   const [isExporting, setIsExporting] = useState(false);
+  const [backendAvailable, setBackendAvailable] = useState(false);
   const { tracks, getTotalDuration } = useTimelineStore();
   const { mediaItems } = useMediaStore();
 
-  const handleExport = async () => {
+  // Check backend availability on mount
+  useEffect(() => {
+    isBackendExportAvailable().then(setBackendAvailable);
+  }, []);
+
+  const handleExport = async (method: ExportMethod = "auto") => {
     if (!activeProject || tracks.length === 0) {
       toast.error("No content to export");
       return;
+    }
+
+    // Show delightful feedback based on method
+    const methodMessages = {
+      auto: "✨ Using Smart Export - choosing the best method for you!",
+      backend: "⚡ Using Pro Export - maximum quality and speed!",
+      webcodecs: "🚀 Using Quick Export - fast processing!",
+      offline: "🎯 Using Reliable Export - works on any device!",
+      canvas: "🎨 Using Basic Export - simple and compatible!",
+    };
+
+    if (method !== "auto") {
+      toast.success(methodMessages[method] || "Starting export...");
     }
 
     setIsExporting(true);
@@ -59,7 +80,7 @@ export function EditorHeader() {
           format: "portrait", // Default mobile-first format
           quality: "medium",
           includeAudio: true,
-          method: "auto", // Auto-select best method with improved fallback handling
+          method: method, // Use selected method
           outputFormat: "mp4", // MP4 for better compatibility
         }
       );
@@ -157,25 +178,96 @@ export function EditorHeader() {
 
       {/* Right Section */}
       <div className="flex items-center gap-2">
-        <Button
-          variant="text"
-          size="sm"
-          onClick={handleExport}
-          disabled={isExporting || !activeProject || tracks.length === 0}
-          className="text-xs font-medium"
-        >
-          {isExporting ? (
-            <>
-              <span className="inline-block h-4 w-4 mr-1 animate-spin">⟳</span>
-              Exporting...
-            </>
-          ) : (
-            <>
-              <span className="inline-block h-4 w-4 mr-1">⬇️</span>
-              Export
-            </>
-          )}
-        </Button>
+        <div className="flex items-center">
+          <Button
+            variant="text"
+            size="sm"
+            onClick={() => handleExport()}
+            disabled={isExporting || !activeProject || tracks.length === 0}
+            className="text-xs font-medium rounded-r-none border-r-0"
+          >
+            {isExporting ? (
+              <>
+                <span className="inline-block h-4 w-4 mr-1 animate-spin">
+                  ⟳
+                </span>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <span className="inline-block h-4 w-4 mr-1">⬇️</span>
+                Export
+                {backendAvailable && (
+                  <span className="ml-1 text-xs bg-green-100 text-green-700 px-1 rounded">
+                    Pro
+                  </span>
+                )}
+              </>
+            )}
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="text"
+                size="sm"
+                disabled={isExporting || !activeProject || tracks.length === 0}
+                className="text-xs font-medium rounded-l-none border-l-0 px-1 w-6"
+              >
+                <span className="text-xs">▼</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => handleExport("auto")}>
+                <span className="inline-block h-4 w-4 mr-2">✨</span>
+                <div className="flex flex-col">
+                  <span className="font-medium">Smart Export</span>
+                  <span className="text-xs text-muted-foreground">
+                    Recommended • Chooses best method for you
+                  </span>
+                </div>
+              </DropdownMenuItem>
+              {backendAvailable && (
+                <DropdownMenuItem onClick={() => handleExport("backend")}>
+                  <span className="inline-block h-4 w-4 mr-2">⚡</span>
+                  <div className="flex flex-col">
+                    <span className="font-medium">Pro Export</span>
+                    <span className="text-xs text-muted-foreground">
+                      Premium • Fastest & highest quality
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => handleExport("webcodecs")}>
+                <span className="inline-block h-4 w-4 mr-2">🚀</span>
+                <div className="flex flex-col">
+                  <span className="font-medium">Quick Export</span>
+                  <span className="text-xs text-muted-foreground">
+                    Fast • Modern browsers only
+                  </span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("offline")}>
+                <span className="inline-block h-4 w-4 mr-2">🎯</span>
+                <div className="flex flex-col">
+                  <span className="font-medium">Reliable Export</span>
+                  <span className="text-xs text-muted-foreground">
+                    Stable • Works on any device
+                  </span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("canvas")}>
+                <span className="inline-block h-4 w-4 mr-2">🎨</span>
+                <div className="flex flex-col">
+                  <span className="font-medium">Basic Export</span>
+                  <span className="text-xs text-muted-foreground">
+                    Simple • Maximum compatibility
+                  </span>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
         {address && (
           <Button
