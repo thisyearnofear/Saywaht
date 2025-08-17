@@ -41,7 +41,7 @@ export const exportVideoBackend = async (
   mediaItems: MediaItem[],
   totalDuration: number,
   onProgress: (progress: number) => void,
-  options: BackendExportOptions = {}
+  options: BackendExportOptions = { format: 'landscape', quality: 'high' }
 ): Promise<BackendExportResult> => {
   const startTime = performance.now();
   
@@ -49,12 +49,11 @@ export const exportVideoBackend = async (
     console.log('⚡ Starting Pro Export for best quality...');
     
     // Prepare export options
-    const dimensions = FORMAT_DIMENSIONS[options.format || "portrait"];
+    const dimensions = FORMAT_DIMENSIONS[options.format];
     const exportOptions = {
       width: dimensions.width,
       height: dimensions.height,
       frameRate: options.frameRate || 30,
-      quality: options.quality || "medium",
       outputFormat: options.outputFormat || "mp4",
       maxFileSizeMB: options.maxFileSizeMB || 50,
       ...options
