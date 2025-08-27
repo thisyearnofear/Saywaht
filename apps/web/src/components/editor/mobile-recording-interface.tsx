@@ -16,6 +16,7 @@ import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { cn } from "@/lib/utils";
+import { requestMicrophoneAccess } from "@/lib/audio-recording";
 
 interface MobileRecordingInterfaceProps {
   isOpen: boolean;
@@ -142,8 +143,11 @@ export function MobileRecordingInterface({
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const stream = await requestMicrophoneAccess();
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: "audio/webm",
+        audioBitsPerSecond: 128000,
+      });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
