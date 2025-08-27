@@ -11,6 +11,7 @@ import {
   requestMicrophoneAccess,
   detectBestAudioFormat,
   type AudioConstraints,
+  RecordingCountdown,
 } from "@/lib/audio-recording";
 
 export function VoiceoverRecorder() {
@@ -22,6 +23,12 @@ export function VoiceoverRecorder() {
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordedDuration, setRecordedDuration] = useState(0);
   const [audioFormat, setAudioFormat] = useState<string>("audio/webm");
+
+  // 10-second recording limit (configurable)
+  const MAX_RECORDING_DURATION = 10;
+  const [countdownState, setCountdownState] = useState(() =>
+    RecordingCountdown.getCountdownState(0, MAX_RECORDING_DURATION)
+  );
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -192,10 +199,30 @@ export function VoiceoverRecorder() {
       setRecordingState("recording");
       setRecordingTime(0);
       recordingTimeRef.current = 0; // Reset ref
+
+      // Initialize countdown
+      setCountdownState(
+        RecordingCountdown.getCountdownState(0, MAX_RECORDING_DURATION)
+      );
+
       timerRef.current = setInterval(() => {
         setRecordingTime((prev: number) => {
           const newTime = prev + 1;
           recordingTimeRef.current = newTime; // Update ref
+
+          // Update countdown state
+          const newCountdownState = RecordingCountdown.getCountdownState(
+            newTime,
+            MAX_RECORDING_DURATION
+          );
+          setCountdownState(newCountdownState);
+
+          // Auto-stop when time limit reached
+          if (newCountdownState.isFinished) {
+            stopRecording();
+            toast.info("Recording stopped at 10-second limit");
+          }
+
           return newTime;
         });
       }, 1000);
@@ -319,6 +346,11 @@ export function VoiceoverRecorder() {
               Upload a video first to record voiceover
             </p>
           )}
+          {hasVideo && (
+            <p className="text-xs text-muted-foreground text-center">
+              ⏱️ Maximum 10 seconds
+            </p>
+          )}
         </div>
       )}
 
@@ -335,10 +367,46 @@ export function VoiceoverRecorder() {
               <Square className="h-6 w-6" />
             </Button>
           </div>
-          <p className="font-mono text-lg text-muted-foreground">
-            {formatTime(recordingTime)}
-          </p>
-          <p className="text-xs text-muted-foreground">Recording...</p>
+
+          {/* Countdown Timer */}
+          <div className="text-center space-y-2">
+            <div
+              className={cn(
+                "font-mono text-2xl font-bold transition-colors duration-200",
+                countdownState.isCritical && "text-red-500 animate-pulse",
+                countdownState.isWarning && "text-orange-500",
+                !countdownState.isWarning &&
+                  !countdownState.isCritical &&
+                  "text-muted-foreground"
+              )}
+            >
+              {RecordingCountdown.formatCountdownTime(countdownState.remaining)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {countdownState.isCritical && "⏰ Time's up!"}
+              {countdownState.isWarning && "⚠️ Almost out of time"}
+              {!countdownState.isWarning &&
+                !countdownState.isCritical &&
+                "Recording..."}
+            </p>
+          </div>
+
+          {/* Progress indicator */}
+          <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className={cn(
+                "h-full transition-all duration-1000 ease-linear",
+                countdownState.isCritical && "bg-red-500",
+                countdownState.isWarning && "bg-orange-500",
+                !countdownState.isWarning &&
+                  !countdownState.isCritical &&
+                  "bg-blue-500"
+              )}
+              style={{
+                width: `${((MAX_RECORDING_DURATION - countdownState.remaining) / MAX_RECORDING_DURATION) * 100}%`,
+              }}
+            />
+          </div>
         </div>
       )}
 

@@ -18,6 +18,8 @@ export interface RecordingOptions {
   format?: string;
   warmUpDelay?: number;
   onAudioLevelChange?: (level: number) => void;
+  maxDuration?: number; // Maximum recording duration in seconds
+  onRecordingLimitReached?: () => void; // Callback when max duration is reached
 }
 
 /**
@@ -160,6 +162,36 @@ export function monitorAudioLevels(
 }
 
 /**
+ * Recording countdown utilities for UI components
+ */
+export const RecordingCountdown = {
+  /**
+   * Calculate countdown display state based on elapsed time
+   */
+  getCountdownState: (elapsed: number, maxDuration: number = 10) => {
+    const remaining = Math.max(0, maxDuration - elapsed);
+    const isWarning = remaining <= 3 && remaining > 1;
+    const isCritical = remaining <= 1;
+    const displayTime = Math.ceil(remaining);
+
+    return {
+      remaining,
+      displayTime,
+      isWarning,
+      isCritical,
+      isFinished: remaining <= 0,
+    };
+  },
+
+  /**
+   * Format time for countdown display
+   */
+  formatCountdownTime: (seconds: number): string => {
+    return Math.ceil(seconds).toString();
+  },
+};
+
+/**
  * Enhanced recording session with automatic quality monitoring
  */
 export class AudioRecordingSession {
@@ -168,9 +200,15 @@ export class AudioRecordingSession {
   private chunks: Blob[] = [];
   private audioLevelMonitor: (() => void) | null = null;
   private onAudioLevelChange?: (level: number) => void;
+  private maxDuration?: number;
+  private onRecordingLimitReached?: () => void;
+  private recordingStartTime?: number;
+  private durationCheckInterval?: NodeJS.Timeout;
 
   constructor(options: RecordingOptions = {}) {
     this.onAudioLevelChange = options.onAudioLevelChange;
+    this.maxDuration = options.maxDuration;
+    this.onRecordingLimitReached = options.onRecordingLimitReached;
   }
 
   async start(): Promise<void> {
@@ -194,7 +232,23 @@ export class AudioRecordingSession {
     };
 
     this.mediaRecorder.start();
+    this.recordingStartTime = Date.now();
+
+    // Set up duration monitoring if maxDuration is specified
+    if (this.maxDuration && this.onRecordingLimitReached) {
+      this.durationCheckInterval = setInterval(() => {
+        const elapsed = (Date.now() - (this.recordingStartTime || 0)) / 1000;
+        if (elapsed >= this.maxDuration!) {
+          this.onRecordingLimitReached!();
+          this.stop();
+        }
+      }, 100); // Check every 100ms for precise timing
+    }
+
     console.log("🎵 Recording started with enhanced audio configuration");
+    if (this.maxDuration) {
+      console.log(`⏰ Maximum duration set to ${this.maxDuration} seconds`);
+    }
   }
 
   stop(): Promise<Blob> {
@@ -232,6 +286,10 @@ export class AudioRecordingSession {
   destroy(): void {
     if (this.audioLevelMonitor) {
       this.audioLevelMonitor();
+    }
+    if (this.durationCheckInterval) {
+      clearInterval(this.durationCheckInterval);
+      this.durationCheckInterval = undefined;
     }
     if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
       this.mediaRecorder.stop();

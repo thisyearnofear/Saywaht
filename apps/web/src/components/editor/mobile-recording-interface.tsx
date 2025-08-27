@@ -16,7 +16,10 @@ import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { cn } from "@/lib/utils";
-import { requestMicrophoneAccess } from "@/lib/audio-recording";
+import {
+  requestMicrophoneAccess,
+  RecordingCountdown,
+} from "@/lib/audio-recording";
 
 interface MobileRecordingInterfaceProps {
   isOpen: boolean;
@@ -40,6 +43,12 @@ export function MobileRecordingInterface({
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [currentHint, setCurrentHint] = useState<string>("");
   const [audioLevel, setAudioLevel] = useState(0);
+
+  // 10-second recording limit (configurable)
+  const MAX_RECORDING_DURATION = 10;
+  const [countdownState, setCountdownState] = useState(() =>
+    RecordingCountdown.getCountdownState(0, MAX_RECORDING_DURATION)
+  );
 
   const { mediaItems } = useMediaStore();
   const { currentTime, duration, isPlaying, play, pause, seek } =
@@ -130,12 +139,28 @@ export function MobileRecordingInterface({
     }
   }, [currentTime, duration, getRecordingHint]);
 
-  // Recording timer
+  // Recording timer with countdown
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (recordingState === "recording") {
       interval = setInterval(() => {
-        setRecordingTime((prev: number) => prev + 0.1);
+        setRecordingTime((prev: number) => {
+          const newTime = prev + 0.1;
+
+          // Update countdown state
+          const newCountdownState = RecordingCountdown.getCountdownState(
+            newTime,
+            MAX_RECORDING_DURATION
+          );
+          setCountdownState(newCountdownState);
+
+          // Auto-stop when time limit reached
+          if (newCountdownState.isFinished) {
+            stopRecording();
+          }
+
+          return newTime;
+        });
       }, 100);
     }
     return () => clearInterval(interval);
@@ -265,8 +290,61 @@ export function MobileRecordingInterface({
               <div className="w-20 h-20 rounded-full bg-red-500/30 flex items-center justify-center mb-4 animate-pulse">
                 <div className="w-12 h-12 rounded-full bg-red-500" />
               </div>
-              <div className="text-white text-xl font-mono font-bold">
-                {formatTime(recordingTime)}
+
+              {/* Countdown Timer */}
+              <div
+                className={cn(
+                  "text-3xl font-mono font-bold mb-2 transition-colors duration-200",
+                  countdownState.isCritical && "text-red-400 animate-pulse",
+                  countdownState.isWarning && "text-orange-400",
+                  !countdownState.isWarning &&
+                    !countdownState.isCritical &&
+                    "text-white"
+                )}
+              >
+                {RecordingCountdown.formatCountdownTime(
+                  countdownState.remaining
+                )}
+              </div>
+
+              {/* Progress Ring */}
+              <div className="relative w-16 h-16 mb-2">
+                <svg
+                  className="w-16 h-16 transform -rotate-90"
+                  viewBox="0 0 36 36"
+                >
+                  <path
+                    d="M18 2.0845
+                      a 15.9155 15.9155 0 0 1 0 31.831
+                      a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.2)"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M18 2.0845
+                      a 15.9155 15.9155 0 0 1 0 31.831
+                      a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke={
+                      countdownState.isCritical
+                        ? "#ef4444"
+                        : countdownState.isWarning
+                          ? "#f97316"
+                          : "#3b82f6"
+                    }
+                    strokeWidth="2"
+                    strokeDasharray={`${((MAX_RECORDING_DURATION - countdownState.remaining) / MAX_RECORDING_DURATION) * 100}, 100`}
+                  />
+                </svg>
+              </div>
+
+              <div className="text-white text-sm">
+                {countdownState.isCritical && "⏰ Time's up!"}
+                {countdownState.isWarning && "⚠️ Almost out of time"}
+                {!countdownState.isWarning &&
+                  !countdownState.isCritical &&
+                  "Recording..."}
               </div>
             </div>
           )}
@@ -362,11 +440,14 @@ export function MobileRecordingInterface({
         </div>
 
         {/* Instructions */}
-        <div className="mt-4 text-center">
+        <div className="mt-4 text-center space-y-1">
           {recordingState === "idle" && (
-            <p className="text-white/80 text-sm">
-              Tap the red button to start recording your voiceover
-            </p>
+            <>
+              <p className="text-white/80 text-sm">
+                Tap the red button to start recording your voiceover
+              </p>
+              <p className="text-white/60 text-xs">⏱️ Maximum 10 seconds</p>
+            </>
           )}
           {recordingState === "recording" && (
             <p className="text-white/80 text-sm">
