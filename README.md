@@ -2,7 +2,7 @@
 
 <div align="right">
 
-# SayWhat (prev AppCut)
+# saywaht (prev AppCut)
 
 ### A free, open-source video editor for web, desktop, and mobile.
 
@@ -79,7 +79,7 @@ Before you begin, ensure you have the following installed on your system:
 
     ```bash
     git clone <repo-url>
-    cd SayWhat
+    cd saywaht
     ```
 
 2.  **Install dependencies**
@@ -156,7 +156,7 @@ The application will be available at [http://localhost:3000](http://localhost:30
 
 ## 🌐 Three-Phase App Architecture
 
-SayWhat follows a **mobile-first, three-phase design**:
+saywaht follows a **mobile-first, three-phase design**:
 
 ### **Phase 1: Landing & Discovery** (`/`)
 

@@ -86,7 +86,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
           symbol: data.coinSymbol,
           uri: data.metadataUri as ValidMetadataURI,
           payoutRecipient: address,
-          platformReferrer: PLATFORM_ADDRESS, // SayWhat earns 15% of all trading fees!
+          platformReferrer: PLATFORM_ADDRESS, // saywaht earns 15% of all trading fees!
           chainId: base.id,
           currency: DeployCurrency.ZORA, // Use ZORA as the trading currency
         };

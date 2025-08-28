@@ -2,7 +2,7 @@
 
 ## Overview
 
-SayWhat offers multiple video export methods to ensure the best possible experience for all users and content types. The system automatically selects the optimal export method, but you can also manually choose your preferred method.
+saywaht offers multiple video export methods to ensure the best possible experience for all users and content types. The system automatically selects the optimal export method, but you can also manually choose your preferred method.
 
 ## Export Methods
 
@@ -21,7 +21,7 @@ Professional server-side video processing using FFmpeg:
 - **Requirements**: Internet connection to backend service
 - **File size limit**: 50MB per media file
 
-**When to use**: 
+**When to use**:
 - Videos longer than 60 seconds
 - Projects with multiple video/audio tracks
 - When maximum quality is required
@@ -144,7 +144,7 @@ Basic browser-based rendering:
 
 ### Estimated Time
 - **Simple projects**: 10-30 seconds
-- **Medium projects**: 30-120 seconds  
+- **Medium projects**: 30-120 seconds
 - **Complex projects**: 2-5 minutes
 - **Backend exports**: Generally 2-3x faster than browser methods
 
@@ -178,7 +178,7 @@ Basic browser-based rendering:
 
 ### File Sizes
 - **Low quality**: ~2-5MB per minute
-- **Medium quality**: ~5-10MB per minute  
+- **Medium quality**: ~5-10MB per minute
 - **High quality**: ~10-20MB per minute
 - **Backend exports**: Generally 20-30% smaller than browser exports
 

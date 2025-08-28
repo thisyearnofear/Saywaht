@@ -45,7 +45,7 @@ export function WalletGuard({
           <CardTitle>Connect Your Wallet</CardTitle>
           <CardDescription>
             Connect your wallet to start creating and editing videos with
-            SayWhat
+            saywaht
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

@@ -120,14 +120,14 @@ const throttledFn = throttle(frequentFunction, 100);
 ### Core Types
 
 ```tsx
-import type { 
-  Address, 
-  ButtonVariant, 
+import type {
+  Address,
+  ButtonVariant,
   ButtonSize,
   IconProps,
   ExportProgress,
   MediaFile,
-  Project 
+  Project
 } from "@/lib/types";
 
 // Usage
@@ -171,8 +171,8 @@ import { Icon, LoadingIcon, StatusIcon, IconButton } from "@/components/ui/icon"
 <StatusIcon status="warning" />
 
 // Interactive icons
-<IconButton 
-  name="delete" 
+<IconButton
+  name="delete"
   onClick={handleDelete}
   aria-label="Delete item"
 />
@@ -181,16 +181,16 @@ import { Icon, LoadingIcon, StatusIcon, IconButton } from "@/components/ui/icon"
 ## 🚀 Constants & Configuration
 
 ```tsx
-import { 
-  APP_CONFIG, 
-  API_ENDPOINTS, 
+import {
+  APP_CONFIG,
+  API_ENDPOINTS,
   STORAGE_KEYS,
   FEATURE_FLAGS,
-  BREAKPOINTS 
+  BREAKPOINTS
 } from "@/lib";
 
 // App configuration
-console.log(APP_CONFIG.name); // "SayWhat"
+console.log(APP_CONFIG.name); // "saywaht"
 
 // API endpoints
 fetch(API_ENDPOINTS.projects);

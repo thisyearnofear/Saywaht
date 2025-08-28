@@ -25,7 +25,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  socialProviders: process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? {  
+  socialProviders: process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -35,8 +35,8 @@ export const auth = betterAuth({
   trustedOrigins: [
     "http://localhost:3000",
     "https://localhost:3000",
-    ...(process.env.NODE_ENV === "production" ? ["https://saywhat.app"] : [])
+    ...(process.env.NODE_ENV === "production" ? ["https://saywaht.app"] : [])
   ],
 });
 
-export type Auth = typeof auth; 
+export type Auth = typeof auth;

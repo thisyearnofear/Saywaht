@@ -83,7 +83,7 @@ export function PWAInstallPrompt({ className }: PWAInstallPromptProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Smartphone className="h-5 w-5 text-primary" />
-            <CardTitle className="text-sm">Install SayWhat</CardTitle>
+            <CardTitle className="text-sm">Install saywaht</CardTitle>
           </div>
           <Button
             variant="ghost"
@@ -98,7 +98,7 @@ export function PWAInstallPrompt({ className }: PWAInstallPromptProps) {
 
       <CardContent className="pt-0">
         <CardDescription className="text-xs mb-3">
-          Install SayWhat for a better experience with offline access and faster
+          Install saywaht for a better experience with offline access and faster
           loading.
         </CardDescription>
 

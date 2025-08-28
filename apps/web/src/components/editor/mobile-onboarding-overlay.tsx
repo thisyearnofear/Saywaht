@@ -20,7 +20,7 @@ export function MobileOnboardingOverlay({
 
   const steps = [
     {
-      title: "Welcome to SayWhat! 🎬",
+      title: "Welcome to saywaht! 🎬",
       description:
         "Turn any video into your own commentary in just 3 simple steps",
       icon: "🎤",

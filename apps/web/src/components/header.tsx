@@ -37,12 +37,12 @@ export function Header() {
     >
       <Image
         src="/logo.png"
-        alt="SayWhat Logo"
+        alt="saywaht Logo"
         width={28}
         height={28}
         className="rounded-md"
       />
-      <span className="font-semibold tracking-tight text-lg">SayWhat</span>
+      <span className="font-semibold tracking-tight text-lg">saywaht</span>
     </Link>
   );
 

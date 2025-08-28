@@ -78,7 +78,7 @@ export function Hero() {
           className="inline-block"
         >
           <h1 className="text-5xl sm:text-7xl font-bold tracking-tighter bg-gradient-to-r from-foreground via-foreground to-foreground/80 bg-clip-text">
-            SayWhat
+            saywaht
           </h1>
           <h1 className="text-5xl sm:text-7xl font-bold tracking-tighter mt-2 bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
             Coin Your Commentary

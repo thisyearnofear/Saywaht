@@ -43,7 +43,7 @@ const connectors = connectorsForWallets(
     },
   ],
   {
-    appName: "SayWhat - Video Creator Coins",
+    appName: "saywaht - Video Creator Coins",
     projectId,
   }
 );

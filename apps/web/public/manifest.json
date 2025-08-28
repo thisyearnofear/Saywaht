@@ -1,6 +1,6 @@
 {
-  "name": "SayWhat Video Editor",
-  "short_name": "SayWhat",
+  "name": "saywaht Video Editor",
+  "short_name": "saywaht",
   "description": "A simple but powerful video editor that gets the job done. In your browser.",
   "start_url": "/",
   "display": "standalone",

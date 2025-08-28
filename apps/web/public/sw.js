@@ -1,6 +1,6 @@
 const CACHE_VERSION = "v1";
-const STATIC_CACHE = `saywhat-static-${CACHE_VERSION}`;
-const DYNAMIC_CACHE = `saywhat-dynamic-${CACHE_VERSION}`;
+const STATIC_CACHE = `saywaht-static-${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `saywaht-dynamic-${CACHE_VERSION}`;
 
 // Static files to cache
 const STATIC_FILES = ["/", "/editor", "/manifest.json", "/offline.html"];

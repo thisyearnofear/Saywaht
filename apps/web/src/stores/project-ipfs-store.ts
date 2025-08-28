@@ -12,7 +12,7 @@ export interface ProjectData {
   createdAt: string;
   updatedAt: string;
   walletAddress: string;
-  
+
   // Timeline data
   tracks: any[]; // From timeline store
   mediaItems: any[]; // From media store
@@ -21,7 +21,7 @@ export interface ProjectData {
     fps: number;
     resolution: { width: number; height: number };
   };
-  
+
   // IPFS storage info
   ipfsUri?: string; // Grove URI for the project
   ipfsGatewayUrl?: string; // Direct access URL
@@ -32,15 +32,15 @@ export interface ProjectData {
 interface ProjectIPFSStore {
   // Current project
   currentProject: ProjectData | null;
-  
+
   // Project cache (local storage)
   projectCache: Record<string, ProjectData>;
-  
+
   // Loading states
   isLoading: boolean;
   isSaving: boolean;
   isLoadingFromIPFS: boolean;
-  
+
   // Actions
   createProject: (name: string, walletAddress: string) => ProjectData;
   updateProject: (updates: Partial<ProjectData>) => void;
@@ -48,7 +48,7 @@ interface ProjectIPFSStore {
   loadFromIPFS: (ipfsUri: string) => Promise<void>;
   loadProject: (projectId: string) => void;
   deleteProject: (projectId: string) => void;
-  
+
   // Auto-save functionality
   markDirty: () => void;
   getProjectList: (walletAddress: string) => ProjectData[];
@@ -127,7 +127,7 @@ export const useProjectIPFSStore = create<ProjectIPFSStore>()(
             ...currentProject,
             savedAt: new Date().toISOString(),
             version: "1.0",
-            platform: "SayWhat",
+            platform: "saywaht",
           };
 
           // Upload to Grove/IPFS
@@ -167,7 +167,7 @@ export const useProjectIPFSStore = create<ProjectIPFSStore>()(
 
           // Convert IPFS URI to gateway URL for fetching
           const gatewayUrl = ipfsUri.replace('ipfs://', 'https://api.grove.storage/');
-          
+
           const response = await fetch(gatewayUrl);
           if (!response.ok) {
             throw new Error(`Failed to fetch project: ${response.statusText}`);
@@ -249,7 +249,7 @@ export const useProjectIPFSStore = create<ProjectIPFSStore>()(
       },
     }),
     {
-      name: "saywhat-project-ipfs-store",
+      name: "saywaht-project-ipfs-store",
       partialize: (state) => ({
         projectCache: state.projectCache,
       }),
@@ -260,7 +260,7 @@ export const useProjectIPFSStore = create<ProjectIPFSStore>()(
 // Auto-save hook
 export function useAutoSave() {
   const { currentProject, saveToIPFS, isSaving } = useProjectIPFSStore();
-  
+
   // Auto-save every 30 seconds if project is dirty
   useEffect(() => {
     if (!currentProject?.isDirty || isSaving) return;

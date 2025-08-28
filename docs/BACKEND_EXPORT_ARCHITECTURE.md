@@ -2,7 +2,7 @@
 
 ## Overview
 
-The SayWhat video editor now supports both frontend and backend video export methods. The backend export service provides superior reliability, performance, and quality compared to browser-based export methods.
+The saywaht video editor now supports both frontend and backend video export methods. The backend export service provides superior reliability, performance, and quality compared to browser-based export methods.
 
 ## Architecture Components
 

@@ -65,8 +65,8 @@ export class GroveStorageService {
 
       // Create a dynamic index that lists all files
       const index = (resources: any[]) => ({
-        name: "SayWhat Media Folder",
-        description: "Media files uploaded from SayWhat video editor",
+        name: "saywaht Media Folder",
+        description: "Media files uploaded from saywaht video editor",
         files: resources.map((resource) => ({
           uri: resource.uri,
           gatewayUrl: resource.gatewayUrl,
@@ -74,7 +74,7 @@ export class GroveStorageService {
           filename: resource.filename || "unknown",
         })),
         uploadedAt: new Date().toISOString(),
-        platform: "SayWhat",
+        platform: "saywaht",
       });
 
       const response = await this.client.uploadFolder(fileArray, {
@@ -120,12 +120,12 @@ export class GroveStorageService {
       // Convert lens:// URI to standard ipfs:// format for better compatibility
       let ipfsUri = '';
       let publicGatewayUrl = '';
-      
+
       if (response.uri && response.uri.startsWith('lens://')) {
         const ipfsHash = response.uri.replace('lens://', '');
         ipfsUri = `ipfs://${ipfsHash}`;
         publicGatewayUrl = `https://ipfs.io/ipfs/${ipfsHash}`;
-        
+
         console.log(`✅ Metadata uploaded successfully!`);
         console.log(`  Lens URI: ${response.uri}`);
         console.log(`  IPFS URI: ${ipfsUri}`);

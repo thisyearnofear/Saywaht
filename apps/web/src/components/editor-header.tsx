@@ -138,12 +138,12 @@ export function EditorHeader() {
           <span className="text-sm">←</span>
           <Image
             src="/logo.png"
-            alt="SayWhat"
+            alt="saywaht"
             width={24}
             height={24}
             className="rounded-sm"
           />
-          <span className="font-semibold text-sm">SayWhat</span>
+          <span className="font-semibold text-sm">saywaht</span>
         </Link>
 
         <div className="w-px h-6 bg-border" />

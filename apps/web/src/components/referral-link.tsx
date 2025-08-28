@@ -33,8 +33,8 @@ export function ReferralLink() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Join SayWhat",
-          text: "Create and trade video coins on SayWhat!",
+          title: "Join saywaht",
+          text: "Create and trade video coins on saywaht!",
           url: referralLink,
         });
       } catch (error) {

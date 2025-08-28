@@ -57,14 +57,14 @@ export class RendererFactory {
     // Enhance existing renderers with Grove capabilities
     const webglRenderer = new WebGLRenderer();
     const canvas2dRenderer = new Canvas2DRenderer();
-    
+
     // Add required properties to existing renderers
     this.enhanceRenderer(webglRenderer, 'webgl', this.config.preferWebGL ? 100 : 50);
     this.enhanceRenderer(canvas2dRenderer, 'canvas2d', 80);
-    
+
     this.renderers.set('webgl', webglRenderer);
     this.renderers.set('canvas2d', canvas2dRenderer);
-    
+
     // Register custom renderers
     if (this.config.customRenderers) {
       this.config.customRenderers.forEach((renderer, index) => {
@@ -82,7 +82,7 @@ export class RendererFactory {
       }
       return true;
     };
-    
+
     // Add Grove integration methods
     if (this.config.enableGrove) {
       (renderer as any).supportsGrove = () => true;
@@ -111,7 +111,7 @@ export class RendererFactory {
     capabilities: DeviceCapabilities
   ): Promise<FrameRenderer> {
     const factory = RendererFactory.getInstance();
-    
+
     // Use factory selection logic
     const selectedRenderer = factory.selectRenderer({
       tracks: [],
@@ -190,7 +190,7 @@ export class RendererFactory {
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       navigator.userAgent
     );
-    
+
     let supportsWebGL = false;
     try {
       const canvas = document.createElement('canvas');
@@ -203,7 +203,7 @@ export class RendererFactory {
     return {
       isMobile,
       supportsWebGL,
-      supportsGrove: true, // Always true for SayWhat with Grove integration
+      supportsGrove: true, // Always true for saywaht with Grove integration
       memoryLimit: isMobile ? 512 : 2048 // MB estimate
     };
   }

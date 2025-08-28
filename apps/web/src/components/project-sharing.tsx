@@ -221,7 +221,7 @@ export function ProjectSharing() {
             <div className="space-y-2">
               <Label className="text-xs">Share URL or IPFS URI:</Label>
               <Input
-                placeholder="https://saywhat.app/project/share?ipfs=... or ipfs://..."
+                placeholder="https://saywaht.app/project/share?ipfs=... or ipfs://..."
                 value={loadUrl}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   setLoadUrl(e.target.value)

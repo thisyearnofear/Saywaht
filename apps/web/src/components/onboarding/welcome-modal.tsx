@@ -58,14 +58,14 @@ export function WelcomeModal() {
 
   useEffect(() => {
     // Check if user has seen onboarding before
-    const hasSeenOnboarding = localStorage.getItem("saywhat-onboarding-seen");
+    const hasSeenOnboarding = localStorage.getItem("saywaht-onboarding-seen");
     if (!hasSeenOnboarding) {
       setIsOpen(true);
     }
   }, []);
 
   const handleClose = () => {
-    localStorage.setItem("saywhat-onboarding-seen", "true");
+    localStorage.setItem("saywaht-onboarding-seen", "true");
     setIsOpen(false);
   };
 
@@ -88,7 +88,7 @@ export function WelcomeModal() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              <DialogTitle>SayWhat?!</DialogTitle>
+              <DialogTitle>saywaht?!</DialogTitle>
             </div>
             <Button
               variant="text"

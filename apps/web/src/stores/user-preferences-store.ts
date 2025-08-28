@@ -7,17 +7,17 @@ export interface UserPreferences {
   autoSave: boolean;
   snapToGrid: boolean;
   showWaveforms: boolean;
-  
+
   // Timeline preferences
   timelineZoom: number;
   trackHeight: number;
   showTimecodes: boolean;
-  
+
   // Export preferences
   defaultExportFormat: "mp4" | "webm";
   defaultQuality: "720p" | "1080p" | "4k";
   defaultVideoFormat: "portrait" | "landscape" | "square";
-  
+
   // Wallet-specific data
   walletAddress?: string;
   recentProjects: string[]; // Project IDs
@@ -53,17 +53,17 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
   persist(
     (set, get) => ({
       preferences: defaultPreferences,
-      
+
       updatePreferences: (updates) =>
         set((state) => ({
           preferences: { ...state.preferences, ...updates },
         })),
-      
+
       setWalletAddress: (address) =>
         set((state) => ({
           preferences: { ...state.preferences, walletAddress: address },
         })),
-      
+
       addRecentProject: (projectId) =>
         set((state) => {
           const recent = state.preferences.recentProjects.filter(id => id !== projectId);
@@ -74,7 +74,7 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
             },
           };
         }),
-      
+
       addFavoriteAsset: (assetId) =>
         set((state) => {
           if (state.preferences.favoriteAssets.includes(assetId)) return state;
@@ -85,7 +85,7 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
             },
           };
         }),
-      
+
       removeFavoriteAsset: (assetId) =>
         set((state) => ({
           preferences: {
@@ -93,12 +93,12 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
             favoriteAssets: state.preferences.favoriteAssets.filter(id => id !== assetId),
           },
         })),
-      
+
       resetPreferences: () =>
         set({ preferences: defaultPreferences }),
     }),
     {
-      name: "saywhat-user-preferences",
+      name: "saywaht-user-preferences",
       // Storage key includes wallet address for user-specific preferences
       partialize: (state) => ({ preferences: state.preferences }),
     }
@@ -108,12 +108,12 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
 // Hook to get wallet-specific storage key
 export function useWalletSpecificStorage() {
   const { preferences, setWalletAddress } = useUserPreferencesStore();
-  
+
   const updateStorageForWallet = (walletAddress: string) => {
     setWalletAddress(walletAddress);
     // Could implement wallet-specific storage partitioning here if needed
   };
-  
+
   return {
     walletAddress: preferences.walletAddress,
     updateStorageForWallet,

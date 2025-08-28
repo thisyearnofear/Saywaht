@@ -339,7 +339,7 @@ export function createDevDashboard(): void {
       const bundleReport = DevBundleAnalyzer.generateBundleReport();
       const depReport = DevDependencyTracker.generateDependencyReport();
 
-      console.group("📊 SayWhat Development Report");
+      console.group("📊 saywaht Development Report");
       console.log("Performance:", perfReport);
       console.log("Bundle Analysis:", bundleReport);
       console.log("Dependencies:", depReport);
@@ -356,7 +356,7 @@ export function createDevDashboard(): void {
   };
 
   console.log(
-    "🛠️ SayWhat Dev Tools loaded. Use __SAYWAHT_DEV__.generateReport() for insights."
+    "🛠️ saywaht Dev Tools loaded. Use __SAYWAHT_DEV__.generateReport() for insights."
   );
 }
 

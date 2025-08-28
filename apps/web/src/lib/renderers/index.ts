@@ -17,27 +17,27 @@ export async function createOptimalRenderer(
   context: 'mobile' | 'desktop' | 'auto' = 'auto'
 ): Promise<RendererPipeline> {
   const capabilities = RendererFactory.detectDeviceCapabilities();
-  
+
   // Override mobile detection if explicitly specified
   if (context !== 'auto') {
     capabilities.isMobile = context === 'mobile';
   }
-  
+
   console.log('🎯 Creating optimal renderer with capabilities:', capabilities);
-  
+
   // Create base renderer using factory
   const baseRenderer = await RendererFactory.createOptimalRenderer(options, capabilities);
-  
+
   // Build pipeline with appropriate enhancements
   const pipeline = new RendererPipeline(baseRenderer)
-    .withGroveSupport() // Always add Grove support for SayWhat
+    .withGroveSupport() // Always add Grove support for saywaht
     .withPerformanceMonitoring(); // Always monitor performance
-  
+
   // Add mobile optimization if needed
   if (capabilities.isMobile) {
     pipeline.withMobileOptimization();
   }
-  
+
   console.log('✅ Optimal renderer pipeline created successfully');
   return pipeline;
 }

@@ -1,4 +1,4 @@
-# OpenCut (SayWhat) Project
+# OpenCut (saywaht) Project
 
 ## Overview
 

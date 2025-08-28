@@ -85,12 +85,12 @@ export async function processThumbnailForMetadata(thumbnailSource: string | null
       return thumbnailSource;
     }
   }
-  
+
   // For any other format, try to make it absolute
   if (thumbnailSource.startsWith('/')) {
-    return `https://saywhat.app${thumbnailSource}`;
+    return `https://saywaht.app${thumbnailSource}`;
   }
-  
+
   // Default: return as-is
   return thumbnailSource;
 }

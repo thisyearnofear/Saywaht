@@ -84,7 +84,7 @@ export function WelcomeScreen() {
             <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">
               {" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                SayWhat?!
+                saywaht?!
               </span>
             </h1>
             <p className="text-xl text-white/80 max-w-2xl mx-auto">

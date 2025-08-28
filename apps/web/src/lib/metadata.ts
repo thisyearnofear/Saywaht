@@ -58,7 +58,7 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
 
   // Calculate total project duration
   const totalDuration = Math.max(
-    ...tracks.flatMap(track => 
+    ...tracks.flatMap(track =>
       track.clips.map(clip => clip.startTime + clip.duration)
     ),
     0
@@ -98,7 +98,7 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
       trait_type: "FilCDN Items",
       value: filcdnItems.length.toString()
     });
-    
+
     attributes.push({
       trait_type: "Decentralized Storage",
       value: "Filecoin PDP"
@@ -138,7 +138,7 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
     name: coinName,
     description: `A memetic video commentary created with OpenCut. ${filcdnItems.length > 0 ? 'Powered by FilCDN for lightning-fast delivery.' : ''} Deploy, trade, and collect unique video coins.`,
     image: imageUrl, // Always set the image
-    external_url: `https://saywhat.app/project/${projectId}`,
+    external_url: `https://saywaht.app/project/${projectId}`,
     attributes
   };
 
@@ -211,21 +211,21 @@ export function getFilCDNHighlights(mediaItems: MediaItem[]): string[] {
   if (!mediaItems || mediaItems.length === 0) {
     return [];
   }
-  
+
   const filcdnItems = mediaItems.filter(item => item.isFilCDN);
   const highlights: string[] = [];
-  
+
   if (filcdnItems.length > 0) {
     highlights.push(`🚀 ${filcdnItems.length} files stored on FilCDN`);
     highlights.push('⚡ Lightning-fast retrieval via CDN');
     highlights.push('🔗 Filecoin PDP storage deals');
-    
+
     const totalSize = filcdnItems.reduce((sum, item) => sum + (item.size || 0), 0);
     if (totalSize > 0) {
       highlights.push(`💾 ${(totalSize / 1024 / 1024).toFixed(1)}MB decentralized storage`);
     }
   }
-  
+
   return highlights;
 }
 
@@ -250,7 +250,7 @@ export function generateCoinMetadataFromVideo(params: SimpleCoinMetadataParams):
     creatorAddress,
     projectId,
     thumbnailUrl: providedThumbnailUrl,
-    description = `A video coin created with SayWhat`,
+    description = `A video coin created with saywaht`,
   } = params;
 
   // We need to properly handle IPFS URIs
@@ -260,24 +260,24 @@ export function generateCoinMetadataFromVideo(params: SimpleCoinMetadataParams):
   } else if (videoUri.startsWith('lens://')) {
     ipfsHash = videoUri.substring(7);
   }
-  
+
   // Create a public gateway URL for the video
   const publicGatewayUrl = ipfsHash ? `https://ipfs.io/ipfs/${ipfsHash}` : videoUri;
-  
+
   // Use provided thumbnail if available, otherwise use a default
   // Ensure we always have a valid HTTPS URL for Zora validation
   let thumbnailUrl = providedThumbnailUrl;
-  
+
   if (!thumbnailUrl) {
-    // Use SayWhat's default image as fallback
-    thumbnailUrl = "https://saywhat.app/opengraph-image.jpg";
+    // Use saywaht's default image as fallback
+    thumbnailUrl = "https://saywaht.app/opengraph-image.jpg";
   }
-  
+
   // Ensure the URL is absolute
   if (thumbnailUrl.startsWith('/')) {
-    thumbnailUrl = `https://saywhat.app${thumbnailUrl}`;
+    thumbnailUrl = `https://saywaht.app${thumbnailUrl}`;
   }
-  
+
   // Build the metadata object following Zora's exact format
   const metadata: any = {
     name,
@@ -296,17 +296,17 @@ export function generateCoinMetadataFromVideo(params: SimpleCoinMetadataParams):
       category: "video",
       creator: creatorAddress,
       symbol: symbol,
-      platform: "SayWhat"
+      platform: "saywaht"
     }
   };
 
   // Add external URL if project ID is available
   if (projectId) {
-    metadata.external_url = `https://saywhat.app/project/${projectId}`;
+    metadata.external_url = `https://saywaht.app/project/${projectId}`;
   }
 
   console.log("📄 Generated metadata for Zora validation:", metadata);
-  
+
   // Validate metadata before returning
   try {
     validateMetadataJSON(metadata);
@@ -315,6 +315,6 @@ export function generateCoinMetadataFromVideo(params: SimpleCoinMetadataParams):
     console.error("❌ Metadata validation failed:", error);
     throw new Error(`Invalid metadata format: ${error}`);
   }
-  
+
   return metadata;
 }

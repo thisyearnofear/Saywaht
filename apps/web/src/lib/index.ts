@@ -25,15 +25,15 @@ export * from "./adaptive-loading";
 
 // App configuration
 export const APP_CONFIG = {
-  name: "SayWhat",
+  name: "saywaht",
   description: "AI-powered video editor",
   version: "0.1.0",
-  author: "SayWhat Team",
+  author: "saywaht Team",
 } as const;
 
 // Platform configuration (consolidated from constants.ts)
 export const PLATFORM_ADDRESS = "0x55A5705453Ee82c742274154136Fce8149597058" as const;
-export const PLATFORM_NAME = "SayWhat";
+export const PLATFORM_NAME = "saywaht";
 export const PLATFORM_URLS = {
   production: "https://saywaht.com",
   development: "http://localhost:3000",
@@ -51,10 +51,10 @@ export const API_ENDPOINTS = {
 
 // Local storage keys
 export const STORAGE_KEYS = {
-  theme: "saywhat-theme",
-  user: "saywhat-user",
-  projects: "saywhat-projects",
-  settings: "saywhat-settings",
+  theme: "saywaht-theme",
+  user: "saywaht-user",
+  projects: "saywaht-projects",
+  settings: "saywaht-settings",
 } as const;
 
 // ============================================================================
