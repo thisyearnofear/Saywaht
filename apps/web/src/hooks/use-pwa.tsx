@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "@/lib/hooks-provider";
+import * as React from "react";
 const { useState, useEffect } = React;
 
 interface BeforeInstallPromptEvent extends Event {

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "@/lib/hooks-provider";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
@@ -17,7 +17,7 @@ import { addHapticFeedback } from "@/lib/mobile-utils";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { MobileTimelineTrack } from "./mobile-timeline-track";
-import { useState } from "@/lib/hooks-provider";
+import { useState } from "react";
 
 interface MobileTimelineProps {
   expanded?: boolean;

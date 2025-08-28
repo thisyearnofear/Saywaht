@@ -19,6 +19,8 @@
 # typescript
 /apps/web/next-env.d.ts
 /apps/web/yarn.lock
+/apps/web/tsconfig.tsbuildinfo
+*.tsbuildinfo
 
 # asdf version management
 .tool-versions
@@ -29,3 +31,21 @@ node_modules
 
 *.env
 dump.rdb
+
+# Lock files (use npm for consistency)
+package-lock.json
+yarn.lock
+bun.lock
+
+# Build artifacts and caches
+*.tsbuildinfo
+.next
+out
+dist
+build
+
+# Backup and temporary files
+*.backup.js
+*.complex.js
+*.old
+*.tmp

@@ -1,4 +1,4 @@
-import { useState } from '@/lib/hooks-provider';
+import { useState } from 'react';
 import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { tradeCoin } from "@zoralabs/coins-sdk";
 import { parseEther } from "viem";

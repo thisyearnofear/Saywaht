@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
-import { Wallet, Zap, Shield, Globe } from "@/lib/icons-provider";
+import { Wallet, Zap, Shield, Globe } from "@/lib/icons";
 
 interface WalletGuardProps {
   children: React.ReactNode;

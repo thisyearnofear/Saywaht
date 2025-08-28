@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-// import { Suspense } from '@/lib/hooks-provider';
+// import { Suspense } from 'react';
 import "./editor.css";
 import {
   ResizablePanelGroup,
@@ -16,7 +16,7 @@ import { EditorProvider } from "@/components/editor-provider";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useMobileContext } from "@/contexts/mobile-context";
-import { Loader2 } from "@/lib/icons-provider";
+import { Loader2 } from "@/lib/icons";
 import { WalletGuard } from "@/components/wallet-guard";
 
 // Lazy load heavy components

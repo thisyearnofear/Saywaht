@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "@/lib/hooks-provider";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,7 +17,7 @@ import {
   Monitor,
   Wifi,
   WifiOff,
-} from "@/lib/icons-provider";
+} from "@/lib/icons";
 import { usePWA } from "@/hooks/use-pwa";
 import { cn } from "@/lib/utils";
 

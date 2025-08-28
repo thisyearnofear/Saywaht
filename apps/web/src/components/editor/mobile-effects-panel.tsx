@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "@/lib/hooks-provider";
+import { useState } from "react";
 import {
   Card,
   CardContent,

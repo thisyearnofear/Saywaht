@@ -1,13 +1,13 @@
 "use client";
 
-import React from "@/lib/hooks-provider";
+import React from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useTemplateStore } from "@/stores/template-store";
 import { Button } from "@/components/ui/button";
 import { VideoPreview } from "./video-preview";
 import { VideoThumbnailSimple } from "./video-thumbnail-simple";
-import { useState, useEffect } from "@/lib/hooks-provider";
+import { useState, useEffect } from "react";
 
 interface TemplateDetailsProps {
   templateId: string;

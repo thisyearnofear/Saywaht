@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "@/lib/hooks-provider";
+import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "../ui/button";
 import {
@@ -12,7 +12,7 @@ import {
   Zap,
   X,
   ChevronUp,
-} from "@/lib/icons-provider";
+} from "@/lib/icons";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 const quickActions = [

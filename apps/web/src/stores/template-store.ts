@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Template, TemplateCategory } from "@/types/template";
+import { Template, TemplateCategory } from "@/lib/types";
 import { fetchTemplateCategories, fetchTemplateById, applyTemplate } from "@/lib/template-service";
 import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";

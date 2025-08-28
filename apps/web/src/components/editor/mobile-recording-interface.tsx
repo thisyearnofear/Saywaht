@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "@/lib/hooks-provider";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -11,7 +11,7 @@ import {
   RotateCcw,
   Check,
   X,
-} from "@/lib/icons-provider";
+} from "@/lib/icons";
 import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
@@ -139,6 +139,13 @@ export function MobileRecordingInterface({
     }
   }, [currentTime, duration, getRecordingHint]);
 
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && recordingState === "recording") {
+      mediaRecorderRef.current.stop();
+      pause();
+    }
+  }, [recordingState, pause]);
+
   // Recording timer with countdown
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -164,7 +171,7 @@ export function MobileRecordingInterface({
       }, 100);
     }
     return () => clearInterval(interval);
-  }, [recordingState]);
+  }, [recordingState, stopRecording]);
 
   const startRecording = async () => {
     try {
@@ -202,13 +209,6 @@ export function MobileRecordingInterface({
       }
     } catch (error) {
       console.error("Failed to start recording:", error);
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && recordingState === "recording") {
-      mediaRecorderRef.current.stop();
-      pause();
     }
   };
 

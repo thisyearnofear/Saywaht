@@ -11,7 +11,7 @@ import {
   Users,
   Sparkles,
   ArrowRight,
-} from "@/lib/icons-provider";
+} from "@/lib/icons";
 import { Button } from "../ui/button";
 import Link from "next/link";
 

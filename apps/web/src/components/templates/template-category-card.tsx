@@ -1,9 +1,9 @@
 "use client";
 
-import React from "@/lib/hooks-provider";
+import React from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Template } from "@/types/template";
+import { Template } from "@/lib/types";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

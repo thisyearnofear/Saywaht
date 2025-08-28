@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "@/lib/hooks-provider";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,7 @@ import {
   TrendingDown,
   Users,
   Volume2,
-} from "@/lib/icons-provider";
+} from "@/lib/icons";
 import { type VideoCoin } from "@/lib/zora-coins";
 import { formatEther } from "viem";
 

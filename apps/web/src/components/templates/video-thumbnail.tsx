@@ -1,8 +1,8 @@
 "use client";
 
-import React from '@/lib/hooks-provider';
+import React from 'react';
 import Image from "next/image";
-import { useEffect, useState, useRef } from '@/lib/hooks-provider';
+import { useEffect, useState, useRef } from 'react';
 
 interface VideoThumbnailProps {
   videoSrc: string;

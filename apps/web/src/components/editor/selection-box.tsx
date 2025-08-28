@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "@/lib/hooks-provider";
+import { useEffect, useRef } from "react";
 
 interface SelectionBoxProps {
   startPos: { x: number; y: number } | null;

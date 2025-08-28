@@ -1,12 +1,13 @@
 "use client";
 
-import {
+import React, {
   useState,
   useEffect,
   useRef,
   useCallback,
   useMemo,
-} from "@/lib/hooks-provider";
+  TouchEvent,
+} from "react";
 
 export interface TouchGestureState {
   isActive: boolean;
@@ -35,16 +36,9 @@ export interface TouchGestureCallbacks {
   onPan?: (state: TouchGestureState) => void;
 }
 
-export interface TouchGestureOptions {
-  threshold?: number;
-  velocityThreshold?: number;
-  longPressDelay?: number;
-  preventDefault?: boolean;
-  enablePinch?: boolean;
-  enableSwipe?: boolean;
-  enablePan?: boolean;
-  enableLongPress?: boolean;
-}
+import type { TouchGestureOptions } from "@/lib/types";
+
+type ResolvedTouchGestureOptions = Required<TouchGestureOptions>;
 
 const DEFAULT_OPTIONS: TouchGestureOptions = {
   threshold: 10,
@@ -61,7 +55,7 @@ export function useTouchGestures(
   callbacks: TouchGestureCallbacks,
   options: TouchGestureOptions = {}
 ) {
-  const opts = useMemo(() => ({ ...DEFAULT_OPTIONS, ...options }), [options]);
+  const opts = useMemo(() => ({ ...DEFAULT_OPTIONS, ...options }) as ResolvedTouchGestureOptions, [options]);
   const [gestureState, setGestureState] = useState<TouchGestureState>({
     isActive: false,
     startX: 0,
@@ -90,7 +84,7 @@ export function useTouchGestures(
     }
   }, []);
 
-  const getDistance = useCallback((touches: TouchList) => {
+  const getDistance = useCallback((touches: React.TouchList) => {
     if (touches.length < 2) return 0;
     const touch1 = touches[0];
     const touch2 = touches[1];
@@ -100,7 +94,7 @@ export function useTouchGestures(
     );
   }, []);
 
-  const getCenter = useCallback((touches: TouchList) => {
+  const getCenter = useCallback((touches: React.TouchList) => {
     if (touches.length === 1) {
       return { x: touches[0].clientX, y: touches[0].clientY };
     }
@@ -133,7 +127,7 @@ export function useTouchGestures(
   );
 
   const handleTouchStart = useCallback(
-    (event: TouchEvent) => {
+    (event: TouchEvent<HTMLElement>) => {
       if (opts.preventDefault) {
         event.preventDefault();
       }
@@ -184,7 +178,7 @@ export function useTouchGestures(
   );
 
   const handleTouchMove = useCallback(
-    (event: TouchEvent) => {
+    (event: TouchEvent<HTMLElement>) => {
       if (opts.preventDefault) {
         event.preventDefault();
       }
@@ -247,7 +241,7 @@ export function useTouchGestures(
   );
 
   const handleTouchEnd = useCallback(
-    (event: TouchEvent) => {
+    (event: TouchEvent<HTMLElement>) => {
       if (opts.preventDefault) {
         event.preventDefault();
       }

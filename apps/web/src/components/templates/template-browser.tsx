@@ -1,10 +1,10 @@
 "use client";
 
-import React from "@/lib/hooks-provider";
+import React from "react";
 import { useTemplateStore } from "@/stores/template-store";
 import { TemplateCategoryCard } from "./template-category-card";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "@/lib/hooks-provider";
+import { useEffect } from "react";
 
 export function TemplateBrowser() {
   const { categories, isLoading, error, fetchCategories } = useTemplateStore();

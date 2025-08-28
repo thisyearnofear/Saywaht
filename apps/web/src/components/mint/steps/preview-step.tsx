@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "@/lib/hooks-provider";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, CheckCircle } from "@/lib/icons-provider";
+import { Loader2, AlertCircle, CheckCircle } from "@/lib/icons";
 import Image from "next/image";
 import { MintVideoPreview } from "../video-preview";
 import { useProjectStore } from "@/stores/project-store";
@@ -153,7 +153,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
             allowFallback: true,
             onProgress: (progress) => {
               setExportProgress({
-                phase: "uploading",
+                phase: "finalizing",
                 percentage: progress,
                 message: `Uploading to ${storageProvider}... ${Math.round(progress)}%`,
               });
@@ -351,13 +351,6 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           <span>{Math.round(exportProgress.percentage)}%</span>
         </div>
         <Progress value={exportProgress.percentage} className="h-1" />
-        {exportProgress.estimatedTimeRemaining !== undefined && (
-          <div className="text-xs text-muted-foreground text-right">
-            {exportProgress.estimatedTimeRemaining > 60
-              ? `${Math.round(exportProgress.estimatedTimeRemaining / 60)} min remaining`
-              : `${Math.round(exportProgress.estimatedTimeRemaining)} sec remaining`}
-          </div>
-        )}
       </div>
     );
   }

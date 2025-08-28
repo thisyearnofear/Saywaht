@@ -1,4 +1,4 @@
-import { useState, useEffect } from "@/lib/hooks-provider";
+import { useState, useEffect } from "react";
 
 type Orientation = "portrait" | "landscape";
 

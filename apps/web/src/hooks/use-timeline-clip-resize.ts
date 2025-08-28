@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "@/lib/hooks-provider";
+import { useState, useEffect, useCallback } from "react";
 import { TimelineClip, TimelineTrack } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";

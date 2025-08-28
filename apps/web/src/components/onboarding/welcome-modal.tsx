@@ -1,7 +1,7 @@
 "use client";
 
-import React from "@/lib/hooks-provider";
-import { useState, useEffect } from "@/lib/hooks-provider";
+import React from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "../ui/button";
 import {
@@ -19,7 +19,7 @@ import {
   ArrowRight,
   X,
   Sparkles,
-} from "@/lib/icons-provider";
+} from "@/lib/icons";
 
 const onboardingSteps = [
   {
@@ -38,9 +38,9 @@ const onboardingSteps = [
   },
   {
     icon: Video,
-    title: "Preview in Real-Time",
+    title: "Record with Time Limit",
     description:
-      "See your changes instantly with our real-time preview. No waiting, no rendering delays.",
+      "Add your voice commentary with our 10-second recording limit - perfect for concise, impactful messages that fit Zora's format.",
     color: "text-purple-500",
   },
   {

@@ -3,7 +3,7 @@
 // using the @divvi/referral-sdk package
 
 import { Address } from "viem";
-import { PLATFORM_ADDRESS, PLATFORM_URL } from "./constants";
+import { PLATFORM_ADDRESS, PLATFORM_URL } from "./index";
 
 // Divvi configuration - Your Divvi Identifier
 export const DIVVI_CONSUMER_ADDRESS = process.env.NEXT_PUBLIC_DIVVI_CONSUMER_ADDRESS as Address || PLATFORM_ADDRESS;

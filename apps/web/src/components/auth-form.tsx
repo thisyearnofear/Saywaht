@@ -10,12 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import React from '@/lib/hooks-provider';
+import React from 'react';
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2 } from "@/lib/icons-provider";
+import { Loader2 } from "@/lib/icons";
 import { GoogleIcon } from "@/components/icons";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,7 +28,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useState } from '@/lib/hooks-provider';
+import { useState } from 'react';
 
 // Zod schemas
 const loginSchema = z.object({

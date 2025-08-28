@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 // import { LuExternalLink as ExternalLinkIcon } from "react-icons/lu";;;
 import Link from "next/link";
-import { GithubIcon } from "@/components/icons";
+import { Github } from "@/lib/icons";
 
 export const metadata: Metadata = {
   title: "Contributors - OpenCut",
@@ -78,7 +78,7 @@ export default async function ContributorsPage() {
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-20">
               <div className="inline-flex items-center gap-2 bg-muted/50 text-muted-foreground px-3 py-1 rounded-full text-sm mb-6">
-                <GithubIcon className="h-3 w-3" />
+                <Github className="h-3 w-3" />
                 Open Source
               </div>
               <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
@@ -205,7 +205,7 @@ export default async function ContributorsPage() {
             {contributors.length === 0 && (
               <div className="text-center py-20">
                 <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-muted/50 flex items-center justify-center">
-                  <GithubIcon className="h-8 w-8 text-muted-foreground" />
+                  <Github className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <h3 className="text-xl font-medium mb-3">
                   No contributors found
@@ -220,7 +220,7 @@ export default async function ContributorsPage() {
                   rel="noopener noreferrer"
                 >
                   <Button variant="outline" className="gap-2">
-                    <GithubIcon className="h-4 w-4" />
+                    <Github className="h-4 w-4" />
                     View on GitHub
                   </Button>
                 </Link>
@@ -243,7 +243,7 @@ export default async function ContributorsPage() {
                     rel="noopener noreferrer"
                   >
                     <Button size="lg" className="gap-2 group">
-                      <GithubIcon className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                      <Github className="h-4 w-4 group-hover:scale-110 transition-transform" />
                       Start Contributing
                     </Button>
                   </Link>

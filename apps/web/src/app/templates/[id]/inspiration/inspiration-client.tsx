@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "@/lib/hooks-provider";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTemplateStore } from "@/stores/template-store";
 import { Button } from "@/components/ui/button";
-import { InspirationExample } from "@/types/template";
+import { InspirationExample } from "@/lib/types";
 
 interface InspirationPageClientProps {
   id: string;

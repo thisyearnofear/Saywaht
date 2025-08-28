@@ -12,7 +12,7 @@ import {
   UploadResult,
 } from "@/lib/filcdn";
 import { useDropzone } from "react-dropzone";
-import { useState, useCallback } from "@/lib/hooks-provider";
+import { useState, useCallback } from "react";
 
 interface FileUploadProps {
   onUploadComplete?: (result: UploadResult) => void;

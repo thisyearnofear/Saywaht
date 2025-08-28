@@ -1,6 +1,6 @@
 import { snapTimeToFrame } from "@/constants/timeline-constants";
 import { usePlaybackStore } from "@/stores/playback-store";
-import { useState, useEffect, useCallback, useRef } from "@/lib/hooks-provider";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 interface UseTimelinePlayheadProps {
   currentTime: number;

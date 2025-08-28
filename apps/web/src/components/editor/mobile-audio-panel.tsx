@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, ChangeEvent } from "@/lib/hooks-provider";
+import { useState, useRef, ChangeEvent } from "react";
 import {
   Card,
   CardContent,
@@ -19,7 +19,7 @@ import {
   Play,
   Pause,
   Download,
-} from "@/lib/icons-provider";
+} from "@/lib/icons";
 import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMobileContext } from "@/contexts/mobile-context";
@@ -137,9 +137,12 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
         </div>
 
         {/* Helpful hint for recording */}
-        <div className="px-4 pb-2">
+        <div className="px-4 pb-2 space-y-2">
           <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded text-center">
             💡 Tap the red button above to start recording your voiceover!
+          </div>
+          <div className="text-xs text-muted-foreground bg-blue-500/10 p-2 rounded text-center border border-blue-500/20">
+            ⏱️ You have 10 seconds to record your commentary
           </div>
         </div>
       </div>

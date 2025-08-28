@@ -1,7 +1,7 @@
-import { TProject } from "@/types/project";
+import { TProject } from "@/lib/types";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { customStorage } from "@/lib/custom-storage";
+import { customStorage } from "@/lib/utils";
 
 interface ProjectStore {
   activeProject: TProject | null;

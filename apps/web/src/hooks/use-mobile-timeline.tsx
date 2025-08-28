@@ -6,8 +6,8 @@ import {
   useEffect,
   useCallback,
   useMemo,
-} from "@/lib/hooks-provider";
-import type { TouchEvent } from "@/lib/hooks-provider";
+} from "react";
+import type { TouchEvent } from "react";
 import {
   useTouchGestures,
   TouchGestureState,

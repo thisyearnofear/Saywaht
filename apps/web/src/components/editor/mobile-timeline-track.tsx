@@ -1,6 +1,6 @@
 "use client";
 
-import React from '@/lib/hooks-provider';
+import React from 'react';
 import { useTimelineStore, type TimelineTrack } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { cn } from "@/lib/utils";

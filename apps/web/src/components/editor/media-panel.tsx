@@ -6,7 +6,7 @@ import { DragOverlay } from "../ui/drag-overlay";
 import { useMediaStore } from "@/stores/media-store";
 import { processMediaFiles } from "@/lib/media-processing";
 import {
-  Plus,
+  Upload as Plus,
   Image as ImageIcon,
   Video,
   Music,
@@ -19,10 +19,10 @@ import {
   Cloud,
   Zap,
   Globe,
-} from "@/lib/icons-provider";
+} from "@/lib/icons";
 import Image from "next/image";
 import { useDragDrop } from "@/hooks/use-drag-drop";
-import { useEffect, useRef, useState, ChangeEvent } from '@/lib/hooks-provider';
+import { useEffect, useRef, useState, ChangeEvent } from 'react';
 import { toast } from "sonner";
 import { VoiceoverRecorder } from "./voiceover-recorder";
 import { AiVoiceGenerator } from "./ai-voice-generator";

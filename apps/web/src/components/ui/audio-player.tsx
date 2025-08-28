@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "@/lib/hooks-provider";
+import { useRef, useEffect } from "react";
 import { usePlaybackStore } from "@/stores/playback-store";
 
 interface AudioPlayerProps {

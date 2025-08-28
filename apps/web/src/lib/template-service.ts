@@ -1,4 +1,4 @@
-import { Template, TemplateCategory, TemplateMediaItem, TemplateTimelineTrack } from "@/types/template";
+import { Template, TemplateCategory, TemplateMediaItem, TemplateTimelineTrack } from "@/lib/types";
 import { MediaItem } from "@/stores/media-store";
 import { TimelineTrack, TimelineClip } from "@/stores/timeline-store";
 

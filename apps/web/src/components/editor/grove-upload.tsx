@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { groveStorage, type GroveUploadResult } from "@/lib/grove-storage";
 import { toast } from "sonner";
-import { useState, useCallback } from "@/lib/hooks-provider";
+import { useState, useCallback } from "react";
 
 interface GroveUploadProps {
   onUploadComplete: (result: GroveUploadResult) => void;

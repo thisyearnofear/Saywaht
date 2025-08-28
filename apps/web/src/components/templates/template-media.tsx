@@ -1,7 +1,7 @@
 "use client";
 
-import React from '@/lib/hooks-provider';
-import { TemplateMediaItem } from "@/types/template";
+import React from 'react';
+import { TemplateMediaItem } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface TemplateMediaProps {

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, MouseEvent } from "@/lib/hooks-provider";
+import { useState, MouseEvent } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Copy, Share2 } from "@/lib/icons-provider";
+import { Copy, Share2 } from "@/lib/icons";
 import { useWalletAuth } from "@opencut/auth";
 import { buildReferralLink } from "@/lib/divvi-referral";
 import { toast } from "sonner";
@@ -16,7 +16,7 @@ export function ReferralLink() {
     return null;
   }
 
-  const referralLink = buildReferralLink(user.address);
+  const referralLink = buildReferralLink(user.address as `0x${string}`);
 
   const handleCopy = async () => {
     try {

@@ -11,7 +11,7 @@ import { badgeVariants } from "./ui/badge";
 import { cn } from "@/lib/utils";
 import { useAccount } from "wagmi";
 import { toast } from "sonner";
-import { useState, useEffect } from "@/lib/hooks-provider";
+import { useState, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,

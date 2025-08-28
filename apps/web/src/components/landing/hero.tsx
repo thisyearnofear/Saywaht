@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { Button } from "../ui/button";
-import { ArrowRight, Sparkles, Video, Coins, Zap } from "@/lib/icons-provider";
+import { ArrowRight, Sparkles, Video, Coins, Zap } from "@/lib/icons";
 import Link from "next/link";
 import { useAccount } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";

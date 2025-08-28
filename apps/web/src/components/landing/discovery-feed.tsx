@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "@/lib/hooks-provider";
+import { useEffect, useState } from "react";
 import { zoraCoins, type VideoCoin } from "@/lib/zora-coins";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { SimpleVideoPlayer } from "../ui/simple-video-player";
 import { Badge } from "../ui/badge";
-import { Coins, TrendingUp } from "@/lib/icons-provider";
+import { Coins, TrendingUp } from "@/lib/icons";
 
 export function DiscoveryFeed() {
   const [coins, setCoins] = useState<VideoCoin[]>([]);

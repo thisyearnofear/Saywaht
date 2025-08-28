@@ -1,13 +1,13 @@
 import { db } from "@opencut/db";
 import { waitlist } from "@opencut/db/schema";
-import { sql } from "drizzle-orm";
+import { count } from "drizzle-orm";
 
 export async function getWaitlistCount() {
   try {
     const result = await db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: count() as any })
       .from(waitlist);
-    return result[0]?.count || 0;
+    return Number(result[0]?.count) || 0;
   } catch (error) {
     console.error("Failed to fetch waitlist count:", error);
     return 0;

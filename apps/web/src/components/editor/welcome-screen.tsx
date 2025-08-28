@@ -1,6 +1,6 @@
 "use client";
 
-import React from "@/lib/hooks-provider";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,10 +12,10 @@ import {
 import { useProjectStore } from "@/stores/project-store";
 import { useTemplateStore } from "@/stores/template-store";
 import { useRouter } from "next/navigation";
-import { Template } from "@/types/template";
+import { Template } from "@/lib/types";
 import { HoverVideoPreview } from "@/components/templates/hover-video-preview";
 import Image from "next/image";
-import { useEffect, useMemo } from "@/lib/hooks-provider";
+import { useEffect, useMemo } from "react";
 
 // Interface for templates with category name
 interface FeaturedTemplate extends Template {
@@ -311,7 +311,7 @@ export function WelcomeScreen() {
                   <div>
                     <h3 className="font-medium text-white">Custom Audio</h3>
                     <p className="text-sm text-white/60">
-                      Add your own voiceovers
+                      Add your own voiceovers (10s limit)
                     </p>
                   </div>
                 </div>

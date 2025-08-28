@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "@/lib/hooks-provider";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LuLoader as Loader2, LuCheck, LuX } from "react-icons/lu";
 import {
@@ -20,7 +20,7 @@ import { submitReferral, getReferralTag } from "@divvi/referral-sdk";
 import { MintWizardData } from "../mint-wizard";
 import { base } from "viem/chains";
 import type { ValidMetadataURI } from "@zoralabs/coins-sdk";
-import { PLATFORM_ADDRESS } from "@/lib/constants";
+import { PLATFORM_ADDRESS } from "@/lib";
 import { triggerCoinCelebration } from "@/lib/confetti";
 import { zoraCoins } from "@/lib/zora-coins";
 

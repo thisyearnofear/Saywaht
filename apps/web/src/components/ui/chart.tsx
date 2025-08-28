@@ -296,7 +296,7 @@ const ChartLegendContent = React.forwardRef<
       className?: string;
       hideIcon?: boolean;
       payload?: any[];
-      verticalAlign?: "top" | "bottom";
+      verticalAlign?: "top" | "bottom" | "middle";
       nameKey?: string;
     },
     ref: React.Ref<HTMLDivElement>

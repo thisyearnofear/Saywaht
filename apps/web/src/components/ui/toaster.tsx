@@ -2,7 +2,7 @@
 
 import { useToast } from "../../hooks/use-toast";
 import type { ToastActionElement, ToastProps } from "./toast";
-import * as React from "@/lib/hooks-provider";
+import * as React from "react";
 import {
   Toast,
   ToastClose,

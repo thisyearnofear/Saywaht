@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "@/lib/hooks-provider";
+import { useState } from "react";
 import "@/app/editor/mobile-editor.css";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useMobileContext } from "@/contexts/mobile-context";
-import { Loader2, Smartphone, Monitor } from "@/lib/icons-provider";
+import { Loader2, Smartphone, Monitor } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { usePanelStore } from "@/stores/panel-store";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "@/lib/hooks-provider";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MediaPanel } from "@/components/editor/media-panel";
 import { MobileAudioPanel } from "@/components/editor/mobile-audio-panel";

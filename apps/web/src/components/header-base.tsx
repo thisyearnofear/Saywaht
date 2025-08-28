@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { ReactNode } from "@/lib/hooks-provider";
+import { ReactNode } from "react";
 
 interface HeaderBaseProps {
   leftContent?: ReactNode;

@@ -12,8 +12,8 @@ import {
   WifiOff,
   CheckCircle,
   AlertCircle,
-} from "@/lib/icons-provider";
-import { useEffect, useState } from "@/lib/hooks-provider";
+} from "@/lib/icons";
+import { useEffect, useState } from "react";
 
 export function StatusBar() {
   const { activeProject } = useProjectStore();

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { customStorage } from "@/lib/custom-storage";
+import { customStorage } from "@/lib/utils";
 
 export interface MediaItem {
   id: string;

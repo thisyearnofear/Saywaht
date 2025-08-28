@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, ChangeEvent, KeyboardEvent } from '@/lib/hooks-provider';
+import { useState, useRef, useEffect, ChangeEvent, KeyboardEvent } from 'react';
 import { Input } from "../ui/input";
 import { useProjectStore } from "@/stores/project-store";
-import { Edit2, Check, X } from "@/lib/icons-provider";
+import { Edit2, Check, X } from "@/lib/icons";
 import { Button } from "../ui/button";
 
 interface ProjectNameEditorProps {

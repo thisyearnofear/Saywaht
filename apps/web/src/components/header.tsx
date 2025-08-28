@@ -3,11 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "./ui/button";
-import { ArrowRight, Star, Menu, X } from "@/lib/icons-provider";
+import { ArrowRight, Star, Menu, X } from "@/lib/icons";
 import { HeaderBase } from "./header-base";
 import { useWalletAuth } from "@opencut/auth";
 import { getStars } from "@/lib/fetchGhStars";
-import { useEffect, useState } from "@/lib/hooks-provider";
+import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 

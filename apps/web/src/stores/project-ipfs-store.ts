@@ -1,9 +1,9 @@
-import React from '@/lib/hooks-provider';
+import React from 'react';
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { groveStorage } from "@/lib/grove-storage";
 import { useWalletAuth } from "@opencut/auth";
-import { useEffect } from '@/lib/hooks-provider';
+import { useEffect } from 'react';
 
 export interface ProjectData {
   id: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "@/lib/hooks-provider";
+import { useEffect, useState } from "react";
 import { CoinCard } from "./coin-card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -9,7 +9,7 @@ import {
   RefreshCw,
   TrendingUp,
   AlertCircle,
-} from "@/lib/icons-provider";
+} from "@/lib/icons";
 import { zoraCoins, type VideoCoin } from "@/lib/zora-coins";
 import { useWalletAuth } from "@opencut/auth";
 import { useTrading } from "@/hooks/use-trading";

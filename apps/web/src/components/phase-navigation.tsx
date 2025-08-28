@@ -10,7 +10,7 @@ import {
   GripVertical,
   Minimize2,
   Maximize2,
-} from "@/lib/icons-provider";
+} from "@/lib/icons";
 import {
   motion,
   AnimatePresence,
@@ -19,7 +19,7 @@ import {
 } from "motion/react";
 import { useWalletAuth } from "@opencut/auth";
 import { useMounted } from "@/hooks/use-mobile";
-import { useState, useEffect, useCallback } from "@/lib/hooks-provider";
+import { useState, useEffect, useCallback } from "react";
 
 interface PhaseNavigationProps {
   className?: string;

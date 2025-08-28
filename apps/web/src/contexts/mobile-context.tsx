@@ -1,7 +1,7 @@
 "use client";
 
-import * as React from "@/lib/hooks-provider";
-const { createContext, useContext, useState, useEffect } = React;
+import { createContext, useContext, useState, useEffect } from "react";
+import type { ReactNode } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useMobileOrientation } from "@/hooks/use-mobile-orientation";
 
@@ -16,7 +16,7 @@ type MobileContextType = {
 
 const MobileContext = createContext<MobileContextType | undefined>(undefined);
 
-export function MobileProvider({ children }: { children: React.ReactNode }) {
+export function MobileProvider({ children }: { children: ReactNode }) {
   const isMobile = useIsMobile();
   const orientation = useMobileOrientation();
   const [isEditorMobileMode, setIsEditorMobileMode] = useState(false);

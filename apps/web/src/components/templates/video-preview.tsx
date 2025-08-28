@@ -1,8 +1,8 @@
 "use client";
 
-import React from "@/lib/hooks-provider";
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { useState, useRef } from "@/lib/hooks-provider";
+import { useState, useRef } from "react";
 
 interface VideoPreviewProps {
   src: string;

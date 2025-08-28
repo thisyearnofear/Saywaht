@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef } from "@/lib/hooks-provider";
+import { useState, useRef } from "react";
 import { PreviewPanel } from "@/components/editor/preview-panel";
 import { Button } from "@/components/ui/button";
-import { Maximize2, Minimize2, ZoomIn, ZoomOut } from "@/lib/icons-provider";
+import { Maximize2, Minimize2, ZoomIn, ZoomOut } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useMobileContext } from "@/contexts/mobile-context";
 import { usePinchZoom } from "@/hooks/use-touch-gestures";

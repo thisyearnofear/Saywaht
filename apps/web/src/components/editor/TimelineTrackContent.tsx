@@ -7,14 +7,14 @@ import {
   useEffect,
   useCallback,
   useMemo,
-} from "@/lib/hooks-provider";
+} from "react";
 import { Button } from "../ui/button";
 import {
   Scissors,
   Trash2,
   MoreVertical,
   ArrowLeftRight,
-} from "@/lib/icons-provider";
+} from "@/lib/icons";
 import { useTimelineStore, type TimelineTrack } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ChangeEvent } from "@/lib/hooks-provider";
+import { useState, ChangeEvent } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -21,7 +21,7 @@ import {
   ExternalLink,
   CheckCircle,
   AlertCircle,
-} from "@/lib/icons-provider";
+} from "@/lib/icons";
 import { useProjectIPFSStore } from "@/stores/project-ipfs-store";
 import { toast } from "sonner";
 

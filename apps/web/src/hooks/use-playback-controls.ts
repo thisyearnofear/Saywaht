@@ -1,4 +1,4 @@
-import { useEffect } from '@/lib/hooks-provider';
+import { useEffect } from 'react';
 import { usePlaybackStore } from "@/stores/playback-store";
 
 export function usePlaybackControls() {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, RefObject } from "@/lib/hooks-provider";
+import { useState, useCallback, useEffect, RefObject } from "react";
 
 interface UseTimelineZoomProps {
   containerRef: RefObject<HTMLDivElement>;

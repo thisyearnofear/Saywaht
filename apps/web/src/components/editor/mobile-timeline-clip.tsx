@@ -1,10 +1,10 @@
 "use client";
 
-import React from '@/lib/hooks-provider';
+import React from 'react';
 import { useTimelineStore, type TimelineClip } from "@/stores/timeline-store";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
-import { useState } from '@/lib/hooks-provider';
+import { motion } from "motion/react";
+import { useState } from 'react';
 
 interface MobileTimelineClipProps {
   trackId: string;

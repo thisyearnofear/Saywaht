@@ -1,4 +1,4 @@
-import React from "@/lib/hooks-provider";
+import React from "react";
 
 // Arrow Left Icon
 export function ArrowLeftIcon(props: React.SVGProps<SVGSVGElement>) {

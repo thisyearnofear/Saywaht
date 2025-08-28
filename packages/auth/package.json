@@ -10,10 +10,11 @@
     "./server": "./src/server.ts"
   },
   "dependencies": {
-    "better-auth": "^1.1.1",
-    "@opencut/db": "workspace:*"
+    "@opencut/db": "file:../db",
+    "@types/react": "^19.1.12",
+    "better-auth": "^1.1.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2"
   }
-} 
+}

@@ -1,7 +1,7 @@
 "use client";
 
-import React from '@/lib/hooks-provider';
-import { TemplateTimelineTrack } from "@/types/template";
+import React from 'react';
+import { TemplateTimelineTrack } from "@/lib/types";
 
 interface TemplateTimelineProps {
   tracks: TemplateTimelineTrack[];

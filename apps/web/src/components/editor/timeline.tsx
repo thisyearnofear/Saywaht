@@ -16,7 +16,7 @@ import {
   Pause,
   Play,
   ArrowLeftRight,
-} from "@/lib/icons-provider";
+} from "@/lib/icons";
 import {
   Tooltip,
   TooltipContent,
@@ -28,7 +28,7 @@ import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { processMediaFiles } from "@/lib/media-processing";
 import { toast } from "sonner";
-import { useState, useRef, useEffect, useCallback } from "@/lib/hooks-provider";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Select,
   SelectContent,

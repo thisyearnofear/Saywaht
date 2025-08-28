@@ -5,7 +5,7 @@ import { useMediaStore } from "@/stores/media-store";
 import { useProjectStore } from "@/stores/project-store";
 import { PreviewPanel } from "@/components/editor/preview-panel";
 import Image from "next/image";
-import { useState, useEffect } from "@/lib/hooks-provider";
+import { useState, useEffect } from "react";
 
 export function MintVideoPreview() {
   const { tracks } = useTimelineStore();

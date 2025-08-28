@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "@/lib/hooks-provider";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,7 @@ import { FormatStep } from "./steps/format-step";
 import { PreviewStep } from "./steps/preview-step";
 import { DeployStep } from "./steps/deploy-step";
 import { triggerCelebration } from "@/lib/confetti";
-import { useEffect } from "@/lib/hooks-provider";
+import { useEffect } from "react";
 import type { VideoFormat } from "@/lib/video-utils";
 
 export interface MintWizardData {
@@ -190,7 +190,7 @@ export function MintWizard() {
               <button
                 onClick={() =>
                   navigator.clipboard.writeText(
-                    wizardData.deployedCoin.address!
+                    wizardData.deployedCoin?.address || ""
                   )
                 }
                 className="text-primary hover:underline text-xs mt-1"

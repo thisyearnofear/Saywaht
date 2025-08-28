@@ -1,7 +1,7 @@
 "use client";
 
-import React from '@/lib/hooks-provider';
-import { useState } from '@/lib/hooks-provider';
+import React from 'react';
+import { useState } from 'react';
 
 interface VideoThumbnailSimpleProps {
   videoSrc: string;

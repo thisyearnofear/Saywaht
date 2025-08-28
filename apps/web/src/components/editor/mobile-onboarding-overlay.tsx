@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "@/lib/hooks-provider";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { X, ArrowRight, Mic, Play } from "@/lib/icons-provider";
+import { X, ArrowRight, Mic, Play } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 interface MobileOnboardingOverlayProps {
@@ -11,42 +11,46 @@ interface MobileOnboardingOverlayProps {
   onStartRecording: () => void;
 }
 
-export function MobileOnboardingOverlay({ 
-  isOpen, 
-  onClose, 
-  onStartRecording 
+export function MobileOnboardingOverlay({
+  isOpen,
+  onClose,
+  onStartRecording,
 }: MobileOnboardingOverlayProps) {
   const [currentStep, setCurrentStep] = useState(0);
-  
+
   const steps = [
     {
       title: "Welcome to SayWhat! 🎬",
-      description: "Turn any video into your own commentary in just 3 simple steps",
+      description:
+        "Turn any video into your own commentary in just 3 simple steps",
       icon: "🎤",
-      action: "Get Started"
+      action: "Get Started",
     },
     {
       title: "Step 1: Watch the Video 👀",
-      description: "First, watch the video to understand what's happening. You can see it playing in the background.",
+      description:
+        "First, watch the video to understand what's happening. You can see it playing in the background.",
       icon: "▶️",
-      action: "Got it!"
+      action: "Got it!",
     },
     {
       title: "Step 2: Record Your Voice 🎙️",
-      description: "Tap the big red 'Record Your Voice' button and add your commentary while watching the video.",
+      description:
+        "Tap the big red 'Record Your Voice' button and add your commentary while watching the video. You have 10 seconds to share your thoughts!",
       icon: "🔴",
-      action: "Ready to Record!"
+      action: "Ready to Record!",
     },
     {
       title: "Step 3: Create Your Coin 🪙",
-      description: "Once you're happy with your recording, you can mint it as a tradeable coin on Zora!",
+      description:
+        "Once you're happy with your recording, you can mint it as a tradeable coin on Zora!",
       icon: "✨",
-      action: "Start Recording Now"
-    }
+      action: "Start Recording Now",
+    },
   ];
-  
+
   const currentStepData = steps[currentStep];
-  
+
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
@@ -56,13 +60,13 @@ export function MobileOnboardingOverlay({
       onClose();
     }
   };
-  
+
   const handleSkip = () => {
     onClose();
   };
-  
+
   if (!isOpen) return null;
-  
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-sm w-full p-6 text-center relative">
@@ -75,7 +79,7 @@ export function MobileOnboardingOverlay({
         >
           <X className="w-4 h-4" />
         </Button>
-        
+
         {/* Step indicator */}
         <div className="flex justify-center space-x-2 mb-6">
           {steps.map((_, index) => (
@@ -88,20 +92,20 @@ export function MobileOnboardingOverlay({
             />
           ))}
         </div>
-        
+
         {/* Content */}
         <div className="space-y-4">
           <div className="text-4xl mb-2">{currentStepData.icon}</div>
-          
+
           <h2 className="text-xl font-bold text-gray-900">
             {currentStepData.title}
           </h2>
-          
+
           <p className="text-gray-600 leading-relaxed">
             {currentStepData.description}
           </p>
         </div>
-        
+
         {/* Actions */}
         <div className="mt-8 space-y-3">
           <Button
@@ -120,7 +124,7 @@ export function MobileOnboardingOverlay({
               </>
             )}
           </Button>
-          
+
           {currentStep < steps.length - 1 && (
             <Button
               variant="ghost"
@@ -139,34 +143,34 @@ export function MobileOnboardingOverlay({
 // Hook to manage onboarding state
 export function useMobileOnboarding() {
   const [showOnboarding, setShowOnboarding] = useState(false);
-  
+
   useEffect(() => {
     // Check if user has seen onboarding before
-    const hasSeenOnboarding = localStorage.getItem('saywaht-mobile-onboarding');
-    
+    const hasSeenOnboarding = localStorage.getItem("saywaht-mobile-onboarding");
+
     if (!hasSeenOnboarding) {
       // Show onboarding after a short delay
       const timer = setTimeout(() => {
         setShowOnboarding(true);
       }, 1000);
-      
+
       return () => clearTimeout(timer);
     }
   }, []);
-  
+
   const completeOnboarding = () => {
-    localStorage.setItem('saywaht-mobile-onboarding', 'completed');
+    localStorage.setItem("saywaht-mobile-onboarding", "completed");
     setShowOnboarding(false);
   };
-  
+
   const skipOnboarding = () => {
-    localStorage.setItem('saywaht-mobile-onboarding', 'skipped');
+    localStorage.setItem("saywaht-mobile-onboarding", "skipped");
     setShowOnboarding(false);
   };
-  
+
   return {
     showOnboarding,
     completeOnboarding,
-    skipOnboarding
+    skipOnboarding,
   };
 }

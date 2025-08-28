@@ -1,6 +1,6 @@
 import React from "react";
 import { Slot as SlotPrimitive } from "radix-ui";
-import { ChevronRight, MoreHorizontal } from "@/lib/icons-provider";
+import { ChevronRight, MoreHorizontal } from "@/lib/icons";
 
 import { cn } from "../../lib/utils";
 

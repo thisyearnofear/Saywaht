@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { PlaybackState, PlaybackControls } from "@/types/playback";
+import type { PlaybackState, PlaybackControls } from "@/lib/types";
 
 interface PlaybackStore extends PlaybackState, PlaybackControls {
   setDuration: (duration: number) => void;

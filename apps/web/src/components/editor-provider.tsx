@@ -1,10 +1,6 @@
 "use client";
 
-import { useEffect } from "@/lib/hooks-provider";
-
-interface ReactNode {
-  [key: string]: any;
-}
+import { useEffect, ReactNode } from "react";
 
 interface EditorProviderProps {
   children: ReactNode;

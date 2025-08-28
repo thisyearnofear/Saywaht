@@ -15,7 +15,7 @@ import {
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { ImageTimelineTreatment } from "@/components/ui/image-timeline-treatment";
-import { useState, ChangeEvent } from '@/lib/hooks-provider';
+import { useState, ChangeEvent } from 'react';
 import { SpeedControl } from "./speed-control";
 
 export function PropertiesPanel() {

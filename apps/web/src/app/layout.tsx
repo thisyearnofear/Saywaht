@@ -2,17 +2,11 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/react";
-import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "../components/ui/sonner";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { Web3Provider } from "@/components/wagmi-provider";
 import { MobileProvider } from "@/contexts/mobile-context";
-import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
-import {
-  PhaseNavigation,
-  MobilePhaseNavigation,
-} from "@/components/phase-navigation";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -75,10 +69,7 @@ export default function RootLayout({
           <ThemeProvider attribute="class" forcedTheme="dark" enableSystem>
             <MobileProvider>
               <TooltipProvider>
-                <PhaseNavigation className="hidden md:block" />
-                <MobilePhaseNavigation />
                 {children}
-                <PWAInstallPrompt />
                 <Analytics />
                 <Toaster />
               </TooltipProvider>

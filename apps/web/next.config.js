@@ -1,10 +1,23 @@
 /** @type {import('next').NextConfig} */
 
+// Minimal Next.js configuration for build stability
 const nextConfig = {
+  reactStrictMode: true,
+  swcMinify: true,
+  
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
+  },
+
+  // Basic headers for COEP/COOP
   async headers() {
     return [
       {
-        // Apply COEP headers to all routes except static assets
         source: "/((?!_next/static|_next/image|favicon.ico|templates|.*\\.(?:jpg|jpeg|gif|png|svg|ico|webp|mp4|webm|ogg|mp3|wav|flac|aac|woff|woff2|ttf|otf)).*)",
         headers: [
           {
@@ -18,7 +31,6 @@ const nextConfig = {
         ],
       },
       {
-        // For static assets, use a more permissive policy
         source: "/:all*(jpg|jpeg|gif|png|svg|ico|webp|mp4|webm|ogg|mp3|wav|flac|aac|woff|woff2|ttf|otf)",
         headers: [
           {
@@ -28,7 +40,6 @@ const nextConfig = {
         ],
       },
       {
-        // Specifically for template videos
         source: "/templates/:path*",
         headers: [
           {
@@ -39,9 +50,9 @@ const nextConfig = {
       },
     ];
   },
-  // FFmpeg.wasm webpack configuration
-  webpack: (config: any, { isServer }: any) => {
-    // Handle FFmpeg.wasm dynamic imports and workers
+
+  // Basic webpack config for FFmpeg
+  webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -50,16 +61,8 @@ const nextConfig = {
         crypto: false,
       };
     }
-
     return config;
   },
-  compiler: {
-    removeConsole: process.env.NODE_ENV === "production",
-  },
-  transpilePackages: ["lucide-react", "react"],
-  reactStrictMode: true,
-  productionBrowserSourceMaps: true,
-  output: "standalone",
 };
 
-export default nextConfig;
+module.exports = nextConfig;

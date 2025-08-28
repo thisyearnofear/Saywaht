@@ -1,8 +1,8 @@
 "use client";
 
-import React from '@/lib/hooks-provider';
+import React from 'react';
 import Image from "next/image";
-import { useState, useEffect, useRef } from '@/lib/hooks-provider';
+import { useState, useEffect, useRef } from 'react';
 
 interface HoverVideoPreviewProps {
   videoSrc: string;

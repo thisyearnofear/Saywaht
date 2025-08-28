@@ -1,6 +1,6 @@
 "use client";
 
-import React from '@/lib/hooks-provider';
+import React from 'react';
 import { TemplateBrowser } from "@/components/templates/template-browser";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";

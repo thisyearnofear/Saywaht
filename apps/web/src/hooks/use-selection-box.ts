@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "@/lib/hooks-provider";
+import { useState, useEffect, useCallback } from "react";
 
 interface UseSelectionBoxProps {
   containerRef: React.RefObject<HTMLElement>;

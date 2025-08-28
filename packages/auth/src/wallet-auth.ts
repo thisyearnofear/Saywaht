@@ -1,7 +1,7 @@
 "use client";
 
 import { useAccount, useDisconnect } from "wagmi";
-import { useEffect, useState } from "@/lib/hooks-provider";
+import { useEffect, useState } from "react";
 
 export interface WalletUser {
   address: string;

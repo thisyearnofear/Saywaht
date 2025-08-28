@@ -4,7 +4,7 @@ import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { useMediaStore } from "@/stores/media-store";
 import { toast } from "sonner";
-import { useState } from "@/lib/hooks-provider";
+import { useState } from "react";
 
 export function AiVoiceGenerator() {
   const [text, setText] = useState("");

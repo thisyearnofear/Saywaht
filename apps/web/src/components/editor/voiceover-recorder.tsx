@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "@/lib/hooks-provider";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
-import { Mic, Square, Save, Trash2, AlertCircle } from "@/lib/icons-provider";
+import { Mic, Square, Save, Trash2, AlertCircle } from "@/lib/icons";
 import { useMediaStore } from "../../stores/media-store";
 import { usePlaybackStore } from "../../stores/playback-store";
 import { toast } from "sonner";
