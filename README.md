@@ -93,6 +93,9 @@ Before you begin, ensure you have the following installed on your system:
     For full functionality, create `apps/web/.env.local`:
 
     ```bash
+    # Wallet Connection (Required for mobile wallet support)
+    NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your-walletconnect-project-id
+
     # Core Features (Required for FilCDN + Trading)
     NEXT_PUBLIC_FILECOIN_PRIVATE_KEY=your-filecoin-private-key
     NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS=0xYourWalletAddress
@@ -111,6 +114,8 @@ Before you begin, ensure you have the following installed on your system:
     # Get your client ID from: https://www.databuddy.cc
     NEXT_PUBLIC_DATABUDDY_CLIENT_ID=your-databuddy-client-id
     ```
+
+    **Note:** To enable mobile wallet connections (MetaMask Mobile, Trust Wallet, etc.), get a free WalletConnect Project ID from [https://cloud.walletconnect.com/](https://cloud.walletconnect.com/) and add it to your `.env.local` file. Without this, only browser extension wallets will be available.
 
 4.  **Start the development server**
 
