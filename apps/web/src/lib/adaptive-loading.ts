@@ -31,7 +31,7 @@ export function useNetworkInfo(): NetworkInfo {
     }
 
     const connection = (navigator as any).connection;
-    
+
     const updateNetworkInfo = () => {
       setNetworkInfo({
         effectiveType: connection.effectiveType || "unknown",
@@ -57,7 +57,7 @@ export function useNetworkInfo(): NetworkInfo {
  */
 export function useIsSlowNetwork(): boolean {
   const networkInfo = useNetworkInfo();
-  
+
   return (
     networkInfo.saveData ||
     networkInfo.effectiveType === "slow-2g" ||
@@ -104,8 +104,8 @@ export function useDeviceCapabilities(): DeviceCapabilities {
       };
 
       // Determine if device is low-end
-      newCapabilities.isLowEnd = 
-        newCapabilities.memory <= 2 || 
+      newCapabilities.isLowEnd =
+        newCapabilities.memory <= 2 ||
         newCapabilities.cores <= 2;
 
       setCapabilities(newCapabilities);
@@ -125,12 +125,12 @@ async function supportsImageFormat(format: "webp" | "avif"): Promise<boolean> {
     const img = new Image();
     img.onload = () => resolve(true);
     img.onerror = () => resolve(false);
-    
+
     const testImages = {
       webp: "data:image/webp;base64,UklGRjoAAABXRUJQVlA4IC4AAACyAgCdASoCAAIALmk0mk0iIiIiIgBoSygABc6WWgAA/veff/0PP8bA//LwYAAA",
       avif: "data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAIAAAACAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQ0MAAAAABNjb2xybmNseAACAAIAAYAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKCBgABogQEAwgMg8f8D///8WfhwB8+ErK42A="
     };
-    
+
     img.src = testImages[format];
   });
 }
@@ -281,7 +281,7 @@ export class AdaptiveResourceLoader {
 
     while (this.preloadQueue.length > 0) {
       const batch = this.preloadQueue.splice(0, maxConcurrent);
-      
+
       await Promise.allSettled(
         batch.map(({ url, type }) => this.preloadResource(url, type))
       );
@@ -301,7 +301,7 @@ export class AdaptiveResourceLoader {
       link.rel = "preload";
       link.href = url;
       link.as = type;
-      
+
       if (type === "font") {
         link.crossOrigin = "anonymous";
       }
@@ -334,7 +334,7 @@ export class AdaptiveResourceLoader {
 /**
  * Adaptive cache configuration based on device capabilities
  */
-export function getAdaptiveCacheConfig(): {
+export function useAdaptiveCacheConfig(): {
   maxCacheSize: number; // MB
   maxCacheAge: number;  // minutes
   enableServiceWorker: boolean;

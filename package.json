@@ -21,14 +21,13 @@
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.4.1",
-    "@next/swc-darwin-arm64": "^15.4.5",
-    "@next/swc-wasm-nodejs": "^15.4.5",
     "@rainbow-me/rainbowkit": "^2.2.8",
     "@tanstack/query-core": "^5.85.5",
     "@zoralabs/coins-sdk": "^0.2.5",
     "dotenv": "^17.0.0",
+    "graceful-fs": "^4.2.11",
     "mp4box": "^1.4.2",
-    "next": "^15.3.4",
+    "next": "^14.2.15",
     "viem": "^2.33.2",
     "wagmi": "^2.15.6"
   }

@@ -104,7 +104,7 @@ export function useOptimizedCallback<T extends (...args: any[]) => any>(
   callback: T,
   deps: React.DependencyList
 ): T {
-  return useCallback(callback, deps);
+  return useCallback(callback, [callback, ...deps]);
 }
 
 /**
@@ -181,14 +181,14 @@ export function getOptimizedImageUrl(
   } = {}
 ): string {
   const { width, height, quality = 75, format = "webp" } = options;
-  
+
   // For Next.js Image Optimization API
   const params = new URLSearchParams();
   if (width) params.set("w", width.toString());
   if (height) params.set("h", height.toString());
   params.set("q", quality.toString());
   params.set("f", format);
-  
+
   return `/_next/image?url=${encodeURIComponent(src)}&${params.toString()}`;
 }
 
@@ -205,11 +205,11 @@ export function preloadResource(
   link.rel = "preload";
   link.href = href;
   link.as = as;
-  
+
   if (as === "font") {
     link.crossOrigin = "anonymous";
   }
-  
+
   document.head.appendChild(link);
 }
 
@@ -286,7 +286,7 @@ export function useCachedFetch<T>(
       .finally(() => {
         setLoading(false);
       });
-  }, [key, ttl]);
+  }, [key, ttl, fetcher]);
 
   return { data, loading, error };
 }
@@ -314,11 +314,11 @@ export class PerformanceMonitor {
 
     const duration = performance.now() - start;
     this.measurements.delete(name);
-    
+
     if (process.env.NODE_ENV === "development") {
       console.log(`⚡ ${name}: ${duration.toFixed(2)}ms`);
     }
-    
+
     return duration;
   }
 

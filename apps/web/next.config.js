@@ -3,8 +3,8 @@
 // Minimal Next.js configuration for build stability
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
-  
+  swcMinify: false,
+
   images: {
     remotePatterns: [
       {

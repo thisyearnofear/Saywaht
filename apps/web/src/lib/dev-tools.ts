@@ -78,10 +78,10 @@ class DevPerformanceMonitor {
     const componentStats = Array.from(this.componentRenders.entries()).map(
       ([name, renders]) => {
         const measurements = this.measurements.get(name) || [];
-        const avgRenderTime = measurements.length > 0 
+        const avgRenderTime = measurements.length > 0
           ? measurements.reduce((sum, time) => sum + time, 0) / measurements.length
           : 0;
-        const maxRenderTime = measurements.length > 0 
+        const maxRenderTime = measurements.length > 0
           ? Math.max(...measurements)
           : 0;
 
@@ -151,12 +151,12 @@ class DevPerformanceMonitor {
  * Hook for tracking component performance in development
  */
 export function useDevPerformanceTracking(componentName: string) {
-  if (process.env.NODE_ENV !== "development") return;
-
   const monitor = DevPerformanceMonitor.getInstance();
   const startTime = performance.now();
 
   React.useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+
     const endTime = performance.now();
     const renderTime = endTime - startTime;
     monitor.trackComponentRender(componentName, renderTime);
@@ -167,9 +167,9 @@ export function useDevPerformanceTracking(componentName: string) {
  * Hook for detecting memory leaks in development
  */
 export function useDevMemoryTracking(componentName: string) {
-  if (process.env.NODE_ENV !== "development") return;
-
   React.useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+
     const initialMemory = (performance as any).memory?.usedJSHeapSize || 0;
 
     return () => {
@@ -332,7 +332,7 @@ export function createDevDashboard(): void {
     performance: DevPerformanceMonitor.getInstance(),
     bundle: DevBundleAnalyzer,
     dependencies: DevDependencyTracker,
-    
+
     // Generate comprehensive report
     generateReport() {
       const perfReport = DevPerformanceMonitor.getInstance().generateReport();

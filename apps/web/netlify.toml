@@ -1,19 +1,29 @@
 [build]
   # Install dependencies at root and build the Next.js app
-  command = "cd ../.. && bun install && cd apps/web && bun run build"
-  
+  command = "cd ../.. && npm install --omit=optional && cd apps/web && npm run build"
+
   # Publish directory (Next.js build output)
   publish = ".next"
-  
+
   # Base directory for the build (apps/web)
   base = "apps/web"
 
 [build.environment]
   # Node.js version
   NODE_VERSION = "18"
-  
-  # Bun version
-  BUN_VERSION = "1.2.17"
+
+  # Disable telemetry and platform-specific downloads
+  NEXT_TELEMETRY_DISABLED = "1"
+  DISABLE_OPENCOLLECTIVE = "1"
+
+  # Force Next.js to skip platform-specific SWC downloads
+  NEXT_SKIP_NATIVE_POSTINSTALL = "1"
+  __NEXT_SWCMINIFY = "false"
+
+  # NPM configuration to avoid optional dependencies
+  npm_config_optional = "false"
+  npm_config_fund = "false"
+  npm_config_audit = "false"
 
 # Secrets scanning configuration
 [build.processing.secrets]

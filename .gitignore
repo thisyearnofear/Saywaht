@@ -10,7 +10,7 @@
 # debug
 /apps/web/npm-debug.log*
 /apps/web/yarn-debug.log*
-/apps/web/yarn-error.log* 
+/apps/web/yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 /apps/web/.env*
@@ -32,10 +32,9 @@ node_modules
 *.env
 dump.rdb
 
-# Lock files (use npm for consistency)
+# Lock files (allow bun.lock, block others for consistency)
 package-lock.json
 yarn.lock
-bun.lock
 
 # Build artifacts and caches
 *.tsbuildinfo

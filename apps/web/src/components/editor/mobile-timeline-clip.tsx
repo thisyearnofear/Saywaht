@@ -82,12 +82,14 @@ export function MobileTimelineClip({
         isInteracting ? "z-10 opacity-100" : "z-0 opacity-90",
         "touch-none select-none"
       )}
-      style={{
-        left: `${clipStartPosition}px`,
-        width: `${clipWidth}px`,
+      initial={{
+        left: clipStartPosition,
+        width: clipWidth,
       }}
       animate={{
         scale: isInteracting ? 1.05 : 1,
+        left: clipStartPosition,
+        width: clipWidth,
       }}
       transition={{ duration: 0.15 }}
       onTouchStart={(e: React.TouchEvent) => handleClipTouchStart(e, null)}
