@@ -75,6 +75,7 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
           modalSize="compact"
           showRecentTransactions={true}
           coolMode
+          initialChain={base}
         >
           {children}
         </RainbowKitProvider>

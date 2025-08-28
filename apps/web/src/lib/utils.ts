@@ -210,6 +210,7 @@ export function throttle<T extends (...args: any[]) => any>(
  */
 export const customStorage = {
   getItem: (name: string) => {
+    if (typeof window === 'undefined') return null;
     try {
       const item = localStorage.getItem(name);
       return item ? JSON.parse(item) : null;
@@ -219,6 +220,7 @@ export const customStorage = {
     }
   },
   setItem: (name: string, value: any) => {
+    if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(name, JSON.stringify(value));
     } catch (error) {
@@ -226,6 +228,7 @@ export const customStorage = {
     }
   },
   removeItem: (name: string) => {
+    if (typeof window === 'undefined') return;
     try {
       localStorage.removeItem(name);
     } catch (error) {
@@ -233,6 +236,7 @@ export const customStorage = {
     }
   },
   clear: () => {
+    if (typeof window === 'undefined') return;
     try {
       localStorage.clear();
     } catch (error) {
