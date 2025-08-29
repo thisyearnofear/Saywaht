@@ -182,20 +182,25 @@ export function Timeline() {
       if (clip && track && track.type === "video") {
         const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
         if (mediaItem && mediaItem.type === "video") {
-          // Create audio track if it doesn't exist
-          let audioTrack = tracks.find((t) => t.type === "audio");
-          if (!audioTrack) {
-            const audioTrackId = addTrack("audio");
-            audioTrack = tracks.find((t) => t.id === audioTrackId) || {
-              id: audioTrackId,
-              name: "Audio",
-              type: "audio" as const,
-              clips: [],
-              muted: false,
-            };
+          // Check if audio is already separated for this video
+          const existingAudioTrack = tracks.find(
+            (t) =>
+              t.type === "audio" &&
+              t.clips.some((c) => c.mediaId === clip.mediaId)
+          );
+
+          if (existingAudioTrack) {
+            toast.error("Audio already separated for this clip");
+            return;
           }
 
-          // Add audio clip to audio track
+          // Create audio track if it doesn't exist
+          let audioTrackId = tracks.find((t) => t.type === "audio")?.id;
+          if (!audioTrackId) {
+            audioTrackId = addTrack("audio");
+          }
+
+          // Add audio clip to audio track using direct store access
           const audioClip = {
             mediaId: clip.mediaId,
             name: clip.name + " (audio)",
@@ -205,7 +210,7 @@ export function Timeline() {
             trimEnd: clip.trimEnd,
           };
 
-          useTimelineStore.getState().addClipToTrack(audioTrack.id, audioClip);
+          useTimelineStore.getState().addClipToTrack(audioTrackId, audioClip);
           separatedCount++;
         }
       }
@@ -840,8 +845,8 @@ export function Timeline() {
                           track.type === "video"
                             ? "bg-blue-500"
                             : track.type === "audio"
-                              ? "bg-green-500"
-                              : "bg-purple-500"
+                            ? "bg-green-500"
+                            : "bg-purple-500"
                         }`}
                       />
                       <span className="ml-2 text-sm font-medium truncate">
