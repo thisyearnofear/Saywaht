@@ -58,6 +58,8 @@ export function Timeline() {
     clearSelectedClips,
     setSelectedClips,
     updateClipTrim,
+    updateClipSpeed,
+    toggleClipReversed,
     undo,
     redo,
   } = useTimelineStore();
@@ -264,6 +266,13 @@ export function Timeline() {
       } else if (e.key.toLowerCase() === "s" && selectedClips.length > 0) {
         e.preventDefault();
         handleSplitSelected();
+      } else if (
+        e.key.toLowerCase() === "r" &&
+        e.shiftKey &&
+        selectedClips.length > 0
+      ) {
+        e.preventDefault();
+        handleToggleReversedSelected();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -514,6 +523,35 @@ export function Timeline() {
     toast.success("Deleted selected clip(s)");
   };
 
+  const handleSpeedChangeSelected = (newSpeed: number) => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+    selectedClips.forEach(({ trackId, clipId }) => {
+      updateClipSpeed(trackId, clipId, newSpeed);
+    });
+    toast.success(`Set speed to ${newSpeed}x for selected clip(s)`);
+  };
+
+  const handleToggleReversedSelected = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+    selectedClips.forEach(({ trackId, clipId }) => {
+      toggleClipReversed(trackId, clipId);
+    });
+    const hasReversed = selectedClips.some(({ trackId, clipId }) => {
+      const track = tracks.find((t) => t.id === trackId);
+      const clip = track?.clips.find((c) => c.id === clipId);
+      return clip?.reversed;
+    });
+    toast.success(
+      `${hasReversed ? "Enabled" : "Disabled"} reversal for selected clip(s)`
+    );
+  };
+
   // Old handleSeparateAudio function removed - now using useCallback version above
 
   // Prevent explorer zooming in/out when in timeline
@@ -686,6 +724,61 @@ export function Timeline() {
           </Tooltip>
 
           <div className="w-px h-6 bg-border mx-1" />
+
+          {/* Per-Clip Speed Control */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Select
+                value={
+                  selectedClips.length > 0
+                    ? tracks
+                        .find((t) => t.id === selectedClips[0].trackId)
+                        ?.clips.find((c) => c.id === selectedClips[0].clipId)
+                        ?.speed?.toFixed(1) || "1.0"
+                    : "1.0"
+                }
+                onValueChange={(value: string) =>
+                  handleSpeedChangeSelected(parseFloat(value))
+                }
+              >
+                <SelectTrigger className="w-[70px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0.5">0.5x</SelectItem>
+                  <SelectItem value="0.8">0.8x</SelectItem>
+                  <SelectItem value="1.0">1.0x</SelectItem>
+                  <SelectItem value="1.2">1.2x</SelectItem>
+                  <SelectItem value="1.5">1.5x</SelectItem>
+                  <SelectItem value="2.0">2.0x</SelectItem>
+                </SelectContent>
+              </Select>
+            </TooltipTrigger>
+            <TooltipContent>Clip speed</TooltipContent>
+          </Tooltip>
+
+          {/* Reverse Toggle */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="text"
+                size="icon"
+                onClick={handleToggleReversedSelected}
+                className={
+                  selectedClips.some(({ trackId, clipId }) => {
+                    const track = tracks.find((t) => t.id === trackId);
+                    const clip = track?.clips.find((c) => c.id === clipId);
+                    return clip?.reversed;
+                  })
+                    ? "bg-accent"
+                    : ""
+                }
+              >
+                <ArrowLeftRight className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Reverse clip (Shift+R)</TooltipContent>
+          </Tooltip>
 
           {/* Speed Control */}
           <Tooltip>

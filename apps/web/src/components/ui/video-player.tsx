@@ -12,6 +12,8 @@ interface VideoPlayerProps {
   trimEnd: number;
   clipDuration: number;
   muteAudio?: boolean; // New prop to mute video audio when separated
+  clipSpeed?: number; // Per-clip speed override
+  clipReversed?: boolean; // Per-clip reversal
 }
 
 export function VideoPlayer({
@@ -23,9 +25,15 @@ export function VideoPlayer({
   trimEnd,
   clipDuration,
   muteAudio = false,
+  clipSpeed,
+  clipReversed = false,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { isPlaying, currentTime, volume, speed, muted } = usePlaybackStore();
+
+  // Calculate effective speed (per-clip override or global)
+  const effectiveSpeed = clipSpeed ?? speed;
+  const finalSpeed = clipReversed ? -Math.abs(effectiveSpeed) : effectiveSpeed;
 
   // Calculate if we're within this clip's timeline range
   const clipEndTime = clipStartTime + (clipDuration - trimStart - trimEnd);
@@ -112,8 +120,8 @@ export function VideoPlayer({
 
     video.volume = muteAudio ? 0 : volume;
     video.muted = muteAudio || muted;
-    video.playbackRate = speed;
-  }, [volume, speed, muted, muteAudio]);
+    video.playbackRate = finalSpeed;
+  }, [volume, speed, muted, muteAudio, finalSpeed]);
 
   return (
     <video

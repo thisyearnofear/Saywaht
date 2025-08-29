@@ -111,6 +111,8 @@ export function PreviewPanel() {
             trimEnd={clip.trimEnd}
             clipDuration={clip.duration}
             muteAudio={shouldMuteAudio}
+            clipSpeed={clip.speed}
+            clipReversed={clip.reversed}
           />
         </div>
       );
