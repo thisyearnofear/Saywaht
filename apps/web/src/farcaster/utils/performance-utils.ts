@@ -39,8 +39,8 @@ export function generateOptimizedFrameMetadata(state: string = 'welcome') {
   const stateConfig = {
     welcome: {
       "fc:frame:image": `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.vercel.app"}/api/farcaster/image?state=welcome`,
-      "fc:frame:button:1": "Create Reaction",
-      "fc:frame:button:2": "View Templates"
+      "fc:frame:button:1": "Create Commentary",
+      "fc:frame:button:2": "Browse Coins"
     },
     recording: {
       "fc:frame:image": `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.vercel.app"}/api/farcaster/image?state=recording`,
@@ -49,7 +49,7 @@ export function generateOptimizedFrameMetadata(state: string = 'welcome') {
     },
     minting: {
       "fc:frame:image": `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.vercel.app"}/api/farcaster/image?state=minting`,
-      "fc:frame:button:1": "Mint NFT",
+      "fc:frame:button:1": "Create Coin",
       "fc:frame:button:2": "Share Only"
     },
     complete: {
@@ -100,10 +100,10 @@ export async function generateOptimizedFrameImage(
 
 function getDefaultTitle(state: string): string {
   const titles = {
-    welcome: 'Create Video Reactions',
-    recording: 'Record Your Reaction',
-    minting: 'Mint Your Reaction',
-    complete: 'Reaction Complete!'
+    welcome: 'Create Video Commentary',
+    recording: 'Record Your Commentary',
+    minting: 'Create Your Coin',
+    complete: 'Coin Created!'
   };
   return titles[state as keyof typeof titles] || titles.welcome;
 }
@@ -112,8 +112,8 @@ function getDefaultSubtitle(state: string): string {
   const subtitles = {
     welcome: 'Powered by saywaht',
     recording: 'Add your voice to any video',
-    minting: 'Turn reactions into tradable coins',
-    complete: 'Share your creation with the world'
+    minting: 'Turn commentary into tradable coins',
+    complete: 'Share your coin with the world'
   };
   return subtitles[state as keyof typeof subtitles] || subtitles.welcome;
 }

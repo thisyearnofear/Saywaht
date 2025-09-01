@@ -19,14 +19,28 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { state: string } }
 ) {
+  console.log("Farcaster image route called with URL:", request.url);
   try {
     const { searchParams } = new URL(request.url);
     const state = searchParams.get("state") || params?.state || "welcome";
     const title = searchParams.get("title") || undefined;
     const subtitle = searchParams.get("subtitle") || undefined;
+    console.log(
+      "Farcaster image params - state:",
+      state,
+      "title:",
+      title,
+      "subtitle:",
+      subtitle
+    );
 
     // Generate optimized frame image config
-    const imageConfig = await generateOptimizedFrameImage(state, title, subtitle);
+    const imageConfig = await generateOptimizedFrameImage(
+      state,
+      title,
+      subtitle
+    );
+    console.log("Generated image config:", imageConfig);
 
     return new ImageResponse(
       (
@@ -65,7 +79,7 @@ export async function GET(
             >
               {imageConfig.icon}
             </div>
-            
+
             <h1
               style={{
                 fontSize: "50px",
@@ -78,7 +92,7 @@ export async function GET(
             >
               {imageConfig.title}
             </h1>
-            
+
             <p
               style={{
                 fontSize: "30px",
@@ -90,7 +104,7 @@ export async function GET(
             >
               {imageConfig.subtitle}
             </p>
-            
+
             {/* State indicator */}
             <div
               style={{
@@ -102,12 +116,16 @@ export async function GET(
                 letterSpacing: "2px",
               }}
             >
-              {state === "recording" ? "Recording Mode" : 
-               state === "minting" ? "Minting NFT" : 
-               state === "complete" ? "Complete!" : "Get Started"}
+              {state === "recording"
+                ? "Recording Mode"
+                : state === "minting"
+                ? "Creating Coin"
+                : state === "complete"
+                ? "Complete!"
+                : "Get Started"}
             </div>
           </div>
-          
+
           {/* Branding */}
           <div
             style={{

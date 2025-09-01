@@ -1,0 +1,12 @@
+{
+  "name": "Saywaht",
+  "icon": "https://saywaht.netlify.app/icons/icon-512x512.svg",
+  "description": "AI-powered video creation platform",
+  "action": {
+    "url": "https://saywaht.netlify.app/api/farcaster/action",
+    "type": "post"
+  },
+  "image": {
+    "url": "https://saywaht.netlify.app/api/farcaster/image"
+  }
+}
