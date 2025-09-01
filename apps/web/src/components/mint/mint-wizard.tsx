@@ -21,6 +21,10 @@ import { DeployStep } from "./steps/deploy-step";
 import { triggerCelebration } from "@/lib/confetti";
 import { useEffect } from "react";
 import type { VideoFormat } from "@/lib/video-utils";
+import { useProjectStore } from "@/stores/project-store";
+import { useTimelineStore } from "@/stores/timeline-store";
+import { useMediaStore } from "@/stores/media-store";
+import { toast } from "sonner";
 
 export interface MintWizardData {
   // Thumbnail data
@@ -71,8 +75,17 @@ const STEPS = [
   },
 ];
 
-export function MintWizard() {
+interface MintWizardProps {
+  projectId?: string;
+  dataUrl?: string | null;
+}
+
+export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
+  const { activeProject, createNewProject } = useProjectStore();
+  const { tracks, addTrack, addClipToTrack } = useTimelineStore();
+  const { mediaItems, addMediaItem } = useMediaStore();
   const [currentStep, setCurrentStep] = useState(0);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const [wizardData, setWizardData] = useState<MintWizardData>({
     thumbnail: null,
     thumbnailPrompt: "",
@@ -88,6 +101,72 @@ export function MintWizard() {
   const updateWizardData = useCallback((updates: Partial<MintWizardData>) => {
     setWizardData((prev: MintWizardData) => ({ ...prev, ...updates }));
   }, []);
+
+  // Fetch project data from Grove if localStorage is empty
+  useEffect(() => {
+    const loadProjectData = async () => {
+      // If we have project data in localStorage, no need to fetch
+      if (activeProject && tracks.length > 0) {
+        return;
+      }
+
+      // If no dataUrl provided, can't fetch
+      if (!dataUrl) {
+        toast.error("No project data available. Please return to the editor.");
+        return;
+      }
+
+      setIsLoadingData(true);
+      try {
+        toast.loading("Loading project data...", { id: "load-data" });
+        
+        const response = await fetch(dataUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch project data: ${response.statusText}`);
+        }
+
+        const projectData = await response.json();
+        
+        // Validate project data structure
+        if (!projectData.project || !projectData.tracks || !projectData.mediaItems) {
+          throw new Error("Invalid project data format");
+        }
+
+        // Load project data into stores
+        if (!activeProject && projectData.project) {
+          createNewProject(projectData.project.name);
+        }
+
+        // Load tracks
+        if (projectData.tracks && Array.isArray(projectData.tracks)) {
+          for (const track of projectData.tracks) {
+            const trackId = addTrack(track.type);
+            for (const clip of track.clips) {
+              addClipToTrack(trackId, clip);
+            }
+          }
+        }
+
+        // Load media items
+        if (projectData.mediaItems && Array.isArray(projectData.mediaItems)) {
+          for (const item of projectData.mediaItems) {
+            addMediaItem(item);
+          }
+        }
+
+        toast.dismiss("load-data");
+        toast.success("Project data loaded successfully!");
+      } catch (error) {
+        console.error("Failed to load project data:", error);
+        toast.dismiss("load-data");
+        toast.error(`Failed to load project data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    loadProjectData();
+  }, [dataUrl, activeProject, tracks.length, createNewProject, addTrack, addClipToTrack, addMediaItem]);
 
   // Trigger confetti when deployment is complete
   useEffect(() => {
@@ -156,6 +235,16 @@ export function MintWizard() {
         return null;
     }
   };
+
+  // Show loading state while fetching project data
+  if (isLoadingData) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 space-y-4">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-muted-foreground">Loading project data from IPFS...</p>
+      </div>
+    );
+  }
 
   // If deployment is complete, show success state
   if (wizardData.deployedCoin) {

@@ -23,6 +23,7 @@ import {
 import { getExportErrorMessage } from "@/lib/export-error-handler";
 import { isBackendExportAvailable } from "@/lib/backend-export";
 import { ExportMethod } from "@/lib/canvas-export-utils";
+import { storageManager } from "@/lib/storage-manager";
 
 export function EditorHeader() {
   const { activeProject } = useProjectStore();
@@ -32,6 +33,7 @@ export function EditorHeader() {
 
   // Use imported useState hook from hooks-provider
   const [isExporting, setIsExporting] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
   const [backendAvailable, setBackendAvailable] = useState(false);
   const { tracks, getTotalDuration } = useTimelineStore();
   const { mediaItems } = useMediaStore();
@@ -124,9 +126,55 @@ export function EditorHeader() {
     }
   };
 
-  const handleDeploy = () => {
-    if (!activeProject) return;
-    window.open(`/mint/${activeProject.id}`, "_blank");
+  const handleDeploy = async () => {
+    if (!activeProject) {
+      toast.error("No project to deploy");
+      return;
+    }
+
+    if (tracks.length === 0) {
+      toast.error("Add content to your project before deploying");
+      return;
+    }
+
+    setIsDeploying(true);
+    
+    try {
+      toast.loading("Preparing project for deployment...", { id: "deploy-progress" });
+      
+      // Export project data using consolidated storage manager method
+      const projectData = {
+        project: activeProject,
+        tracks: tracks,
+        mediaItems: mediaItems,
+      };
+
+      toast.loading("Uploading project data to IPFS...", { id: "deploy-progress" });
+      
+      const uploadResult = await storageManager.exportProjectData(projectData, {
+        onProgress: (progress) => {
+          toast.loading(`Uploading to IPFS... ${Math.round(progress)}%`, { id: "deploy-progress" });
+        }
+      });
+
+      toast.dismiss("deploy-progress");
+      toast.success("🚀 Project ready for deployment!");
+      
+      // Open mint page with project data URL
+      const mintUrl = `/mint/${activeProject.id}?dataUrl=${encodeURIComponent(uploadResult.url)}`;
+      window.open(mintUrl, "_blank");
+      
+    } catch (error) {
+      console.error("Deploy preparation failed:", error);
+      toast.dismiss("deploy-progress");
+      toast.error(
+        error instanceof Error 
+          ? `Failed to prepare deployment: ${error.message}`
+          : "Failed to prepare project for deployment"
+      );
+    } finally {
+      setIsDeploying(false);
+    }
   };
 
   return (
@@ -276,10 +324,20 @@ export function EditorHeader() {
             variant="default"
             size="sm"
             onClick={handleDeploy}
+            disabled={isDeploying || !activeProject || tracks.length === 0}
             className="text-xs font-medium bg-primary hover:bg-primary/90"
           >
-            <span className="inline-block h-4 w-4 mr-1">🪙</span>
-            Deploy
+            {isDeploying ? (
+              <>
+                <span className="inline-block h-4 w-4 mr-1 animate-spin">⟳</span>
+                Deploying...
+              </>
+            ) : (
+              <>
+                <span className="inline-block h-4 w-4 mr-1">🪙</span>
+                Deploy
+              </>
+            )}
           </Button>
         )}
 

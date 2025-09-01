@@ -3,8 +3,13 @@
 import { Header } from "@/components/header";
 import { motion } from "motion/react";
 import { MintWizard } from "@/components/mint/mint-wizard";
+import { useParams, useSearchParams } from "next/navigation";
 
 export default function DeployPage() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const projectId = params.projectId as string;
+  const dataUrl = searchParams.get('dataUrl');
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -43,7 +48,7 @@ export default function DeployPage() {
           </div>
 
           {/* Wizard */}
-          <MintWizard />
+          <MintWizard projectId={projectId} dataUrl={dataUrl} />
         </motion.div>
       </div>
     </div>

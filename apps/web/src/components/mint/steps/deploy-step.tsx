@@ -21,6 +21,7 @@ import { MintWizardData } from "../mint-wizard";
 import { base } from "viem/chains";
 import type { ValidMetadataURI } from "@zoralabs/coins-sdk";
 import { PLATFORM_ADDRESS } from "@/lib";
+import { DIVVI_CONSUMER_ADDRESS } from "@/lib/divvi-referral";
 import { triggerCoinCelebration } from "@/lib/confetti";
 import { zoraCoins } from "@/lib/zora-coins";
 
@@ -98,17 +99,17 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         // Generate Divvi referral tag and append to calldata
         try {
           const referralTag = getReferralTag({
-            user: address, // User's address
-            consumer: PLATFORM_ADDRESS, // Your Divvi consumer address
+            user: address, // The user address making the transaction
+            consumer: DIVVI_CONSUMER_ADDRESS, // Your Divvi Identifier
           });
 
-          // Append referral tag to the transaction calldata using dataSuffix
+          // Append referral tag to the transaction calldata
           const modifiedCallParams = {
             ...callParams,
             dataSuffix: referralTag as `0x${string}`,
           };
 
-          console.log("📋 Divvi referral tag appended to calldata");
+          console.log("📋 Divvi referral tag generated and appended to calldata");
           setContractCallParams(modifiedCallParams);
         } catch (referralError) {
           console.warn(
@@ -229,12 +230,12 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
       const submitDivviTracking = async () => {
         try {
           console.log("📝 Submitting Divvi referral tracking for tx:", txHash);
-          const chainId = base.id; // Base mainnet
+          const chainId = await publicClient.getChainId();
           await submitReferral({
             txHash,
             chainId,
           });
-          console.log("✅ Divvi referral tracking submitted");
+          console.log("✅ Divvi referral tracking submitted successfully");
         } catch (error) {
           console.error("❌ Failed to submit Divvi referral tracking:", error);
           // Don't show error to user - this is optional tracking

@@ -29,31 +29,36 @@ export function isFarcasterContext(headers: Headers): boolean {
  * Minimizes computation and maximizes cacheability
  */
 export function generateOptimizedFrameMetadata(state: string = 'welcome') {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!baseUrl) {
+    throw new Error('NEXT_PUBLIC_APP_URL environment variable is required');
+  }
+  
   // Pre-computed base metadata for performance
   const baseMetadata = {
     "fc:frame": "vNext",
-    "fc:frame:post_url": `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app"}/api/farcaster/action`,
+    "fc:frame:post_url": `${baseUrl}/api/farcaster/action`,
   };
   
   // State-specific optimizations
   const stateConfig = {
     welcome: {
-      "fc:frame:image": `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app"}/api/farcaster/image?state=welcome`,
+      "fc:frame:image": `${baseUrl}/api/farcaster/image?state=welcome`,
       "fc:frame:button:1": "Create Commentary",
       "fc:frame:button:2": "Browse Coins"
     },
     recording: {
-      "fc:frame:image": `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app"}/api/farcaster/image?state=recording`,
+      "fc:frame:image": `${baseUrl}/api/farcaster/image?state=recording`,
       "fc:frame:button:1": "Start Recording",
       "fc:frame:button:2": "Cancel"
     },
     minting: {
-      "fc:frame:image": `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app"}/api/farcaster/image?state=minting`,
+      "fc:frame:image": `${baseUrl}/api/farcaster/image?state=minting`,
       "fc:frame:button:1": "Create Coin",
       "fc:frame:button:2": "Share Only"
     },
     complete: {
-      "fc:frame:image": `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app"}/api/farcaster/image?state=complete`,
+      "fc:frame:image": `${baseUrl}/api/farcaster/image?state=complete`,
       "fc:frame:button:1": "Create Another",
       "fc:frame:button:2": "View Profile"
     }

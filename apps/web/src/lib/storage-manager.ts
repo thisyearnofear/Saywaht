@@ -603,6 +603,50 @@ class StorageManager {
   }
   
   /**
+   * Export project data to Grove storage for decentralized access
+   * Consolidates project, tracks, and media items into a single JSON file
+   */
+  async exportProjectData(
+    projectData: {
+      project: any;
+      tracks: any[];
+      mediaItems: any[];
+    },
+    options: UploadOptions = {}
+  ): Promise<UploadResult> {
+    // Create comprehensive project data structure
+    const exportData = {
+      ...projectData,
+      timestamp: Date.now(),
+      version: "1.0",
+      exportedBy: "SayWaht Editor",
+    };
+
+    // Create JSON blob
+    const projectDataBlob = new Blob(
+      [JSON.stringify(exportData, null, 2)], 
+      { type: 'application/json' }
+    );
+    
+    // Generate filename from project name
+    const sanitizedName = projectData.project?.name?.replace(/[^a-zA-Z0-9]/g, "_") || "project";
+    const filename = `${sanitizedName}_project_${Date.now()}.json`;
+    
+    const projectFile = new File(
+      [projectDataBlob], 
+      filename,
+      { type: 'application/json' }
+    );
+
+    // Upload with Grove preference for decentralized storage
+    return this.uploadFile(projectFile, {
+      preferredProvider: "grove",
+      allowFallback: true,
+      ...options,
+    });
+  }
+  
+  /**
    * Fallback to another provider when the primary fails
    */
   private async fallbackUpload(

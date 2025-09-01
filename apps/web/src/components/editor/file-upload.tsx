@@ -99,7 +99,7 @@ export function FileUpload({
           </div>
           <Button asChild className="mt-4" variant="outline">
             <a
-              href="https://fs-upload-dapp.netlify.app"
+              href={process.env.NEXT_PUBLIC_FILCDN_WEB_APP_URL || "https://grove.storage"}
               target="_blank"
               rel="noopener noreferrer"
             >

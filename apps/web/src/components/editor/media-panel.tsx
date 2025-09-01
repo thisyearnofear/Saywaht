@@ -365,7 +365,7 @@ export function MediaPanel() {
                         </p>
                         <Button asChild size="sm" variant="outline">
                           <a
-                            href="https://fs-upload-dapp.netlify.app"
+                            href={process.env.NEXT_PUBLIC_FILCDN_WEB_APP_URL || "https://grove.storage"}
                             target="_blank"
                             rel="noopener noreferrer"
                           >

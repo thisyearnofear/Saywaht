@@ -68,7 +68,8 @@ export const exportVideo = async (
   // Helper function to execute export with method
   const executeExport = async (
     exportMethod: "backend" | "webcodecs" | "offline" | "canvas",
-    progress: (p: number) => void
+    progress: (p: number) => void,
+    abortSignal?: AbortSignal
   ): Promise<Blob> => {
     switch (exportMethod) {
       case "backend": {
@@ -94,7 +95,8 @@ export const exportVideo = async (
           mediaItems,
           totalDuration,
           progress,
-          { ...options, ...config } as WebCodecsExportOptions
+          { ...options, ...config } as WebCodecsExportOptions,
+          abortSignal
         );
       }
 
@@ -117,10 +119,21 @@ export const exportVideo = async (
 
   // Helper function to handle WebCodecs with timeout and fallback
   const executeWebCodecsWithFallback = async (progress: (p: number) => void): Promise<Blob> => {
+    let webCodecsController: AbortController | null = null;
+    
     try {
-      const webCodecsPromise = executeExport("webcodecs", progress);
+      // Create an abort controller to cancel WebCodecs if needed
+      webCodecsController = new AbortController();
+      
+      const webCodecsPromise = executeExport("webcodecs", progress, webCodecsController.signal);
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('WebCodecs export timeout')), getExportTimeout(totalDuration));
+        setTimeout(() => {
+          // Cancel the WebCodecs process before rejecting
+          if (webCodecsController) {
+            webCodecsController.abort();
+          }
+          reject(new Error('WebCodecs export timeout'));
+        }, getExportTimeout(totalDuration));
       });
       
       const result = await Promise.race([webCodecsPromise, timeoutPromise]);
@@ -130,6 +143,14 @@ export const exportVideo = async (
       console.error("WebCodecs export failed:", error);
       recordWebCodecsFailure();
       exportDiagnostics.recordError(error instanceof Error ? error : new Error(String(error)));
+      
+      // Ensure WebCodecs is properly cancelled before fallback
+      if (webCodecsController) {
+        webCodecsController.abort();
+      }
+      
+      // Add a small delay to ensure WebCodecs cleanup completes
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Fallback to offline export
       console.log("🔄 Falling back to offline export");

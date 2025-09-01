@@ -9,6 +9,11 @@ import { generateFrameMetadata } from "@/farcaster/utils/frame-utils";
 export async function POST(request: NextRequest) {
   console.log("Farcaster action route called with URL:", request.url);
   try {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!baseUrl) {
+      throw new Error('NEXT_PUBLIC_APP_URL environment variable is required');
+    }
+
     const formData = await request.formData();
     const action = formData.get("action") as string;
     console.log("Farcaster action received:", action);
@@ -17,7 +22,7 @@ export async function POST(request: NextRequest) {
     const frameMetadata = generateFrameMetadata({
       "fc:frame:button:1": action === "start" ? "Record Commentary" : "Next Step",
       "fc:frame:button:2": "Create Coin",
-      "fc:frame:image": `https://saywaht.netlify.app/api/farcaster/image?state=${action || "welcome"}`
+      "fc:frame:image": `${baseUrl}/api/farcaster/image?state=${action || "welcome"}`
     });
     console.log("Generated frame metadata:", frameMetadata);
 

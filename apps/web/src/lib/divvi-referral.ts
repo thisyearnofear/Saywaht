@@ -1,12 +1,15 @@
-// This file is kept for potential future use of Divvi referral tracking
-// Currently, Divvi tracking is handled directly in the deployment step
-// using the @divvi/referral-sdk package
+/**
+ * Divvi Referral Integration (v2)
+ * 
+ * Simplified integration using the @divvi/referral-sdk v2
+ * Handles referral tracking for earning rewards on user transactions
+ */
 
 import { Address } from "viem";
-import { PLATFORM_ADDRESS, PLATFORM_URL } from "./index";
+import { PLATFORM_URL } from "./index";
 
-// Divvi configuration - Your Divvi Identifier
-export const DIVVI_CONSUMER_ADDRESS = process.env.NEXT_PUBLIC_DIVVI_CONSUMER_ADDRESS as Address || PLATFORM_ADDRESS;
+// Divvi consumer address (your Divvi Identifier)
+export const DIVVI_CONSUMER_ADDRESS = '0x55A5705453Ee82c742274154136Fce8149597058';
 
 /**
  * Get referrer address from URL parameters

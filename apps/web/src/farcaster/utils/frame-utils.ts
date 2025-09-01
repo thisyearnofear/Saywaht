@@ -43,12 +43,20 @@ export function generateFrameMetadata(
  * Generate frame action URLs
  */
 export function generateFrameActionUrl(action: string): string {
-  return `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app"}/api/farcaster/${action}`;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!baseUrl) {
+    throw new Error('NEXT_PUBLIC_APP_URL environment variable is required');
+  }
+  return `${baseUrl}/api/farcaster/${action}`;
 }
 
 /**
  * Get frame image URL for different states
  */
 export function getFrameImageUrl(state: "welcome" | "recording" | "minting" | "complete"): string {
-  return `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app"}/api/farcaster/image?state=${state}`;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!baseUrl) {
+    throw new Error('NEXT_PUBLIC_APP_URL environment variable is required');
+  }
+  return `${baseUrl}/api/farcaster/image?state=${state}`;
 }

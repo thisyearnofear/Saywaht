@@ -94,8 +94,9 @@ export class FilCDNService {
       const preflight = await this.storageService.preflightUpload(fileData.byteLength);
 
       if (!preflight.allowanceCheck.sufficient) {
+        const webAppUrl = process.env.NEXT_PUBLIC_FILCDN_WEB_APP_URL || 'https://grove.storage';
         throw new Error(
-          'Allowance not sufficient. Please increase your allowance via the FilCDN web app: https://fs-upload-dapp.netlify.app'
+          `Allowance not sufficient. Please increase your allowance via the FilCDN web app: ${webAppUrl}`
         );
       }
 

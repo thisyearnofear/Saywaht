@@ -47,10 +47,16 @@ export async function exportVideoWithStreamingWebCodecs(
   mediaItems: MediaItem[],
   totalDuration: number,
   onProgress: (progress: number) => void,
-  options: WebCodecsExportOptions
+  options: WebCodecsExportOptions,
+  abortSignal?: AbortSignal
 ): Promise<Blob> {
   if (!isWebCodecsAvailable()) {
     throw new Error('WebCodecs API not available');
+  }
+
+  // Check if export was cancelled before starting
+  if (abortSignal?.aborted) {
+    throw new Error('Export was cancelled');
   }
 
   const frameRate = options.frameRate || 30;
@@ -172,6 +178,15 @@ export async function exportVideoWithStreamingWebCodecs(
   let renderingComplete = false;
 
   const renderFrame = async () => {
+    // Check if export was cancelled
+    if (abortSignal?.aborted) {
+      console.log('🛑 WebCodecs export cancelled during frame rendering');
+      renderingComplete = true;
+      if (recorder.state === 'recording') {
+        recorder.stop();
+      }
+      return;
+    }
     if (frameIndex >= totalFrames) {
       // Finished rendering
       renderingComplete = true;
@@ -220,9 +235,17 @@ export async function exportVideoWithStreamingWebCodecs(
   // Wait for recording to finish with timeout
   const blob = await new Promise<Blob>((resolve, reject) => {
     let timeoutId: NodeJS.Timeout;
+    let abortListener: (() => void) | null = null;
+    
+    const cleanup = () => {
+      clearTimeout(timeoutId);
+      if (abortListener && abortSignal) {
+        abortSignal.removeEventListener('abort', abortListener);
+      }
+    };
     
     recorder.onstop = () => {
-      clearTimeout(timeoutId);
+      cleanup();
       onProgress(95); // Update progress when recorder stops
       
       try {
@@ -235,11 +258,31 @@ export async function exportVideoWithStreamingWebCodecs(
       }
     };
 
+    // Handle abort signal
+    if (abortSignal) {
+      abortListener = () => {
+        console.log('🛑 WebCodecs export aborted during recording');
+        cleanup();
+        if (recorder.state === 'recording') {
+          recorder.stop();
+        }
+        reject(new Error('Export was cancelled'));
+      };
+      
+      if (abortSignal.aborted) {
+        abortListener();
+        return;
+      }
+      
+      abortSignal.addEventListener('abort', abortListener);
+    }
+
     // Add timeout to prevent hanging at 90%
     const timeoutDuration = getExportTimeout(totalDuration);
     timeoutId = setTimeout(() => {
       if (!renderingComplete || recorder.state === 'recording') {
         console.error('Export timeout - forcing completion');
+        cleanup();
         if (recorder.state === 'recording') {
           recorder.stop();
         }
@@ -278,8 +321,9 @@ export async function exportVideoWithTransferableFrames(
   mediaItems: MediaItem[],
   totalDuration: number,
   onProgress: (progress: number) => void,
-  options: WebCodecsExportOptions
+  options: WebCodecsExportOptions,
+  abortSignal?: AbortSignal
 ): Promise<Blob> {
   // Use the main implementation as it's more reliable
-  return exportVideoWithStreamingWebCodecs(tracks, mediaItems, totalDuration, onProgress, options);
+  return exportVideoWithStreamingWebCodecs(tracks, mediaItems, totalDuration, onProgress, options, abortSignal);
 }
