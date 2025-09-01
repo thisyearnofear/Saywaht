@@ -34,9 +34,8 @@ export function useFarcasterFrame() {
           });
           break;
           
-        case 2: // Mint NFT
+        case 2: // Create Coin
           setFrameState({ step: "minting" });
-          // In a real implementation, this would trigger the minting process
           break;
           
         case 3: // Complete and share

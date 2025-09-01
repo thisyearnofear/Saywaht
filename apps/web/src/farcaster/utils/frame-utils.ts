@@ -43,12 +43,12 @@ export function generateFrameMetadata(
  * Generate frame action URLs
  */
 export function generateFrameActionUrl(action: string): string {
-  return `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.vercel.app"}/api/farcaster/${action}`;
+  return `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app"}/api/farcaster/${action}`;
 }
 
 /**
  * Get frame image URL for different states
  */
 export function getFrameImageUrl(state: "welcome" | "recording" | "minting" | "complete"): string {
-  return `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.vercel.app"}/api/farcaster/image?state=${state}`;
+  return `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app"}/api/farcaster/image?state=${state}`;
 }

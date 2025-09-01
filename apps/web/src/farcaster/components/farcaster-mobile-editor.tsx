@@ -13,10 +13,15 @@ import { FarcasterClientLogic } from "@/farcaster/components/farcaster-client-lo
  * Extends existing mobile layout with Farcaster-specific functionality
  * Following ENHANCEMENT FIRST principle - builds on existing components
  */
-export function FarcasterMobileEditorLayout({ children }: { children?: React.ReactNode }) {
+export function FarcasterMobileEditorLayout({
+  children,
+}: {
+  children?: React.ReactNode;
+}) {
   const { isFarcasterMiniApp, frameState } = useFarcasterContext();
   const { handleFrameAction, handleCastIntegration } = useFarcasterFrame();
-  const { showOnboarding, completeOnboarding, skipOnboarding } = useMobileOnboarding();
+  const { showOnboarding, completeOnboarding, skipOnboarding } =
+    useMobileOnboarding();
   const [showFarcasterOnboarding, setShowFarcasterOnboarding] = useState(false);
 
   // Show Farcaster-specific onboarding when in mini app context
@@ -32,16 +37,16 @@ export function FarcasterMobileEditorLayout({ children }: { children?: React.Rea
       case "start_recording":
         // Initialize recording with cast context if available
         if (frameState.castHash) {
-          handleCastIntegration(`https://farcaster.com/casts/${frameState.castHash}`);
+          handleCastIntegration(
+            `https://farcaster.com/casts/${frameState.castHash}`
+          );
         }
         break;
-      case "mint_nft":
-        // Trigger NFT minting flow
-        console.log("Minting Farcaster reaction as NFT");
+      case "create_coin":
+        // Trigger coin creation flow
         break;
       case "share_cast":
         // Share to Farcaster
-        console.log("Sharing to Farcaster");
         break;
     }
   };
@@ -50,11 +55,9 @@ export function FarcasterMobileEditorLayout({ children }: { children?: React.Rea
     <div className="h-screen w-screen flex flex-col bg-background overflow-hidden mobile-editor safe-area">
       {/* Farcaster client logic */}
       <FarcasterClientLogic />
-      
+
       {/* Enhanced mobile editor layout with Farcaster features */}
-      <MobileEditorLayout>
-        {children}
-      </MobileEditorLayout>
+      <MobileEditorLayout>{children}</MobileEditorLayout>
 
       {/* Farcaster-specific onboarding */}
       {showFarcasterOnboarding && (

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
-import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { Toaster } from "../components/ui/sonner";
 import { TooltipProvider } from "../components/ui/tooltip";
@@ -93,7 +92,6 @@ export default function RootLayout({
               <FarcasterProvider>
                 <TooltipProvider>
                   {children}
-                  <Analytics />
                   <Toaster />
                 </TooltipProvider>
               </FarcasterProvider>

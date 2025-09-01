@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { FarcasterUser, FarcasterFrameState } from "@/farcaster/types";
 import { useMobileContext } from "@/contexts/mobile-context";
+import { sdk } from "@farcaster/miniapp-sdk";
 
 type FarcasterContextType = {
   farcasterUser: FarcasterUser | null;
@@ -10,51 +11,78 @@ type FarcasterContextType = {
   isFarcasterMiniApp: boolean;
   setFarcasterUser: (user: FarcasterUser | null) => void;
   setFrameState: (state: Partial<FarcasterFrameState>) => void;
-  initializeFarcaster: () => Promise<void>;
 };
 
-const FarcasterContext = createContext<FarcasterContextType | undefined>(undefined);
+const FarcasterContext = createContext<FarcasterContextType | undefined>(
+  undefined
+);
 
-export function FarcasterProvider({ 
+export function FarcasterProvider({
   children,
-  initialFrameState
-}: { 
+  initialFrameState,
+}: {
   children: React.ReactNode;
   initialFrameState?: FarcasterFrameState;
 }) {
   const { isMobile } = useMobileContext();
-  const [farcasterUser, setFarcasterUser] = useState<FarcasterUser | null>(null);
+  const [farcasterUser, setFarcasterUser] = useState<FarcasterUser | null>(
+    null
+  );
   const [frameState, setFrameState] = useState<FarcasterFrameState>({
     step: "welcome",
-    ...initialFrameState
+    ...initialFrameState,
   });
   const [isFarcasterMiniApp, setIsFarcasterMiniApp] = useState(false);
 
-  // Detect if we're running in a Farcaster mini app context
+  // Initialize Farcaster Mini App SDK
   useEffect(() => {
-    const checkFarcasterContext = () => {
-      // Check for Farcaster-specific headers or context
-      const isFarcaster = typeof window !== 'undefined' && 
-        (window.name.includes('farcaster') || 
-         window.location.search.includes('farcaster') ||
-         // Check for frame action data
-         window.location.search.includes('fid'));
-      
-      setIsFarcasterMiniApp(isFarcaster || isMobile);
+    const initializeSDK = async () => {
+      try {
+        // Single consolidated ready call for all contexts
+        await sdk.actions.ready();
+
+        // Detect Mini App context and get user data
+        const isFarcaster =
+          typeof window !== "undefined" &&
+          (window.name.includes("farcaster") ||
+            window.location.search.includes("farcaster") ||
+            window.location.search.includes("fid") ||
+            window.location.pathname.includes("/farcaster"));
+
+        const isMiniApp = isFarcaster || isMobile;
+        setIsFarcasterMiniApp(isMiniApp);
+
+        // Get user context if in Mini App
+        if (isMiniApp) {
+          try {
+            const context = await sdk.context;
+            if (context?.user) {
+              setFarcasterUser({
+                fid: context.user.fid,
+                username: context.user.username || "",
+                displayName: context.user.displayName || "",
+                pfpUrl: context.user.pfpUrl || "",
+                profile: {
+                  bio: {
+                    text: "",
+                    mentions: [],
+                  },
+                },
+              });
+            }
+          } catch (error) {
+            // No user context available (expected for some Mini App contexts)
+          }
+        }
+      } catch (error) {
+        console.error("Failed to initialize Farcaster SDK:", error);
+        // Fallback: still mark as ready even if initialization fails
+        setIsFarcasterMiniApp(isMobile);
+      }
     };
 
-    checkFarcasterContext();
+    initializeSDK();
   }, [isMobile]);
-
-  const initializeFarcaster = async () => {
-    try {
-      // In a real implementation, this would fetch user data from Farcaster
-      // For now, we'll set up the context properly
-      console.log("Initializing Farcaster context");
-    } catch (error) {
-      console.error("Failed to initialize Farcaster context:", error);
-    }
-  };
 
   return (
     <FarcasterContext.Provider
@@ -63,8 +91,8 @@ export function FarcasterProvider({
         frameState,
         isFarcasterMiniApp,
         setFarcasterUser,
-        setFrameState: (state) => setFrameState(prev => ({ ...prev, ...state })),
-        initializeFarcaster
+        setFrameState: (state) =>
+          setFrameState((prev) => ({ ...prev, ...state })),
       }}
     >
       {children}
@@ -75,7 +103,9 @@ export function FarcasterProvider({
 export function useFarcasterContext() {
   const context = useContext(FarcasterContext);
   if (context === undefined) {
-    throw new Error("useFarcasterContext must be used within a FarcasterProvider");
+    throw new Error(
+      "useFarcasterContext must be used within a FarcasterProvider"
+    );
   }
   return context;
 }
