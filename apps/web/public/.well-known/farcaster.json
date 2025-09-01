@@ -16,7 +16,7 @@
     "primaryCategory": "social",
     "tags": ["video", "commentary", "trading", "creator", "coins"],
     "heroImageUrl": "https://saywaht.netlify.app/opengraph-image.jpg",
-    "ogTitle": "Saywaht - Create Video Commentary Coins",
+    "ogTitle": "Saywaht - Video Commentary",
     "ogDescription": "AI-powered video creation platform for creating and trading commentary coins",
     "ogImageUrl": "https://saywaht.netlify.app/opengraph-image.jpg",
     "requiredChains": ["eip155:8453"],

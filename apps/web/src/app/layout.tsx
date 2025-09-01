@@ -66,9 +66,12 @@ export const metadata: Metadata = {
     }/api/farcaster/action`,
     "fc:frame:button:1": "Create Commentary",
     "fc:frame:button:2": "Browse Coins",
+    // Farcaster Mini App Embed Metadata
     "fc:miniapp": "Saywaht",
-    "fc:miniapp:url":
-      process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app",
+    "fc:miniapp:url": process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app",
+    "fc:miniapp:version": "1",
+    "fc:miniapp:image": `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app"}/opengraph-image.jpg`,
+    "fc:miniapp:button": "Open Saywaht",
   },
 };
 
