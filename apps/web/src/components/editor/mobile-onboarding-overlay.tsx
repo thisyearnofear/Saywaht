@@ -9,16 +9,49 @@ interface MobileOnboardingOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   onStartRecording: () => void;
+  isFarcasterMode?: boolean;
+  onFarcasterAction?: (action: string) => void;
 }
 
 export function MobileOnboardingOverlay({
   isOpen,
   onClose,
   onStartRecording,
+  isFarcasterMode = false,
+  onFarcasterAction,
 }: MobileOnboardingOverlayProps) {
   const [currentStep, setCurrentStep] = useState(0);
 
-  const steps = [
+  const steps = isFarcasterMode ? [
+    {
+      title: "Create a Farcaster Video Reaction! 🎬",
+      description:
+        "Turn any video into your own commentary and share it directly to Farcaster",
+      icon: "💬",
+      action: "Get Started",
+    },
+    {
+      title: "Step 1: Watch & React 👀",
+      description:
+        "Watch the video and record your instant reaction. Perfect for Farcaster discussions!",
+      icon: "▶️",
+      action: "Got it!",
+    },
+    {
+      title: "Step 2: Record Your Voice 🎙️",
+      description:
+        "Add your commentary while watching. Your reaction will be posted directly to Farcaster!",
+      icon: "🔴",
+      action: "Ready to Record!",
+    },
+    {
+      title: "Step 3: Share to Farcaster 🚀",
+      description:
+        "Post your reaction directly to Farcaster and optionally mint it as an NFT!",
+      icon: "✨",
+      action: "Start Recording Now",
+    },
+  ] : [
     {
       title: "Welcome to saywaht! 🎬",
       description:
@@ -56,6 +89,9 @@ export function MobileOnboardingOverlay({
       setCurrentStep(currentStep + 1);
     } else {
       // Last step - start recording
+      if (isFarcasterMode && onFarcasterAction) {
+        onFarcasterAction("start_recording");
+      }
       onStartRecording();
       onClose();
     }

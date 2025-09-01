@@ -14,6 +14,21 @@ export default {
       fontFamily: {
         sans: ["var(--font-inter)", "sans-serif"],
       },
+      screens: {
+        'xs': '475px',
+        'sm': '640px',
+        'md': '768px',
+        'lg': '1024px',
+        'xl': '1280px',
+        '2xl': '1536px',
+        // Mobile-specific breakpoints
+        'mobile-sm': '320px',
+        'mobile-md': '375px',
+        'mobile-lg': '425px',
+        'tablet': '768px',
+        'laptop': '1024px',
+        'desktop': '1280px',
+      },
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",

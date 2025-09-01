@@ -7,6 +7,7 @@ import { Toaster } from "../components/ui/sonner";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { Web3Provider } from "@/components/wagmi-provider";
 import { MobileProvider } from "@/contexts/mobile-context";
+import { FarcasterProvider } from "@/farcaster/components/farcaster-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -55,6 +56,14 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  // Farcaster Frame Metadata
+  other: {
+    "fc:frame": "vNext",
+    "fc:frame:image": `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.vercel.app"}/api/farcaster/image`,
+    "fc:frame:post_url": `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.vercel.app"}/api/farcaster/action`,
+    "fc:frame:button:1": "Create Reaction",
+    "fc:frame:button:2": "View Templates",
+  }
 };
 
 export default function RootLayout({
@@ -64,15 +73,23 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+        />
+      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <Web3Provider>
           <ThemeProvider attribute="class" forcedTheme="dark" enableSystem>
             <MobileProvider>
-              <TooltipProvider>
-                {children}
-                <Analytics />
-                <Toaster />
-              </TooltipProvider>
+              <FarcasterProvider>
+                <TooltipProvider>
+                  {children}
+                  <Analytics />
+                  <Toaster />
+                </TooltipProvider>
+              </FarcasterProvider>
             </MobileProvider>
           </ThemeProvider>
         </Web3Provider>
