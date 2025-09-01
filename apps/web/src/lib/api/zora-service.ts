@@ -38,6 +38,11 @@ export class ZoraApiService {
       getCoinsMostValuable({ count: 10 })
     ]);
 
+    console.log("🔍 API call results:");
+    console.log("- New coins result:", newCoins.status, newCoins.status === 'fulfilled' ? newCoins.value?.data?.exploreList?.edges?.length || 0 : newCoins.reason);
+    console.log("- Traded coins result:", tradedCoins.status, tradedCoins.status === 'fulfilled' ? tradedCoins.value?.data?.exploreList?.edges?.length || 0 : tradedCoins.reason);
+    console.log("- Valuable coins result:", valuableCoins.status, valuableCoins.status === 'fulfilled' ? valuableCoins.value?.data?.exploreList?.edges?.length || 0 : valuableCoins.reason);
+
     const allCoins: ZoraCoin[] = [];
 
     // Process results with unified logic
@@ -46,6 +51,7 @@ export class ZoraApiService {
     this.processCoinsResult(valuableCoins, allCoins);
 
     console.log("✅ Trending coins fetched:", allCoins.length);
+    console.log("📋 Coin addresses:", allCoins.map(c => c.address));
     return allCoins.slice(0, 10); // Return top 10
   }
 

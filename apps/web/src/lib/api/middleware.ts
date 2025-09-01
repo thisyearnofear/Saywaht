@@ -113,6 +113,7 @@ export class ApiKeyManager {
       this.zoraKeySet = true;
     } else if (!process.env.ZORA_API_KEY) {
       console.warn("⚠️ ZORA_API_KEY not set - you may hit rate limits");
+      console.log("🔍 Environment check: ZORA_API_KEY =", process.env.ZORA_API_KEY ? "SET" : "NOT SET");
     }
   }
 

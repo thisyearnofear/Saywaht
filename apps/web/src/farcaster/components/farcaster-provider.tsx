@@ -78,8 +78,13 @@ export function FarcasterProvider({
             console.log("No user context available:", error);
           }
           
-          // Note: sdk.actions.ready() will be called by our custom splash screen
-          // to coordinate the timing between our loading states and Farcaster's native splash
+          // Call sdk.actions.ready() to signal the mini app is ready
+          try {
+            await sdk.actions.ready();
+            console.log("Farcaster SDK ready() called successfully");
+          } catch (error) {
+            console.error("Failed to call sdk.actions.ready():", error);
+          }
         }
         
         // Mark as ready after initialization

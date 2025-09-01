@@ -7,6 +7,7 @@ import { useProjectStore } from "@/stores/project-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
+import { useCanvasStore } from "@/stores/canvas-store";
 import { badgeVariants } from "./ui/badge";
 import { cn } from "@/lib/utils";
 import { useAccount } from "wagmi";
@@ -27,6 +28,7 @@ export function EditorHeader() {
   const { activeProject } = useProjectStore();
   const { isPlaying, toggle } = usePlaybackStore();
   const { address } = useAccount();
+  const { getFormat } = useCanvasStore();
 
   // Use imported useState hook from hooks-provider
   const [isExporting, setIsExporting] = useState(false);
@@ -77,7 +79,7 @@ export function EditorHeader() {
           });
         },
         {
-          format: "portrait", // Default mobile-first format
+          format: getFormat(), // Use canvas size from preview panel
           quality: "medium",
           includeAudio: true,
           method: method, // Use selected method

@@ -8,8 +8,6 @@ interface FarcasterSplashScreenProps {
   isVisible: boolean;
   onComplete: () => void;
   className?: string;
-  /** Whether to call sdk.actions.ready() when splash completes */
-  callSdkReady?: boolean;
 }
 
 /**
@@ -21,7 +19,6 @@ export function FarcasterSplashScreen({
   isVisible,
   onComplete,
   className,
-  callSdkReady = false,
 }: FarcasterSplashScreenProps) {
   const [loadingStage, setLoadingStage] = useState<
     "initializing" | "connecting" | "ready"
@@ -45,12 +42,7 @@ export function FarcasterSplashScreen({
         // Complete the splash screen
         setTimeout(() => {
           onComplete();
-          // Call SDK ready if requested (for coordination with Farcaster native splash)
-          if (callSdkReady && typeof window !== "undefined") {
-            import("@farcaster/miniapp-sdk").then(({ sdk }) => {
-              sdk.actions.ready().catch(console.error);
-            }).catch(console.error);
-          }
+          // SDK ready is now called directly in the FarcasterProvider
         }, 300);
         return;
       }

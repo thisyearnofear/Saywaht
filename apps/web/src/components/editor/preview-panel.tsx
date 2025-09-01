@@ -1,14 +1,17 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { useTimelineStore } from "@/stores/timeline-store";
-import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
-import { VideoPlayer } from "@/components/ui/video-player";
+import { useMediaStore } from "@/stores/media-store";
+import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
+import { Button } from "../ui/button";
+import { cn } from "@/lib/utils";
+import { VideoPlayer } from "../ui/video-player";
+import { ImageTimelineTreatment } from "../ui/image-timeline-treatment";
 import { AudioPlayer } from "@/components/ui/audio-player";
-import { Button } from "@/components/ui/button";
 import { Play, Pause, Volume2, VolumeX } from "@/lib/icons";
 import Image from "next/image";
-import { useState, useRef } from "react";
 
 // Debug flag - set to false to hide active clips info
 const SHOW_DEBUG_INFO = process.env.NODE_ENV === "development";
@@ -18,7 +21,7 @@ export function PreviewPanel() {
   const { mediaItems } = useMediaStore();
   const { isPlaying, toggle, currentTime, muted, toggleMute, volume } =
     usePlaybackStore();
-  const [canvasSize, setCanvasSize] = useState({ width: 1080, height: 1920 }); // Default to 9:16 Portrait for mobile-first
+  const { canvasSize, setCanvasSize, setCanvasPreset, getAspectRatio } = useCanvasStore();
   const [showDebug, setShowDebug] = useState(SHOW_DEBUG_INFO);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -62,7 +65,7 @@ export function PreviewPanel() {
   };
 
   const activeClips = getActiveClips();
-  const aspectRatio = canvasSize.width / canvasSize.height;
+  const aspectRatio = getAspectRatio();
 
   // Render a clip
   const renderClip = (clipData: any, index: number) => {
@@ -150,14 +153,7 @@ export function PreviewPanel() {
     return null;
   };
 
-  // Canvas presets - Portrait first for mobile-first approach
-  const canvasPresets = [
-    { name: "9:16 Portrait", width: 1080, height: 1920 }, // Mobile-first default
-    { name: "1:1 Square", width: 1080, height: 1080 },
-    { name: "16:9 HD", width: 1920, height: 1080 },
-    { name: "16:9 4K", width: 3840, height: 2160 },
-    { name: "4:3 Standard", width: 1440, height: 1080 },
-  ];
+
 
   return (
     <div className="h-full w-full flex flex-col min-h-0 min-w-0">
@@ -165,24 +161,22 @@ export function PreviewPanel() {
       <div className="border-b p-2 flex items-center gap-2 text-xs flex-shrink-0">
         <span className="text-muted-foreground">Canvas:</span>
         <select
-          value={`${canvasSize.width}x${canvasSize.height}`}
-          onChange={(e) => {
-            const preset = canvasPresets.find(
-              (p) => `${p.width}x${p.height}` === e.target.value
-            );
-            if (preset)
-              setCanvasSize({ width: preset.width, height: preset.height });
-          }}
-          className="bg-background border rounded px-2 py-1 text-xs"
-        >
-          {canvasPresets.map((preset) => (
-            <option
-              key={preset.name}
-              value={`${preset.width}x${preset.height}`}
-            >
-              {preset.name} ({preset.width}×{preset.height})
-            </option>
-          ))}
+            value={canvasPresets.find(p => 
+              p.size.width === canvasSize.width && p.size.height === canvasSize.height
+            )?.name || "Custom"}
+            onChange={(e) => {
+              const preset = canvasPresets.find(p => p.name === e.target.value);
+              if (preset) {
+                setCanvasPreset(preset);
+              }
+            }}
+            className="bg-background border rounded px-2 py-1 text-xs"
+          >
+            {canvasPresets.map((preset) => (
+              <option key={preset.name} value={preset.name}>
+                {preset.name} ({preset.size.width}x{preset.size.height})
+              </option>
+            ))}
         </select>
 
         {/* Debug Toggle - Only show in development */}

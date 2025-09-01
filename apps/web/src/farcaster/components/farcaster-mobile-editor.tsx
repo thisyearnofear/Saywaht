@@ -62,7 +62,6 @@ export function FarcasterMobileEditorLayout({
       {/* Farcaster Mini App Splash Screen */}
        <FarcasterSplashScreen
          isVisible={isFarcasterMiniApp && isInitializing}
-         callSdkReady={isFarcasterMiniApp}
          onComplete={() => {
            // Splash screen completion is handled by the provider
            console.log("Farcaster splash screen completed");

@@ -14,10 +14,16 @@ export function DiscoveryFeed() {
   useEffect(() => {
     const fetchCoins = async () => {
       try {
+        console.log("🔄 DiscoveryFeed: Starting to fetch coins...");
         const data = await zoraCoins.getTrendingCoins();
+        console.log(
+          "✅ DiscoveryFeed: Coins fetched successfully:",
+          data.length
+        );
         setCoins(data);
       } catch (error) {
-        console.error("Failed to fetch coins:", error);
+        console.error("❌ DiscoveryFeed: Failed to fetch coins:", error);
+        console.log("🔄 DiscoveryFeed: Falling back to mock data");
         // Set some fallback data if API fails
         setCoins([
           {
