@@ -1,18 +1,22 @@
 {
-  "name": "Saywaht",
-  "icon": "https://saywaht.netlify.app/icons/icon-512x512.svg",
-  "description": "AI-powered video creation platform",
-  "action": {
-    "url": "https://saywaht.netlify.app/api/farcaster/action",
-    "type": "post"
-  },
-  "image": {
-    "url": "https://saywaht.netlify.app/api/farcaster/image"
-  },
   "accountAssociation": {
     "header": "eyJmaWQiOjUyNTQsInR5cGUiOiJhdXRoIiwia2V5IjoiMHhkODY1Q2Q3Y2NjOTFGODM2OTJhQjMzMDk4MWMzRTNlOWQ3QTA1MjZBIn0",
     "payload": "eyJkb21haW4iOiJzYXl3YWh0Lm5ldGxpZnkuYXBwIn0",
     "signature": "hEHGInzKUWHewoTcx1PPt1x6vQsO0LOpWNccpPPbiOB1B8nH90C6J8UezgbcE8RT79zcwzZPGOYn5Cd7pM/7Gxs="
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Saywaht",
+    "iconUrl": "https://saywaht.netlify.app/icons/icon-512x512.svg",
+    "homeUrl": "https://saywaht.netlify.app",
+    "splashImageUrl": "https://saywaht.netlify.app/icons/icon-512x512.svg",
+    "splashBackgroundColor": "#000000",
+    "subtitle": "Create Video Commentary",
+    "description": "AI-powered video creation platform for creating and trading commentary coins",
+    "primaryCategory": "social",
+    "tags": ["video", "commentary", "trading", "creator", "coins"],
+    "requiredChains": ["eip155:8453"],
+    "requiredCapabilities": ["actions.signIn", "wallet.getEthereumProvider"]
   },
   "baseBuilder": {
     "allowedAddresses": ["0x3D86Ff165D8bEb8594AE05653249116a6d1fF3f1"]
