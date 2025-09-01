@@ -16,23 +16,23 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.vercel.app"
+    process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app"
   ),
-  title: "saywaht",
+  title: "Saywaht - Create Video Commentary Coins",
   description:
-    "A simple but powerful video editor that gets the job done. In your browser.",
+    "AI-powered video creation platform for creating and trading commentary coins. Turn your video reactions into tradable cryptocurrency tokens.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "saywaht",
+    title: "Saywaht",
   },
   openGraph: {
-    title: "saywaht",
+    title: "Saywaht - Create Video Commentary Coins",
     description:
-      "A simple but powerful video editor that gets the job done. In your browser.",
+      "AI-powered video creation platform for creating and trading commentary coins. Turn your video reactions into tradable cryptocurrency tokens.",
     url: "/",
-    siteName: "saywaht",
+    siteName: "Saywaht",
     locale: "en_US",
     type: "website",
     images: [
@@ -40,15 +40,15 @@ export const metadata: Metadata = {
         url: "/opengraph-image.jpg",
         width: 1200,
         height: 630,
-        alt: "saywaht",
+        alt: "Saywaht - Video Commentary Coin Creation",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "saywaht",
+    title: "Saywaht - Create Video Commentary Coins",
     description:
-      "A simple but powerful video editor that gets the job done. In your browser.",
+      "AI-powered video creation platform for creating and trading commentary coins. Turn your video reactions into tradable cryptocurrency tokens.",
     creator: "@saywahtapp",
     images: ["/opengraph-image.jpg"],
   },
@@ -59,11 +59,18 @@ export const metadata: Metadata = {
   // Farcaster Frame Metadata
   other: {
     "fc:frame": "vNext",
-    "fc:frame:image": `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.vercel.app"}/api/farcaster/image`,
-    "fc:frame:post_url": `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.vercel.app"}/api/farcaster/action`,
-    "fc:frame:button:1": "Create Reaction",
-    "fc:frame:button:2": "View Templates",
-  }
+    "fc:frame:image": `${
+      process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app"
+    }/api/farcaster/image`,
+    "fc:frame:post_url": `${
+      process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app"
+    }/api/farcaster/action`,
+    "fc:frame:button:1": "Create Commentary",
+    "fc:frame:button:2": "Browse Coins",
+    "fc:miniapp": "Saywaht",
+    "fc:miniapp:url":
+      process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app",
+  },
 };
 
 export default function RootLayout({
