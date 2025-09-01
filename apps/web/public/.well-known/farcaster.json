@@ -8,5 +8,13 @@
   },
   "image": {
     "url": "https://saywaht.netlify.app/api/farcaster/image"
+  },
+  "accountAssociation": {
+    "header": "eyJmaWQiOjUyNTQsInR5cGUiOiJhdXRoIiwia2V5IjoiMHhkODY1Q2Q3Y2NjOTFGODM2OTJhQjMzMDk4MWMzRTNlOWQ3QTA1MjZBIn0",
+    "payload": "eyJkb21haW4iOiJzYXl3YWh0Lm5ldGxpZnkuYXBwIn0",
+    "signature": "hEHGInzKUWHewoTcx1PPt1x6vQsO0LOpWNccpPPbiOB1B8nH90C6J8UezgbcE8RT79zcwzZPGOYn5Cd7pM/7Gxs="
+  },
+  "baseBuilder": {
+    "allowedAddresses": ["0x3D86Ff165D8bEb8594AE05653249116a6d1fF3f1"]
   }
 }
