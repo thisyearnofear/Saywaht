@@ -7,9 +7,9 @@
   "miniapp": {
     "version": "1",
     "name": "Saywaht",
-    "iconUrl": "https://saywaht.netlify.app/icons/icon-512x512.svg",
+    "iconUrl": "https://saywaht.netlify.app/images/android-chrome-512x512.png",
     "homeUrl": "https://saywaht.netlify.app",
-    "splashImageUrl": "https://saywaht.netlify.app/icons/icon-512x512.svg",
+    "splashImageUrl": "https://saywaht.netlify.app/images/android-chrome-512x512.png",
     "splashBackgroundColor": "#000000",
     "subtitle": "Create Video Commentary",
     "description": "AI-powered video creation platform for creating and trading commentary coins",
