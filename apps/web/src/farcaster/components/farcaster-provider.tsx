@@ -9,6 +9,8 @@ type FarcasterContextType = {
   farcasterUser: FarcasterUser | null;
   frameState: FarcasterFrameState;
   isFarcasterMiniApp: boolean;
+  isInitializing: boolean;
+  isReady: boolean;
   setFarcasterUser: (user: FarcasterUser | null) => void;
   setFrameState: (state: Partial<FarcasterFrameState>) => void;
 };
@@ -33,15 +35,16 @@ export function FarcasterProvider({
     ...initialFrameState,
   });
   const [isFarcasterMiniApp, setIsFarcasterMiniApp] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isReady, setIsReady] = useState(false);
 
   // Initialize Farcaster Mini App SDK
   useEffect(() => {
     const initializeSDK = async () => {
       try {
-        // Single consolidated ready call for all contexts
-        await sdk.actions.ready();
-
-        // Detect Mini App context and get user data
+        setIsInitializing(true);
+        
+        // Detect Mini App context first
         const isFarcaster =
           typeof window !== "undefined" &&
           (window.name.includes("farcaster") ||
@@ -52,8 +55,8 @@ export function FarcasterProvider({
         const isMiniApp = isFarcaster || isMobile;
         setIsFarcasterMiniApp(isMiniApp);
 
-        // Get user context if in Mini App
         if (isMiniApp) {
+          // Get user context if available (before calling ready)
           try {
             const context = await sdk.context;
             if (context?.user) {
@@ -72,12 +75,22 @@ export function FarcasterProvider({
             }
           } catch (error) {
             // No user context available (expected for some Mini App contexts)
+            console.log("No user context available:", error);
           }
+          
+          // Note: sdk.actions.ready() will be called by our custom splash screen
+          // to coordinate the timing between our loading states and Farcaster's native splash
         }
+        
+        // Mark as ready after initialization
+        setIsReady(true);
+        setIsInitializing(false);
       } catch (error) {
         console.error("Failed to initialize Farcaster SDK:", error);
         // Fallback: still mark as ready even if initialization fails
         setIsFarcasterMiniApp(isMobile);
+        setIsReady(true);
+        setIsInitializing(false);
       }
     };
 
@@ -90,6 +103,8 @@ export function FarcasterProvider({
         farcasterUser,
         frameState,
         isFarcasterMiniApp,
+        isInitializing,
+        isReady,
         setFarcasterUser,
         setFrameState: (state) =>
           setFrameState((prev) => ({ ...prev, ...state })),

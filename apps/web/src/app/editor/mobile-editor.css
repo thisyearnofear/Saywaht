@@ -4,6 +4,89 @@
 .mobile-editor {
   overscroll-behavior: none;
   touch-action: pan-x pan-y;
+  /* Ensure proper scrolling in all contexts */
+  overflow: hidden;
+  position: relative;
+}
+
+/* Farcaster Mini App specific styles */
+.mobile-editor.farcaster-miniapp {
+  /* Prevent overscroll behavior that can interfere with mini app gestures */
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
+  
+  /* Optimize touch interactions for mini app context */
+  touch-action: pan-y pinch-zoom;
+  
+  /* Use dynamic viewport units for better mobile compatibility */
+  min-height: 100dvh;
+  max-height: 100dvh;
+  width: 100dvw;
+  max-width: 100dvw;
+  
+  /* Ensure proper overflow handling */
+  overflow: hidden;
+  overflow-y: auto;
+  
+  /* Prevent text selection and callouts that can interfere with gestures */
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  
+  /* Optimize for mini app modal context */
+  position: relative;
+  isolation: isolate;
+  
+  /* Prevent zoom on input focus */
+  -webkit-text-size-adjust: 100%;
+  
+  /* Smooth scrolling for better UX */
+  scroll-behavior: smooth;
+  
+  /* Hardware acceleration for better performance */
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Enhanced scrollable containers within Farcaster context */
+.farcaster-miniapp .scrollable {
+  /* Better momentum scrolling */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  
+  /* Prevent scroll chaining */
+  overscroll-behavior: contain;
+  
+  /* Optimize touch interactions */
+  touch-action: pan-y;
+}
+
+/* Farcaster-specific input optimizations */
+.farcaster-miniapp input,
+.farcaster-miniapp textarea,
+.farcaster-miniapp select {
+  /* Prevent zoom on focus */
+  font-size: 16px;
+  
+  /* Re-enable user selection for inputs */
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Optimize buttons and interactive elements */
+.farcaster-miniapp button,
+.farcaster-miniapp [role="button"] {
+  /* Improve touch targets */
+  min-height: 44px;
+  min-width: 44px;
+  
+  /* Prevent text selection */
+  -webkit-user-select: none;
+  user-select: none;
+  
+  /* Optimize touch feedback */
+  touch-action: manipulation;
 }
 
 /* Optimize touch targets for mobile */
@@ -41,6 +124,21 @@
 .mobile-editor .scrollable {
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
+  /* Enhanced for Farcaster Mini App */
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+/* Farcaster Mini App scrollable areas */
+.mobile-editor.farcaster-miniapp .scrollable {
+  /* Ensure smooth scrolling in mini app context */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  /* Prevent momentum scrolling issues */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 /* Hide scrollbars on mobile but keep functionality */
@@ -76,6 +174,14 @@
 /* Optimize for mobile gestures */
 .mobile-editor .gesture-area {
   touch-action: manipulation;
+}
+
+/* Farcaster Mini App gesture optimization */
+.mobile-editor.farcaster-miniapp .gesture-area {
+  touch-action: pan-y;
+  /* Allow vertical scrolling but prevent horizontal */
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: contain;
 }
 
 /* Prevent zoom on double tap */
