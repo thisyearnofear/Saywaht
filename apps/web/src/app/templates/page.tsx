@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React from "react";
 import { TemplateBrowser } from "@/components/templates/template-browser";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -9,9 +9,9 @@ export default function TemplatesPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-800 to-blue-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-800 to-blue-900 text-white overflow-y-auto scrollable">
       {/* Background Visual Elements */}
-      <div className="absolute inset-0 overflow-hidden opacity-10">
+      <div className="absolute inset-0 overflow-hidden opacity-10 pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500 rounded-full blur-3xl"></div>
         <div className="absolute top-60 -left-20 w-60 h-60 bg-purple-500 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 right-20 w-60 h-60 bg-indigo-500 rounded-full blur-3xl"></div>

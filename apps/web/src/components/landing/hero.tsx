@@ -11,7 +11,7 @@ export function Hero() {
   const { isConnected } = useAccount();
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col justify-between items-center text-center px-4 relative overflow-hidden">
+    <div className="min-h-[calc(100vh-4rem)] flex flex-col justify-between items-center text-center px-4 relative overflow-y-auto scrollable">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div

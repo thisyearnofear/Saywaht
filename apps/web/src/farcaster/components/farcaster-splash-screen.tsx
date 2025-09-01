@@ -90,7 +90,7 @@ export function FarcasterSplashScreen({
       )}
     >
       {/* Farcaster-style gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-purple-500/10" />
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-purple-500/10 pointer-events-none" />
       
       {/* Main content */}
       <div className="relative flex flex-col items-center space-y-8 px-8 text-center">

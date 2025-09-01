@@ -8,30 +8,19 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: '**',
+        protocol: "https",
+        hostname: "**",
       },
     ],
   },
 
-  // Basic headers for COEP/COOP
+  // Security headers (COOP/COEP removed to support Coinbase Smart Wallet)
   async headers() {
     return [
       {
-        source: "/((?!_next/static|_next/image|favicon.ico|templates|.*\\.(?:jpg|jpeg|gif|png|svg|ico|webp|mp4|webm|ogg|mp3|wav|flac|aac|woff|woff2|ttf|otf)).*)",
-        headers: [
-          {
-            key: "Cross-Origin-Opener-Policy",
-            value: "same-origin",
-          },
-          {
-            key: "Cross-Origin-Embedder-Policy",
-            value: "require-corp",
-          },
-        ],
-      },
-      {
-        source: "/:all*(jpg|jpeg|gif|png|svg|ico|webp|mp4|webm|ogg|mp3|wav|flac|aac|woff|woff2|ttf|otf)",
+        // Keep CORP for static assets, but do not set COOP/COEP to avoid wallet SDK issues
+        source:
+          "/:all*(jpg|jpeg|gif|png|svg|ico|webp|mp4|webm|ogg|mp3|wav|flac|aac|woff|woff2|ttf|otf)",
         headers: [
           {
             key: "Cross-Origin-Resource-Policy",
