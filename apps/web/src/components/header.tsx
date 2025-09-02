@@ -5,23 +5,66 @@ import Image from "next/image";
 import { Button } from "./ui/button";
 import { ArrowRight, Star, Menu, X } from "@/lib/icons";
 import { HeaderBase } from "./header-base";
-import { useWalletAuth } from "@opencut/auth";
-import { getStars } from "@/lib/fetchGhStars";
 import { useEffect, useState } from "react";
+
+// Inline wallet components to avoid import issues
+import { useWalletAuth } from "@opencut/auth";
 import { useAccount } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
-export function Header() {
+function WalletComponents({
+  mobile,
+  onClose,
+}: {
+  mobile?: boolean;
+  onClose?: () => void;
+}) {
   const { isAuthenticated } = useWalletAuth();
   const { isConnected } = useAccount();
+
+  if (mobile) {
+    return isConnected ? (
+      <Link href="/editor" onClick={onClose}>
+        <Button className="w-full text-sm font-medium">
+          Launch Editor
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </Link>
+    ) : (
+      <div className="flex justify-center">
+        <ConnectButton />
+      </div>
+    );
+  }
+
+  return isConnected ? (
+    <Link href="/editor">
+      <Button size="sm" className="text-sm font-medium">
+        Launch Editor
+        <ArrowRight className="ml-2 h-4 w-4" />
+      </Button>
+    </Link>
+  ) : (
+    <ConnectButton />
+  );
+}
+
+export function Header() {
   const [star, setStar] = useState<string>("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+
+    // Only fetch stars on client side
     const fetchStars = async () => {
       try {
-        const data = await getStars();
-        setStar(data);
+        const response = await fetch(
+          "https://api.github.com/repos/thisyearnofear/saywaht"
+        );
+        const data = await response.json();
+        setStar(data.stargazers_count?.toString() || "");
       } catch (err) {
         console.error("Failed to fetch GitHub stars", err);
       }
@@ -79,16 +122,8 @@ export function Header() {
 
         <div className="w-px h-6 bg-border mx-2" />
 
-        {isConnected ? (
-          <Link href="/editor">
-            <Button size="sm" className="text-sm font-medium">
-              Launch Editor
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-        ) : (
-          <ConnectButton />
-        )}
+        {/* Wallet Components - Only render on client */}
+        {isClient && <WalletComponents />}
       </nav>
 
       {/* Mobile Menu Button */}
@@ -147,17 +182,12 @@ export function Header() {
               </Button>
             </Link>
             <div className="border-t border-border my-2" />
-            {isConnected ? (
-              <Link href="/editor" onClick={() => setMobileMenuOpen(false)}>
-                <Button className="w-full text-sm font-medium">
-                  Launch Editor
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            ) : (
-              <div className="flex justify-center">
-                <ConnectButton />
-              </div>
+            {/* Wallet Components - Only render on client */}
+            {isClient && (
+              <WalletComponents
+                mobile
+                onClose={() => setMobileMenuOpen(false)}
+              />
             )}
           </nav>
         </div>

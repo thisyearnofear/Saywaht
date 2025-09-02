@@ -86,6 +86,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   const { mediaItems, addMediaItem } = useMediaStore();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [wizardData, setWizardData] = useState<MintWizardData>({
     thumbnail: null,
     thumbnailPrompt: "",
@@ -98,6 +99,11 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
     deployedCoin: null,
   });
 
+  // Ensure we're on client side before doing anything
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const updateWizardData = useCallback((updates: Partial<MintWizardData>) => {
     setWizardData((prev: MintWizardData) => ({ ...prev, ...updates }));
   }, []);
@@ -105,14 +111,14 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   // Skip automatic data loading to avoid serverless function issues
   // Users can manually set up their coin details
   useEffect(() => {
-    if (dataUrl) {
+    if (isClient && dataUrl) {
       console.log("Project data URL available:", dataUrl);
       console.log(
         "Note: Automatic data loading disabled to avoid serverless function issues"
       );
       console.log("Users can manually configure their coin details");
     }
-  }, [dataUrl]);
+  }, [dataUrl, isClient]);
 
   // Trigger confetti when deployment is complete
   useEffect(() => {
@@ -182,13 +188,13 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
     }
   };
 
-  // Show loading state while fetching project data
-  if (isLoadingData) {
+  // Show loading state while fetching project data or during SSR
+  if (isLoadingData || !isClient) {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-4">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         <p className="text-muted-foreground">
-          Loading project data from IPFS...
+          {isClient ? "Loading project data from IPFS..." : "Initializing..."}
         </p>
       </div>
     );

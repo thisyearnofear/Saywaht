@@ -1,11 +1,23 @@
-import {
-  getCoinsNew,
-  getCoinsLastTraded,
-  getCoinsMostValuable,
-  validateMetadataURIContent,
-} from "@zoralabs/coins-sdk";
-import type { ValidMetadataURI } from "@zoralabs/coins-sdk";
 import { ApiKeyManager } from "./middleware";
+
+// Type definition for ValidMetadataURI
+type ValidMetadataURI = string;
+
+// Dynamic imports to avoid SSR issues with Zora SDK
+let zoraSdk: any = null;
+
+async function getZoraSdk() {
+  if (!zoraSdk && typeof window === 'undefined') {
+    try {
+      const sdk = await import("@zoralabs/coins-sdk");
+      zoraSdk = sdk;
+    } catch (error) {
+      console.error("Failed to load Zora SDK:", error);
+      throw error;
+    }
+  }
+  return zoraSdk;
+}
 
 export interface ZoraCoin {
   address: string;
@@ -30,6 +42,14 @@ export class ZoraApiService {
 
   async getTrendingCoins(): Promise<ZoraCoin[]> {
     console.log("📈 Fetching trending coins from Zora...");
+
+    // Get the Zora SDK dynamically
+    const sdk = await getZoraSdk();
+    if (!sdk) {
+      throw new Error("Failed to load Zora SDK");
+    }
+
+    const { getCoinsNew, getCoinsLastTraded, getCoinsMostValuable } = sdk;
 
     // Fetch latest coins from Zora in parallel
     const [newCoins, tradedCoins, valuableCoins] = await Promise.allSettled([
@@ -57,6 +77,14 @@ export class ZoraApiService {
 
   async validateMetadata(metadataUri: string): Promise<void> {
     console.log("🔍 Validating metadata URI content...");
+
+    // Get the Zora SDK dynamically
+    const sdk = await getZoraSdk();
+    if (!sdk) {
+      throw new Error("Failed to load Zora SDK");
+    }
+
+    const { validateMetadataURIContent } = sdk;
     await validateMetadataURIContent(metadataUri as ValidMetadataURI);
     console.log("✅ Metadata validation passed");
   }
