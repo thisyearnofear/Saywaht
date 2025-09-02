@@ -20,7 +20,7 @@ import "@rainbow-me/rainbowkit/styles.css";
 // WalletConnect project ID - get from https://cloud.walletconnect.com/
 const projectId =
   process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
-  "b19c9a5e8c4d8b2e7f8c7b5a3d2e1f9a";
+  "6e6bc41fa987ef4e0969f95976de621a";
 
 // Module-level singletons to avoid double initialization during HMR or multi-mount
 let wagmiConfigSingleton: ReturnType<typeof createConfig> | null = null;
