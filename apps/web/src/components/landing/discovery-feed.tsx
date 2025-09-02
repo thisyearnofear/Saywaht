@@ -38,6 +38,7 @@ export function DiscoveryFeed() {
             volume24h: "0",
             priceChange24h: 0,
             createdAt: new Date().toISOString(),
+            thumbnail: "/templates/voiceovers/animal/cheetah.mp4",
           },
         ]);
       } finally {
@@ -45,7 +46,12 @@ export function DiscoveryFeed() {
       }
     };
 
-    fetchCoins();
+    // Only fetch on client side to avoid SSR issues
+    if (typeof window !== "undefined") {
+      fetchCoins();
+    } else {
+      setIsLoading(false);
+    }
   }, []);
 
   if (isLoading) {

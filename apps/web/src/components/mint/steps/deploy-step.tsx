@@ -64,7 +64,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
       try {
         console.log("🪙 Preparing coin creation on Zora Protocol...");
 
-        // Validate metadata URI content before proceeding using secure server-side API
+        // Validate metadata URI content before proceeding using client-side validation
         console.log("🔍 Validating metadata URI content...");
         try {
           if (!data.metadataUri) {
@@ -109,7 +109,9 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
             dataSuffix: referralTag as `0x${string}`,
           };
 
-          console.log("📋 Divvi referral tag generated and appended to calldata");
+          console.log(
+            "📋 Divvi referral tag generated and appended to calldata"
+          );
           setContractCallParams(modifiedCallParams);
         } catch (referralError) {
           console.warn(

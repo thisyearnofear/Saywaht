@@ -104,32 +104,11 @@ export class ApiKeyManager {
   private static zoraKeySet = false;
 
   static setZoraKey(): void {
-    // Only set the key if we're in a server environment and have the API key
-    if (typeof window === 'undefined' && !this.zoraKeySet && process.env.ZORA_API_KEY) {
-      try {
-        // Use require instead of dynamic import to avoid bundling issues
-        const { setApiKey } = require("@zoralabs/coins-sdk");
-        setApiKey(process.env.ZORA_API_KEY!);
-        console.log("🔑 Zora API key configured");
-        this.zoraKeySet = true;
-      } catch (error) {
-        console.warn("⚠️ Failed to set Zora API key:", error);
-      }
-    } else if (!process.env.ZORA_API_KEY) {
-      console.warn("⚠️ ZORA_API_KEY not set - you may hit rate limits");
-    }
+    // Zora API key is now handled client-side in zora-coins.ts
+    // No server-side SDK initialization needed
+    console.log("🔑 Zora API key handled client-side");
   }
 
-  static getFilecoinConfig() {
-    const privateKey = process.env.FILECOIN_PRIVATE_KEY;
-    const walletAddress = process.env.FILECOIN_WALLET_ADDRESS;
-    
-    if (!privateKey || !walletAddress) {
-      throw new Error("Filecoin configuration missing. Set FILECOIN_PRIVATE_KEY and FILECOIN_WALLET_ADDRESS");
-    }
-    
-    return { privateKey, walletAddress };
-  }
 }
 
 // Compose multiple middlewares
