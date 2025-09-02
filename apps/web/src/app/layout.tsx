@@ -72,14 +72,14 @@ export const metadata: Metadata = {
       "button": {
         "title": "🎬 Open Saywaht",
         "action": {
-          "type": "launch_frame",
+          "type": "launch_miniapp",
           "name": "Saywaht",
           "url": baseUrl,
           "splashImageUrl": `${baseUrl}/images/android-chrome-512x512.png`,
           "splashBackgroundColor": "#000000"
         }
       }
-    }),
+    })
   },
 };
 
