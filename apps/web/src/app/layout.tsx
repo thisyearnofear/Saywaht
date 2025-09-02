@@ -65,12 +65,21 @@ export const metadata: Metadata = {
     "fc:frame:post_url": `${baseUrl}/api/farcaster/action`,
     "fc:frame:button:1": "Create Commentary",
     "fc:frame:button:2": "Browse Coins",
-    // Mini app metadata
-    "fc:miniapp": "Saywaht",
-    "fc:miniapp:url": baseUrl,
-    "fc:miniapp:version": "1",
-    "fc:miniapp:image": `${baseUrl}/opengraph-image.jpg`,
-    "fc:miniapp:button": "Open Saywaht",
+    // Mini app metadata - 2025 format with stringified JSON
+    "fc:miniapp": JSON.stringify({
+      "version": "1",
+      "imageUrl": `${baseUrl}/opengraph-image.jpg`,
+      "button": {
+        "title": "🎬 Open Saywaht",
+        "action": {
+          "type": "launch_frame",
+          "name": "Saywaht",
+          "url": baseUrl,
+          "splashImageUrl": `${baseUrl}/images/android-chrome-512x512.png`,
+          "splashBackgroundColor": "#000000"
+        }
+      }
+    }),
   },
 };
 

@@ -44,13 +44,22 @@ export function FarcasterProvider({
       try {
         setIsInitializing(true);
         
-        // Detect Mini App context first
+        // Enhanced Mini App context detection for 2025 standards
         const isFarcaster =
           typeof window !== "undefined" &&
           (window.name.includes("farcaster") ||
             window.location.search.includes("farcaster") ||
             window.location.search.includes("fid") ||
-            window.location.pathname.includes("/farcaster"));
+            window.location.pathname.includes("/farcaster") ||
+            // Check for Farcaster user agent
+            navigator.userAgent.includes("Farcaster") ||
+            // Check for frame context indicators
+            window.location.search.includes("fc_frame") ||
+            // Check for parent window context (iframe detection)
+            window.parent !== window ||
+            // Check for Farcaster referrer
+            document.referrer.includes("farcaster") ||
+            document.referrer.includes("warpcast"));
 
         const isMiniApp = isFarcaster || isMobile;
         setIsFarcasterMiniApp(isMiniApp);
