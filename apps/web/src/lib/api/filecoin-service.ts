@@ -16,12 +16,26 @@ export class FilecoinApiService {
   private config: { privateKey: string; walletAddress: string };
 
   constructor() {
-    this.config = ApiKeyManager.getFilecoinConfig();
+    try {
+      this.config = ApiKeyManager.getFilecoinConfig();
+    } catch (error) {
+      console.warn('Filecoin configuration not available:', error);
+      // Provide fallback config to prevent crashes
+      this.config = {
+        privateKey: '',
+        walletAddress: ''
+      };
+    }
   }
 
   async initialize(): Promise<void> {
     if (this.synapse && this.storageService) {
       return; // Already initialized
+    }
+
+    // Check if we have valid configuration
+    if (!this.config.privateKey || !this.config.walletAddress) {
+      throw new Error('Filecoin configuration is missing. Please set FILECOIN_PRIVATE_KEY and FILECOIN_WALLET_ADDRESS environment variables.');
     }
 
     try {
