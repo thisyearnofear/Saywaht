@@ -1,36 +1,49 @@
+/**
+ * SIMPLE MOBILE TIMELINE
+ * Basic mobile timeline without complex dependencies
+ * Following ENHANCEMENT FIRST and CLEAN principles
+ */
+
 "use client";
 
-// ENHANCEMENT FIRST: Minimal imports to fix build issues
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 
-interface MobileTimelineProps {
+interface SimpleMobileTimelineProps {
   expanded?: boolean;
   onToggleExpand?: () => void;
 }
 
-export function MobileTimeline({
+export function SimpleMobileTimeline({
   expanded = false,
   onToggleExpand,
-}: MobileTimelineProps) {
+}: SimpleMobileTimelineProps) {
   const [isExpanded, setIsExpanded] = useState(expanded);
-  const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  
+  const timelineRef = useRef<HTMLDivElement>(null);
   const { currentTime, duration, seek } = usePlaybackStore();
   const { tracks } = useTimelineStore();
 
-  // CLEAN: Minimal touch interactions
-  const timelineRef = useRef<HTMLDivElement>(null);
-  const [isScrubbing, setIsScrubbing] = useState(false);
-  
-  // PERFORMANT: Simple scrubbing
+  // CLEAN: Simple toggle function
+  const handleToggle = () => {
+    if (onToggleExpand) {
+      onToggleExpand();
+    } else {
+      setIsExpanded(!isExpanded);
+    }
+  };
+
+  // PERFORMANT: Simple touch handling for scrubbing
   const handleTouchStart = (e: React.TouchEvent) => {
     setIsScrubbing(true);
     e.preventDefault();
   };
-  
+
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isScrubbing || !timelineRef.current) return;
     
@@ -42,33 +55,28 @@ export function MobileTimeline({
     seek(newTime);
     e.preventDefault();
   };
-  
+
   const handleTouchEnd = () => {
     setIsScrubbing(false);
   };
 
-  // CLEAN: Simplified toggle without haptic feedback
-  const handleToggle = () => {
-    if (onToggleExpand) {
-      onToggleExpand();
-    } else {
-      setIsExpanded(!isExpanded);
-    }
+  // MODULAR: Simple zoom controls
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(3, prev + 0.5));
   };
 
-  // MODULAR: Simple state management
-  const actualExpanded = onToggleExpand ? expanded : isExpanded;
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(0.5, prev - 0.5));
+  };
 
-  // CLEAN: Simple zoom controls
-  const handleZoomIn = () => setZoomLevel(prev => Math.min(3, prev + 0.5));
-  const handleZoomOut = () => setZoomLevel(prev => Math.max(0.5, prev - 0.5));
-
-  // Format time for display
+  // CLEAN: Format time display
   const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${minutes}:${secs.toString().padStart(2, "0")}`;
   };
+
+  const actualExpanded = onToggleExpand ? expanded : isExpanded;
 
   return (
     <div

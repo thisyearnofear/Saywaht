@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { usePanelStore } from "@/stores/panel-store";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
 import { StatusBar } from "@/components/editor/status-bar";
-import { MobileTimeline } from "@/components/editor/mobile-timeline";
+import { WorkingMobileTimeline } from "@/components/editor/working-mobile-timeline";
 import { MobileMediaPanel } from "@/components/editor/mobile-media-panel";
 import { MobilePreviewPanel } from "@/components/editor/mobile-preview-panel";
 import {
@@ -218,8 +218,8 @@ export function MobileEditorLayout({ children }: MobileEditorLayoutProps) {
           </Tabs>
         )}
 
-        {/* Mobile Timeline with expand/collapse control */}
-        <MobileTimeline
+        {/* ENHANCEMENT: Working Mobile Timeline with proper touch handling */}
+        <WorkingMobileTimeline
           expanded={timelineExpanded}
           onToggleExpand={() => setTimelineExpanded(!timelineExpanded)}
         />

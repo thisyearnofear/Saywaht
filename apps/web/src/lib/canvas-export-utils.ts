@@ -8,6 +8,7 @@ import { selectBestExportMethod, recordWebCodecsFailure, recordWebCodecsSuccess,
 import { exportDiagnostics } from "./export-diagnostics";
 import { getExportConfig, getWebCodecsConfig, getExportTimeout } from "./export-config";
 import { exportVideoBackend, BackendExportOptions } from "./backend-export";
+import { withExportRetry, withMethodFallback, EXPORT_RETRY_CONFIGS, exportWithReliability } from "./export-retry-system";
 
 export type ExportMethod = "backend" | "canvas" | "offline" | "webcodecs" | "auto";
 export type { VideoFormat }; // Re-export for backward compatibility
@@ -65,7 +66,7 @@ export const exportVideo = async (
     onProgress(progress);
   };
   
-  // Helper function to execute export with method
+  // ENHANCEMENT: Helper function to execute export with retry logic
   const executeExport = async (
     exportMethod: "backend" | "webcodecs" | "offline" | "canvas",
     progress: (p: number) => void,
@@ -73,90 +74,117 @@ export const exportVideo = async (
   ): Promise<Blob> => {
     switch (exportMethod) {
       case "backend": {
-        const backendOptions: BackendExportOptions = {
-          ...options,
-          maxFileSizeMB: 50,
-          timeout: 300000 // 5 minutes
-        };
-        const result = await exportVideoBackend(
-          tracks,
-          mediaItems,
-          totalDuration,
-          progress,
-          backendOptions
-        );
-        return result.blob;
+        // ENHANCEMENT: Backend export with retry logic
+        return withExportRetry(async () => {
+          const backendOptions: BackendExportOptions = {
+            ...options,
+            maxFileSizeMB: 50,
+            timeout: 300000 // 5 minutes
+          };
+          const result = await exportVideoBackend(
+            tracks,
+            mediaItems,
+            totalDuration,
+            progress,
+            backendOptions
+          );
+          return result.blob;
+        }, 'backend-export', {
+          config: EXPORT_RETRY_CONFIGS.backend
+        });
       }
 
       case "webcodecs": {
-        const config = getWebCodecsConfig(options);
-        return exportVideoWithTransferableFrames(
-          tracks,
-          mediaItems,
-          totalDuration,
-          progress,
-          { ...options, ...config } as WebCodecsExportOptions,
-          abortSignal
-        );
+        // ENHANCEMENT: WebCodecs export with retry logic
+        return withExportRetry(async () => {
+          const config = getWebCodecsConfig(options);
+          return exportVideoWithTransferableFrames(
+            tracks,
+            mediaItems,
+            totalDuration,
+            progress,
+            { ...options, ...config } as WebCodecsExportOptions,
+            abortSignal
+          );
+        }, 'webcodecs-export', {
+          config: EXPORT_RETRY_CONFIGS.webcodecs
+        });
       }
 
       case "offline": {
-        const config = getExportConfig(options);
-        return exportVideoTrueOffline(
-          tracks,
-          mediaItems,
-          totalDuration,
-          progress,
-          { ...options, ...config }
-        );
+        // ENHANCEMENT: Offline export with retry logic
+        return withExportRetry(async () => {
+          const config = getExportConfig(options);
+          return exportVideoTrueOffline(
+            tracks,
+            mediaItems,
+            totalDuration,
+            progress,
+            { ...options, ...config }
+          );
+        }, 'offline-export', {
+          config: EXPORT_RETRY_CONFIGS.canvas
+        });
       }
 
       case "canvas":
       default:
-        return exportVideoWithCanvas(tracks, mediaItems, totalDuration, progress, options);
+        // ENHANCEMENT: Canvas export with retry logic
+        return withExportRetry(async () => {
+          return exportVideoWithCanvas(tracks, mediaItems, totalDuration, progress, options);
+        }, 'canvas-export', {
+          config: EXPORT_RETRY_CONFIGS.canvas
+        });
     }
   };
 
-  // Helper function to handle WebCodecs with timeout and fallback
+  // ENHANCEMENT: WebCodecs with intelligent fallback using retry system
   const executeWebCodecsWithFallback = async (progress: (p: number) => void): Promise<Blob> => {
-    let webCodecsController: AbortController | null = null;
-    
-    try {
-      // Create an abort controller to cancel WebCodecs if needed
-      webCodecsController = new AbortController();
-      
-      const webCodecsPromise = executeExport("webcodecs", progress, webCodecsController.signal);
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          // Cancel the WebCodecs process before rejecting
+    return withMethodFallback(
+      // Primary method: WebCodecs with timeout
+      async () => {
+        let webCodecsController: AbortController | null = null;
+        
+        try {
+          webCodecsController = new AbortController();
+          
+          const webCodecsPromise = executeExport("webcodecs", progress, webCodecsController.signal);
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => {
+              if (webCodecsController) {
+                webCodecsController.abort();
+              }
+              reject(new Error('WebCodecs export timeout'));
+            }, getExportTimeout(totalDuration));
+          });
+          
+          const result = await Promise.race([webCodecsPromise, timeoutPromise]);
+          recordWebCodecsSuccess();
+          return result;
+        } catch (error) {
+          recordWebCodecsFailure();
           if (webCodecsController) {
             webCodecsController.abort();
           }
-          reject(new Error('WebCodecs export timeout'));
-        }, getExportTimeout(totalDuration));
-      });
-      
-      const result = await Promise.race([webCodecsPromise, timeoutPromise]);
-      recordWebCodecsSuccess();
-      return result;
-    } catch (error) {
-      console.error("WebCodecs export failed:", error);
-      recordWebCodecsFailure();
-      exportDiagnostics.recordError(error instanceof Error ? error : new Error(String(error)));
-      
-      // Ensure WebCodecs is properly cancelled before fallback
-      if (webCodecsController) {
-        webCodecsController.abort();
+          // Small delay for cleanup
+          await new Promise(resolve => setTimeout(resolve, 100));
+          throw error;
+        }
+      },
+      // Fallback method: Offline export
+      async () => {
+        progress(0); // Reset progress for fallback
+        return executeExport("offline", progress);
+      },
+      'webcodecs',
+      'offline',
+      'webcodecs-with-fallback',
+      {
+        onMethodFallback: (from, to, reason) => {
+          console.log(`🔄 Falling back from ${from} to ${to}: ${reason}`);
+        }
       }
-      
-      // Add a small delay to ensure WebCodecs cleanup completes
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Fallback to offline export
-      console.log("🔄 Falling back to offline export");
-      progress(0); // Reset progress
-      return executeExport("offline", progress);
-    }
+    );
   };
 
   try {

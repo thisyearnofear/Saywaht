@@ -7,7 +7,13 @@ export function useIsMobile() {
   const [isMobile, setIsMobile] = useState<boolean | undefined>(undefined);
 
   useEffect(() => {
+    // ENHANCEMENT: Prevent memory leaks with proper cleanup
+    let mounted = true;
+    
     const checkIsMobile = () => {
+      // CLEAN: Early return if component unmounted
+      if (!mounted) return;
+      
       // Check screen size
       const isSmallScreen = window.innerWidth < MOBILE_BREAKPOINT;
 
@@ -26,14 +32,20 @@ export function useIsMobile() {
       const isMobileDevice =
         isSmallScreen && (hasTouchScreen || mobileUserAgent);
 
-      setIsMobile(isMobileDevice);
+      if (mounted) {
+        setIsMobile(isMobileDevice);
+      }
     };
 
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
     mql.addEventListener("change", checkIsMobile);
     checkIsMobile();
 
-    return () => mql.removeEventListener("change", checkIsMobile);
+    // ENHANCEMENT: Proper cleanup to prevent memory leaks
+    return () => {
+      mounted = false;
+      mql.removeEventListener("change", checkIsMobile);
+    };
   }, []);
 
   return !!isMobile;

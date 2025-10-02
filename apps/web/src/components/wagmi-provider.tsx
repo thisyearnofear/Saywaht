@@ -16,11 +16,16 @@ import {
   trustWallet,
 } from "@rainbow-me/rainbowkit/wallets";
 import "@rainbow-me/rainbowkit/styles.css";
+import { handleError } from "@/lib/error-handler";
 
-// WalletConnect project ID - get from https://cloud.walletconnect.com/
+// ENHANCEMENT: Graceful fallback for WalletConnect project ID
 const projectId =
   process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
   "6e6bc41fa987ef4e0969f95976de621a";
+
+if (!process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID) {
+  console.warn('NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID not set, using fallback. Mobile wallet connections may be limited.');
+}
 
 // Module-level singletons to avoid double initialization during HMR or multi-mount
 let wagmiConfigSingleton: ReturnType<typeof createConfig> | null = null;
@@ -29,47 +34,65 @@ let queryClientSingleton: QueryClient | null = null;
 function getWagmiConfig() {
   if (wagmiConfigSingleton) return wagmiConfigSingleton;
 
-  // Configure wallet connectors with mobile wallet support (create once)
-  const { wallets } = getDefaultWallets();
+  try {
+    // Configure wallet connectors with mobile wallet support (create once)
+    const { wallets } = getDefaultWallets();
 
-  const connectors = connectorsForWallets(
-    [
-      ...wallets,
+    const connectors = connectorsForWallets(
+      [
+        ...wallets,
+        {
+          groupName: "Popular",
+          wallets: [metaMaskWallet, coinbaseWallet, walletConnectWallet],
+        },
+        {
+          groupName: "Mobile",
+          wallets: [trustWallet, rainbowWallet],
+        },
+      ],
       {
-        groupName: "Popular",
-        wallets: [metaMaskWallet, coinbaseWallet, walletConnectWallet],
-      },
-      {
-        groupName: "Mobile",
-        wallets: [trustWallet, rainbowWallet],
-      },
-    ],
-    {
-      appName: "saywaht - Video Creator Coins",
-      projectId,
-    }
-  );
+        appName: "saywaht - Video Creator Coins",
+        projectId,
+      }
+    );
 
-  wagmiConfigSingleton = createConfig({
-    connectors,
-    chains: [base, baseSepolia],
-    transports: {
-      [base.id]: http(),
-      [baseSepolia.id]: http(),
-    },
-    ssr: true,
-  });
+    wagmiConfigSingleton = createConfig({
+      connectors,
+      chains: [base, baseSepolia],
+      transports: {
+        [base.id]: http(),
+        [baseSepolia.id]: http(),
+      },
+      ssr: true,
+    });
 
-  return wagmiConfigSingleton;
+    return wagmiConfigSingleton;
+  } catch (error) {
+    // ENHANCEMENT: Handle wallet configuration errors gracefully
+    handleError(error, 'Wallet configuration');
+    throw error;
+  }
 }
 
 function getQueryClient() {
   if (queryClientSingleton) return queryClientSingleton;
+  
+  // ENHANCEMENT: Better error handling and retry logic for queries
   queryClientSingleton = new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 60 * 1000,
-        retry: 2,
+        retry: (failureCount, error) => {
+          // Don't retry on 4xx errors
+          if (error instanceof Error && error.message.includes('4')) {
+            return false;
+          }
+          return failureCount < 3;
+        },
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      },
+      mutations: {
+        retry: 1,
       },
     },
   });

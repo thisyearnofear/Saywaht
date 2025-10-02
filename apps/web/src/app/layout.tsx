@@ -7,15 +7,17 @@ import { TooltipProvider } from "../components/ui/tooltip";
 import { Web3Provider } from "@/components/wagmi-provider";
 import { MobileProvider } from "@/contexts/mobile-context";
 import { FarcasterProvider } from "@/farcaster/components/farcaster-provider";
+import { PerformanceTracker } from "@/components/performance-tracker";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
 });
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
-if (!baseUrl) {
-  throw new Error('NEXT_PUBLIC_APP_URL environment variable is required');
+// ENHANCEMENT: Graceful fallback for missing environment variable
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://saywaht.netlify.app';
+if (!process.env.NEXT_PUBLIC_APP_URL) {
+  console.warn('NEXT_PUBLIC_APP_URL not set, using fallback:', baseUrl);
 }
 
 export const metadata: Metadata = {
@@ -104,6 +106,8 @@ export default function RootLayout({
                 <TooltipProvider>
                   {children}
                   <Toaster />
+                  {/* PERFORMANT: Track app performance metrics */}
+                  <PerformanceTracker />
                 </TooltipProvider>
               </FarcasterProvider>
             </MobileProvider>

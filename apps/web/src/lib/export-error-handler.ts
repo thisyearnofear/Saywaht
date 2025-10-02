@@ -1,7 +1,10 @@
 /**
- * Centralized error handling for exports
- * Maintains DRY principle by consolidating error logic
+ * SIMPLIFIED EXPORT ERROR HANDLING
+ * Following ENHANCEMENT FIRST and CLEAN principles
  */
+
+// CLEAN: Only import what we need
+// import { trackBugFix } from './monitoring';
 
 export interface ExportError {
   type: 'timeout' | 'webcodecs' | 'memory' | 'unknown';
@@ -65,16 +68,26 @@ export function getExportErrorMessage(error: unknown): string {
 }
 
 /**
- * Log export error with context
+ * CLEAN: Log export error with context using production logger
  */
 export function logExportError(error: unknown, context?: Record<string, any>): void {
   const analysis = analyzeExportError(error);
   
-  console.error('Export Error:', {
-    type: analysis.type,
-    message: analysis.message,
-    suggestion: analysis.suggestion,
-    context,
-    stack: analysis.originalError?.stack
-  });
+  // ENHANCEMENT: Track export fix effectiveness (simplified)
+  // trackBugFix('export', false, analysis.message, { 
+  //   type: analysis.type,
+  //   suggestion: analysis.suggestion,
+  //   ...context 
+  // });
+  
+  // Use production-aware logging
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Export Error:', {
+      type: analysis.type,
+      message: analysis.message,
+      suggestion: analysis.suggestion,
+      context,
+      stack: analysis.originalError?.stack
+    });
+  }
 }

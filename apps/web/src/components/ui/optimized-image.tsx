@@ -1,7 +1,9 @@
 // Optimized Image component with lazy loading and performance features
 // Adaptive loading with intersection observer and multiple format support
+// ENHANCEMENT: Using Next.js Image for better performance and LCP
 
 import React, { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useLazyImage, useIntersectionObserver } from "@/lib/performance";
 
@@ -131,16 +133,17 @@ export function OptimizedImage({
       className={cn("relative overflow-hidden", className)}
       style={{ width, height }}
     >
-      <img
+      <Image
         ref={imgRef}
-        src={currentSrc}
+        src={currentSrc || src}
         alt={alt}
-        width={width}
-        height={height}
+        width={width || 400}
+        height={height || 300}
         sizes={sizes}
-        srcSet={shouldLoad ? generateSrcSet(src) : undefined}
-        loading={priority ? "eager" : "lazy"}
-        decoding="async"
+        priority={priority}
+        quality={quality}
+        placeholder={blurDataURL ? "blur" : "empty"}
+        blurDataURL={blurDataURL}
         className={cn(
           "transition-opacity duration-300",
           isLoaded ? "opacity-100" : "opacity-0",
@@ -149,6 +152,14 @@ export function OptimizedImage({
         )}
         style={{
           filter: !isLoaded && blurDataURL ? "blur(10px)" : "none",
+        }}
+        onLoad={() => {
+          setIsLoaded(true);
+          onLoad?.();
+        }}
+        onError={() => {
+          setHasError(true);
+          onError?.();
         }}
       />
       

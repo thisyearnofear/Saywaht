@@ -1,5 +1,8 @@
 import { Synapse } from "@filoz/synapse-sdk";
 import { ApiKeyManager } from "./middleware";
+import { handleError, withRetry, groveCircuitBreaker } from "../error-handler";
+import { recordCustomMetric } from "../performance-monitor";
+import { log } from "../logger";
 
 const FILECOIN_CALIBRATION_RPC = "https://api.calibration.node.glif.io/rpc/v1";
 
@@ -19,8 +22,8 @@ export class FilecoinApiService {
     try {
       this.config = ApiKeyManager.getFilecoinConfig();
     } catch (error) {
-      console.warn('Filecoin configuration not available:', error);
-      // Provide fallback config to prevent crashes
+      // ENHANCEMENT: Graceful degradation with user-friendly error
+      handleError(error, 'Filecoin service initialization');
       this.config = {
         privateKey: '',
         walletAddress: ''
@@ -33,13 +36,15 @@ export class FilecoinApiService {
       return; // Already initialized
     }
 
-    // Check if we have valid configuration
+    // ENHANCEMENT: Graceful degradation when config missing
     if (!this.config.privateKey || !this.config.walletAddress) {
-      throw new Error('Filecoin configuration is missing. Please set FILECOIN_PRIVATE_KEY and FILECOIN_WALLET_ADDRESS environment variables.');
+      const error = new Error('Filecoin configuration is missing. Please set FILECOIN_PRIVATE_KEY and FILECOIN_WALLET_ADDRESS environment variables.');
+      handleError(error, 'Filecoin initialization');
+      throw error;
     }
 
     try {
-      console.log('🚀 Initializing FilCDN with Synapse SDK...');
+      log.info('Initializing FilCDN with Synapse SDK', null, 'FilCDN');
       
       this.synapse = await Synapse.create({
         withCDN: true,
@@ -50,68 +55,79 @@ export class FilecoinApiService {
       this.storageService = await this.synapse.createStorageService({
         onProofSetCreationProgress: (progress: any) => {
           if (progress.transactionMined && !progress.proofSetLive) {
-            console.log('  Transaction mined, waiting for proof set to be live...');
+            log.debug('Transaction mined, waiting for proof set to be live', null, 'FilCDN');
           }
         },
       });
 
-      console.log('✅ FilCDN service initialized');
+      log.info('FilCDN service initialized', null, 'FilCDN');
     } catch (error) {
-      console.error('❌ Failed to initialize FilCDN:', error);
-      throw new Error(`FilCDN initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      handleError(error, 'FilCDN initialization');
+      throw error;
     }
   }
 
   async uploadFile(fileBuffer: Buffer, filename: string): Promise<FilecoinUploadResult> {
-    await this.initialize();
+    // PERFORMANT: Use circuit breaker for external service
+    const uploadStartTime = performance.now();
+    return groveCircuitBreaker.execute(async () => {
+      await this.initialize();
 
-    // Check file size limit (254 MiB)
-    const maxSize = 254 * 1024 * 1024;
-    if (fileBuffer.length > maxSize) {
-      throw new Error(`File size ${(fileBuffer.length / 1024 / 1024).toFixed(1)}MB exceeds FilCDN limit of 254MB`);
-    }
+      // Check file size limit (254 MiB)
+      const maxSize = 254 * 1024 * 1024;
+      if (fileBuffer.length > maxSize) {
+        const error = new Error(`File size ${(fileBuffer.length / 1024 / 1024).toFixed(1)}MB exceeds FilCDN limit of 254MB`);
+        handleError(error, 'File upload validation');
+        throw error;
+      }
 
-    try {
-      console.log(`📤 Uploading ${filename} to FilCDN...`);
+      // ENHANCEMENT: Retry with exponential backoff
+      return withRetry(async () => {
+        log.info(`Uploading ${filename} to FilCDN`, { filename }, 'FilCDN');
 
-      const fileData = {
-        name: filename,
-        data: new Uint8Array(fileBuffer),
-      };
+        const fileData = {
+          name: filename,
+          data: new Uint8Array(fileBuffer),
+        };
 
-      const uploadResult = await this.storageService.upload(fileData);
-      const cid = uploadResult.commp;
+        const uploadResult = await this.storageService.upload(fileData);
+        const cid = uploadResult.commp;
 
-      // Generate FilCDN URL
-      const walletAddress = await this.synapse.getSigner().getAddress();
-      const filcdnUrl = `https://${walletAddress}.calibration.filcdn.io/${cid}`;
+        // Generate FilCDN URL
+        const walletAddress = await this.synapse.getSigner().getAddress();
+        const filcdnUrl = `https://${walletAddress}.calibration.filcdn.io/${cid}`;
 
-      console.log(`✅ File uploaded successfully!`);
-      console.log(`  CID: ${cid}`);
-      console.log(`  FilCDN URL: ${filcdnUrl}`);
+        log.info('File uploaded successfully', { cid, filcdnUrl }, 'FilCDN');
 
-      return {
-        cid,
-        filcdnUrl,
-        size: fileBuffer.length,
-        filename,
-      };
-    } catch (error) {
-      console.error('❌ Upload failed:', error);
-      throw new Error(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+        // PERFORMANT: Track upload performance
+        const uploadDuration = performance.now() - uploadStartTime;
+        recordCustomMetric('file-upload-duration', uploadDuration, 'ms', {
+          filename,
+          fileSize: fileBuffer.length,
+          fileSizeMB: (fileBuffer.length / 1024 / 1024).toFixed(2),
+          success: true
+        });
+
+        return {
+          cid,
+          filcdnUrl,
+          size: fileBuffer.length,
+          filename,
+        };
+      }, 3, 2000);
+    });
   }
 
   async downloadFile(cid: string): Promise<Uint8Array> {
     await this.initialize();
 
     try {
-      console.log(`📥 Downloading ${cid} from FilCDN...`);
+      log.info(`Downloading ${cid} from FilCDN`, { cid }, 'FilCDN');
       const downloadedData = await this.synapse.download(cid);
-      console.log(`✅ Downloaded ${cid} successfully`);
+      log.info(`Downloaded ${cid} successfully`, { cid }, 'FilCDN');
       return downloadedData;
     } catch (error) {
-      console.error('❌ Download failed:', error);
+      log.error('Download failed', error, 'FilCDN');
       throw new Error(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

@@ -226,6 +226,25 @@ export function Timeline() {
     }
   }, [selectedClips, tracks, mediaItems, addTrack, clearSelectedClips]);
 
+  // ENHANCEMENT: Move handleToggleReversedSelected before useEffect that uses it
+  const handleToggleReversedSelected = useCallback(() => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+    selectedClips.forEach(({ trackId, clipId }) => {
+      toggleClipReversed(trackId, clipId);
+    });
+    const hasReversed = selectedClips.some(({ trackId, clipId }) => {
+      const track = tracks.find((t) => t.id === trackId);
+      const clip = track?.clips.find((c) => c.id === clipId);
+      return clip?.reversed;
+    });
+    toast.success(
+      `${hasReversed ? "Enabled" : "Disabled"} reversal for selected clip(s)`
+    );
+  }, [selectedClips, tracks, toggleClipReversed]);
+
   // Update timeline duration when tracks change
   useEffect(() => {
     const totalDuration = getTotalDuration();
@@ -283,6 +302,7 @@ export function Timeline() {
     clearSelectedClips,
     handleSeparateAudio,
     handleSplitSelected,
+    handleToggleReversedSelected,
   ]);
 
   // Keyboard event for undo (Cmd+Z)
@@ -534,26 +554,7 @@ export function Timeline() {
     toast.success(`Set speed to ${newSpeed}x for selected clip(s)`);
   };
 
-  const handleToggleReversedSelected = () => {
-    if (selectedClips.length === 0) {
-      toast.error("No clips selected");
-      return;
-    }
-    selectedClips.forEach(({ trackId, clipId }) => {
-      toggleClipReversed(trackId, clipId);
-    });
-    const hasReversed = selectedClips.some(({ trackId, clipId }) => {
-      const track = tracks.find((t) => t.id === trackId);
-      const clip = track?.clips.find((c) => c.id === clipId);
-      return clip?.reversed;
-    });
-    toast.success(
-      `${hasReversed ? "Enabled" : "Disabled"} reversal for selected clip(s)`
-    );
-  };
-
-  // Old handleSeparateAudio function removed - now using useCallback version above
-
+  // Function definition moved above to fix dependency order
   // Prevent explorer zooming in/out when in timeline
   useEffect(() => {
     const preventZoom = (e: WheelEvent) => {
