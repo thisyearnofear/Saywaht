@@ -208,7 +208,11 @@ saywaht follows a **mobile-first, three-phase design**:
 ### Getting Help
 
 - Check the [Issues](https://github.com/your-repo/issues) page for known problems
-- Review the [Docs](docs/) folder for detailed documentation
+- Review the [Docs](docs/) folder for detailed documentation:
+  - **[SETUP.md](docs/SETUP.md)** - Complete setup guide, environment variables, and deployment
+  - **[ROADMAP.md](docs/ROADMAP.md)** - Feature roadmap, current status, and future plans
+  - **[EXPORT.md](docs/EXPORT.md)** - Video export system documentation and troubleshooting
+  - **[TESTING.md](docs/TESTING.md)** - Testing checklists and quality assurance
 - Join our community discussions for support
 
 ## License

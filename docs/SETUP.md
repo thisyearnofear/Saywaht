@@ -1,150 +1,144 @@
-# 🚀 Technical Implementation Plan
+# 🚀 Saywaht Setup Guide
 
-## 🔍 **Overview**
+## Overview
 
-This technical implementation plan focuses on transforming saywaht into a fully mobile-optimized application with integrated trading functionality, structured around three distinct phases: Landing & Account Management, Creation & Editing, and Trading & Monetization.
+A decentralized video commentary platform that enables users to create memetic content and deploy it as tradeable Zora coins. Features FilCDN integration for low-latency content delivery and real-time video editing capabilities.
 
-### 1. **Clone and Install**
+## Commands
+
+- Build: `bun run build` (all), `bun run build --filter=web` (single app)
+- Lint: `bun run lint`, `bun run format` (uses Biome)
+- Dev: `bun run dev` (all), `cd apps/web && bun run dev` (single app)
+- Type check: `bun run check-types`
+- Database: `cd packages/db && bun run db:studio`, `cd apps/web && bun run db:push:local`
+
+## Architecture
+
+### **Three-Phase Mobile-First Design**
+
+- **Phase 1**: Landing page (`/`) - Wallet auth and onboarding
+- **Phase 2**: Video editor (`/editor`) - Professional editing tools
+- **Phase 3**: Trading platform (`/trade`) - Creator coin marketplace
+
+### **Technical Stack**
+
+- **Turborepo monorepo** with apps/ and packages/
+- **Frontend**: `apps/web` - Next.js app with three distinct phases
+- **Auth**: `packages/auth` - Wallet-based authentication (Wagmi + RainbowKit)
+- **Storage**: Grove/IPFS integration for decentralized content storage
+- **Trading**: Zora Coins SDK + Uniswap V4 for creator coin trading
+- **State Management**: Zustand with localStorage persistence
+- **Navigation**: Mobile-first, no headers, gesture-based transitions
+
+## Key Integrations
+
+### 🚀 **FilCDN (Hackathon Feature)**
+
+- **PDP Storage**: Creates Filecoin Proof of Data Possession deals
+- **CDN Delivery**: Low-latency content retrieval via FilCDN
+- **Implementation**: `apps/web/src/lib/filcdn.ts` + Synapse SDK
+- **Upload Component**: `apps/web/src/components/editor/file-upload.tsx`
+- **URL Format**: `https://{wallet}.calibration.filcdn.io/{cid}`
+
+### 🪙 **Zora Protocol Integration**
+
+- **Real API**: Uses `@zoralabs/coins-sdk` for live coin data
+- **Discovery Feed**: Shows actual coins with market data
+- **Deployment**: Complete WAGMI-based coin creation workflow
+- **Implementation**: `apps/web/src/lib/zora.ts` + mint pages
+
+### 🎬 **Video Editor**
+
+- **Timeline**: Multi-track editing with drag & drop
+- **Media Panel**: Supports both local files and FilCDN uploads
+- **Export**: Canvas-based video rendering (supports FilCDN URLs)
+- **AI Voice**: ElevenLabs integration for commentary generation
+
+## Environment Variables
+
+### Optional for Enhanced Features
 
 ```bash
-git clone <your-repo>
-cd Saywaht
-bun install
+# AI Voice Generation
+ELEVENLABS_API_KEY=your-elevenlabs-key
+
+# Blockchain Integration
+NEXT_PUBLIC_ZORA_API_KEY=your-zora-api-key
 ```
 
-### 2. **Environment Setup (Optional)**
-
-Create `apps/web/.env.local` for optional features:
+### Required for FilCDN (Hackathon)
 
 ```bash
-# Optional - Enhanced features
-ELEVENLABS_API_KEY=your-elevenlabs-key
-NEXT_PUBLIC_ZORA_API_KEY=your-zora-api-key
-
-# Required for Core Functionality
-NEXT_PUBLIC_FILECOIN_PRIVATE_KEY=your-filecoin-private-key
+# Filecoin Calibration Testnet
+NEXT_PUBLIC_FILECOIN_PRIVATE_KEY=your-private-key
 NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS=0xYourWalletAddress
-NEXT_PUBLIC_ZORA_API_KEY=your-zora-api-key
-
-# Optional - Enhanced features
-ELEVENLABS_API_KEY=your-elevenlabs-key
-UPSTASH_REDIS_REST_URL=your-redis-url
-UPSTASH_REDIS_REST_TOKEN=your-redis-token
 ```
 
-### 3. **FilCDN Setup (Required for Hackathon)**
-
-#### 3.1 Wallet Configuration
-
-1. **Install Metamask** and add Filecoin Calibration network:
-
-   ```
-   Network Name: Filecoin Calibration
-   RPC URL: https://api.calibration.node.glif.io/rpc/v1
-   Chain ID: 314159
-   Currency: tFIL
-   ```
-
-2. **Get Test Tokens**:
-   - **tFIL**: https://faucet.calibration.fildev.network/
-   - **USDFC**: https://faucet.calibration.fildev.network/ (for storage payments)
-
-#### 3.2 Initial Payment Setup
-
-1. Visit: https://fs-upload-dapp.netlify.app
-2. Connect your wallet
-3. Go to "Manage Storage" tab
-4. Click "Deposit & Increase Allowances"
-5. Approve transactions for storage payments
-6. Note your wallet address → add to `NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS`
-7. Export private key → add to `NEXT_PUBLIC_FILECOIN_PRIVATE_KEY`
-
-### 3. **Start Development**
+### Optional Enhancements
 
 ```bash
-# Start the app
-bun run dev
+# AI Voice Generation
+ELEVENLABS_API_KEY=your-elevenlabs-key
 
-# Or start just the web app
+# Zora API (recommended to avoid rate limits)
+NEXT_PUBLIC_ZORA_API_KEY=your-zora-api-key
+```
+
+## FilCDN Setup (Hackathon Demo)
+
+### 1. Wallet Setup
+
+1. Configure Metamask for [Filecoin Calibration testnet](https://docs.filecoin.io/networks/calibration/details)
+2. Get tFIL from [Calibration Faucet](https://faucet.calibration.fildev.network/)
+3. Get USDFC tokens for storage payments
+
+### 2. Initial Payment Setup
+
+1. Visit [FilCDN Demo App](https://fs-upload-dapp.netlify.app)
+2. Connect wallet and complete payment setup
+3. Approve spending allowances for storage deals
+4. Note your wallet address for environment variables
+
+### 3. Test Integration
+
+```bash
 cd apps/web
 bun run dev
+
+# 1. Go to /editor
+# 2. Click "FilCDN" tab in media panel
+# 3. Upload video/audio files
+# 4. Files appear instantly via CDN
+# 5. Create timeline compositions
+# 6. Deploy as Zora coins at /mint
 ```
 
-Visit: http://localhost:3000
+## Code Style & Standards
 
-## 🎪 **Demo Workflow**
+- **Package Manager**: Bun
+- **Formatter**: Biome (tab indentation, double quotes)
+- **Import Organization**: Auto-organize enabled
+- **TypeScript**: Strict mode throughout
+- **UI**: React + Tailwind CSS + Radix UI
+- **State**: Zustand with persistence
+- **Security**: Rate limiting, input validation, environment checks
 
-### **1. Test FilCDN Upload**
+## Production Deployment
 
-1. Go to `/editor`
-2. Click "FilCDN" tab in media panel
-3. Drag & drop a video file (max 254MB)
-4. Watch upload progress and FilCDN URL generation
+- All secrets externalized via environment variables
+- Docker Compose ready with health checks
+- Secure API endpoints with rate limiting
+- Cross-origin support for FilCDN content
+- Error boundaries and graceful fallbacks
 
-### **2. Test Video Editor**
+## Demo Workflow
 
-1. Add uploaded file to timeline
-2. Create a simple composition
-3. Test playback (low-latency FilCDN content)
+1. **Upload** → FilCDN creates PDP deal with CDN enabled
+2. **Edit** → Low-latency content loading in timeline
+3. **Mint** → Create tradeable Zora coin with FilCDN metadata
+4. **Discover** → Browse real coins with market data via Zora API
 
-### **3. Test Zora Integration**
-
-1. Connect wallet (same one used for FilCDN)
-2. Go to `/mint/project-id`
-3. Create coin name and symbol
-4. Mint as Zora coin
-5. Check discovery feed for real Zora coins
-
-### **4. Full Demo Flow**
-
-```
-Upload → FilCDN (PDP deal) → Edit → Timeline → Mint → Zora Coin → Discovery
-```
-
-## 🐳 **Production Deployment with Docker**
-
-### 1. **Environment File**
-
-Create `.env` file:
-
-```bash
-# Database
-POSTGRES_PASSWORD=your-secure-password
-DATABASE_URL=postgresql://saywaht:your-secure-password@db:5432/saywaht
-
-# Auth
-BETTER_AUTH_SECRET=your-production-secret-256-bit
-BETTER_AUTH_URL=https://yourdomain.com
-NEXT_PUBLIC_BETTER_AUTH_URL=https://yourdomain.com
-
-# FilCDN
-NEXT_PUBLIC_FILECOIN_PRIVATE_KEY=your-filecoin-private-key
-NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS=0xYourWalletAddress
-
-# Optional
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-ELEVENLABS_API_KEY=your-elevenlabs-key
-NEXT_PUBLIC_ZORA_API_KEY=your-zora-api-key
-UPSTASH_REDIS_REST_URL=your-redis-url
-UPSTASH_REDIS_REST_TOKEN=your-redis-token
-REDIS_TOKEN=your-redis-token
-```
-
-### 2. **Deploy**
-
-```bash
-# Start all services
-docker-compose up -d
-
-# Check logs
-docker-compose logs -f web
-
-# Health check
-curl http://localhost:3000/api/health
-```
-
-## 📱 **Mobile Optimization Implementation**
+## Mobile Optimization Implementation
 
 ### **Phase 1: Landing & Account Management**
 
@@ -298,23 +292,19 @@ const MobileTimeline = () => {
 import { createPublicClient, http } from "viem";
 import { wagmiConfig } from "@/lib/wagmi";
 
-// Initialize Uniswap SDK
 export const initializeUniswap = () => {
   const publicClient = createPublicClient({
     chain: wagmiConfig.chains[0],
     transport: http(),
   });
 
-  // Initialize Uniswap hooks and contracts
   return {
-    // Trading functions
     swapTokens: async (params) => {
       // Implementation for token swapping
     },
     addLiquidity: async (params) => {
       // Implementation for adding liquidity
     },
-    // Market data functions
     getPoolData: async (poolAddress) => {
       // Implementation for fetching pool data
     },
@@ -388,7 +378,7 @@ const MobileTradePanel = ({ coinAddress }) => {
 };
 ```
 
-## 🔄 **Implementation Timeline**
+## Implementation Timeline
 
 ### **Week 1-2: Mobile Optimization**
 
@@ -411,7 +401,7 @@ const MobileTradePanel = ({ coinAddress }) => {
 - Fix bugs and improve user experience
 - Prepare for production deployment
 
-## 🔧 **Troubleshooting**
+## Troubleshooting
 
 ### **Mobile Optimization Issues**
 
@@ -443,7 +433,7 @@ const MobileTradePanel = ({ coinAddress }) => {
 - **Rate limiting**: Add `NEXT_PUBLIC_ZORA_API_KEY` for higher limits
 - **Transaction failures**: Check wallet connection and testnet balance
 
-## ✅ **Health Checks**
+## Health Checks
 
 After implementation, verify:
 
@@ -452,5 +442,3 @@ After implementation, verify:
 - [ ] Trading functionality works with test transactions
 - [ ] Performance is acceptable on mid-range mobile devices
 - [ ] All three app phases (Landing, Creation, Trading) are functional
-
-**Your mobile-optimized saywaht app with trading functionality is ready!** 🎉

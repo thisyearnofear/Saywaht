@@ -1,22 +1,174 @@
-# Backend Export Architecture
+# 🧪 Testing & Quality Assurance
 
-## Overview
+## Bug Fix Testing Checklist
+
+This checklist helps validate that our critical bug fixes are working correctly.
+
+### ✅ **Environment Configuration Fixes**
+
+#### Test: Missing Environment Variables
+- [ ] Remove `NEXT_PUBLIC_APP_URL` from `.env.local`
+- [ ] Restart the app
+- [ ] **Expected**: App should start with fallback URL and show warning in console
+- [ ] **Actual**: _______________
+
+#### Test: Missing WalletConnect Project ID
+- [ ] Remove `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` from `.env.local`
+- [ ] Try to connect wallet
+- [ ] **Expected**: Should work with fallback ID and show warning
+- [ ] **Actual**: _______________
+
+### ✅ **Trading System Fixes**
+
+#### Test: Buy Transaction with Reduced Slippage
+- [ ] Connect wallet with small amount of ETH
+- [ ] Try to buy a coin
+- [ ] **Expected**: Transaction should succeed with 3% slippage (was 5%)
+- [ ] **Actual**: _______________
+
+#### Test: Sell Transaction with Reduced Slippage
+- [ ] Own some coins
+- [ ] Try to sell coins
+- [ ] **Expected**: Transaction should succeed with 5% slippage (was 15%)
+- [ ] **Actual**: _______________
+
+#### Test: Trading Error Handling
+- [ ] Try trading without wallet connected
+- [ ] **Expected**: User-friendly error message with retry option
+- [ ] **Actual**: _______________
+
+### ✅ **File Upload & Storage Fixes**
+
+#### Test: Large File Upload
+- [ ] Try uploading a file larger than 254MB
+- [ ] **Expected**: Clear error message about file size limit
+- [ ] **Actual**: _______________
+
+#### Test: Upload Retry Logic
+- [ ] Simulate network issue during upload
+- [ ] **Expected**: Automatic retry with exponential backoff
+- [ ] **Actual**: _______________
+
+#### Test: FileCDN Service Initialization
+- [ ] Remove FileCDN environment variables
+- [ ] Try to upload a file
+- [ ] **Expected**: Graceful error message, app doesn't crash
+- [ ] **Actual**: _______________
+
+### ✅ **Mobile Experience Fixes**
+
+#### Test: Mobile Hook Memory Leaks
+- [ ] Open mobile editor
+- [ ] Navigate away and back multiple times
+- [ ] **Expected**: No memory leaks, smooth performance
+- [ ] **Actual**: _______________
+
+#### Test: Touch Gesture Handling
+- [ ] Use mobile editor on touch device
+- [ ] Try timeline interactions
+- [ ] **Expected**: Smooth touch interactions without conflicts
+- [ ] **Actual**: _______________
+
+### ✅ **Error Monitoring System**
+
+#### Test: Bug Fix Tracking
+- [ ] Open browser console
+- [ ] Trigger a trading transaction
+- [ ] **Expected**: See bug fix tracking logs in development
+- [ ] **Actual**: _______________
+
+#### Test: Error Statistics
+- [ ] Run: `localStorage.getItem('saywaht_bug_fixes')`
+- [ ] **Expected**: JSON array of tracked metrics
+- [ ] **Actual**: _______________
+
+### ✅ **Code Quality Fixes**
+
+#### Test: TypeScript Compilation
+```bash
+npx tsc --noEmit
+```
+- [ ] **Expected**: No TypeScript errors
+- [ ] **Actual**: _______________
+
+#### Test: Linting
+```bash
+npm run lint
+```
+- [ ] **Expected**: No ESLint warnings or errors
+- [ ] **Actual**: _______________
+
+#### Test: Build Process
+```bash
+npm run build
+```
+- [ ] **Expected**: Successful build without errors
+- [ ] **Actual**: _______________
+
+## 📊 **Performance Validation**
+
+### Test: App Startup Time
+- [ ] Clear cache and reload app
+- [ ] Measure time to interactive
+- [ ] **Expected**: < 3 seconds on good connection
+- [ ] **Actual**: _______________
+
+### Test: Memory Usage
+- [ ] Use browser dev tools to monitor memory
+- [ ] Navigate through app for 5 minutes
+- [ ] **Expected**: No significant memory leaks
+- [ ] **Actual**: _______________
+
+## 🎯 **User Experience Validation**
+
+### Test: Error Messages
+- [ ] Trigger various error scenarios
+- [ ] **Expected**: User-friendly messages with actionable suggestions
+- [ ] **Actual**: _______________
+
+### Test: Retry Functionality
+- [ ] Trigger retryable errors
+- [ ] Click retry button in toast
+- [ ] **Expected**: Operation retries automatically
+- [ ] **Actual**: _______________
+
+## 📝 **Notes**
+
+### Issues Found:
+- _______________
+
+### Additional Testing Needed:
+- _______________
+
+### Performance Observations:
+- _______________
+
+---
+
+**Testing Date**: _______________  
+**Tester**: _______________  
+**Environment**: _______________  
+**Overall Status**: ⭕ Pass / ❌ Fail / ⚠️ Partial
+
+## Backend Export Architecture
+
+### Overview
 
 The saywaht video editor now supports both frontend and backend video export methods. The backend export service provides superior reliability, performance, and quality compared to browser-based export methods.
 
-## Architecture Components
+### Architecture Components
 
-### 1. Backend Export Service
+#### 1. Backend Export Service
 - **Location**: `http://157.180.36.156:3001`
 - **Technology**: Node.js + Express + FFmpeg
 - **Features**: Professional video processing, job queuing, progress tracking
 
-### 2. Frontend Integration
+#### 2. Frontend Integration
 - **Client**: `apps/web/src/lib/backend-export.ts`
 - **Method Selection**: `apps/web/src/lib/export-method-selector.ts`
 - **UI Integration**: Export dropdown in editor header
 
-### 3. Export Method Selection
+#### 3. Export Method Selection
 The system intelligently chooses between export methods:
 
 1. **Backend Export** (Recommended for complex content)
@@ -38,15 +190,15 @@ The system intelligently chooses between export methods:
    - Very simple content
    - Basic browser compatibility
 
-## Backend Service Setup
+### Backend Service Setup
 
-### Server Requirements
+#### Server Requirements
 - **CPU**: 2+ cores (Intel Xeon or equivalent)
 - **RAM**: 4GB+ (3.7GB available on current server)
 - **Storage**: 20GB+ free space (12GB available)
 - **OS**: Ubuntu 24.04 or compatible
 
-### Installation Steps
+#### Installation Steps
 
 1. **Install Dependencies**
 ```bash
@@ -107,15 +259,15 @@ pm2 save
 pm2 startup
 ```
 
-## API Endpoints
+### API Endpoints
 
-### Health Check
+#### Health Check
 ```
 GET /api/health
 ```
 Returns service status and FFmpeg availability.
 
-### Start Export
+#### Start Export
 ```
 POST /api/export/start
 Content-Type: multipart/form-data
@@ -126,27 +278,27 @@ Body:
 - mediaFiles: File uploads for local media
 ```
 
-### Check Status
+#### Check Status
 ```
 GET /api/export/status/:jobId
 ```
 Returns job progress and status.
 
-### Download Result
+#### Download Result
 ```
 GET /api/export/download/:jobId
 ```
 Downloads the completed video file.
 
-## Frontend Integration
+### Frontend Integration
 
-### Environment Variables
+#### Environment Variables
 ```bash
 # .env.local
 NEXT_PUBLIC_BACKEND_EXPORT_URL=http://157.180.36.156:3001
 ```
 
-### Usage Example
+#### Usage Example
 ```typescript
 import { exportVideoBackend } from "@/lib/backend-export";
 
@@ -166,16 +318,16 @@ const result = await exportVideoBackend(
 // result.blob contains the exported video
 ```
 
-## Performance Characteristics
+### Performance Characteristics
 
-### Backend Export
+#### Backend Export
 - **Reliability**: 99%+ success rate
 - **Quality**: Professional FFmpeg encoding
 - **Speed**: 2-5x faster than browser methods
 - **File Size**: Optimized compression
 - **Concurrent Jobs**: 1-2 simultaneous exports
 
-### Browser Export Comparison
+#### Browser Export Comparison
 | Method | Reliability | Speed | Quality | File Size |
 |--------|-------------|-------|---------|-----------|
 | Backend | 99% | Fast | High | Optimized |
@@ -183,9 +335,9 @@ const result = await exportVideoBackend(
 | Offline | 90% | Medium | Medium | Good |
 | Canvas | 95% | Slow | Low | Large |
 
-## Monitoring and Maintenance
+### Monitoring and Maintenance
 
-### Health Monitoring
+#### Health Monitoring
 ```bash
 # Check service status
 pm2 status
@@ -197,13 +349,13 @@ pm2 logs video-export-service
 pm2 restart video-export-service
 ```
 
-### Cleanup Tasks
+#### Cleanup Tasks
 The service automatically cleans up files older than 24 hours:
 - Temporary files in `/temp`
 - Completed exports in `/exports`
 - Uploaded files in `/uploads`
 
-### Troubleshooting
+#### Troubleshooting
 
 **Service Won't Start**
 - Check PM2 logs: `pm2 logs video-export-service`
@@ -220,7 +372,7 @@ The service automatically cleans up files older than 24 hours:
 - Check concurrent jobs
 - Consider scaling to multiple instances
 
-## Security Considerations
+### Security Considerations
 
 - **File Upload Limits**: 500MB per file
 - **Rate Limiting**: 100 requests per 15 minutes per IP
@@ -228,7 +380,7 @@ The service automatically cleans up files older than 24 hours:
 - **File Cleanup**: Automatic cleanup prevents disk filling
 - **Process Isolation**: PM2 manages process crashes
 
-## Future Enhancements
+### Future Enhancements
 
 1. **Horizontal Scaling**: Multiple backend instances
 2. **Queue Management**: Redis-based job queuing

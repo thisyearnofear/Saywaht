@@ -1,8 +1,8 @@
-# Video Export User Guide
+# 📤 Video Export System
 
 ## Overview
 
-saywaht offers multiple video export methods to ensure the best possible experience for all users and content types. The system automatically selects the optimal export method, but you can also manually choose your preferred method.
+Saywaht offers multiple video export methods to ensure the best possible experience for all users and content types. The system automatically selects the optimal export method, but you can also manually choose your preferred method.
 
 ## Export Methods
 
@@ -210,3 +210,109 @@ If export fails, click "View Diagnostics" in the error message to see:
 - Try different export methods
 - Simplify your project if problems persist
 - Report persistent issues with diagnostic information
+
+## Architecture
+
+### Current State
+- ✅ Sophisticated audio recording with voiceover-recorder.tsx
+- ✅ Multi-track timeline with audio separation
+- ✅ Audio/video synchronization in preview
+- ❌ **Missing**: Audio capture during canvas export (videos are muted in export)
+
+### Phase 1: Web Audio API Integration ✅ **COMPLETED**
+- [x] **Enhanced MediaRecorder** - Capture both video and audio streams during export
+- [x] **Audio Context Mixing** - Mix multiple audio tracks using Web Audio API
+- [x] **Timeline Audio Sync** - Ensure audio tracks align with video timeline
+- [x] **Browser Compatibility** - Graceful fallbacks for unsupported browsers
+- [x] **Quality Options** - Different audio bitrates for export quality settings
+
+### Phase 2: Enhanced Canvas Export ✅ **COMPLETED**
+- [x] **Professional Canvas Processing** - High-quality client-side export with enhanced rendering
+- [x] **Advanced Audio Processing** - Multi-track mixing with compression and 48kHz sampling
+- [x] **Multiple Format Support** - MP4 and WebM output with intelligent codec selection
+- [x] **Intelligent Method Selection** - Auto-select between Standard and Enhanced Canvas based on complexity
+- [x] **Quality Control** - Configurable bitrates (2-8 Mbps) and frame rates up to 30fps
+- [x] **Enhanced Rendering** - High-quality image smoothing and precise aspect ratio handling
+
+### Phase 3A: Optimized Export Architecture ✅ **COMPLETED**
+- [x] **Offline Audio Rendering** - Pre-render audio tracks using OfflineAudioContext for perfect synchronization
+- [x] **Buffered Video Rendering** - Pre-render key video frames to eliminate seeking during export
+- [x] **Synchronized Processing** - Combine offline audio with buffered video for smooth output
+- [x] **Performance Optimization** - Eliminate real-time constraints that cause timing issues
+- [x] **Quality Assurance** - Frame-accurate timing and glitch-free audio processing
+
+**Results**: ✅ Perfect audio achieved, ⚠️ video frame skipping remained (only 37/392 frames pre-rendered)
+
+### Phase 3B: Full Frame Buffering ✅ **COMPLETED**
+- [x] **Complete Frame Pre-rendering** - Pre-render ALL frames (not just key frames) to eliminate real-time rendering
+- [x] **Zero-Seeking Export** - No video seeking during export, only buffered frame playback
+- [x] **Robust Video Loading** - Enhanced video element creation with better error handling and validation
+- [x] **Improved Seeking Logic** - Tighter tolerance (33ms) and multiple fallback mechanisms
+- [x] **Frame Validation** - Comprehensive video readiness and dimension validation
+
+**Results**: ✅ Perfect audio + ✅ No frame skipping + ✅ No black frames + ✅ Smooth playback
+
+### Phase 3C: Advanced Features (Future)
+- [ ] **GPU Acceleration** - WebGL-based rendering for better performance
+- [ ] **Advanced Effects** - Complex transitions and effects processing
+- [ ] **Multi-threaded Processing** - Web Workers for parallel processing
+
+### Phase 4: Server-Side Processing (Future)
+- [ ] **Production Export API** - Server-side FFmpeg processing
+- [ ] **Background Jobs** - Queue system for large video exports
+- [ ] **Cloud Storage** - Direct export to FilCDN/IPFS
+- [ ] **Professional Quality** - Unlimited processing power and formats
+
+## Technical Implementation
+
+```typescript
+// Phase 1: Enhanced canvas-export-utils.ts ✅ COMPLETED
+- ✅ Extended existing exportVideoWithCanvas()
+- ✅ Added Web Audio API mixing with setupAudioTracks()
+- ✅ Combined video + audio MediaStreams
+- ✅ Maintained backward compatibility with includeAudio option
+- ✅ Added proper cleanup for audio resources
+- ✅ Integrated into both editor export and mint workflow
+
+// Phase 2: Enhanced Canvas Export ✅ COMPLETED
+- ✅ Professional client-side video composition with enhanced Canvas rendering
+- ✅ Multi-format support (MP4, WebM) with intelligent codec selection
+- ✅ Intelligent auto-selection between Standard and Enhanced Canvas methods
+- ✅ Bitrate-based quality control (2-8 Mbps) and advanced audio processing
+
+// Phase 3A: Optimized Export Architecture ✅ COMPLETED
+- ✅ Offline audio rendering with OfflineAudioContext
+- ✅ Buffered video rendering with pre-rendered key frames
+- ✅ Synchronized processing eliminates frame skipping and audio stuttering
+- ✅ Intelligent auto-selection for complex projects and audio-enabled exports
+
+// Phase 3B: Full Offline Rendering 🔮 FUTURE
+- Complete frame-by-frame offline rendering
+- GPU acceleration with WebGL
+- Advanced effects and transitions
+
+// Phase 4: Server-side API 🔮 FUTURE
+- /api/export-video endpoint
+- Background processing with job queues
+- Direct cloud storage integration
+```
+
+### Implementation Summary
+
+**Files Modified:**
+- `apps/web/src/lib/canvas-export-utils.ts` - Core audio export functionality
+- `apps/web/src/components/mint/steps/preview-step.tsx` - Mint workflow integration
+- `apps/web/src/components/editor-header.tsx` - Editor export integration
+
+**Key Features Added:**
+- Web Audio API integration for multi-track audio mixing
+- Audio context management with proper cleanup
+- Timeline-synchronized audio playback during export
+- Graceful fallback to video-only export if audio fails
+- Support for both video files (separated audio) and pure audio files
+- Configurable audio quality settings (128kbps default)
+
+**Browser Support:**
+- Modern browsers with Web Audio API support
+- Automatic fallback to video-only for unsupported browsers
+- Enhanced codec support (VP9 + Opus when available)
