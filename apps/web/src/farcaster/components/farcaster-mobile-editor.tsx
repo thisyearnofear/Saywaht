@@ -8,6 +8,7 @@ import { MobileOnboardingOverlay } from "@/components/editor/mobile-onboarding-o
 import { FarcasterSplashScreen } from "./farcaster-splash-screen";
 import { useMobileOnboarding } from "@/components/editor/mobile-onboarding-overlay";
 import { FarcasterClientLogic } from "@/farcaster/components/farcaster-client-logic";
+import { sdk } from '@farcaster/miniapp-sdk';
 
 /**
  * Farcaster-enhanced mobile editor layout
@@ -20,22 +21,43 @@ export function FarcasterMobileEditorLayout({
   children?: React.ReactNode;
 }) {
   const { isFarcasterMiniApp, frameState, isInitializing, isReady } = useFarcasterContext();
-  const { handleFrameAction, handleCastIntegration } = useFarcasterFrame();
+  const { handleMiniAppNavigation, handleCastIntegration } = useFarcasterFrame();
   const { showOnboarding, completeOnboarding, skipOnboarding } =
     useMobileOnboarding();
   const [showFarcasterOnboarding, setShowFarcasterOnboarding] = useState(false);
 
-  // Show Farcaster-specific onboarding when in mini app context
+  // Initialize Mini App SDK with proper error handling and context detection
   useEffect(() => {
+    const initializeMiniApp = async () => {
+      if (isFarcasterMiniApp && isReady && !isInitializing) {
+        try {
+          // Check if we're actually in a Mini App context
+          const context = await sdk.context;
+          if (context) {
+            console.log('Mini App context detected:', context);
+            // Hide splash screen once app is ready
+            await sdk.actions.ready();
+          }
+        } catch (error) {
+          console.warn('Failed to initialize Mini App SDK:', error);
+          // App can still function without Mini App features
+        }
+      }
+    };
+
+    initializeMiniApp();
+
+    // Show Mini App specific onboarding
     if (isFarcasterMiniApp && showOnboarding) {
       setShowFarcasterOnboarding(true);
     }
-  }, [isFarcasterMiniApp, showOnboarding]);
+  }, [isFarcasterMiniApp, isReady, isInitializing, showOnboarding]);
 
-  // Handle Farcaster-specific actions
-  const handleFarcasterAction = (action: string) => {
+  // Handle Mini App navigation actions
+  const handleMiniAppAction = (action: string) => {
     switch (action) {
       case "start_recording":
+        handleMiniAppNavigation('editor');
         // Initialize recording with cast context if available
         if (frameState.castHash) {
           handleCastIntegration(
@@ -44,10 +66,10 @@ export function FarcasterMobileEditorLayout({
         }
         break;
       case "create_coin":
-        // Trigger coin creation flow
+        handleMiniAppNavigation('mint');
         break;
-      case "share_cast":
-        // Share to Farcaster
+      case "browse_coins":
+        handleMiniAppNavigation('trade');
         break;
     }
   };
@@ -85,7 +107,7 @@ export function FarcasterMobileEditorLayout({
           }}
           onStartRecording={completeOnboarding}
           isFarcasterMode={true}
-          onFarcasterAction={handleFarcasterAction}
+          onFarcasterAction={handleMiniAppAction}
         />
       )}
     </div>

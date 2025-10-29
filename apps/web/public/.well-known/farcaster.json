@@ -9,7 +9,7 @@
     "name": "Saywaht",
     "iconUrl": "https://saywaht.netlify.app/images/android-chrome-512x512.png",
     "homeUrl": "https://saywaht.netlify.app",
-    "splashImageUrl": "https://saywaht.netlify.app/images/android-chrome-512x512.png",
+    "splashImageUrl": "https://saywaht.netlify.app/images/android-chrome-192x192.png",
     "splashBackgroundColor": "#000000",
     "subtitle": "Create Video Commentary",
     "description": "AI-powered video creation platform for creating and trading commentary coins",

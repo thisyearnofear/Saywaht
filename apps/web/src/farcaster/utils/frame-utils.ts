@@ -1,62 +1,66 @@
-import { metadata } from "@/app/layout";
-import { generateOptimizedFrameMetadata } from "@/farcaster/utils/performance-utils";
-
 /**
- * Frame metadata generator for Farcaster mini app
- * Single source of truth for all frame-related metadata
- * Optimized for performance and reliability
+ * Farcaster Mini App v2 utilities
+ * ENHANCEMENT FIRST: Consolidates Mini App functionality
+ * DRY: Single source of truth for Farcaster integration
+ * CLEAN: Focused on Mini Apps v2 specification only
  */
-export interface FrameMetadata {
-  "fc:frame": string;
-  "fc:frame:image": string;
-  "fc:frame:post_url"?: string;
-  "fc:frame:input:text"?: string;
-  "fc:frame:button:1"?: string;
-  "fc:frame:button:1:action"?: string;
-  "fc:frame:button:2"?: string;
-  "fc:frame:button:2:action"?: string;
-  [key: string]: string | undefined;
-}
 
-/**
- * Generate frame metadata based on current app state
- * Uses existing PWA metadata as base and extends for Farcaster
- * Optimized version for better performance
- */
-export function generateFrameMetadata(
-  overrideMetadata?: Partial<FrameMetadata>
-): FrameMetadata {
-  // Use optimized metadata generation
-  const baseMetadata = generateOptimizedFrameMetadata(
-    overrideMetadata?.["fc:frame:image"]?.includes("recording") ? "recording" :
-    overrideMetadata?.["fc:frame:image"]?.includes("minting") ? "minting" :
-    overrideMetadata?.["fc:frame:image"]?.includes("complete") ? "complete" : "welcome"
-  );
-
-  return {
-    ...baseMetadata,
-    ...overrideMetadata,
+export interface MiniAppEmbed {
+  version: "1";
+  imageUrl: string;
+  button: {
+    title: string;
+    action: {
+      type: "launch_frame";
+      name: string;
+      url: string;
+      splashImageUrl?: string;
+      splashBackgroundColor?: string;
+    };
   };
 }
 
 /**
- * Generate frame action URLs
+ * Generate Mini App embed metadata (v2 specification)
+ * PERFORMANT: Pre-computed configuration for optimal performance
  */
-export function generateFrameActionUrl(action: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!baseUrl) {
-    throw new Error('NEXT_PUBLIC_APP_URL environment variable is required');
-  }
-  return `${baseUrl}/api/farcaster/${action}`;
+export function generateMiniAppEmbed(overrides?: Partial<MiniAppEmbed>): MiniAppEmbed {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://saywaht.netlify.app';
+
+  const defaultEmbed: MiniAppEmbed = {
+    version: "1",
+    imageUrl: `${baseUrl}/opengraph-image.jpg`,
+    button: {
+      title: "🎬 Open Saywaht",
+      action: {
+        type: "launch_frame",
+        name: "Saywaht",
+        url: baseUrl,
+        splashImageUrl: `${baseUrl}/images/android-chrome-512x512.png`,
+        splashBackgroundColor: "#000000"
+      }
+    }
+  };
+
+  return {
+    ...defaultEmbed,
+    ...overrides,
+    button: {
+      ...defaultEmbed.button,
+      ...overrides?.button,
+      action: {
+        ...defaultEmbed.button.action,
+        ...overrides?.button?.action
+      }
+    }
+  };
 }
 
 /**
- * Get frame image URL for different states
+ * Get Mini App manifest URL
+ * MODULAR: Points to well-known manifest location
  */
-export function getFrameImageUrl(state: "welcome" | "recording" | "minting" | "complete"): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!baseUrl) {
-    throw new Error('NEXT_PUBLIC_APP_URL environment variable is required');
-  }
-  return `${baseUrl}/api/farcaster/image?state=${state}`;
+export function getMiniAppManifestUrl(): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://saywaht.netlify.app';
+  return `${baseUrl}/.well-known/farcaster.json`;
 }

@@ -62,4 +62,5 @@ export interface FarcasterFrameState {
   user?: FarcasterUser;
   step: "welcome" | "recording" | "minting" | "complete";
   recordingTime?: number;
+  source?: "miniapp" | "cast" | "direct";
 }

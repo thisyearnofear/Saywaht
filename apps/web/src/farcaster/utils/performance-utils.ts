@@ -1,118 +1,73 @@
 /**
- * Enhanced Farcaster performance utilities
- * Optimized for minimal bundle size and maximum performance
+ * Farcaster Mini App v2 performance utilities
+ * PERFORMANT: Optimized for minimal bundle size and maximum performance
+ * CLEAN: Focused only on Mini Apps v2 specification
+ * DRY: Single source of truth for Farcaster context detection
  */
 
 /**
- * Lightweight Farcaster context detection
- * Avoids heavy client-side detection in favor of server-side headers
+ * Lightweight Farcaster Mini App context detection
+ * PERFORMANT: Server-side detection avoids heavy client-side computation
+ * MODULAR: Works with both legacy frames and Mini Apps v2
  */
 export function isFarcasterContext(headers: Headers): boolean {
-  // Check multiple indicators to ensure reliable detection
   const userAgent = headers.get('user-agent') || '';
   const referer = headers.get('referer') || '';
   const origin = headers.get('origin') || '';
-  
+
   return (
     userAgent.includes('Farcaster') ||
     referer.includes('farcaster') ||
     origin.includes('farcaster') ||
-    // Additional frame-specific indicators
+    // Mini App specific indicators
     !!headers.get('x-farcaster-context') ||
-    // Frame action indicator
-    !!headers.get('x-frame-signature')
+    !!headers.get('x-miniapp-context')
   );
 }
 
 /**
- * Optimized frame metadata generation
- * Minimizes computation and maximizes cacheability
+ * Check if request is from a Farcaster Mini App
+ * CLEAN: Specific detection for Mini Apps v2
  */
-export function generateOptimizedFrameMetadata(state: string = 'welcome') {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!baseUrl) {
-    throw new Error('NEXT_PUBLIC_APP_URL environment variable is required');
-  }
-  
-  // Pre-computed base metadata for performance
-  const baseMetadata = {
-    "fc:frame": "vNext",
-    "fc:frame:post_url": `${baseUrl}/api/farcaster/action`,
-  };
-  
-  // State-specific optimizations
-  const stateConfig = {
-    welcome: {
-      "fc:frame:image": `${baseUrl}/api/farcaster/image?state=welcome`,
-      "fc:frame:button:1": "Create Commentary",
-      "fc:frame:button:2": "Browse Coins"
-    },
-    recording: {
-      "fc:frame:image": `${baseUrl}/api/farcaster/image?state=recording`,
-      "fc:frame:button:1": "Start Recording",
-      "fc:frame:button:2": "Cancel"
-    },
-    minting: {
-      "fc:frame:image": `${baseUrl}/api/farcaster/image?state=minting`,
-      "fc:frame:button:1": "Create Coin",
-      "fc:frame:button:2": "Share Only"
-    },
-    complete: {
-      "fc:frame:image": `${baseUrl}/api/farcaster/image?state=complete`,
-      "fc:frame:button:1": "Create Another",
-      "fc:frame:button:2": "View Profile"
-    }
-  };
-  
-  return {
-    ...baseMetadata,
-    ...stateConfig[state as keyof typeof stateConfig]
-  };
+export function isFarcasterMiniApp(headers: Headers): boolean {
+  return isFarcasterContext(headers) && (
+    headers.get('user-agent')?.includes('MiniApp') ||
+    !!headers.get('x-miniapp-context')
+  );
 }
 
 /**
- * Performance-optimized frame image generation
- * Uses caching and minimal computation
+ * Get optimized app state for Mini App context
+ * PERFORMANT: Pre-computed states for better performance
+ * MODULAR: State management separated from UI concerns
  */
-export async function generateOptimizedFrameImage(
-  state: string = 'welcome',
-  title?: string,
-  subtitle?: string
-) {
-  const config = {
-    welcome: { bg: '#000000', accent: '#9CA3AF', icon: '🎬' },
-    recording: { bg: '#EF4444', accent: '#FECACA', icon: '🔴' },
-    minting: { bg: '#3B82F6', accent: '#BFDBFE', icon: '🪙' },
-    complete: { bg: '#10B981', accent: '#A7F3D0', icon: '✅' }
+export function getOptimizedAppState(context: 'welcome' | 'editor' | 'mint' | 'complete' = 'welcome') {
+  const stateConfig = {
+    welcome: {
+      title: 'Create Video Commentary',
+      description: 'Transform your thoughts into viral content',
+      primaryAction: 'Start Creating',
+      secondaryAction: 'Browse Examples'
+    },
+    editor: {
+      title: 'Video Editor',
+      description: 'Add your voice to any video',
+      primaryAction: 'Record Commentary',
+      secondaryAction: 'Import Video'
+    },
+    mint: {
+      title: 'Create Coin',
+      description: 'Deploy your content as tradeable coin',
+      primaryAction: 'Create Coin',
+      secondaryAction: 'Preview'
+    },
+    complete: {
+      title: 'Coin Created!',
+      description: 'Your commentary coin is now live',
+      primaryAction: 'Share Coin',
+      secondaryAction: 'Create Another'
+    }
   };
-  
-  const stateConfig = config[state as keyof typeof config] || config.welcome;
-  
-  return {
-    backgroundColor: stateConfig.bg,
-    accentColor: stateConfig.accent,
-    icon: stateConfig.icon,
-    title: title || getDefaultTitle(state),
-    subtitle: subtitle || getDefaultSubtitle(state)
-  };
-}
 
-function getDefaultTitle(state: string): string {
-  const titles = {
-    welcome: 'Create Video Commentary',
-    recording: 'Record Your Commentary',
-    minting: 'Create Your Coin',
-    complete: 'Coin Created!'
-  };
-  return titles[state as keyof typeof titles] || titles.welcome;
-}
-
-function getDefaultSubtitle(state: string): string {
-  const subtitles = {
-    welcome: 'Powered by saywaht',
-    recording: 'Add your voice to any video',
-    minting: 'Turn commentary into tradable coins',
-    complete: 'Share your coin with the world'
-  };
-  return subtitles[state as keyof typeof subtitles] || subtitles.welcome;
+  return stateConfig[context];
 }

@@ -5,6 +5,9 @@ import { headers } from "next/headers";
  * Farcaster Mini App Page
  * Entry point for Farcaster frame integration
  * Uses enhanced mobile editor layout with Farcaster-specific features
+ *
+ * ENHANCEMENT FIRST: Inherits metadata from layout.tsx (single source of truth)
+ * CLEAN: No duplicate metadata - follows DRY principle
  */
 
 export default function FarcasterPage() {
@@ -18,12 +21,7 @@ export default function FarcasterPage() {
 
   return (
     <FarcasterMobileEditorLayout>
-      {/* Farcaster-specific content can be added here */}
-      <div className="hidden">
-        {/* Hidden div for frame metadata - this will be read by Farcaster clients */}
-        <meta name="fc:frame:button:1" content="Record Commentary" />
-        <meta name="fc:frame:button:2" content="Browse Coins" />
-      </div>
+      {/* Main Farcaster Mini App content */}
     </FarcasterMobileEditorLayout>
   );
 }

@@ -3,11 +3,11 @@
 import { useCallback, useState } from "react";
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 import { FarcasterFrameAction } from "@/farcaster/types";
-import { generateFrameActionUrl } from "@/farcaster/utils/frame-utils";
 
 /**
- * Hook for handling Farcaster frame actions
- * Extends existing mobile functionality rather than duplicating
+ * Hook for handling Farcaster Mini App v2 interactions
+ * ENHANCEMENT FIRST: Extends existing mobile functionality
+ * CLEAN: Focused on Mini Apps v2 specification only
  */
 export function useFarcasterFrame() {
   const { setFrameState, frameState } = useFarcasterContext();
@@ -15,63 +15,56 @@ export function useFarcasterFrame() {
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Handle frame button actions
+   * Handle Mini App navigation actions
+   * MODULAR: State-based navigation without deprecated frame actions
    */
-  const handleFrameAction = useCallback(async (action: FarcasterFrameAction) => {
+  const handleMiniAppNavigation = useCallback((destination: 'editor' | 'mint' | 'trade') => {
     setIsProcessing(true);
     setError(null);
-    
+
     try {
-      // Extract action data
-      const { buttonIndex, inputText, castId } = action.untrustedData;
-      
-      // Handle different button actions
-      switch (buttonIndex) {
-        case 1: // Start recording
-          setFrameState({ 
+      switch (destination) {
+        case 'editor':
+          setFrameState({
             step: "recording",
-            castHash: castId.hash
+            source: "miniapp"
           });
+          // Navigate to editor in Mini App context
+          window.location.hash = '#editor';
           break;
-          
-        case 2: // Create Coin
+
+        case 'mint':
           setFrameState({ step: "minting" });
+          window.location.hash = '#mint';
           break;
-          
-        case 3: // Complete and share
+
+        case 'trade':
           setFrameState({ step: "complete" });
+          window.location.hash = '#trade';
           break;
-          
+
         default:
-          console.warn("Unknown frame action:", buttonIndex);
+          console.warn("Unknown Mini App destination:", destination);
       }
-      
-      // Send analytics or tracking data
-      await fetch(generateFrameActionUrl("track"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(action),
-      });
-      
+
     } catch (err) {
-      console.error("Frame action error:", err);
-      setError("Failed to process frame action");
+      console.error("Mini App navigation error:", err);
+      setError("Failed to navigate in Mini App");
     } finally {
       setIsProcessing(false);
     }
   }, [setFrameState]);
 
   /**
-   * Handle cast integration
+   * Handle cast integration from Mini App context
+   * DRY: Reuses existing cast integration logic
    */
   const handleCastIntegration = useCallback(async (castUrl: string) => {
     try {
-      // Extract video from cast if available
       setFrameState({
         videoUrl: castUrl,
-        step: "recording"
+        step: "recording",
+        source: "cast"
       });
     } catch (err) {
       console.error("Cast integration error:", err);
@@ -80,7 +73,7 @@ export function useFarcasterFrame() {
   }, [setFrameState]);
 
   return {
-    handleFrameAction,
+    handleMiniAppNavigation,
     handleCastIntegration,
     isProcessing,
     error,

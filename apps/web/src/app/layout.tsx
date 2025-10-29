@@ -60,25 +60,33 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
-  // Farcaster Frame Metadata
+  // Farcaster Mini App v2 Metadata - Single source of truth
   other: {
-    "fc:frame": "vNext",
-    "fc:frame:image": `${baseUrl}/api/farcaster/image`,
-    "fc:frame:post_url": `${baseUrl}/api/farcaster/action`,
-    "fc:frame:button:1": "Create Commentary",
-    "fc:frame:button:2": "Browse Coins",
-    // Mini app metadata - 2025 format with stringified JSON
+    // Primary Mini App embed (v2 specification)
     "fc:miniapp": JSON.stringify({
       "version": "1",
       "imageUrl": `${baseUrl}/opengraph-image.jpg`,
       "button": {
         "title": "🎬 Open Saywaht",
         "action": {
-          "type": "launch_miniapp",
+          "type": "launch_frame",
           "name": "Saywaht",
           "url": baseUrl,
-          "splashImageUrl": `${baseUrl}/images/android-chrome-512x512.png`,
+          "splashImageUrl": `${baseUrl}/images/android-chrome-192x192.png`,
           "splashBackgroundColor": "#000000"
+        }
+      }
+    }),
+    // Backward compatibility for legacy frames (deprecated March 2025)
+    "fc:frame": JSON.stringify({
+      "version": "next",
+      "imageUrl": `${baseUrl}/opengraph-image.jpg`,
+      "button": {
+        "title": "🎬 Open Saywaht",
+        "action": {
+          "type": "launch_frame",
+          "name": "Saywaht",
+          "url": baseUrl
         }
       }
     })
