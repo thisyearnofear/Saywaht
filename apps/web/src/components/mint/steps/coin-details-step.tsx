@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent } from "react";
+import { ChangeEvent, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,8 @@ export function CoinDetailsStep({ data, updateData }: CoinDetailsStepProps) {
   const handleDescriptionChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     updateData({ coinDescription: e.target.value });
   };
+
+  const suggestedTags = useMemo(() => ["#commentary", "#meme", "#ai", "#base", "#zora"], []);
 
   return (
     <Card>
@@ -76,6 +78,22 @@ export function CoinDetailsStep({ data, updateData }: CoinDetailsStepProps) {
           <p className="text-xs text-muted-foreground">
             Describe what makes your video coin special or unique
           </p>
+          <div className="flex flex-wrap gap-2 pt-2">
+            {suggestedTags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => {
+                  const next = (data.coinDescription || "").trim();
+                  const appended = next ? `${next} ${tag}` : tag;
+                  updateData({ coinDescription: appended });
+                }}
+                className="text-xs px-2 py-1 rounded-full bg-muted hover:bg-muted/70"
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Validation Messages */}

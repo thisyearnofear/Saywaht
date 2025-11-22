@@ -8,6 +8,7 @@ import { Web3Provider } from "@/components/wagmi-provider";
 import { MobileProvider } from "@/contexts/mobile-context";
 import { FarcasterProvider } from "@/farcaster/components/farcaster-provider";
 import { PerformanceTracker } from "@/components/performance-tracker";
+import { generateMiniAppEmbed } from "@/farcaster/utils/frame-utils";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -15,9 +16,10 @@ const inter = Inter({
 });
 
 // ENHANCEMENT: Graceful fallback for missing environment variable
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://saywaht.netlify.app';
+const baseUrl =
+  process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app";
 if (!process.env.NEXT_PUBLIC_APP_URL) {
-  console.warn('NEXT_PUBLIC_APP_URL not set, using fallback:', baseUrl);
+  console.warn("NEXT_PUBLIC_APP_URL not set, using fallback:", baseUrl);
 }
 
 export const metadata: Metadata = {
@@ -62,34 +64,20 @@ export const metadata: Metadata = {
   },
   // Farcaster Mini App v2 Metadata - Single source of truth
   other: {
-    // Primary Mini App embed (v2 specification)
-    "fc:miniapp": JSON.stringify({
-      "version": "1",
-      "imageUrl": `${baseUrl}/opengraph-image.jpg`,
-      "button": {
-        "title": "🎬 Open Saywaht",
-        "action": {
-          "type": "launch_frame",
-          "name": "Saywaht",
-          "url": `${baseUrl}/farcaster`,
-          "splashImageUrl": `${baseUrl}/images/android-chrome-192x192.png`,
-          "splashBackgroundColor": "#000000"
-        }
-      }
-    }),
-    // Backward compatibility for legacy frames (deprecated March 2025)
-    "fc:frame": JSON.stringify({
-      "version": "next",
-      "imageUrl": `${baseUrl}/opengraph-image.jpg`,
-      "button": {
-        "title": "🎬 Open Saywaht",
-        "action": {
-          "type": "launch_frame",
-          "name": "Saywaht",
-          "url": `${baseUrl}/farcaster`
-        }
-      }
-    })
+    "fc:miniapp": JSON.stringify(
+      generateMiniAppEmbed({
+        button: {
+          title: "🎬 Open Saywaht",
+          action: {
+            type: "launch_frame",
+            name: "Saywaht",
+            url: `${baseUrl}/farcaster`,
+            splashImageUrl: `${baseUrl}/images/android-chrome-192x192.png`,
+            splashBackgroundColor: "#000000",
+          },
+        },
+      })
+    ),
   },
 };
 

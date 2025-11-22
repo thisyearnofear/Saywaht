@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { storageManager } from "@/lib/storage-manager";
 import { sdk } from "@farcaster/miniapp-sdk";
+import { hapticSelection, hapticImpact, hapticNotify } from "@/farcaster/utils/frame-utils";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { useCanvasStore } from "@/stores/canvas-store";
@@ -67,13 +68,30 @@ export function useFarcasterShare() {
 
             toast.success("Ready to share!", { id: "farcaster-share" });
 
-            // 3. Open Farcaster Compose
             const text = "Check out my reaction video! 🎥✨ created with @saywaht";
             const embeds = [uploadResult.url];
 
-            await sdk.actions.openUrl(
-                `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(embeds[0])}`
-            );
+            hapticSelection();
+            hapticImpact('light');
+
+            try {
+                const composer = (sdk.actions as any).composeCast;
+                if (typeof composer === "function") {
+                    const result = await composer({ text, embeds, channelKey: undefined });
+                    if (result?.cast?.hash) {
+                        await (sdk.actions as any).viewCast({ hash: result.cast.hash });
+                    }
+                } else {
+                    await sdk.actions.openUrl(
+                        `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(embeds[0])}`
+                    );
+                }
+                hapticNotify('success');
+            } catch {
+                await sdk.actions.openUrl(
+                    `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(embeds[0])}`
+                );
+            }
 
         } catch (error) {
             console.error("Share failed:", error);

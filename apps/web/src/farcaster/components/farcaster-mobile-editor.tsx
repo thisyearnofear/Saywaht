@@ -29,23 +29,7 @@ export function FarcasterMobileEditorLayout({
 
   // Initialize Mini App SDK with proper error handling and context detection
   useEffect(() => {
-    const initializeMiniApp = async () => {
-      if (isFarcasterMiniApp && isReady && !isInitializing) {
-        try {
-          // Check if we're actually in a Mini App context
-          const context = await sdk.context;
-          if (context) {
-            console.log('Mini App context detected:', context);
-            // Hide splash screen once app is ready
-            await sdk.actions.ready();
-          }
-        } catch (error) {
-          console.warn('Failed to initialize Mini App SDK:', error);
-          // App can still function without Mini App features
-        }
-      }
-    };
-
+    const initializeMiniApp = async () => {};
     initializeMiniApp();
 
     // Show Mini App specific onboarding

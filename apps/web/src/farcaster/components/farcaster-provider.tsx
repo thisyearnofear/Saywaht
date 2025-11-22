@@ -43,25 +43,13 @@ export function FarcasterProvider({
     const initializeSDK = async () => {
       try {
         setIsInitializing(true);
-        
-        // Enhanced Mini App context detection for 2025 standards
-        const isFarcaster =
-          typeof window !== "undefined" &&
-          (window.name.includes("farcaster") ||
-            window.location.search.includes("farcaster") ||
-            window.location.search.includes("fid") ||
-            window.location.pathname.includes("/farcaster") ||
-            // Check for Farcaster user agent
-            navigator.userAgent.includes("Farcaster") ||
-            // Check for frame context indicators
-            window.location.search.includes("fc_frame") ||
-            // Check for parent window context (iframe detection)
-            window.parent !== window ||
-            // Check for Farcaster referrer
-            document.referrer.includes("farcaster") ||
-            document.referrer.includes("warpcast"));
-
-        const isMiniApp = isFarcaster || isMobile;
+        let miniAppDetected = false;
+        try {
+          const detector = (sdk as any).isInMiniApp;
+          miniAppDetected =
+            typeof detector === "function" ? await detector() : false;
+        } catch {}
+        const isMiniApp = miniAppDetected || isMobile;
         setIsFarcasterMiniApp(isMiniApp);
 
         if (isMiniApp) {
@@ -86,7 +74,7 @@ export function FarcasterProvider({
             // No user context available (expected for some Mini App contexts)
             console.log("No user context available:", error);
           }
-          
+
           // Call sdk.actions.ready() to signal the mini app is ready
           try {
             await sdk.actions.ready();
@@ -95,7 +83,7 @@ export function FarcasterProvider({
             console.error("Failed to call sdk.actions.ready():", error);
           }
         }
-        
+
         // Mark as ready after initialization
         setIsReady(true);
         setIsInitializing(false);

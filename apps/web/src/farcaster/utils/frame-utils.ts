@@ -64,3 +64,23 @@ export function getMiniAppManifestUrl(): string {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://saywaht.netlify.app';
   return `${baseUrl}/.well-known/farcaster.json`;
 }
+
+import { sdk } from '@farcaster/miniapp-sdk';
+
+export function hapticSelection() {
+  try {
+    sdk.haptics?.selectionChanged?.();
+  } catch {}
+}
+
+export function hapticImpact(type: 'light' | 'medium' | 'heavy' = 'light') {
+  try {
+    sdk.haptics?.impactOccurred?.(type);
+  } catch {}
+}
+
+export function hapticNotify(type: 'success' | 'warning' | 'error' = 'success') {
+  try {
+    sdk.haptics?.notificationOccurred?.(type);
+  } catch {}
+}

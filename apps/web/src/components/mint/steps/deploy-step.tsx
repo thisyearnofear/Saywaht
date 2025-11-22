@@ -24,6 +24,12 @@ import { PLATFORM_ADDRESS } from "@/lib";
 import { DIVVI_CONSUMER_ADDRESS } from "@/lib/divvi-referral";
 import { triggerCoinCelebration } from "@/lib/confetti";
 import { zoraCoins } from "@/lib/zora-coins";
+import { sdk } from "@farcaster/miniapp-sdk";
+import {
+  hapticSelection,
+  hapticImpact,
+  hapticNotify,
+} from "@/farcaster/utils/frame-utils";
 
 interface DeployStepProps {
   data: MintWizardData;
@@ -438,6 +444,44 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
                 Share it with your community and start earning from trading
                 activity.
               </p>
+              <div className="pt-3">
+                <button
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded bg-purple-600 text-white hover:bg-purple-700"
+                  onClick={async () => {
+                    const baseUrl =
+                      process.env.NEXT_PUBLIC_APP_URL ||
+                      "https://saywaht.netlify.app";
+                    const text = `I just launched ${data.coinName} ($${data.coinSymbol}) on @saywaht`;
+                    const link = `${baseUrl}/trade`;
+                    hapticSelection();
+                    hapticImpact("light");
+                    try {
+                      const composer = (sdk.actions as any).composeCast;
+                      if (typeof composer === "function") {
+                        const result = await composer({
+                          text: `${text} 🎬🪙`,
+                          embeds: [link],
+                        });
+                        if (result?.cast?.hash) {
+                          await (sdk.actions as any).viewCast({
+                            hash: result.cast.hash,
+                          });
+                        }
+                      } else {
+                        await sdk.actions.openUrl(
+                          `https://warpcast.com/~/compose?text=${encodeURIComponent(
+                            `${text} 🎬🪙`
+                          )}&embeds[]=${encodeURIComponent(link)}`
+                        );
+                      }
+                      hapticNotify("success");
+                    } catch {}
+                  }}
+                >
+                  <span className="text-sm">🚀</span>
+                  Share on Farcaster
+                </button>
+              </div>
             </div>
           )}
         </div>

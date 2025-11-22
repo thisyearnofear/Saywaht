@@ -1,6 +1,6 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 // import { Suspense } from 'react';
 import "./editor.css";
 import {
@@ -20,7 +20,7 @@ import { Loader2 } from "@/lib/icons";
 import { WalletGuard } from "@/components/wallet-guard";
 
 // Lazy load heavy components
-const EditorHeader = dynamic(
+const EditorHeader = nextDynamic(
   () => import("@/components/editor-header").then((mod) => mod.EditorHeader),
   {
     ssr: false,
@@ -32,7 +32,7 @@ const EditorHeader = dynamic(
   }
 );
 
-const MediaPanel = dynamic(
+const MediaPanel = nextDynamic(
   () =>
     import("../../components/editor/media-panel").then((mod) => ({
       default: mod.MediaPanel,
@@ -47,7 +47,7 @@ const MediaPanel = dynamic(
   }
 );
 
-const Timeline = dynamic(
+const Timeline = nextDynamic(
   () =>
     import("../../components/editor/timeline").then((mod) => ({
       default: mod.Timeline,
@@ -62,7 +62,7 @@ const Timeline = dynamic(
   }
 );
 
-const PreviewPanel = dynamic(
+const PreviewPanel = nextDynamic(
   () =>
     import("../../components/editor/preview-panel").then((mod) => ({
       default: mod.PreviewPanel,
@@ -77,7 +77,7 @@ const PreviewPanel = dynamic(
   }
 );
 
-const WelcomeModal = dynamic(
+const WelcomeModal = nextDynamic(
   () =>
     import("../../components/onboarding/welcome-modal").then((mod) => ({
       default: mod.WelcomeModal,
@@ -85,7 +85,7 @@ const WelcomeModal = dynamic(
   { ssr: false }
 );
 
-const QuickActions = dynamic(
+const QuickActions = nextDynamic(
   () =>
     import("../../components/editor/quick-actions").then((mod) => ({
       default: mod.QuickActions,
@@ -93,7 +93,7 @@ const QuickActions = dynamic(
   { ssr: false }
 );
 
-const MobileEditorLayout = dynamic(
+const MobileEditorLayout = nextDynamic(
   () =>
     import("@/components/editor/mobile-editor-layout").then((mod) => ({
       default: mod.MobileEditorLayout,
@@ -209,3 +209,5 @@ export default function Editor() {
     </WalletGuard>
   );
 }
+
+export const dynamic = "force-dynamic";

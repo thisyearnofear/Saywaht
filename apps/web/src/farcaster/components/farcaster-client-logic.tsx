@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
+import { sdk } from "@farcaster/miniapp-sdk";
 
 /**
  * Farcaster Client Logic
@@ -30,16 +31,22 @@ export function FarcasterClientLogic() {
 
   // Redirect to main editor if not in Farcaster context
   useEffect(() => {
-    if (typeof window !== "undefined" && !isFarcasterMiniApp) {
-      // Simple check for Farcaster context
-      const isFarcaster =
-        window.location.search.includes("farcaster") ||
-        window.location.search.includes("fid");
-
-      if (!isFarcaster) {
-        router.push("/editor");
+    const run = async () => {
+      if (typeof window !== "undefined" && !isFarcasterMiniApp) {
+        let inMiniApp = false;
+        try {
+          const detector = (sdk as any).isInMiniApp;
+          inMiniApp = typeof detector === "function" ? await detector() : false;
+        } catch {}
+        const urlFlag =
+          window.location.search.includes("farcaster") ||
+          window.location.search.includes("fid");
+        if (!inMiniApp && !urlFlag) {
+          router.push("/editor");
+        }
       }
-    }
+    };
+    run();
   }, [isFarcasterMiniApp, router]);
 
   return null;
