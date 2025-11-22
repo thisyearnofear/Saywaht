@@ -24,12 +24,16 @@ import { getExportErrorMessage } from "@/lib/export-error-handler";
 import { isBackendExportAvailable } from "@/lib/backend-export";
 import { ExportMethod } from "@/lib/canvas-export-utils";
 import { storageManager } from "@/lib/storage-manager";
+import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
+import { useFarcasterShare } from "@/farcaster/hooks/use-farcaster-share";
 
 export function EditorHeader() {
   const { activeProject } = useProjectStore();
   const { isPlaying, toggle } = usePlaybackStore();
   const { address } = useAccount();
   const { getFormat } = useCanvasStore();
+  const { isFarcasterMiniApp } = useFarcasterContext();
+  const { shareToFarcaster, isSharing } = useFarcasterShare();
 
   // Use imported useState hook from hooks-provider
   const [isExporting, setIsExporting] = useState(false);
@@ -138,10 +142,10 @@ export function EditorHeader() {
     }
 
     setIsDeploying(true);
-    
+
     try {
       toast.loading("Preparing project for deployment...", { id: "deploy-progress" });
-      
+
       // Export project data using consolidated storage manager method
       const projectData = {
         project: activeProject,
@@ -150,7 +154,7 @@ export function EditorHeader() {
       };
 
       toast.loading("Uploading project data to IPFS...", { id: "deploy-progress" });
-      
+
       const uploadResult = await storageManager.exportProjectData(projectData, {
         onProgress: (progress) => {
           toast.loading(`Uploading to IPFS... ${Math.round(progress)}%`, { id: "deploy-progress" });
@@ -159,16 +163,16 @@ export function EditorHeader() {
 
       toast.dismiss("deploy-progress");
       toast.success("🚀 Project ready for deployment!");
-      
+
       // Open mint page with project data URL
       const mintUrl = `/mint/${activeProject.id}?dataUrl=${encodeURIComponent(uploadResult.url)}`;
       window.open(mintUrl, "_blank");
-      
+
     } catch (error) {
       console.error("Deploy preparation failed:", error);
       toast.dismiss("deploy-progress");
       toast.error(
-        error instanceof Error 
+        error instanceof Error
           ? `Failed to prepare deployment: ${error.message}`
           : "Failed to prepare project for deployment"
       );
@@ -236,7 +240,7 @@ export function EditorHeader() {
             disabled={isExporting || !activeProject || tracks.length === 0}
             className="text-xs font-medium rounded-r-none border-r-0"
           >
-            {isExporting ? (
+            {isSharing ? (
               <>
                 <span className="inline-block h-4 w-4 mr-1 animate-spin">
                   ⟳
@@ -319,7 +323,7 @@ export function EditorHeader() {
           </DropdownMenu>
         </div>
 
-        {address && (
+        {address && !isFarcasterMiniApp && (
           <Button
             variant="default"
             size="sm"
@@ -336,6 +340,28 @@ export function EditorHeader() {
               <>
                 <span className="inline-block h-4 w-4 mr-1">🪙</span>
                 Deploy
+              </>
+            )}
+          </Button>
+        )}
+
+        {isFarcasterMiniApp && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={shareToFarcaster}
+            disabled={isSharing || !activeProject || tracks.length === 0}
+            className="text-xs font-medium bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            {isSharing ? (
+              <>
+                <span className="inline-block h-4 w-4 mr-1 animate-spin">⟳</span>
+                Sharing...
+              </>
+            ) : (
+              <>
+                <span className="inline-block h-4 w-4 mr-1">🚀</span>
+                Share
               </>
             )}
           </Button>

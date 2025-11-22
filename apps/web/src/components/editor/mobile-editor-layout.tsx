@@ -89,9 +89,10 @@ const QuickActions = dynamic(
 
 interface MobileEditorLayoutProps {
   children?: React.ReactNode;
+  className?: string;
 }
 
-export function MobileEditorLayout({ children }: MobileEditorLayoutProps) {
+export function MobileEditorLayout({ children, className }: MobileEditorLayoutProps) {
   const { orientation, isEditorMobileMode, toggleEditorMobileMode } =
     useMobileContext();
   const [activeTab, setActiveTab] = useState<string>("preview");
@@ -113,7 +114,7 @@ export function MobileEditorLayout({ children }: MobileEditorLayoutProps) {
   const timelineHeight = timelineExpanded ? "50vh" : "120px";
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-background overflow-hidden mobile-editor safe-area">
+    <div className={cn("h-full w-full flex flex-col bg-background overflow-hidden mobile-editor safe-area", className)}>
       {/* Header with mode toggle */}
       <div className="relative">
         <EditorHeader />

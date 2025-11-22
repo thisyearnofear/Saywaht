@@ -71,7 +71,7 @@ export const metadata: Metadata = {
         "action": {
           "type": "launch_frame",
           "name": "Saywaht",
-          "url": baseUrl,
+          "url": `${baseUrl}/farcaster`,
           "splashImageUrl": `${baseUrl}/images/android-chrome-192x192.png`,
           "splashBackgroundColor": "#000000"
         }
@@ -86,7 +86,7 @@ export const metadata: Metadata = {
         "action": {
           "type": "launch_frame",
           "name": "Saywaht",
-          "url": baseUrl
+          "url": `${baseUrl}/farcaster`
         }
       }
     })

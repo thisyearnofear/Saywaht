@@ -8,6 +8,7 @@ import { MobileOnboardingOverlay } from "@/components/editor/mobile-onboarding-o
 import { FarcasterSplashScreen } from "./farcaster-splash-screen";
 import { useMobileOnboarding } from "@/components/editor/mobile-onboarding-overlay";
 import { FarcasterClientLogic } from "@/farcaster/components/farcaster-client-logic";
+import { CastContextPanel } from "./cast-context-panel";
 import { sdk } from '@farcaster/miniapp-sdk';
 
 /**
@@ -75,24 +76,27 @@ export function FarcasterMobileEditorLayout({
   };
 
   return (
-    <div className={`h-screen w-screen flex flex-col bg-background overflow-hidden mobile-editor safe-area ${
-      isFarcasterMiniApp ? 'farcaster-miniapp' : ''
-    }`}>
+    <div className={`h-screen w-screen flex flex-col bg-background overflow-hidden mobile-editor safe-area ${isFarcasterMiniApp ? 'farcaster-miniapp' : ''
+      }`}>
       {/* Farcaster client logic */}
       <FarcasterClientLogic />
 
       {/* Farcaster Mini App Splash Screen */}
-       <FarcasterSplashScreen
-         isVisible={isFarcasterMiniApp && isInitializing}
-         onComplete={() => {
-           // Splash screen completion is handled by the provider
-           console.log("Farcaster splash screen completed");
-         }}
-       />
+      <FarcasterSplashScreen
+        isVisible={isFarcasterMiniApp && isInitializing}
+        onComplete={() => {
+          // Splash screen completion is handled by the provider
+          console.log("Farcaster splash screen completed");
+        }}
+      />
 
       {/* Enhanced mobile editor layout with Farcaster features - only show when ready */}
       {(!isFarcasterMiniApp || isReady) && (
-        <div className="flex-1 min-h-0 overflow-y-auto scrollable">
+        <div className="flex-1 min-h-0 overflow-y-auto scrollable flex flex-col">
+          {/* Show Cast Context if available */}
+          {frameState.castHash && (
+            <CastContextPanel castHash={frameState.castHash} />
+          )}
           <MobileEditorLayout>{children}</MobileEditorLayout>
         </div>
       )}

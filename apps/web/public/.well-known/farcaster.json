@@ -8,21 +8,34 @@
     "version": "1",
     "name": "Saywaht",
     "iconUrl": "https://saywaht.netlify.app/images/android-chrome-512x512.png",
-    "homeUrl": "https://saywaht.netlify.app",
+    "homeUrl": "https://saywaht.netlify.app/farcaster",
     "splashImageUrl": "https://saywaht.netlify.app/images/android-chrome-192x192.png",
     "splashBackgroundColor": "#000000",
     "subtitle": "Create Video Commentary",
     "description": "AI-powered video creation platform for creating and trading commentary coins",
     "primaryCategory": "social",
-    "tags": ["video", "commentary", "trading", "creator", "coins"],
+    "tags": [
+      "video",
+      "commentary",
+      "trading",
+      "creator",
+      "coins"
+    ],
     "heroImageUrl": "https://saywaht.netlify.app/opengraph-image.jpg",
     "ogTitle": "Saywaht - Video Commentary",
     "ogDescription": "AI-powered video creation platform for creating and trading commentary coins",
     "ogImageUrl": "https://saywaht.netlify.app/opengraph-image.jpg",
-    "requiredChains": ["eip155:8453"],
-    "requiredCapabilities": ["actions.signIn", "wallet.getEthereumProvider"]
+    "requiredChains": [
+      "eip155:8453"
+    ],
+    "requiredCapabilities": [
+      "actions.signIn",
+      "wallet.getEthereumProvider"
+    ]
   },
   "baseBuilder": {
-    "allowedAddresses": ["0x3D86Ff165D8bEb8594AE05653249116a6d1fF3f1"]
+    "allowedAddresses": [
+      "0x3D86Ff165D8bEb8594AE05653249116a6d1fF3f1"
+    ]
   }
 }
