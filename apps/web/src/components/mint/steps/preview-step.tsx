@@ -12,6 +12,8 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { generateCoinMetadata, uploadMetadataToIPFS } from "@/lib/metadata";
 import { MintWizardData } from "../mint-wizard";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { useUserPreferencesStore } from "@/stores/user-preferences-store";
 import {
   unifiedExport,
   ExportProgress,
@@ -27,6 +29,7 @@ interface PreviewStepProps {
 }
 
 export function PreviewStep({ data, updateData }: PreviewStepProps) {
+  const { preferences } = useUserPreferencesStore();
   const [isGeneratingMetadata, setIsGeneratingMetadata] = useState(false);
   const [videoUploadStatus, setVideoUploadStatus] = useState<
     | "idle"
@@ -364,6 +367,28 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           <p className="text-sm text-muted-foreground">
             Review how your coin will appear to traders and collectors
           </p>
+          {preferences.hasCreatorCoin !== undefined && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Backing Currency:</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant={preferences.hasCreatorCoin ? "default" : "secondary"}
+                      className="text-xs cursor-help"
+                    >
+                      {preferences.hasCreatorCoin ? "Creator Coin (preferred)" : "ZORA"}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {preferences.hasCreatorCoin
+                      ? "Uses your Creator Coin for markets. Aligns rewards and reduces slippage risk."
+                      : "Uses ZORA for markets. Connect or set up a Creator Coin to prefer creator-backed markets."}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

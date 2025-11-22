@@ -22,12 +22,14 @@ export interface UserPreferences {
   walletAddress?: string;
   recentProjects: string[]; // Project IDs
   favoriteAssets: string[]; // Asset IDs
+  hasCreatorCoin?: boolean;
 }
 
 interface UserPreferencesStore {
   preferences: UserPreferences;
   updatePreferences: (updates: Partial<UserPreferences>) => void;
   setWalletAddress: (address: string) => void;
+  setHasCreatorCoin: (value: boolean) => void;
   addRecentProject: (projectId: string) => void;
   addFavoriteAsset: (assetId: string) => void;
   removeFavoriteAsset: (assetId: string) => void;
@@ -47,6 +49,7 @@ const defaultPreferences: UserPreferences = {
   defaultVideoFormat: "portrait", // Default to mobile-first format
   recentProjects: [],
   favoriteAssets: [],
+  hasCreatorCoin: undefined,
 };
 
 export const useUserPreferencesStore = create<UserPreferencesStore>()(
@@ -62,6 +65,11 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
       setWalletAddress: (address) =>
         set((state) => ({
           preferences: { ...state.preferences, walletAddress: address },
+        })),
+
+      setHasCreatorCoin: (value) =>
+        set((state) => ({
+          preferences: { ...state.preferences, hasCreatorCoin: value },
         })),
 
       addRecentProject: (projectId) =>

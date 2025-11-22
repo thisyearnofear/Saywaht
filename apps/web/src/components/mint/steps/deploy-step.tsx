@@ -2,26 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { LuLoader as Loader2, LuCheck, LuX } from "react-icons/lu";
-import {
-  useAccount,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-  useSimulateContract,
-  usePublicClient,
-} from "wagmi";
+import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { toast } from "sonner";
-import {
-  createCoinCall,
-  DeployCurrency,
-  getCoinCreateFromLogs,
-} from "@zoralabs/coins-sdk";
-import { submitReferral, getReferralTag } from "@divvi/referral-sdk";
+import { createCoin, getProfile } from "@zoralabs/coins-sdk";
+import * as CoinsSDK from "@zoralabs/coins-sdk";
+import { submitReferral } from "@divvi/referral-sdk";
 import { MintWizardData } from "../mint-wizard";
 import { base } from "viem/chains";
-import type { ValidMetadataURI } from "@zoralabs/coins-sdk";
+// Using CreateCoinArgs and CreateConstants via namespace import
 import { PLATFORM_ADDRESS } from "@/lib";
-import { DIVVI_CONSUMER_ADDRESS } from "@/lib/divvi-referral";
 import { triggerCoinCelebration } from "@/lib/confetti";
 import { zoraCoins } from "@/lib/zora-coins";
 import { sdk } from "@farcaster/miniapp-sdk";
@@ -30,6 +21,13 @@ import {
   hapticImpact,
   hapticNotify,
 } from "@/farcaster/utils/frame-utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
+import { useUserPreferencesStore } from "@/stores/user-preferences-store";
 
 interface DeployStepProps {
   data: MintWizardData;
@@ -39,21 +37,20 @@ interface DeployStepProps {
 export function DeployStep({ data, updateData }: DeployStepProps) {
   const { address } = useAccount();
   const publicClient = usePublicClient();
+  const { preferences, setHasCreatorCoin } = useUserPreferencesStore();
 
   // Prepare contract call parameters
   const [contractCallParams, setContractCallParams] = useState<any>(null);
+  const [backingInfo, setBackingInfo] = useState<{
+    label: string;
+    creatorBacked: boolean;
+  } | null>(null);
 
-  // Use simulate contract to prepare the transaction - only when params are ready
-  const { data: simulateData } = useSimulateContract(
-    contractCallParams || undefined
-  );
-
-  // Use write contract with the simulated data
-  const { writeContract, data: txHash, status, error } = useWriteContract();
-
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
-    hash: txHash,
-  });
+  const { data: walletClient } = useWalletClient();
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [status, setStatus] = useState<"idle" | "pending" | "error">("idle");
 
   // Prepare the contract call when component mounts
   useEffect(() => {
@@ -87,46 +84,59 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
           return;
         }
 
-        // Create the coin call parameters
-        const coinParams = {
+        // Detect if user has a Creator Coin to prefer creator-backed markets
+        let selectedCurrency =
+          (CoinsSDK as any)?.CreateConstants?.ContentCoinCurrencies?.ZORA ??
+          (CoinsSDK as any)?.DeployCurrency?.ZORA ??
+          "ZORA";
+        if (preferences.hasCreatorCoin !== undefined) {
+          const hasCreatorCoin = !!preferences.hasCreatorCoin;
+          if (hasCreatorCoin) {
+            selectedCurrency =
+              (CoinsSDK as any)?.CreateConstants?.ContentCoinCurrencies
+                ?.CREATOR_COIN_OR_ZORA ??
+              (CoinsSDK as any)?.DeployCurrency?.CREATOR_COIN_OR_ZORA ??
+              "CREATOR_COIN_OR_ZORA";
+          }
+          setBackingInfo({
+            label: hasCreatorCoin ? "Creator Coin (preferred)" : "ZORA",
+            creatorBacked: hasCreatorCoin,
+          });
+        } else {
+          try {
+            const prof = await getProfile({ identifier: address });
+            const hasCreatorCoin = !!prof?.data?.profile?.creatorCoin?.address;
+            if (hasCreatorCoin) {
+              selectedCurrency =
+                (CoinsSDK as any)?.CreateConstants?.ContentCoinCurrencies
+                  ?.CREATOR_COIN_OR_ZORA ??
+                (CoinsSDK as any)?.DeployCurrency?.CREATOR_COIN_OR_ZORA ??
+                "CREATOR_COIN_OR_ZORA";
+            }
+            setHasCreatorCoin(hasCreatorCoin);
+            setBackingInfo({
+              label: hasCreatorCoin ? "Creator Coin (preferred)" : "ZORA",
+              creatorBacked: hasCreatorCoin,
+            });
+          } catch {
+            setHasCreatorCoin(false);
+            setBackingInfo({ label: "ZORA", creatorBacked: false });
+          }
+        }
+
+        // Prepare CreateCoinArgs for SDK v0.3.x
+        const coinArgs: any = {
+          creator: address,
           name: data.coinName,
           symbol: data.coinSymbol,
-          uri: data.metadataUri as ValidMetadataURI,
-          payoutRecipient: address,
-          platformReferrer: PLATFORM_ADDRESS, // saywaht earns 15% of all trading fees!
+          metadata: { type: "RAW_URI", uri: data.metadataUri },
+          currency: selectedCurrency,
           chainId: base.id,
-          currency: DeployCurrency.ZORA, // Use ZORA as the trading currency
+          platformReferrer: PLATFORM_ADDRESS,
+          payoutRecipientOverride: address,
         };
 
-        // Get the contract call parameters
-        const callParams = await createCoinCall(coinParams);
-        console.log("📋 Contract call prepared:", callParams);
-
-        // Generate Divvi referral tag and append to calldata
-        try {
-          const referralTag = getReferralTag({
-            user: address, // The user address making the transaction
-            consumer: DIVVI_CONSUMER_ADDRESS, // Your Divvi Identifier
-          });
-
-          // Append referral tag to the transaction calldata
-          const modifiedCallParams = {
-            ...callParams,
-            dataSuffix: referralTag as `0x${string}`,
-          };
-
-          console.log(
-            "📋 Divvi referral tag generated and appended to calldata"
-          );
-          setContractCallParams(modifiedCallParams);
-        } catch (referralError) {
-          console.warn(
-            "⚠️ Failed to generate Divvi referral tag:",
-            referralError
-          );
-          // Continue without referral tag if it fails
-          setContractCallParams(callParams);
-        }
+        setContractCallParams(coinArgs);
       } catch (err) {
         console.error("Failed to prepare coin creation:", err);
         toast.error("Failed to prepare coin creation");
@@ -147,20 +157,54 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
     // updateData is intentionally excluded to prevent infinite loop
   ]);
 
-  // Auto-deploy when simulation is ready
+  // Auto-deploy when coin args are ready
   useEffect(() => {
-    if (!simulateData || data.isDeploying || data.deployedCoin) return;
+    if (!contractCallParams || data.isDeploying || data.deployedCoin) return;
+    if (!walletClient || !publicClient) return;
 
     const deployNow = async () => {
       updateData({ isDeploying: true });
+      setStatus("pending");
 
       try {
-        console.log("🚀 Deploying coin to blockchain...");
-        await writeContract(simulateData.request);
+        console.log("🚀 Deploying coin via Coins SDK...");
+        const result = await createCoin({
+          call: contractCallParams as any,
+          walletClient: walletClient as any,
+          publicClient: publicClient as any,
+        });
+        setTxHash(result.hash);
+        setIsSuccess(true);
+        setIsConfirming(false);
+
+        const coinAddress = result.address || result.deployment?.coin;
+        console.log("🪙 Coin deployed successfully!");
+        console.log("📍 Coin address:", coinAddress);
+
+        // Trigger celebration confetti
+        triggerCoinCelebration();
+
+        toast.dismiss();
+        toast.success("Content coin created successfully! 🎉");
+        updateData({
+          deployedCoin: {
+            name: data.coinName,
+            symbol: data.coinSymbol,
+            address: coinAddress || undefined,
+          },
+          isDeploying: false,
+        });
+
+        // Submit Divvi referral tracking (optional, non-blocking)
+        try {
+          const chainId = await publicClient.getChainId();
+          await submitReferral({ txHash: result.hash, chainId });
+        } catch {}
+
+        setStatus("idle");
       } catch (err) {
         console.error("Deploy failed:", err);
-
-        // Handle specific error types
+        setStatus("error");
         if (err instanceof Error) {
           if (
             err.message.includes("User denied") ||
@@ -179,113 +223,20 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         } else {
           toast.error("Transaction failed. Please try again");
         }
-
         updateData({ isDeploying: false });
       }
     };
 
     deployNow();
   }, [
-    simulateData,
+    contractCallParams,
+    walletClient,
+    publicClient,
     data.isDeploying,
     data.deployedCoin,
-    writeContract,
-    updateData,
-  ]);
-
-  // Handle transaction confirmation
-  useEffect(() => {
-    if (isSuccess && txHash && address && publicClient) {
-      const handleSuccess = async () => {
-        try {
-          // Get transaction receipt to extract coin address
-          const receipt = await publicClient.getTransactionReceipt({
-            hash: txHash,
-          });
-          const coinDeployment = getCoinCreateFromLogs(receipt);
-
-          console.log("🪙 Coin deployed successfully!");
-          console.log("📍 Coin address:", coinDeployment?.coin);
-
-          // Trigger celebration confetti
-          triggerCoinCelebration();
-
-          toast.dismiss();
-          toast.success("Content coin created successfully! 🎉");
-          updateData({
-            deployedCoin: {
-              name: data.coinName,
-              symbol: data.coinSymbol,
-              address: coinDeployment?.coin || undefined,
-            },
-            isDeploying: false,
-          });
-        } catch (error) {
-          console.error("Failed to extract coin address:", error);
-          // Still mark as successful even if we can't extract the address
-          toast.dismiss();
-          toast.success("Content coin created successfully! 🎉");
-          updateData({
-            deployedCoin: { name: data.coinName, symbol: data.coinSymbol },
-            isDeploying: false,
-          });
-        }
-      };
-
-      handleSuccess();
-
-      // Submit Divvi referral tracking (optional, non-blocking)
-      const submitDivviTracking = async () => {
-        try {
-          console.log("📝 Submitting Divvi referral tracking for tx:", txHash);
-          const chainId = await publicClient.getChainId();
-          await submitReferral({
-            txHash,
-            chainId,
-          });
-          console.log("✅ Divvi referral tracking submitted successfully");
-        } catch (error) {
-          console.error("❌ Failed to submit Divvi referral tracking:", error);
-          // Don't show error to user - this is optional tracking
-        }
-      };
-
-      submitDivviTracking();
-    } else if (status === "error") {
-      toast.dismiss();
-
-      if (error?.message) {
-        if (
-          error.message.includes("User denied") ||
-          error.message.includes("user rejected")
-        ) {
-          toast.error("Transaction cancelled by user");
-        } else if (error.message.includes("insufficient funds")) {
-          toast.error("Insufficient funds to complete transaction");
-        } else if (error.message.includes("network")) {
-          toast.error(
-            "Network error. Please check your connection and try again"
-          );
-        } else {
-          toast.error(error.message);
-        }
-      } else {
-        toast.error("Transaction failed. Please try again");
-      }
-
-      updateData({ isDeploying: false });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    isSuccess,
-    txHash,
-    status,
-    error,
     data.coinName,
     data.coinSymbol,
-    address,
-    publicClient,
-    // updateData is intentionally excluded to prevent infinite loop
+    updateData,
   ]);
 
   const getStatusInfo = () => {
@@ -364,6 +315,32 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         <p className="text-sm text-muted-foreground">
           Your coin is being deployed to the Zora protocol on Base
         </p>
+        {backingInfo && (
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              Backing Currency:
+            </span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant={
+                      backingInfo.creatorBacked ? "default" : "secondary"
+                    }
+                    className="text-xs cursor-help"
+                  >
+                    {backingInfo.label}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {backingInfo.creatorBacked
+                    ? "Uses your Creator Coin for markets. Aligns rewards and reduces slippage risk."
+                    : "Uses ZORA for markets. Connect or set up a Creator Coin to prefer creator-backed markets."}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <div className="flex flex-col items-center space-y-6 py-8">

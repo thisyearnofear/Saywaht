@@ -20,6 +20,9 @@ import {
 import { useWalletAuth } from "@opencut/auth";
 import { useMounted } from "@/hooks/use-mobile";
 import { useState, useEffect, useCallback } from "react";
+import { useAccount } from "wagmi";
+import { useUserPreferencesStore } from "@/stores/user-preferences-store";
+import { getProfile } from "@zoralabs/coins-sdk";
 
 interface PhaseNavigationProps {
   className?: string;
@@ -30,6 +33,8 @@ export function PhaseNavigation({ className = "" }: PhaseNavigationProps) {
   const pathname = usePathname();
   const { isAuthenticated } = useWalletAuth();
   const isMounted = useMounted();
+  const { address } = useAccount();
+  const { preferences, setHasCreatorCoin } = useUserPreferencesStore();
 
   // Interactive state management
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -68,6 +73,25 @@ export function PhaseNavigation({ className = "" }: PhaseNavigationProps) {
   useEffect(() => {
     savePreferences();
   }, [savePreferences]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!address) return;
+      if (preferences.hasCreatorCoin !== undefined) return;
+      try {
+        const prof = await getProfile({ identifier: address });
+        const hasCreatorCoin = !!prof?.data?.profile?.creatorCoin?.address;
+        if (!cancelled) setHasCreatorCoin(hasCreatorCoin);
+      } catch {
+        if (!cancelled) setHasCreatorCoin(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [address, preferences.hasCreatorCoin, setHasCreatorCoin]);
 
   if (!isMounted || !isAuthenticated || pathname === "/") {
     return null;

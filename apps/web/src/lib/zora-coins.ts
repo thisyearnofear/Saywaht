@@ -1,6 +1,7 @@
 import { createPublicClient, http, type Address } from "viem";
 import { base } from "viem/chains";
 import { handleError, withRetry, zoraCircuitBreaker } from "./error-handler";
+import { setApiKey, getCoinsNew } from "@zoralabs/coins-sdk";
 
 // Zora Coins SDK types
 export interface VideoCoin {
@@ -39,8 +40,16 @@ export class ZoraCoinsService {
       transport: http(),
     });
 
-    // API key is now handled server-side for security
-    console.log("🔑 Zora API calls will be made through secure server-side routes");
+    // Initialize SDK API key (public key acceptable per Zora docs for client usage)
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_ZORA_API_KEY;
+      if (apiKey) {
+        setApiKey(apiKey);
+        console.log("🔑 Zora Coins SDK API key initialized");
+      } else {
+        console.warn("⚠️ NEXT_PUBLIC_ZORA_API_KEY not set; queries may be rate limited");
+      }
+    } catch {}
   }
 
 
@@ -50,59 +59,11 @@ export class ZoraCoinsService {
    */
   async getTrendingCoins(): Promise<VideoCoin[]> {
     return zoraCircuitBreaker.execute(async () => {
-      // Fetching trending coins from Zora API
-
-      // ENHANCEMENT: Retry with exponential backoff
+      // Use official Coins SDK explore query
       return withRetry(async () => {
-        const response = await fetch('https://api.zora.co/graphql', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(process.env.NEXT_PUBLIC_ZORA_API_KEY && {
-              'X-API-Key': process.env.NEXT_PUBLIC_ZORA_API_KEY
-            })
-          },
-          body: JSON.stringify({
-            query: `
-              query GetTrendingCoins {
-                exploreList(
-                  where: { sort: { sortKey: CREATED, sortDirection: DESC } }
-                  pagination: { limit: 10 }
-                ) {
-                  edges {
-                    node {
-                      address
-                      name
-                      symbol
-                      creatorAddress
-                      tokenURI
-                      totalSupply
-                      volume24h
-                      createdAt
-                      image
-                    }
-                  }
-                }
-              }
-            `
-          })
-        });
-
-        if (!response.ok) {
-          const error = new Error(`Zora API request failed: ${response.status} ${response.statusText}`);
-          handleError(error, 'Zora API - trending coins');
-          throw error;
-        }
-
-        const result = await response.json();
-
-        if (result.errors) {
-          const error = new Error(`GraphQL errors: ${result.errors.map((e: any) => e.message).join(', ')}`);
-          handleError(error, 'Zora API - GraphQL errors');
-          throw error;
-        }
-
-        const coins = result.data?.exploreList?.edges?.map((edge: any) => ({
+        const response = await getCoinsNew({ count: 10 });
+        const edges = response?.data?.exploreList?.edges || [];
+        const coins: VideoCoin[] = edges.map((edge: any) => ({
           address: edge.node.address,
           name: edge.node.name || "Untitled Coin",
           symbol: edge.node.symbol || "COIN",
@@ -110,14 +71,12 @@ export class ZoraCoinsService {
           videoUri: edge.node.tokenURI || "",
           metadataUri: edge.node.tokenURI || "",
           totalSupply: edge.node.totalSupply || "1000000",
-          price: "0.001",
+          price: edge.node.price || "0.001",
           volume24h: edge.node.volume24h || "0",
-          priceChange24h: 0,
+          priceChange24h: Number(edge.node.marketCapDelta24h || 0),
           createdAt: edge.node.createdAt || new Date().toISOString(),
           thumbnail: edge.node.image || "",
-        })) || [];
-
-        // Successfully fetched trending coins
+        }));
         return coins;
       }, 3, 2000);
     });

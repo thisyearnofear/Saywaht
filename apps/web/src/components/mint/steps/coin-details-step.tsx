@@ -6,6 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MintWizardData } from "../mint-wizard";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
+import { useUserPreferencesStore } from "@/stores/user-preferences-store";
 
 interface CoinDetailsStepProps {
   data: MintWizardData;
@@ -13,6 +21,7 @@ interface CoinDetailsStepProps {
 }
 
 export function CoinDetailsStep({ data, updateData }: CoinDetailsStepProps) {
+  const { preferences } = useUserPreferencesStore();
   const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
     updateData({ coinName: e.target.value });
   };
@@ -25,7 +34,10 @@ export function CoinDetailsStep({ data, updateData }: CoinDetailsStepProps) {
     updateData({ coinDescription: e.target.value });
   };
 
-  const suggestedTags = useMemo(() => ["#commentary", "#meme", "#ai", "#base", "#zora"], []);
+  const suggestedTags = useMemo(
+    () => ["#commentary", "#meme", "#ai", "#base", "#zora"],
+    []
+  );
 
   return (
     <Card>
@@ -34,6 +46,34 @@ export function CoinDetailsStep({ data, updateData }: CoinDetailsStepProps) {
         <p className="text-sm text-muted-foreground">
           Set up the basic information for your video coin
         </p>
+        {preferences.hasCreatorCoin !== undefined && (
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              Backing Currency:
+            </span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant={
+                      preferences.hasCreatorCoin ? "default" : "secondary"
+                    }
+                    className="text-xs cursor-help"
+                  >
+                    {preferences.hasCreatorCoin
+                      ? "Creator Coin (preferred)"
+                      : "ZORA"}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {preferences.hasCreatorCoin
+                    ? "Uses your Creator Coin for markets. Aligns rewards and reduces slippage risk."
+                    : "Uses ZORA for markets. Connect or set up a Creator Coin to prefer creator-backed markets."}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
