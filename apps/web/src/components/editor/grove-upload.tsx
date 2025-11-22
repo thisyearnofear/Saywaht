@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { groveStorage, type GroveUploadResult } from "@/lib/grove-storage";
 import { toast } from "sonner";
 import { useState, useCallback } from "react";
+import { recordCustomMetric } from "@/lib/performance-monitor";
 
 interface GroveUploadProps {
   onUploadComplete: (result: GroveUploadResult) => void;
@@ -62,6 +63,9 @@ export function GroveUpload({
           onUploadComplete(result);
 
           toast.success(`Uploaded ${file.name} to IPFS`);
+          recordCustomMetric('storage-upload', 1, 'count', {
+            provider: 'grove',
+          });
         }
 
         setUploadedFiles((prev: GroveUploadResult[]) => [...prev, ...results]);

@@ -141,6 +141,22 @@ export async function unifiedExport(
 ): Promise<Blob> {
   console.log("🪙 Starting Zora coin export with intelligent method selection...");
 
+  // Determine default max size based on storage provider availability
+  async function getDefaultMaxSize(): Promise<number> {
+    try {
+      const hasFilcdnMedia = mediaItems.some(m => m.isFilCDN);
+      if (hasFilcdnMedia) return 254; // MiB
+      const res = await fetch('/api/filecoin/status');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.configured && data.allowanceSufficient) return 254;
+      }
+      return 8;
+    } catch {
+      return 8;
+    }
+  }
+
   // Convert UnifiedExportOptions to ExportOptions for our smart export system
   const exportOptions = {
     format: options.format || "portrait",
@@ -151,7 +167,7 @@ export async function unifiedExport(
     videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || "medium"),
     audioBitrate: options.audioBitrate || 192000,
     method: "auto" as const, // Use intelligent method selection
-    maxFileSizeMB: options.maxFileSizeMB || 8 // Default to Grove's 8MB limit
+    maxFileSizeMB: options.maxFileSizeMB || await getDefaultMaxSize()
   };
   
   // Convert progress callback to simple percentage for our export system

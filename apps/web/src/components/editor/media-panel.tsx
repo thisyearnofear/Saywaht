@@ -22,7 +22,7 @@ import {
 } from "@/lib/icons";
 import Image from "next/image";
 import { useDragDrop } from "@/hooks/use-drag-drop";
-import { useEffect, useRef, useState, ChangeEvent } from 'react';
+import { useEffect, useRef, useState, ChangeEvent } from "react";
 import { toast } from "sonner";
 import { VoiceoverRecorder } from "./voiceover-recorder";
 import { AiVoiceGenerator } from "./ai-voice-generator";
@@ -38,6 +38,7 @@ import {
   CollapsibleTrigger,
 } from "../ui/collapsible";
 import { cn } from "@/lib/utils";
+import { useAccount } from "wagmi";
 
 // MediaPanel lets users add, view, and drag media (images, videos, audio) into the project.
 // You can upload files or drag them from your computer. Dragging from here to the timeline adds them to your video project.
@@ -48,6 +49,23 @@ export function MediaPanel() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAudioOpen, setIsAudioOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"upload" | "audio">("upload");
+  const [filStatus, setFilStatus] = useState<{
+    configured: boolean;
+    allowanceSufficient: boolean;
+    walletAddress?: string;
+  } | null>(null);
+  const { isConnected } = useAccount();
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const s = await isFilCDNConfigured();
+      if (mounted) setFilStatus(s);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const processFiles = async (files: FileList | File[]) => {
     // If no files, do nothing
@@ -97,8 +115,8 @@ export function MediaPanel() {
     const type = result.filename.match(/\.(mp4|webm|mov|avi)$/i)
       ? ("video" as const)
       : result.filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)
-        ? ("image" as const)
-        : ("audio" as const);
+      ? ("image" as const)
+      : ("audio" as const);
 
     const mediaItem = {
       id: crypto.randomUUID(),
@@ -356,7 +374,7 @@ export function MediaPanel() {
                   </TabsContent>
 
                   <TabsContent value="filcdn" className="mt-3">
-                    {isFilCDNConfigured() ? (
+                    {filStatus?.configured || isConnected ? (
                       <FileUpload onUploadComplete={handleFilCDNUpload} />
                     ) : (
                       <div className="text-center">
@@ -365,7 +383,10 @@ export function MediaPanel() {
                         </p>
                         <Button asChild size="sm" variant="outline">
                           <a
-                            href={process.env.NEXT_PUBLIC_FILCDN_WEB_APP_URL || "https://grove.storage"}
+                            href={
+                              process.env.NEXT_PUBLIC_FILCDN_WEB_APP_URL ||
+                              "https://filcdn.com"
+                            }
                             target="_blank"
                             rel="noopener noreferrer"
                           >
@@ -458,7 +479,10 @@ export function MediaPanel() {
                                     title={item.name}
                                   >
                                     {item.name.length > 12
-                                      ? `${item.name.slice(0, 8)}...${item.name.slice(-3)}`
+                                      ? `${item.name.slice(
+                                          0,
+                                          8
+                                        )}...${item.name.slice(-3)}`
                                       : item.name}
                                   </span>
                                 </Button>

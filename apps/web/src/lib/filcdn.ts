@@ -1,5 +1,5 @@
 import { Synapse } from '@filoz/synapse-sdk';
-import { ethers } from 'ethers';
+import { BrowserProvider } from 'ethers';
 
 // FilCDN Configuration
 const FILECOIN_CALIBRATION_RPC = 'https://api.calibration.node.glif.io/rpc/v1';
@@ -32,16 +32,12 @@ export class FilCDNService {
 
     try {
       console.log('🚀 Initializing FilCDN with Synapse SDK...');
-      
       this.synapse = await Synapse.create({
         withCDN: true,
         privateKey: this.config.privateKey,
         rpcURL: FILECOIN_CALIBRATION_RPC,
       });
-
       console.log('✅ FilCDN Synapse SDK initialized');
-
-      // Create storage service with callbacks for monitoring
       this.storageService = await this.synapse.createStorage({
         callbacks: {
           onProviderSelected: (provider: any) => {
@@ -55,7 +51,7 @@ export class FilCDNService {
               console.log(`✓ Created new proof set: ${info.proofSetId}`);
             }
           },
-          onProofSetCreationStarted: (transaction: any, statusUrl: any) => {
+          onProofSetCreationStarted: (transaction: any) => {
             console.log(`  Creating proof set, tx: ${transaction.hash}`);
           },
           onProofSetCreationProgress: (progress: any) => {
@@ -65,7 +61,6 @@ export class FilCDNService {
           },
         },
       });
-
       console.log('✅ Storage service initialized');
     } catch (error) {
       console.error('❌ Failed to initialize FilCDN:', error);
@@ -92,17 +87,14 @@ export class FilCDNService {
 
       // Run preflight checks
       const preflight = await this.storageService.preflightUpload(fileData.byteLength);
-
-      if (!preflight.allowanceCheck.sufficient) {
-        const webAppUrl = process.env.NEXT_PUBLIC_FILCDN_WEB_APP_URL || 'https://grove.storage';
-        throw new Error(
-          `Allowance not sufficient. Please increase your allowance via the FilCDN web app: ${webAppUrl}`
-        );
+      if (!preflight.allowanceCheck?.sufficient) {
+        const webAppUrl = process.env.NEXT_PUBLIC_FILCDN_WEB_APP_URL || 'https://filcdn.com';
+        throw new Error(`Allowance not sufficient. Increase your FilCDN allowance: ${webAppUrl}`);
       }
 
       // Upload the file
       const uploadResult = await this.storageService.upload(fileData);
-      const cid = uploadResult.commp;
+      const cid = uploadResult.commp?.toString?.() ?? String(uploadResult.commp);
 
       // Generate FilCDN URL
       const walletAddress = await this.synapse.getSigner().getAddress();
@@ -233,8 +225,82 @@ export async function initializeFilCDN(): Promise<SecureFilCDNService> {
 }
 
 // Helper to check if FilCDN is properly configured
-export function isFilCDNConfigured(): boolean {
-  // For client-side, we assume it's configured if the API route exists
-  // The actual validation happens server-side
-  return true;
+export async function isFilCDNConfigured(): Promise<{ configured: boolean; allowanceSufficient: boolean; walletAddress?: string }> {
+  try {
+    const res = await fetch('/api/filecoin/status', { method: 'GET' });
+    if (!res.ok) {
+      return { configured: false, allowanceSufficient: false };
+    }
+    const data = await res.json();
+    return {
+      configured: !!data.configured,
+      allowanceSufficient: !!data.allowanceSufficient,
+      walletAddress: data.walletAddress || undefined,
+    };
+  } catch {
+    return { configured: false, allowanceSufficient: false };
+  }
+}
+
+// Client-side wallet-based upload (Advanced)
+export async function uploadViaWallet(file: File): Promise<UploadResult> {
+  if (typeof window === 'undefined') {
+    throw new Error('Wallet upload is only available in the browser');
+  }
+  const eth = (window as any).ethereum;
+  if (!eth) {
+    throw new Error('No wallet provider found');
+  }
+
+  // Size limit parity with FilCDN
+  const maxSize = 254 * 1024 * 1024;
+  if (file.size > maxSize) {
+    throw new Error(`File size ${(file.size / 1024 / 1024).toFixed(1)}MB exceeds FilCDN limit of 254MB`);
+  }
+
+  const provider = new BrowserProvider(eth);
+  const signer = await provider.getSigner();
+
+  const synapse = await Synapse.create({
+    withCDN: true,
+    signer,
+    rpcURL: FILECOIN_CALIBRATION_RPC,
+  });
+
+  const storageService = await synapse.createStorage({});
+
+  const fileData = await file.arrayBuffer();
+  const preflight = await storageService.preflightUpload(fileData.byteLength);
+  if (!preflight?.allowanceCheck?.sufficient) {
+    const webAppUrl = process.env.NEXT_PUBLIC_FILCDN_WEB_APP_URL || 'https://filcdn.com';
+    throw new Error(`Allowance not sufficient. Increase your FilCDN allowance: ${webAppUrl}`);
+  }
+
+  const uploadResult = await storageService.upload(fileData);
+  const cid = uploadResult.commp?.toString?.() ?? String(uploadResult.commp);
+  const walletAddress = await synapse.getSigner().getAddress();
+  const filcdnUrl = `https://${walletAddress}.calibration.filcdn.io/${cid}`;
+
+  return {
+    cid,
+    filcdnUrl,
+    size: file.size,
+    filename: file.name,
+  };
+}
+
+export async function checkClientPreflight(): Promise<{ allow: boolean; error?: string }> {
+  try {
+    if (typeof window === 'undefined') return { allow: false, error: 'not-browser' };
+    const eth = (window as any).ethereum;
+    if (!eth) return { allow: false, error: 'no-wallet' };
+    const provider = new BrowserProvider(eth);
+    const signer = await provider.getSigner();
+    const synapse = await Synapse.create({ withCDN: true, signer, rpcURL: FILECOIN_CALIBRATION_RPC });
+    const storageService = await synapse.createStorage({});
+    const preflight = await storageService.preflightUpload(1);
+    return { allow: !!preflight?.allowanceCheck?.sufficient };
+  } catch (e) {
+    return { allow: false, error: e instanceof Error ? e.message : String(e) };
+  }
 }

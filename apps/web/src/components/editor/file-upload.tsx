@@ -12,7 +12,10 @@ import {
   UploadResult,
 } from "@/lib/filcdn";
 import { useDropzone } from "react-dropzone";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useAccount } from "wagmi";
+import { Switch } from "@/components/ui/switch";
+import { recordCustomMetric } from "@/lib/performance-monitor";
 
 interface FileUploadProps {
   onUploadComplete?: (result: UploadResult) => void;
@@ -32,10 +35,54 @@ export function FileUpload({
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [useWalletUpload, setUseWalletUpload] = useState<boolean>(false);
+  const { isConnected } = useAccount();
+
+  const [status, setStatus] = useState<{
+    configured: boolean;
+    allowanceSufficient: boolean;
+    walletAddress?: string;
+  } | null>(null);
+  const [clientPreflight, setClientPreflight] = useState<
+    "unknown" | "pass" | "fail"
+  >("unknown");
+
+  // Check FilCDN status on mount
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      const s = await isFilCDNConfigured();
+      if (isMounted) setStatus(s);
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Client-side allowance preflight when wallet connects
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (isConnected) {
+        try {
+          const { checkClientPreflight } = await import("@/lib/filcdn");
+          const res = await checkClientPreflight();
+          if (active) setClientPreflight(res.allow ? "pass" : "fail");
+        } catch {
+          if (active) setClientPreflight("fail");
+        }
+      } else {
+        if (active) setClientPreflight("unknown");
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [isConnected]);
 
   const uploadFile = useCallback(
     async (file: File) => {
-      if (!isFilCDNConfigured()) {
+      if (!status?.configured) {
         setError("FilCDN not configured. Please set up your Filecoin wallet.");
         return;
       }
@@ -45,17 +92,24 @@ export function FileUpload({
         setError(null);
         setUploadProgress(0);
 
-        const filcdnService = getFilCDNService();
-
         setUploadProgress(20);
-
-        // Upload to FilCDN via secure API
-        const result = await filcdnService.uploadFile(file);
+        let result: UploadResult;
+        if (useWalletUpload && isConnected) {
+          const { uploadViaWallet } = await import("@/lib/filcdn");
+          result = await uploadViaWallet(file);
+        } else {
+          const filcdnService = getFilCDNService();
+          result = await filcdnService.uploadFile(file);
+        }
 
         setUploadProgress(100);
         setUploadResult(result);
 
         toast.success(`✅ File uploaded to FilCDN successfully!`);
+        recordCustomMetric("storage-upload", 1, "count", {
+          provider: "filcdn",
+          method: useWalletUpload && isConnected ? "wallet" : "server",
+        });
         onUploadComplete?.(result);
       } catch (error: any) {
         console.error("Upload failed:", error);
@@ -65,7 +119,7 @@ export function FileUpload({
         setIsUploading(false);
       }
     },
-    [onUploadComplete]
+    [onUploadComplete, status, isConnected, useWalletUpload]
   );
 
   // Simplified dropzone implementation
@@ -81,7 +135,7 @@ export function FileUpload({
     disabled: isUploading,
   } as any);
 
-  if (!isFilCDNConfigured()) {
+  if (!status?.configured && !isConnected) {
     return (
       <Card className="border-dashed border-2 border-muted-foreground/25">
         <CardContent className="flex flex-col items-center justify-center p-6 text-center">
@@ -99,12 +153,45 @@ export function FileUpload({
           </div>
           <Button asChild className="mt-4" variant="outline">
             <a
-              href={process.env.NEXT_PUBLIC_FILCDN_WEB_APP_URL || "https://grove.storage"}
+              href={
+                process.env.NEXT_PUBLIC_FILCDN_WEB_APP_URL ||
+                "https://filcdn.com"
+              }
               target="_blank"
               rel="noopener noreferrer"
             >
               <span className="mr-2">☁️</span>
               FilCDN Setup Guide
+            </a>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (status && !status.allowanceSufficient && !isConnected) {
+    return (
+      <Card className="border-dashed border-2 border-muted-foreground/25">
+        <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+          <span className="text-2xl mb-4">ℹ️</span>
+          <h3 className="text-lg font-semibold mb-2">
+            Increase FilCDN Allowance
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Your wallet does not have sufficient allowance set for FilCDN
+            uploads.
+          </p>
+          <Button asChild className="mt-2" variant="outline">
+            <a
+              href={
+                process.env.NEXT_PUBLIC_FILCDN_WEB_APP_URL ||
+                "https://filcdn.com"
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span className="mr-2">⚡</span>
+              Open FilCDN Web App
             </a>
           </Button>
         </CardContent>
@@ -168,6 +255,53 @@ export function FileUpload({
   return (
     <Card className="border-dashed border-2 border-muted-foreground/25">
       <CardContent className="p-6">
+        {/* Readiness checklist */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+          <div className="flex items-center gap-2 text-xs">
+            <span
+              className={cn(
+                "w-2 h-2 rounded-full",
+                isConnected ? "bg-green-500" : "bg-red-500"
+              )}
+            ></span>
+            <span>Wallet</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <span
+              className={cn(
+                "w-2 h-2 rounded-full",
+                status?.configured ? "bg-green-500" : "bg-red-500"
+              )}
+            ></span>
+            <span>Server Config</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <span
+              className={cn(
+                "w-2 h-2 rounded-full",
+                clientPreflight === "pass"
+                  ? "bg-green-500"
+                  : clientPreflight === "fail"
+                  ? "bg-red-500"
+                  : "bg-gray-400"
+              )}
+            ></span>
+            <span>Client Allowance</span>
+          </div>
+        </div>
+        {/* Advanced: Wallet-based upload toggle */}
+        {isConnected && (
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs text-muted-foreground">
+              Advanced: Use connected wallet for FilCDN upload
+            </div>
+            <Switch
+              checked={useWalletUpload}
+              onCheckedChange={(v: any) => setUseWalletUpload(!!v)}
+              aria-label="Use wallet upload"
+            />
+          </div>
+        )}
         {isUploading ? (
           <div className="text-center space-y-4">
             <span className="h-8 w-8 animate-spin mx-auto text-primary inline-block">
@@ -184,8 +318,8 @@ export function FileUpload({
               {uploadProgress < 40
                 ? "Initializing FilCDN..."
                 : uploadProgress < 80
-                  ? "Uploading to Filecoin..."
-                  : "Finalizing deal..."}
+                ? "Uploading to Filecoin..."
+                : "Finalizing deal..."}
             </p>
           </div>
         ) : (
