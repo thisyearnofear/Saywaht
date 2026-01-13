@@ -15,6 +15,7 @@ import {
   Home,
   Menu,
   X,
+  Search,
 
   // Media & Editor
   Play,
@@ -76,6 +77,7 @@ import {
   AlertCircle,
   CheckCircle,
   Shield,
+  AlertTriangle,
 
   // Organization
   Users,
@@ -93,13 +95,13 @@ import {
 // Re-export all icons for direct import
 export {
   ChevronUp, ChevronDown, ChevronRight, ArrowRight, ArrowLeft, ArrowLeftRight,
-  ArrowLeftToLine, ArrowRightToLine, Home, Menu, X, Play, Pause, Square,
+  ArrowLeftToLine, ArrowRightToLine, Home, Menu, X, Search, Play, Pause, Square,
   Video, Music, Mic, Volume2, VolumeX, Upload, Download, Save, Copy, Edit2,
   Share2, Trash2, Scissors, RotateCcw, RefreshCw, Maximize2, Minimize2,
   ZoomIn, ZoomOut, Monitor, Smartphone, GripVertical, MoreHorizontal,
   MoreVertical, SplitSquareHorizontal, Image, Sparkles, Plus, Check, Star,
   Cloud, Zap, Globe, Wifi, WifiOff, ExternalLink, Coins, Wallet, TrendingUp,
-  TrendingDown, Loader2, AlertCircle, CheckCircle, Shield, Users, Clock,
+  TrendingDown, Loader2, AlertCircle, CheckCircle, Shield, AlertTriangle, Users, Clock,
   Layers, HardDrive, Type, Palette, Snowflake, Github,
 };
 
@@ -117,6 +119,7 @@ export const ICONS = {
   home: Home,
   menu: Menu,
   close: X,
+  search: Search,
 
   // Media & Editor
   play: Play,
@@ -178,6 +181,7 @@ export const ICONS = {
   warning: AlertCircle,
   success: CheckCircle,
   security: Shield,
+  alertTriangle: AlertTriangle,
 
   // Organization
   users: Users,

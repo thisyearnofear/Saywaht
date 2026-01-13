@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { CoinCard } from "./coin-card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Loader2,
   RefreshCw,
   TrendingUp,
   AlertCircle,
+  Search,
 } from "@/lib/icons";
 import { zoraCoins, type VideoCoin } from "@/lib/zora-coins";
 import { useWalletAuth } from "@opencut/auth";
@@ -19,9 +22,17 @@ export function TradingFeed() {
   const { isAuthenticated, user } = useWalletAuth();
   const { buyCoin, sellCoin, isLoading: tradingLoading } = useTrading();
   const [coins, setCoins] = useState<VideoCoin[]>([]);
+  const [filteredCoins, setFilteredCoins] = useState<VideoCoin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // ENHANCEMENT FIRST: Advanced filtering and discovery
+  const [activeFilter, setActiveFilter] = useState<'trending' | 'gainers' | 'losers' | 'volume'>('trending');
+  const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d'>('24h');
+  const [marketInsights, setMarketInsights] = useState<any>(null);
+  const [sortBy, setSortBy] = useState<'volume' | 'price' | 'change' | 'created'>('volume');
 
   const fetchTrendingCoins = async (showRefreshIndicator = false) => {
     try {
@@ -32,8 +43,15 @@ export function TradingFeed() {
       }
       setError(null);
 
-      const trendingCoins = await zoraCoins.getTrendingCoins();
+      // ENHANCEMENT FIRST: Fetch market insights alongside coins
+      const [trendingCoins, insights] = await Promise.all([
+        zoraCoins.getTrendingCoins(),
+        zoraCoins.getMarketInsights().catch(() => null) // Graceful fallback
+      ]);
+
       setCoins(trendingCoins);
+      setFilteredCoins(trendingCoins);
+      setMarketInsights(insights);
 
       if (showRefreshIndicator) {
         toast.success("Feed refreshed!");
@@ -53,42 +71,82 @@ export function TradingFeed() {
     fetchTrendingCoins();
   }, []);
 
-  const handleBuy = async (coin: VideoCoin) => {
+  // ENHANCEMENT FIRST: Advanced filtering and sorting logic
+  useEffect(() => {
+    let filtered = [...coins];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(coin =>
+        coin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        coin.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        coin.creator.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Apply category filter using market insights
+    if (marketInsights && activeFilter !== 'trending') {
+      switch (activeFilter) {
+        case 'gainers':
+          filtered = marketInsights.topGainers || [];
+          break;
+        case 'losers':
+          filtered = marketInsights.topLosers || [];
+          break;
+        case 'volume':
+          filtered = marketInsights.volumeLeaders || [];
+          break;
+      }
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'volume':
+          return parseFloat(b.volume24h) - parseFloat(a.volume24h);
+        case 'price':
+          return parseFloat(b.price) - parseFloat(a.price);
+        case 'change':
+          return b.priceChange24h - a.priceChange24h;
+        case 'created':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        default:
+          return 0;
+      }
+    });
+
+    setFilteredCoins(filtered);
+  }, [searchQuery, coins, activeFilter, sortBy, marketInsights]);
+
+  const handleBuy = async (coin: VideoCoin, amount: string) => {
     if (!isAuthenticated || !user?.address) {
       toast.error("Please connect your wallet to trade");
       return;
     }
 
     try {
-      toast.loading("Preparing buy order...");
-
-      await buyCoin(coin.address, "0.001"); // Default 0.001 ETH
+      await buyCoin(coin.address, amount);
     } catch (error) {
-      toast.dismiss();
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      toast.error(`Trading not yet available: ${errorMessage}`);
+      // Error handling is done in the hook
       console.error("Buy error:", error);
     }
   };
 
-  const handleSell = async (coin: VideoCoin) => {
+  const handleSell = async (coin: VideoCoin, amount: string) => {
     if (!isAuthenticated || !user?.address) {
       toast.error("Please connect your wallet to trade");
       return;
     }
 
     try {
-      // TODO: Implement actual amount selection UI
-      await sellCoin(coin.address as string, "0.01"); // Default 0.01 tokens
+      await sellCoin(coin.address as string, amount);
     } catch (error) {
+      // Error handling is done in the hook
       console.error("Sell error:", error);
-      // Error is already handled by the hook
     }
   };
 
   const handlePlay = (coin: VideoCoin) => {
-    // TODO: Implement video playback
     toast.info(`Playing: ${coin.name}`);
   };
 
@@ -100,11 +158,11 @@ export function TradingFeed() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
         <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-          <TrendingUp className="h-8 w-8 text-primary" />
+          <span className="text-2xl">💬</span>
         </div>
-        <h2 className="text-xl font-semibold mb-2">Connect Wallet to Trade</h2>
+        <h2 className="text-xl font-semibold mb-2">Connect Wallet to Trade Commentary</h2>
         <p className="text-muted-foreground mb-4">
-          Connect your wallet to discover and trade video creator coins
+          Connect your wallet to discover and trade video commentary coins
         </p>
         <Button onClick={() => (window.location.href = "/")}>
           Connect Wallet
@@ -117,7 +175,10 @@ export function TradingFeed() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading trending video coins...</p>
+        <p className="text-muted-foreground">Loading commentary coins...</p>
+        <p className="text-xs text-muted-foreground mt-2">
+          Discovering reactions, analysis & creator insights
+        </p>
       </div>
     );
   }
@@ -155,7 +216,7 @@ export function TradingFeed() {
             Be the first to create a video coin on saywaht!
           </p>
           <Button onClick={() => (window.location.href = "/editor")}>
-            Create Your First Video Coin
+            Create Your First Commentary Coin
           </Button>
         </div>
       </div>
@@ -164,15 +225,19 @@ export function TradingFeed() {
 
   return (
     <div className="pb-20">
-      {" "}
-      {/* Bottom padding for floating button */}
-      {/* Header */}
-      <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border p-4 z-10">
+      {/* Enhanced Header with Search */}
+      <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b border-border p-4 z-10 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold">Trending Video Coins</h1>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-2xl">💬</span>
+              <h1 className="text-xl font-bold">Commentary Coins</h1>
+              <Badge className="bg-purple-500/10 text-purple-600 border-purple-500/20">
+                Beta
+              </Badge>
+            </div>
             <p className="text-sm text-muted-foreground">
-              Discover and trade creator coins
+              Trade creator commentary & reactions • {filteredCoins.length} coins
             </p>
           </div>
           <Button
@@ -186,19 +251,49 @@ export function TradingFeed() {
             />
           </Button>
         </div>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search commentary coins by creator, topic, or type..."
+            value={searchQuery}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
       </div>
+
       {/* Coins Feed */}
       <div className="p-4 space-y-4">
-        {coins.length === 0 ? (
+        {filteredCoins.length === 0 ? (
           <div className="text-center py-12">
-            <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No coins found</h3>
-            <p className="text-muted-foreground">
-              Be the first to create a video coin!
-            </p>
+            {searchQuery ? (
+              <>
+                <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No coins found</h3>
+                <p className="text-muted-foreground mb-4">
+                  Try adjusting your search terms
+                </p>
+                <Button variant="outline" onClick={() => setSearchQuery("")}>
+                  Clear Search
+                </Button>
+              </>
+            ) : (
+              <>
+                <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No commentary coins found</h3>
+                <p className="text-muted-foreground mb-4">
+                  Be the first to create a commentary coin!
+                </p>
+                <Button onClick={() => (window.location.href = "/editor")}>
+                  Create Your First Commentary Coin
+                </Button>
+              </>
+            )}
           </div>
         ) : (
-          coins.map((coin: VideoCoin) => (
+          filteredCoins.map((coin: VideoCoin) => (
             <CoinCard
               key={coin.address}
               coin={coin}
@@ -209,9 +304,10 @@ export function TradingFeed() {
           ))
         )}
       </div>
+
       {/* Floating Create Button */}
       <Button
-        className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg"
+        className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg z-50"
         onClick={() => (window.location.href = "/editor")}
       >
         <span className="text-xl">✂️</span>
