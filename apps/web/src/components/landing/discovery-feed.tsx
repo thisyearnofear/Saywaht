@@ -24,21 +24,49 @@ export function DiscoveryFeed() {
       } catch (error) {
         console.error("❌ DiscoveryFeed: Failed to fetch coins:", error);
         console.log("🔄 DiscoveryFeed: Falling back to mock data");
-        // Set some fallback data if API fails
+        // Enhanced fallback with more variety
         setCoins([
           {
             address: "0x1234567890123456789012345678901234567890",
-            name: "Sample Commentary",
-            symbol: "SAMPLE",
+            name: "Cheetah Commentary",
+            symbol: "CHEETAH",
             creator: "0x0000000000000000000000000000000000000000",
             videoUri: "/templates/voiceovers/animal/cheetah.mp4",
             metadataUri: "",
             totalSupply: "1000000",
             price: "0.001",
-            volume24h: "0",
-            priceChange24h: 0,
+            volume24h: "12.5",
+            priceChange24h: 15.2,
             createdAt: new Date().toISOString(),
             thumbnail: "/templates/voiceovers/animal/cheetah.mp4",
+          },
+          {
+            address: "0x2345678901234567890123456789012345678901",
+            name: "Crypto Reactions",
+            symbol: "REACT",
+            creator: "0x1111111111111111111111111111111111111111",
+            videoUri: "/templates/voiceovers/crypto/bitcoin.mp4",
+            metadataUri: "",
+            totalSupply: "500000",
+            price: "0.0025",
+            volume24h: "8.3",
+            priceChange24h: -3.7,
+            createdAt: new Date(Date.now() - 86400000).toISOString(),
+            thumbnail: "/templates/voiceovers/crypto/bitcoin.mp4",
+          },
+          {
+            address: "0x3456789012345678901234567890123456789012",
+            name: "Meme Magic",
+            symbol: "MEME",
+            creator: "0x2222222222222222222222222222222222222222",
+            videoUri: "/templates/voiceovers/meme/doge.mp4",
+            metadataUri: "",
+            totalSupply: "2000000",
+            price: "0.0005",
+            volume24h: "25.1",
+            priceChange24h: 42.8,
+            createdAt: new Date(Date.now() - 172800000).toISOString(),
+            thumbnail: "/templates/voiceovers/meme/doge.mp4",
           },
         ]);
       } finally {

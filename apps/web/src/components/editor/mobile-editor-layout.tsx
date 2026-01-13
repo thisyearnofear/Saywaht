@@ -97,11 +97,53 @@ export function MobileEditorLayout({ children, className }: MobileEditorLayoutPr
     useMobileContext();
   const [activeTab, setActiveTab] = useState<string>("preview");
   const [timelineExpanded, setTimelineExpanded] = useState<boolean>(false);
-  const [splitViewMode, setSplitViewMode] = useState<boolean>(true); // Default to split view for better UX
+  const [splitViewMode, setSplitViewMode] = useState<boolean>(true);
+  const [gestureStartY, setGestureStartY] = useState<number>(0);
+  const [isGesturing, setIsGesturing] = useState<boolean>(false);
 
   // Onboarding state
   const { showOnboarding, completeOnboarding, skipOnboarding } =
     useMobileOnboarding();
+
+  // Enhanced gesture handling for timeline
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setGestureStartY(e.touches[0].clientY);
+    setIsGesturing(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isGesturing) return;
+
+    const currentY = e.touches[0].clientY;
+    const deltaY = gestureStartY - currentY;
+
+    // Swipe up to expand timeline, down to collapse
+    if (Math.abs(deltaY) > 50) {
+      if (deltaY > 0 && !timelineExpanded) {
+        setTimelineExpanded(true);
+        setIsGesturing(false);
+      } else if (deltaY < 0 && timelineExpanded) {
+        setTimelineExpanded(false);
+        setIsGesturing(false);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsGesturing(false);
+  };
+
+  // Quick tab switching with swipe gestures
+  const handleTabSwipe = (direction: "left" | "right") => {
+    const tabs = ["preview", "media", "timeline"];
+    const currentIndex = tabs.indexOf(activeTab);
+
+    if (direction === "left" && currentIndex > 0) {
+      setActiveTab(tabs[currentIndex - 1]);
+    } else if (direction === "right" && currentIndex < tabs.length - 1) {
+      setActiveTab(tabs[currentIndex + 1]);
+    }
+  };
 
   // Get panel sizes from store
   const { setToolsPanel, setPreviewPanel, setMainContent, setTimeline } =
