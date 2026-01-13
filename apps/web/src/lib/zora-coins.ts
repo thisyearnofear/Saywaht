@@ -379,7 +379,7 @@ export class ZoraCoinsService {
    * ENHANCEMENT FIRST: Enhanced to get comprehensive creator analytics
    * Uses official Zora SDK with extended market data
    */
-  async getCreatorAnalytics(creatorAddress: string): Promise < {
+  async getCreatorAnalytics(creatorAddress: string): Promise<{
   totalCoins: number;
   totalVolume: string;
   totalRevenue: string;
@@ -471,7 +471,7 @@ export class ZoraCoinsService {
   /**
    * ENHANCEMENT FIRST: Enhanced market insights for better discovery
    */
-  async getMarketInsights(): Promise < {
+  async getMarketInsights(): Promise<{
   trendingTopics: string[];
   marketSentiment: 'bullish' | 'bearish' | 'neutral';
   topGainers: VideoCoin[];
