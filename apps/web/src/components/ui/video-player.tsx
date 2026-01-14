@@ -14,6 +14,7 @@ interface VideoPlayerProps {
   muteAudio?: boolean; // New prop to mute video audio when separated
   clipSpeed?: number; // Per-clip speed override
   clipReversed?: boolean; // Per-clip reversal
+  objectFit?: "contain" | "cover"; // Display mode for the video
 }
 
 export function VideoPlayer({
@@ -27,6 +28,7 @@ export function VideoPlayer({
   muteAudio = false,
   clipSpeed,
   clipReversed = false,
+  objectFit = "contain",
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { isPlaying, currentTime, volume, speed, muted } = usePlaybackStore();
@@ -128,7 +130,7 @@ export function VideoPlayer({
       ref={videoRef}
       src={src}
       poster={poster}
-      className={`w-full h-full object-cover ${className}`}
+      className={`w-full h-full ${objectFit === "contain" ? "object-contain" : "object-cover"} ${className}`}
       playsInline
       preload="auto"
       controls={false}

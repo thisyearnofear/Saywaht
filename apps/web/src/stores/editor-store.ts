@@ -5,9 +5,14 @@ interface EditorState {
   isInitializing: boolean;
   isPanelsReady: boolean;
 
+  // Video display preferences
+  videoObjectFit: "contain" | "cover";
+
   // Actions
   setInitializing: (loading: boolean) => void;
   setPanelsReady: (ready: boolean) => void;
+  setVideoObjectFit: (fit: "contain" | "cover") => void;
+  toggleVideoObjectFit: () => void;
   initializeApp: () => Promise<void>;
 }
 
@@ -15,6 +20,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   // Initial states
   isInitializing: true,
   isPanelsReady: false,
+  videoObjectFit: "contain",
 
   // Actions
   setInitializing: (loading) => {
@@ -23,6 +29,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setPanelsReady: (ready) => {
     set({ isPanelsReady: ready });
+  },
+
+  setVideoObjectFit: (fit) => {
+    set({ videoObjectFit: fit });
+  },
+
+  toggleVideoObjectFit: () => {
+    const currentFit = get().videoObjectFit;
+    set({ videoObjectFit: currentFit === "contain" ? "cover" : "contain" });
   },
 
   initializeApp: async () => {

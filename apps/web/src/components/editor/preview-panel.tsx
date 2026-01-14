@@ -5,13 +5,20 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useMediaStore } from "@/stores/media-store";
 import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
+import { useEditorStore } from "@/stores/editor-store";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
 import { VideoPlayer } from "../ui/video-player";
 import { ImageTimelineTreatment } from "../ui/image-timeline-treatment";
 import { AudioPlayer } from "@/components/ui/audio-player";
-import { Play, Pause, Volume2, VolumeX } from "@/lib/icons";
+import { Play, Pause, Volume2, VolumeX, Maximize2, Minimize2 } from "@/lib/icons";
 import Image from "next/image";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Debug flag - set to false to hide active clips info
 const SHOW_DEBUG_INFO = process.env.NODE_ENV === "development";
@@ -22,6 +29,7 @@ export function PreviewPanel() {
   const { isPlaying, toggle, currentTime, muted, toggleMute, volume } =
     usePlaybackStore();
   const { canvasSize, setCanvasSize, setCanvasPreset, getAspectRatio } = useCanvasStore();
+  const { videoObjectFit, toggleVideoObjectFit } = useEditorStore();
   const [showDebug, setShowDebug] = useState(SHOW_DEBUG_INFO);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -116,6 +124,7 @@ export function PreviewPanel() {
             muteAudio={shouldMuteAudio}
             clipSpeed={clip.speed}
             clipReversed={clip.reversed}
+            objectFit={videoObjectFit}
           />
         </div>
       );
@@ -129,7 +138,7 @@ export function PreviewPanel() {
             src={mediaItem.url}
             alt={mediaItem.name}
             fill
-            style={{ objectFit: "cover" }}
+            style={{ objectFit: videoObjectFit }}
             draggable={false}
           />
         </div>
@@ -191,11 +200,38 @@ export function PreviewPanel() {
           </Button>
         )}
 
+        {/* Fit Mode Toggle */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleVideoObjectFit}
+                className="ml-auto"
+              >
+                {videoObjectFit === "contain" ? (
+                  <Maximize2 className="h-3 w-3 mr-1" />
+                ) : (
+                  <Minimize2 className="h-3 w-3 mr-1" />
+                )}
+                {videoObjectFit === "contain" ? "Fit" : "Fill"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>
+                {videoObjectFit === "contain"
+                  ? "Switch to Fill (crop to fit frame)"
+                  : "Switch to Fit (show full video)"}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
         <Button
           variant="outline"
           size="sm"
           onClick={toggleMute}
-          className="ml-auto"
         >
           {muted || volume === 0 ? (
             <VolumeX className="h-3 w-3 mr-1" />
@@ -219,11 +255,13 @@ export function PreviewPanel() {
       <div className="flex-1 flex items-center justify-center p-2 sm:p-4 bg-gray-900 min-h-0 min-w-0">
         <div
           ref={previewRef}
-          className="relative overflow-hidden rounded-sm max-w-full max-h-full bg-black border border-gray-600"
+          className="relative overflow-hidden rounded-sm bg-black border border-gray-600"
           style={{
             aspectRatio: aspectRatio.toString(),
-            width: "100%",
-            height: "100%",
+            maxWidth: "100%",
+            maxHeight: "100%",
+            width: "auto",
+            height: "auto",
           }}
         >
           {activeClips.length === 0 ? (
