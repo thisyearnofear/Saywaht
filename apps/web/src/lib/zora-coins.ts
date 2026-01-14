@@ -373,30 +373,29 @@ export class ZoraCoinsService {
       return false;
     }
   }
-}
 
   /**
    * ENHANCEMENT FIRST: Enhanced to get comprehensive creator analytics
    * Uses official Zora SDK with extended market data
    */
   async getCreatorAnalytics(creatorAddress: string): Promise<{
-  totalCoins: number;
-  totalVolume: string;
-  totalRevenue: string;
-  avgCoinPerformance: number;
-  topPerformingCoin: VideoCoin | null;
-  recentActivity: Array<{
-    type: 'mint' | 'trade' | 'revenue';
-    timestamp: string;
-    amount: string;
-    coinAddress?: string;
-  }>;
-  audienceMetrics: {
-    uniqueHolders: number;
-    avgHoldingTime: number;
-    retentionRate: number;
-  };
-} > {
+    totalCoins: number;
+    totalVolume: string;
+    totalRevenue: string;
+    avgCoinPerformance: number;
+    topPerformingCoin: VideoCoin | null;
+    recentActivity: Array<{
+      type: 'mint' | 'trade' | 'revenue';
+      timestamp: string;
+      amount: string;
+      coinAddress?: string;
+    }>;
+    audienceMetrics: {
+      uniqueHolders: number;
+      avgHoldingTime: number;
+      retentionRate: number;
+    };
+  }> {
   return zoraCircuitBreaker.execute(async () => {
     return withRetry(async () => {
       try {
@@ -472,18 +471,18 @@ export class ZoraCoinsService {
    * ENHANCEMENT FIRST: Enhanced market insights for better discovery
    */
   async getMarketInsights(): Promise<{
-  trendingTopics: string[];
-  marketSentiment: 'bullish' | 'bearish' | 'neutral';
-  topGainers: VideoCoin[];
-  topLosers: VideoCoin[];
-  volumeLeaders: VideoCoin[];
-  newCreators: Array<{
-    address: string;
-    firstCoinDate: string;
-    coinsCreated: number;
-    totalVolume: string;
-  }>;
-} > {
+    trendingTopics: string[];
+    marketSentiment: 'bullish' | 'bearish' | 'neutral';
+    topGainers: VideoCoin[];
+    topLosers: VideoCoin[];
+    volumeLeaders: VideoCoin[];
+    newCreators: Array<{
+      address: string;
+      firstCoinDate: string;
+      coinsCreated: number;
+      totalVolume: string;
+    }>;
+  }> {
   return zoraCircuitBreaker.execute(async () => {
     return withRetry(async () => {
       try {

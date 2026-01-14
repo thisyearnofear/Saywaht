@@ -40,7 +40,7 @@ const nextConfig = {
     ];
   },
 
-  // Basic webpack config for FFmpeg
+  // Basic webpack config for FFmpeg and browser compatibility
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -50,6 +50,13 @@ const nextConfig = {
         crypto: false,
       };
     }
+    
+    // Ensure bs58 and other Node.js modules work in browser
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'bs58': require.resolve('bs58'),
+    };
+    
     return config;
   },
 };
