@@ -107,10 +107,12 @@ export default function Editor() {
     previewPanel,
     mainContent,
     timeline,
+    isTimelineCollapsed,
     setToolsPanel,
     setPreviewPanel,
     setMainContent,
     setTimeline,
+    toggleTimelineCollapse,
   } = usePanelStore();
 
   const { activeProject, createNewProject } = useProjectStore();
@@ -183,18 +185,20 @@ export default function Editor() {
                 </ResizablePanelGroup>
               </ResizablePanel>
 
-              <ResizableHandle withHandle />
+              {!isTimelineCollapsed && <ResizableHandle withHandle />}
 
               {/* Timeline */}
-              <ResizablePanel
-                defaultSize={timeline}
-                minSize={15}
-                maxSize={70}
-                onResize={setTimeline}
-                className="min-h-0"
-              >
-                <Timeline />
-              </ResizablePanel>
+              {!isTimelineCollapsed && (
+                <ResizablePanel
+                  defaultSize={timeline}
+                  minSize={15}
+                  maxSize={70}
+                  onResize={setTimeline}
+                  className="min-h-0"
+                >
+                  <Timeline />
+                </ResizablePanel>
+              )}
             </ResizablePanelGroup>
           </div>
 

@@ -7,12 +7,15 @@ interface EditorState {
 
   // Video display preferences
   videoObjectFit: "contain" | "cover";
+  previewZoom: number;
 
   // Actions
   setInitializing: (loading: boolean) => void;
   setPanelsReady: (ready: boolean) => void;
   setVideoObjectFit: (fit: "contain" | "cover") => void;
   toggleVideoObjectFit: () => void;
+  setPreviewZoom: (zoom: number) => void;
+  resetPreviewZoom: () => void;
   initializeApp: () => Promise<void>;
 }
 
@@ -21,6 +24,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   isInitializing: true,
   isPanelsReady: false,
   videoObjectFit: "contain",
+  previewZoom: 1,
 
   // Actions
   setInitializing: (loading) => {
@@ -38,6 +42,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   toggleVideoObjectFit: () => {
     const currentFit = get().videoObjectFit;
     set({ videoObjectFit: currentFit === "contain" ? "cover" : "contain" });
+  },
+
+  setPreviewZoom: (zoom) => {
+    set({ previewZoom: Math.max(0.25, Math.min(3, zoom)) }); // Clamp between 25% and 300%
+  },
+
+  resetPreviewZoom: () => {
+    set({ previewZoom: 1 });
   },
 
   initializeApp: async () => {

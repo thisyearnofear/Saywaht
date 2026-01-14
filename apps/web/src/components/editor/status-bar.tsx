@@ -3,6 +3,7 @@
 import { useProjectStore } from "@/stores/project-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
+import { usePanelStore } from "@/stores/panel-store";
 import { cn } from "@/lib/utils";
 import {
   Clock,
@@ -12,13 +13,17 @@ import {
   WifiOff,
   CheckCircle,
   AlertCircle,
+  ChevronUp,
+  ChevronDown,
 } from "@/lib/icons";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 export function StatusBar() {
   const { activeProject } = useProjectStore();
   const { tracks } = useTimelineStore();
   const { currentTime, duration } = usePlaybackStore();
+  const { isTimelineCollapsed, toggleTimelineCollapse } = usePanelStore();
   const [isOnline, setIsOnline] = useState(true);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
@@ -53,6 +58,22 @@ export function StatusBar() {
     <div className="h-6 bg-muted/30 border-t border-border flex items-center justify-between px-4 text-xs text-muted-foreground">
       {/* Left Section */}
       <div className="flex items-center gap-4">
+        {/* Timeline Toggle */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleTimelineCollapse}
+          className="h-5 px-2 text-xs hover:bg-muted"
+          title={isTimelineCollapsed ? "Show Timeline" : "Hide Timeline"}
+        >
+          {isTimelineCollapsed ? (
+            <ChevronUp className="w-3 h-3 mr-1" />
+          ) : (
+            <ChevronDown className="w-3 h-3 mr-1" />
+          )}
+          Timeline
+        </Button>
+
         <div className="flex items-center gap-1">
           <Clock className="w-3 h-3" />
           <span>

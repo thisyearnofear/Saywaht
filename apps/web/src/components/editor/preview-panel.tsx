@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { VideoPlayer } from "../ui/video-player";
 import { ImageTimelineTreatment } from "../ui/image-timeline-treatment";
 import { AudioPlayer } from "@/components/ui/audio-player";
-import { Play, Pause, Volume2, VolumeX, Maximize2, Minimize2 } from "@/lib/icons";
+import { Play, Pause, Volume2, VolumeX, Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw } from "@/lib/icons";
 import Image from "next/image";
 import {
   Tooltip,
@@ -29,7 +29,7 @@ export function PreviewPanel() {
   const { isPlaying, toggle, currentTime, muted, toggleMute, volume } =
     usePlaybackStore();
   const { canvasSize, setCanvasSize, setCanvasPreset, getAspectRatio } = useCanvasStore();
-  const { videoObjectFit, toggleVideoObjectFit } = useEditorStore();
+  const { videoObjectFit, toggleVideoObjectFit, previewZoom, setPreviewZoom, resetPreviewZoom } = useEditorStore();
   const [showDebug, setShowDebug] = useState(SHOW_DEBUG_INFO);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -252,7 +252,65 @@ export function PreviewPanel() {
       </div>
 
       {/* Preview Area */}
-      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 bg-gray-900 min-h-0 min-w-0">
+      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 bg-gray-900 min-h-0 min-w-0 relative">
+        {/* Canvas Size Indicator */}
+        <div className="absolute top-4 left-4 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded border border-white/20">
+          {canvasSize.width} × {canvasSize.height}px
+        </div>
+
+        {/* Zoom Controls */}
+        <div className="absolute top-4 right-4 z-10 flex gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPreviewZoom(previewZoom - 0.25)}
+                  disabled={previewZoom <= 0.25}
+                  className="h-7 w-7 p-0"
+                >
+                  <ZoomOut className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Zoom Out</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={resetPreviewZoom}
+                  className="h-7 px-2 text-xs"
+                >
+                  {Math.round(previewZoom * 100)}%
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Reset Zoom (100%)</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPreviewZoom(previewZoom + 0.25)}
+                  disabled={previewZoom >= 3}
+                  className="h-7 w-7 p-0"
+                >
+                  <ZoomIn className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Zoom In</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
         <div
           ref={previewRef}
           className="relative overflow-hidden rounded-sm bg-black border border-gray-600"
@@ -262,6 +320,8 @@ export function PreviewPanel() {
             maxHeight: "100%",
             width: "auto",
             height: "auto",
+            transform: `scale(${previewZoom})`,
+            transformOrigin: "center",
           }}
         >
           {activeClips.length === 0 ? (
