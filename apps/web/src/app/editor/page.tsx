@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import nextDynamic from "next/dynamic";
 // import { Suspense } from 'react';
 import "./editor.css";
@@ -15,6 +17,7 @@ import { useProjectStore } from "@/stores/project-store";
 import { EditorProvider } from "@/components/editor-provider";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useEditorShortcuts } from "@/hooks/use-editor-shortcuts";
 import { useMobileContext } from "@/contexts/mobile-context";
 import { Loader2 } from "@/lib/icons";
 import { WalletGuard } from "@/components/wallet-guard";
@@ -216,5 +219,3 @@ export default function Editor() {
     </WalletGuard>
   );
 }
-
-export const dynamic = "force-dynamic";

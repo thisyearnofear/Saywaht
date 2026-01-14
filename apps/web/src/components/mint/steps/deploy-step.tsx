@@ -87,7 +87,6 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         // Detect if user has a Creator Coin to prefer creator-backed markets
         let selectedCurrency =
           (CoinsSDK as any)?.CreateConstants?.ContentCoinCurrencies?.ZORA ??
-          (CoinsSDK as any)?.DeployCurrency?.ZORA ??
           "ZORA";
         if (preferences.hasCreatorCoin !== undefined) {
           const hasCreatorCoin = !!preferences.hasCreatorCoin;
@@ -95,7 +94,6 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
             selectedCurrency =
               (CoinsSDK as any)?.CreateConstants?.ContentCoinCurrencies
                 ?.CREATOR_COIN_OR_ZORA ??
-              (CoinsSDK as any)?.DeployCurrency?.CREATOR_COIN_OR_ZORA ??
               "CREATOR_COIN_OR_ZORA";
           }
           setBackingInfo({
@@ -110,7 +108,6 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
               selectedCurrency =
                 (CoinsSDK as any)?.CreateConstants?.ContentCoinCurrencies
                   ?.CREATOR_COIN_OR_ZORA ??
-                (CoinsSDK as any)?.DeployCurrency?.CREATOR_COIN_OR_ZORA ??
                 "CREATOR_COIN_OR_ZORA";
             }
             setHasCreatorCoin(hasCreatorCoin);

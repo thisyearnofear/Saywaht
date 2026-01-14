@@ -48,6 +48,7 @@ const nextConfig = {
         fs: false,
         path: false,
         crypto: false,
+        '@react-native-async-storage/async-storage': false,
       };
     }
     

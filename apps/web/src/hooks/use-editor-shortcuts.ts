@@ -25,7 +25,7 @@ import { toast } from "@/hooks/use-toast";
  * - End: Go to end
  */
 export function useEditorShortcuts() {
-  const { isPlaying, toggle, toggleMute, seek, currentTime, duration } = usePlaybackStore();
+  const { isPlaying, toggle, toggleMute, seek, currentTime, duration, muted } = usePlaybackStore();
   const { videoObjectFit, toggleVideoObjectFit, previewZoom, setPreviewZoom, resetPreviewZoom } = useEditorStore();
   const { toggleTimelineCollapse, isTimelineCollapsed } = usePanelStore();
 
@@ -119,7 +119,7 @@ export function useEditorShortcuts() {
         case "m": // M - Toggle Mute
           toggleMute();
           toast({
-            title: "Audio " + (toggleMute ? "Muted" : "Unmuted"),
+            title: "Audio " + (muted ? "Unmuted" : "Muted"),
             duration: 1000,
           });
           break;
@@ -171,6 +171,7 @@ export function useEditorShortcuts() {
     seek,
     currentTime,
     duration,
+    muted,
     videoObjectFit,
     toggleVideoObjectFit,
     previewZoom,

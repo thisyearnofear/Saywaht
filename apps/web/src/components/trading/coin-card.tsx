@@ -398,9 +398,9 @@ export function CoinCard({ coin, onBuy, onSell, onPlay }: CoinCardProps) {
 
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">You'll receive</span>
-                          <span className="font-medium">~{estimatedTokens.toFixed(0)} {coin.symbol}</span>
-                        </div>
+                            <span className="text-muted-foreground">You&apos;ll receive</span>
+                            <span className="font-medium">~{estimatedTokens.toFixed(0)} {coin.symbol}</span>
+                          </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Price impact</span>
                           <span className={priceImpact > 5 ? "text-red-500" : "text-green-500"}>

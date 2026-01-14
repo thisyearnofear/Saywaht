@@ -330,7 +330,7 @@ export function CreatorDashboard() {
                     <CardContent className="p-6 text-center">
                         <h3 className="text-lg font-semibold mb-2">Ready to create more commentary?</h3>
                         <p className="text-muted-foreground mb-4">
-                            Share your insights and reactions to grow your audience and earnings
+                            Share your insights and reactions to grow your audience and earnings.
                         </p>
                         <Button onClick={() => (window.location.href = "/editor")} className="bg-purple-600 hover:bg-purple-700">
                             <Sparkles className="h-4 w-4 mr-2" />

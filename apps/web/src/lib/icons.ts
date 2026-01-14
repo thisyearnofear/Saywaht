@@ -71,6 +71,8 @@ import {
   Wallet,
   TrendingUp,
   TrendingDown,
+  DollarSign,
+  BarChart3,
 
   // System & Status
   Loader2,
@@ -88,6 +90,11 @@ import {
   Palette,
   Snowflake,
 
+  // Social & Engagement
+  Heart,
+  MessageCircle,
+  Eye,
+
   // Social & External
   Github,
 } from "lucide-react";
@@ -101,8 +108,8 @@ export {
   ZoomIn, ZoomOut, Monitor, Smartphone, GripVertical, MoreHorizontal,
   MoreVertical, SplitSquareHorizontal, Image, Sparkles, Plus, Check, Star,
   Cloud, Zap, Globe, Wifi, WifiOff, ExternalLink, Coins, Wallet, TrendingUp,
-  TrendingDown, Loader2, AlertCircle, CheckCircle, Shield, AlertTriangle, Users, Clock,
-  Layers, HardDrive, Type, Palette, Snowflake, Github,
+  TrendingDown, DollarSign, BarChart3, Loader2, AlertCircle, CheckCircle, Shield, AlertTriangle, Users, Clock,
+  Layers, HardDrive, Type, Palette, Snowflake, Heart, MessageCircle, Eye, Github,
 };
 
 // Enhanced icon registry for better DX and type safety
@@ -175,6 +182,8 @@ export const ICONS = {
   wallet: Wallet,
   trendingUp: TrendingUp,
   trendingDown: TrendingDown,
+  dollarSign: DollarSign,
+  barChart: BarChart3,
 
   // System & Status
   loading: Loader2,
@@ -191,6 +200,11 @@ export const ICONS = {
   text: Type,
   palette: Palette,
   freeze: Snowflake,
+
+  // Social & Engagement
+  heart: Heart,
+  messageCircle: MessageCircle,
+  eye: Eye,
 
   // Social & External
   github: Github,
