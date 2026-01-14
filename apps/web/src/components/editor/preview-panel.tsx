@@ -208,12 +208,12 @@ export function PreviewPanel() {
                 variant="outline"
                 size="sm"
                 onClick={toggleVideoObjectFit}
-                className="ml-auto"
+                className="ml-auto transition-all duration-200 hover:scale-105 active:scale-95"
               >
                 {videoObjectFit === "contain" ? (
-                  <Maximize2 className="h-3 w-3 mr-1" />
+                  <Maximize2 className="h-3 w-3 mr-1 transition-transform duration-200" />
                 ) : (
-                  <Minimize2 className="h-3 w-3 mr-1" />
+                  <Minimize2 className="h-3 w-3 mr-1 transition-transform duration-200" />
                 )}
                 {videoObjectFit === "contain" ? "Fit" : "Fill"}
               </Button>
@@ -232,20 +232,26 @@ export function PreviewPanel() {
           variant="outline"
           size="sm"
           onClick={toggleMute}
+          className="transition-all duration-200 hover:scale-105 active:scale-95"
         >
           {muted || volume === 0 ? (
-            <VolumeX className="h-3 w-3 mr-1" />
+            <VolumeX className="h-3 w-3 mr-1 transition-transform duration-200" />
           ) : (
-            <Volume2 className="h-3 w-3 mr-1" />
+            <Volume2 className="h-3 w-3 mr-1 transition-transform duration-200" />
           )}
           {muted || volume === 0 ? "Unmute" : "Mute"}
         </Button>
 
-        <Button variant="outline" size="sm" onClick={toggle}>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={toggle}
+          className="transition-all duration-200 hover:scale-105 active:scale-95"
+        >
           {isPlaying ? (
-            <Pause className="h-3 w-3 mr-1" />
+            <Pause className="h-3 w-3 mr-1 transition-transform duration-200" />
           ) : (
-            <Play className="h-3 w-3 mr-1" />
+            <Play className="h-3 w-3 mr-1 transition-transform duration-200" />
           )}
           {isPlaying ? "Pause" : "Play"}
         </Button>
@@ -254,12 +260,12 @@ export function PreviewPanel() {
       {/* Preview Area */}
       <div className="flex-1 flex items-center justify-center p-2 sm:p-4 bg-gray-900 min-h-0 min-w-0 relative">
         {/* Canvas Size Indicator */}
-        <div className="absolute top-4 left-4 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded border border-white/20">
+        <div className="absolute top-4 left-4 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded border border-white/20 backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-500">
           {canvasSize.width} × {canvasSize.height}px
         </div>
 
         {/* Zoom Controls */}
-        <div className="absolute top-4 right-4 z-10 flex gap-1">
+        <div className="absolute top-4 right-4 z-10 flex gap-1 animate-in fade-in slide-in-from-top-2 duration-500">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -268,7 +274,7 @@ export function PreviewPanel() {
                   size="sm"
                   onClick={() => setPreviewZoom(previewZoom - 0.25)}
                   disabled={previewZoom <= 0.25}
-                  className="h-7 w-7 p-0"
+                  className="h-7 w-7 p-0 transition-all duration-200 hover:scale-110 active:scale-95"
                 >
                   <ZoomOut className="h-3 w-3" />
                 </Button>
@@ -284,7 +290,7 @@ export function PreviewPanel() {
                   variant="secondary"
                   size="sm"
                   onClick={resetPreviewZoom}
-                  className="h-7 px-2 text-xs"
+                  className="h-7 px-2 text-xs transition-all duration-200 hover:scale-105 active:scale-95"
                 >
                   {Math.round(previewZoom * 100)}%
                 </Button>
@@ -301,7 +307,7 @@ export function PreviewPanel() {
                   size="sm"
                   onClick={() => setPreviewZoom(previewZoom + 0.25)}
                   disabled={previewZoom >= 3}
-                  className="h-7 w-7 p-0"
+                  className="h-7 w-7 p-0 transition-all duration-200 hover:scale-110 active:scale-95"
                 >
                   <ZoomIn className="h-3 w-3" />
                 </Button>
@@ -313,7 +319,7 @@ export function PreviewPanel() {
 
         <div
           ref={previewRef}
-          className="relative overflow-hidden rounded-sm bg-black border border-gray-600"
+          className="relative overflow-hidden rounded-sm bg-black border border-gray-600 transition-transform duration-300 ease-out"
           style={{
             aspectRatio: aspectRatio.toString(),
             maxWidth: "100%",

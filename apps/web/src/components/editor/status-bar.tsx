@@ -55,7 +55,7 @@ export function StatusBar() {
   };
 
   return (
-    <div className="h-6 bg-muted/30 border-t border-border flex items-center justify-between px-4 text-xs text-muted-foreground">
+    <div className="h-6 bg-muted/30 border-t border-border flex items-center justify-between px-4 text-xs text-muted-foreground animate-in fade-in slide-in-from-bottom-2 duration-500">
       {/* Left Section */}
       <div className="flex items-center gap-4">
         {/* Timeline Toggle */}
@@ -63,13 +63,13 @@ export function StatusBar() {
           variant="ghost"
           size="sm"
           onClick={toggleTimelineCollapse}
-          className="h-5 px-2 text-xs hover:bg-muted"
+          className="h-5 px-2 text-xs hover:bg-muted transition-all duration-200 hover:scale-105 active:scale-95"
           title={isTimelineCollapsed ? "Show Timeline" : "Hide Timeline"}
         >
           {isTimelineCollapsed ? (
-            <ChevronUp className="w-3 h-3 mr-1" />
+            <ChevronUp className="w-3 h-3 mr-1 transition-transform duration-200" />
           ) : (
-            <ChevronDown className="w-3 h-3 mr-1" />
+            <ChevronDown className="w-3 h-3 mr-1 transition-transform duration-200" />
           )}
           Timeline
         </Button>
