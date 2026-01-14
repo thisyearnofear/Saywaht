@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { useMobileContext } from "@/contexts/mobile-context";
 import { usePinchZoom } from "@/hooks/use-touch-gestures";
 import { addHapticFeedback } from "@/lib/mobile-utils";
+import { useCanvasStore } from "@/stores/canvas-store";
+import { useEditorStore } from "@/stores/editor-store";
 
 interface MobilePreviewPanelProps {
   className?: string;
@@ -17,6 +19,8 @@ export function MobilePreviewPanel({ className }: MobilePreviewPanelProps) {
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const { orientation } = useMobileContext();
   const previewRef = useRef<HTMLDivElement>(null);
+  const { canvasSize } = useCanvasStore();
+  const { videoObjectFit, toggleVideoObjectFit } = useEditorStore();
 
   const toggleFullscreen = () => {
     addHapticFeedback("medium");
@@ -54,10 +58,32 @@ export function MobilePreviewPanel({ className }: MobilePreviewPanelProps) {
     addHapticFeedback("medium");
   };
 
+  const handleToggleFit = () => {
+    toggleVideoObjectFit();
+    addHapticFeedback("light");
+  };
+
   return (
     <div className={cn("relative h-full w-full", className)}>
+      {/* Canvas Size Indicator */}
+      <div className="absolute top-2 left-2 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded border border-white/20">
+        {canvasSize.width} × {canvasSize.height}px
+      </div>
+
       {/* Control buttons */}
       <div className="absolute top-2 right-2 z-10 flex gap-1">
+        <Button
+          variant="secondary"
+          size="icon"
+          className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+          onClick={handleToggleFit}
+        >
+          {videoObjectFit === "contain" ? (
+            <Maximize2 className="h-4 w-4" />
+          ) : (
+            <Minimize2 className="h-4 w-4" />
+          )}
+        </Button>
         <Button
           variant="secondary"
           size="icon"

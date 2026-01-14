@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface EditorState {
   // Loading states
@@ -19,44 +20,56 @@ interface EditorState {
   initializeApp: () => Promise<void>;
 }
 
-export const useEditorStore = create<EditorState>((set, get) => ({
-  // Initial states
-  isInitializing: true,
-  isPanelsReady: false,
-  videoObjectFit: "contain",
-  previewZoom: 1,
+export const useEditorStore = create<EditorState>()(
+  persist(
+    (set, get) => ({
+      // Initial states
+      isInitializing: true,
+      isPanelsReady: false,
+      videoObjectFit: "contain",
+      previewZoom: 1,
 
-  // Actions
-  setInitializing: (loading) => {
-    set({ isInitializing: loading });
-  },
+      // Actions
+      setInitializing: (loading) => {
+        set({ isInitializing: loading });
+      },
 
-  setPanelsReady: (ready) => {
-    set({ isPanelsReady: ready });
-  },
+      setPanelsReady: (ready) => {
+        set({ isPanelsReady: ready });
+      },
 
-  setVideoObjectFit: (fit) => {
-    set({ videoObjectFit: fit });
-  },
+      setVideoObjectFit: (fit) => {
+        set({ videoObjectFit: fit });
+      },
 
-  toggleVideoObjectFit: () => {
-    const currentFit = get().videoObjectFit;
-    set({ videoObjectFit: currentFit === "contain" ? "cover" : "contain" });
-  },
+      toggleVideoObjectFit: () => {
+        const currentFit = get().videoObjectFit;
+        set({ videoObjectFit: currentFit === "contain" ? "cover" : "contain" });
+      },
 
-  setPreviewZoom: (zoom) => {
-    set({ previewZoom: Math.max(0.25, Math.min(3, zoom)) }); // Clamp between 25% and 300%
-  },
+      setPreviewZoom: (zoom) => {
+        set({ previewZoom: Math.max(0.25, Math.min(3, zoom)) }); // Clamp between 25% and 300%
+      },
 
-  resetPreviewZoom: () => {
-    set({ previewZoom: 1 });
-  },
+      resetPreviewZoom: () => {
+        set({ previewZoom: 1 });
+      },
 
-  initializeApp: async () => {
-    console.log("Initializing video editor...");
-    set({ isInitializing: true, isPanelsReady: false });
+      initializeApp: async () => {
+        console.log("Initializing video editor...");
+        set({ isInitializing: true, isPanelsReady: false });
 
-    set({ isPanelsReady: true, isInitializing: false });
-    console.log("Video editor ready");
-  },
-}));
+        set({ isPanelsReady: true, isInitializing: false });
+        console.log("Video editor ready");
+      },
+    }),
+    {
+      name: "editor-preferences",
+      // Only persist user preferences, not app state
+      partialize: (state) => ({
+        videoObjectFit: state.videoObjectFit,
+        previewZoom: state.previewZoom,
+      }),
+    }
+  )
+);

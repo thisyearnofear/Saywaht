@@ -115,6 +115,9 @@ export default function Editor() {
     toggleTimelineCollapse,
   } = usePanelStore();
 
+  // Enable keyboard shortcuts
+  useEditorShortcuts();
+
   const { activeProject, createNewProject } = useProjectStore();
   const isMobile = useIsMobile();
   const { isEditorMobileMode } = useMobileContext();

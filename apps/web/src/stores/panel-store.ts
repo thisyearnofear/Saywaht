@@ -47,7 +47,16 @@ export const usePanelStore = create<PanelState>()(
         set({ isTimelineCollapsed: collapsed }),
     }),
     {
-      name: "panel-sizes",
+      name: "panel-preferences",
+      // Persist panel sizes and visibility
+      partialize: (state) => ({
+        toolsPanel: state.toolsPanel,
+        previewPanel: state.previewPanel,
+        propertiesPanel: state.propertiesPanel,
+        mainContent: state.mainContent,
+        timeline: state.timeline,
+        isTimelineCollapsed: state.isTimelineCollapsed,
+      }),
     }
   )
 );
