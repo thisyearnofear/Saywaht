@@ -9,8 +9,8 @@
   base = "apps/web"
 
 [build.environment]
-  # Node.js version - Updated to fix compatibility issues
-  NODE_VERSION = "20"
+   # Node.js version - Must be 22+ for @zoralabs/coins-sdk compatibility
+   NODE_VERSION = "22"
 
   # Disable telemetry and platform-specific downloads
   NEXT_TELEMETRY_DISABLED = "1"

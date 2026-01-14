@@ -1,6 +1,6 @@
-"use client";
-
 export const dynamic = "force-dynamic";
+
+"use client";
 
 import { TradingFeed } from "@/components/trading/trading-feed";
 import { WalletGuard } from "@/components/wallet-guard";
