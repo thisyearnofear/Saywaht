@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, ReactNode } from "react";
+import { useEditorStore } from "@/stores/editor-store";
+import { useTemplateStore } from "@/stores/template-store";
 
 interface EditorProviderProps {
   children: ReactNode;
@@ -8,11 +10,24 @@ interface EditorProviderProps {
 
 export function EditorProvider({ children }: EditorProviderProps) {
   const { isInitializing, isPanelsReady, initializeApp } = useEditorStore();
+  const { selectedTemplate, applySelectedTemplate, clearSelectedTemplate } = useTemplateStore();
 
-  // Use custom useEffect hook
+  // Initialize editor on mount
   useEffect(() => {
     initializeApp();
   }, [initializeApp]);
+
+  // Apply selected template after editor is ready
+  useEffect(() => {
+    if (isPanelsReady && selectedTemplate) {
+      console.log('Applying selected template:', selectedTemplate.name);
+      applySelectedTemplate(selectedTemplate.name).then((success) => {
+        if (success) {
+          clearSelectedTemplate();
+        }
+      });
+    }
+  }, [isPanelsReady, selectedTemplate, applySelectedTemplate, clearSelectedTemplate]);
 
   // Show loading screen while initializing
   if (isInitializing || !isPanelsReady) {
@@ -29,6 +44,3 @@ export function EditorProvider({ children }: EditorProviderProps) {
   // App is ready, render children
   return <>{children}</>;
 }
-
-// Import store after defining the types to avoid ordering issues
-import { useEditorStore } from "@/stores/editor-store";

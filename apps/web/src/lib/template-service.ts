@@ -92,31 +92,42 @@ export async function convertTemplateMediaItem(item: TemplateMediaItem): Promise
   // For template items, we'll use the original URL directly instead of creating blob URLs
   // This ensures the video player can properly access the media
   
-  // Still fetch to get the file size
-  const response = await fetch(item.url);
-  const blob = await response.blob();
+  console.log('Converting template media item:', item.name, item.url);
   
-  // Create a File object from the blob
-  const mimeType = item.type === 'video' ? 'video/mp4' :
-                  item.type === 'audio' ? 'audio/mp3' :
-                  'image/jpeg';
-  
-  const file = new File([blob], item.name, { type: mimeType });
-  
-  // Create the media item using the original URL
-  const mediaItem: MediaItem = {
-    id: item.id,
-    name: item.name,
-    type: item.type,
-    file,
-    url: item.url, // Use the original URL instead of blob URL
-    thumbnailUrl: item.thumbnailUrl || item.url, // Fallback to main URL if no thumbnail
-    duration: item.duration || 0,
-    aspectRatio: item.aspectRatio,
-    size: blob.size
-  };
-  
-  return mediaItem;
+  try {
+    // Fetch to get the file size
+    const response = await fetch(item.url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch media: ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    
+    // Create a File object from the blob
+    const mimeType = item.type === 'video' ? 'video/mp4' :
+                    item.type === 'audio' ? 'audio/mp3' :
+                    'image/jpeg';
+    
+    const file = new File([blob], item.name, { type: mimeType });
+    
+    // Create the media item using the original URL
+    const mediaItem: MediaItem = {
+      id: item.id,
+      name: item.name,
+      type: item.type,
+      file,
+      url: item.url, // Use the original URL instead of blob URL
+      thumbnailUrl: item.thumbnailUrl || item.url, // Fallback to main URL if no thumbnail
+      duration: item.duration || 0,
+      aspectRatio: item.aspectRatio,
+      size: blob.size
+    };
+    
+    console.log('Successfully converted media item:', mediaItem.name, 'size:', mediaItem.size);
+    return mediaItem;
+  } catch (error) {
+    console.error('Error converting template media item:', item.name, error);
+    throw error;
+  }
 }
 
 /**

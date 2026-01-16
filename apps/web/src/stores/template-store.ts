@@ -79,36 +79,49 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       return false;
     }
     
+    console.log('🎬 Starting to apply template:', selectedTemplate.name);
     set({ isLoading: true });
     
     try {
       // Get required stores
       const { clearAllMedia, addMediaItem } = useMediaStore.getState();
-      const { tracks, addTrack, addClipToTrack } = useTimelineStore.getState();
+      const { tracks, addTrack, addClipToTrack, removeTrack } = useTimelineStore.getState();
       const { createNewProject } = useProjectStore.getState();
       const { setCurrentTime, pause } = usePlaybackStore.getState();
       
       // Create a new project with the template name or provided name
       const newProjectName = projectName || selectedTemplate.name;
+      console.log('📝 Creating new project:', newProjectName);
       createNewProject(newProjectName);
       
-      // Clear existing media
+      // Clear existing media and tracks
+      console.log('🗑️ Clearing existing media and tracks');
       clearAllMedia();
+      // Clear all existing tracks
+      const currentTracks = useTimelineStore.getState().tracks;
+      currentTracks.forEach(track => removeTrack(track.id));
       
       // Load template media and tracks
+      console.log('📦 Loading template media and tracks');
       const { mediaItems, tracks: templateTracks } = await applyTemplate(selectedTemplate);
+      console.log('✅ Template loaded:', mediaItems.length, 'media items,', templateTracks.length, 'tracks');
       
       // Add media items to the store
+      console.log('📥 Adding media items to store');
       mediaItems.forEach(item => {
+        console.log('  - Adding media item:', item.name, item.type, item.url);
         addMediaItem(item);
       });
       
       // Add tracks and clips to the timeline
-      templateTracks.forEach(track => {
+      console.log('🎞️ Adding tracks and clips to timeline');
+      templateTracks.forEach((track, trackIndex) => {
+        console.log(`  - Adding track ${trackIndex + 1}/${templateTracks.length}:`, track.name, track.type);
         const trackId = addTrack(track.type);
         
         // Add clips to the track
-        track.clips.forEach(clip => {
+        track.clips.forEach((clip, clipIndex) => {
+          console.log(`    - Adding clip ${clipIndex + 1}/${track.clips.length}:`, clip.name, 'mediaId:', clip.mediaId);
           addClipToTrack(trackId, {
             mediaId: clip.mediaId,
             name: clip.name,
@@ -121,14 +134,16 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       });
       
       // Reset playhead to 0 and pause playback to ensure clips are visible
+      console.log('⏸️ Resetting playback');
       pause();
       setCurrentTime(0);
       
+      console.log('✨ Template application complete!');
       toast.success(`Template "${selectedTemplate.name}" applied successfully!`);
       set({ isLoading: false });
       return true;
     } catch (error) {
-      console.error('Failed to apply template:', error);
+      console.error('❌ Failed to apply template:', error);
       toast.error('Failed to apply template');
       set({ 
         error: error instanceof Error ? error.message : 'Failed to apply template', 
