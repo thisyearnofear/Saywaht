@@ -7,7 +7,6 @@ import { LuLoader as Loader2, LuCheck, LuX } from "react-icons/lu";
 import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { toast } from "sonner";
 import { createCoin, getProfile } from "@zoralabs/coins-sdk";
-import * as CoinsSDK from "@zoralabs/coins-sdk";
 import { submitReferral } from "@divvi/referral-sdk";
 import { MintWizardData } from "../mint-wizard";
 import { base } from "viem/chains";
@@ -85,16 +84,11 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         }
 
         // Detect if user has a Creator Coin to prefer creator-backed markets
-        let selectedCurrency =
-          (CoinsSDK as any)?.CreateConstants?.ContentCoinCurrencies?.ZORA ??
-          "ZORA";
+        let selectedCurrency = "ZORA";
         if (preferences.hasCreatorCoin !== undefined) {
           const hasCreatorCoin = !!preferences.hasCreatorCoin;
           if (hasCreatorCoin) {
-            selectedCurrency =
-              (CoinsSDK as any)?.CreateConstants?.ContentCoinCurrencies
-                ?.CREATOR_COIN_OR_ZORA ??
-              "CREATOR_COIN_OR_ZORA";
+            selectedCurrency = "CREATOR_COIN_OR_ZORA";
           }
           setBackingInfo({
             label: hasCreatorCoin ? "Creator Coin (preferred)" : "ZORA",
@@ -105,10 +99,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
             const prof = await getProfile({ identifier: address });
             const hasCreatorCoin = !!prof?.data?.profile?.creatorCoin?.address;
             if (hasCreatorCoin) {
-              selectedCurrency =
-                (CoinsSDK as any)?.CreateConstants?.ContentCoinCurrencies
-                  ?.CREATOR_COIN_OR_ZORA ??
-                "CREATOR_COIN_OR_ZORA";
+              selectedCurrency = "CREATOR_COIN_OR_ZORA";
             }
             setHasCreatorCoin(hasCreatorCoin);
             setBackingInfo({

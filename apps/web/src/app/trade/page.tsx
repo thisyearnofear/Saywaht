@@ -1,16 +1,11 @@
-"use client";
+import nextDynamic from "next/dynamic";
 
 export const dynamic = "force-dynamic";
 
-import { TradingFeed } from "@/components/trading/trading-feed";
-import { WalletGuard } from "@/components/wallet-guard";
+const TradeClient = nextDynamic(() => import("./trade-client"), {
+  ssr: false,
+});
 
 export default function TradePage() {
-  return (
-    <WalletGuard>
-      <div className="min-h-screen bg-background">
-        <TradingFeed />
-      </div>
-    </WalletGuard>
-  );
+  return <TradeClient />;
 }

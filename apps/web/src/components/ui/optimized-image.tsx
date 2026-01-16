@@ -67,7 +67,7 @@ export function OptimizedImage({
   useEffect(() => {
     if (!shouldLoad || isLoaded) return;
 
-    const img = new Image();
+    const img = new window.Image();
     
     img.onload = () => {
       setCurrentSrc(src);

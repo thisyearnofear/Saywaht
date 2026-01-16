@@ -3,7 +3,9 @@
 // Minimal Next.js configuration for build stability
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: false,
+  
+  // Add turbopack config to silence the warning
+  turbopack: {},
 
   images: {
     remotePatterns: [
@@ -48,16 +50,16 @@ const nextConfig = {
         fs: false,
         path: false,
         crypto: false,
-        '@react-native-async-storage/async-storage': false,
       };
     }
-    
+
     // Ensure bs58 and other Node.js modules work in browser
     config.resolve.alias = {
       ...config.resolve.alias,
-      'bs58': require.resolve('bs58'),
+      bs58: require.resolve("bs58"),
+      "@react-native-async-storage/async-storage": false,
     };
-    
+
     return config;
   },
 };
