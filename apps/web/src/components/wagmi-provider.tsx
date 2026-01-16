@@ -1,10 +1,11 @@
 "use client";
 
-import { WagmiProvider, createConfig, http } from "wagmi";
+import "@rainbow-me/rainbowkit/styles.css";
+
+import { WagmiProvider, http } from "wagmi";
 import { base, baseSepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { metaMask } from "wagmi/connectors";
-import { walletConnect } from "@wagmi/connectors";
+import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { handleError } from "@/lib/error-handler";
 
 // ENHANCEMENT: Graceful fallback for WalletConnect project ID
@@ -17,34 +18,16 @@ if (!process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID) {
 }
 
 // Module-level singletons to avoid double initialization during HMR or multi-mount
-let wagmiConfigSingleton: ReturnType<typeof createConfig> | null = null;
+let wagmiConfigSingleton: any = null;
 let queryClientSingleton: QueryClient | null = null;
 
 function getWagmiConfig() {
   if (wagmiConfigSingleton) return wagmiConfigSingleton;
 
   try {
-    // RADICAL SIMPLIFICATION: Use only essential wagmi connectors
-    // This completely eliminates the RainbowKit + @base-org/account dependency chain
-    const connectors = [
-      metaMask({ 
-        dappMetadata: {
-          name: "saywaht - Video Creator Coins",
-        },
-      }),
-      walletConnect({
-        projectId,
-        metadata: {
-          name: "saywaht - Video Creator Coins",
-          description: "Video Creator Coins Platform",
-          url: "https://saywaht.netlify.app",
-          icons: ["https://saywaht.netlify.app/logo.png"],
-        },
-      }),
-    ];
-
-    wagmiConfigSingleton = createConfig({
-      connectors,
+    wagmiConfigSingleton = getDefaultConfig({
+      appName: "saywaht - Video Creator Coins",
+      projectId,
       chains: [base, baseSepolia],
       transports: {
         [base.id]: http(),
@@ -63,7 +46,7 @@ function getWagmiConfig() {
 
 function getQueryClient() {
   if (queryClientSingleton) return queryClientSingleton;
-  
+
   // ENHANCEMENT: Better error handling and retry logic for queries
   queryClientSingleton = new QueryClient({
     defaultOptions: {
@@ -93,7 +76,7 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        {children}
+        <RainbowKitProvider>{children}</RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

@@ -1,11 +1,17 @@
+const path = require("path");
+
 /** @type {import('next').NextConfig} */
 
 // Minimal Next.js configuration for build stability
 const nextConfig = {
   reactStrictMode: true,
-  
-  // Add turbopack config to silence the warning
-  turbopack: {},
+
+  transpilePackages: [
+    "@wagmi/connectors",
+    "@base-org/account",
+    "@coinbase/cdp-sdk",
+    "bs58",
+  ],
 
   images: {
     remotePatterns: [
@@ -56,6 +62,7 @@ const nextConfig = {
     // Ensure bs58 and other Node.js modules work in browser
     config.resolve.alias = {
       ...config.resolve.alias,
+      bs58: path.resolve(__dirname, "node_modules/bs58/src/esm/index.js"),
       "@react-native-async-storage/async-storage": false,
     };
 
