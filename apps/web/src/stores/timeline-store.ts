@@ -35,6 +35,11 @@ interface TimelineStore {
   clearSelectedClips: () => void;
   setSelectedClips: (clips: { trackId: string; clipId: string }[]) => void;
 
+  // Clipboard
+  clipboardClip: TimelineClip | null;
+  copySelectedClip: () => void;
+  pasteClipAtPlayhead: (playheadTime: number) => void;
+
   // Actions
   addTrack: (type: "video" | "audio" | "effects") => string;
   removeTrack: (trackId: string) => void;
@@ -86,6 +91,7 @@ export const useTimelineStore = create<TimelineStore>()(
       history: [],
       redoStack: [],
       selectedClips: [],
+      clipboardClip: null,
 
       pushHistory: () => {
         const { tracks, history, redoStack } = get();
@@ -419,6 +425,55 @@ export const useTimelineStore = create<TimelineStore>()(
             })
           };
         });
+      },
+
+      // Copy selected clip to clipboard
+      copySelectedClip: () => {
+        const { selectedClips, tracks } = get();
+        if (selectedClips.length === 0) return;
+
+        // Copy only the first selected clip
+        const selected = selectedClips[0];
+        const track = tracks.find((t: TimelineTrack) => t.id === selected.trackId);
+        const clip = track?.clips.find((c: TimelineClip) => c.id === selected.clipId);
+
+        if (clip) {
+          // Deep copy the clip to avoid reference issues
+          set({ clipboardClip: JSON.parse(JSON.stringify(clip)) });
+        }
+      },
+
+      // Paste clip from clipboard at playhead position
+      pasteClipAtPlayhead: (playheadTime: number) => {
+        const { clipboardClip, tracks } = get();
+        if (!clipboardClip) return;
+
+        get().pushHistory();
+
+        // Find a track of the same type or create one
+        const videoTrack = tracks.find((t: TimelineTrack) => t.type === "video");
+        let targetTrackId = videoTrack?.id;
+
+        if (!targetTrackId) {
+          // Create a new video track if none exists
+          targetTrackId = get().addTrack("video");
+        }
+
+        // Create new clip with new ID and updated start time
+        const newClip: TimelineClip = {
+          ...clipboardClip,
+          id: crypto.randomUUID(),
+          startTime: playheadTime,
+        };
+
+        set((state: TimelineStore) => ({
+          tracks: state.tracks.map((track: TimelineTrack) =>
+            track.id === targetTrackId
+              ? { ...track, clips: [...track.clips, newClip] }
+              : track
+          ),
+          selectedClips: [{ trackId: targetTrackId!, clipId: newClip.id }],
+        }));
       },
     }),
     {
