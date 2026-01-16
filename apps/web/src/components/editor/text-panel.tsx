@@ -45,7 +45,7 @@ const TEXT_PRESETS = [
 ] as const;
 
 export function TextPanel() {
-  const { addTextElement, textElements } = useTextStore();
+  const { addTextElement, textElements, selectText, selectedTextId } = useTextStore();
   const { currentTime, duration } = usePlaybackStore();
 
   const handleAddText = (presetIndex?: number) => {
@@ -132,19 +132,24 @@ export function TextPanel() {
             </div>
             <div className="space-y-1">
               {textElements.map((text) => (
-                <div
+                <button
                   key={text.id}
-                  className="p-2 rounded border bg-card text-xs flex items-center gap-2"
+                  onClick={() => selectText(text.id)}
+                  className={`w-full p-2 rounded border text-xs flex items-center gap-2 transition-colors hover:bg-accent/50 ${
+                    selectedTextId === text.id
+                      ? "bg-accent border-primary"
+                      : "bg-card"
+                  }`}
                 >
                   <Type className="h-3 w-3 flex-shrink-0" />
-                  <span className="flex-1 truncate">
+                  <span className="flex-1 truncate text-left">
                     {text.content.substring(0, 20)}
                     {text.content.length > 20 && "..."}
                   </span>
                   <span className="text-muted-foreground">
                     {text.startTime.toFixed(1)}s
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           </div>

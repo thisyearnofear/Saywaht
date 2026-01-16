@@ -14,17 +14,25 @@ import {
 } from "../ui/select";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
+import { useTextStore } from "@/stores/text-store";
 import { ImageTimelineTreatment } from "@/components/ui/image-timeline-treatment";
 import { useState, ChangeEvent } from 'react';
 import { SpeedControl } from "./speed-control";
+import { TextPropertiesPanel } from "./text-properties-panel";
 
 export function PropertiesPanel() {
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
+  const { selectedTextId } = useTextStore();
   const [backgroundType, setBackgroundType] = useState<
     "blur" | "mirror" | "color"
   >("blur");
   const [backgroundColor, setBackgroundColor] = useState("#000000");
+
+  // Show text properties if text is selected
+  if (selectedTextId) {
+    return <TextPropertiesPanel />;
+  }
 
   // Get the first video clip for preview (simplified)
   const firstVideoClip = tracks
