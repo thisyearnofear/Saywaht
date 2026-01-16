@@ -81,6 +81,23 @@ export interface TimelineClip {
   track: number;
 }
 
+// Text element type for text layers
+export interface TextElement {
+  id: string;
+  content: string;
+  fontSize: number;        // 12-72px
+  fontFamily: string;      // Font name
+  color: string;           // Hex color
+  x: number;              // Position X (0-1, relative to canvas width)
+  y: number;              // Position Y (0-1, relative to canvas height)
+  startTime: number;      // When text appears
+  endTime: number;        // When text disappears
+  // Optional properties (can add later)
+  textAlign?: "left" | "center" | "right";
+  fontWeight?: "normal" | "bold";
+  opacity?: number;       // 0-1
+}
+
 // ============================================================================
 // TOUCH & GESTURE TYPES
 // ============================================================================
