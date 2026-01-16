@@ -10,7 +10,32 @@ import { useEffect, useState } from "react";
 // Inline wallet components to avoid import issues
 import { useWalletAuth } from "@opencut/auth";
 import { useAccount } from "wagmi";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useConnect, useDisconnect } from "wagmi";
+import { injected, walletConnect } from "wagmi/connectors";
+
+function SimpleWalletConnect() {
+  const { connect } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { isConnected } = useAccount();
+
+  const handleConnect = () => {
+    // Try MetaMask first, fallback to WalletConnect
+    const metaMaskConnector = connect({ connector: injected() });
+    if (metaMaskConnector) {
+      metaMaskConnector.catch(() => {
+        connect({ connector: walletConnect() });
+      });
+    } else {
+      connect({ connector: walletConnect() });
+    }
+  };
+
+  return (
+    <Button onClick={isConnected ? disconnect : handleConnect} size="sm">
+      {isConnected ? "Disconnect" : "Connect Wallet"}
+    </Button>
+  );
+}
 
 function WalletComponents({
   mobile,
@@ -32,7 +57,7 @@ function WalletComponents({
       </Link>
     ) : (
       <div className="flex justify-center">
-        <ConnectButton />
+        <SimpleWalletConnect />
       </div>
     );
   }
@@ -45,7 +70,7 @@ function WalletComponents({
       </Button>
     </Link>
   ) : (
-    <ConnectButton />
+    <SimpleWalletConnect />
   );
 }
 

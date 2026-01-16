@@ -3,19 +3,8 @@
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { base, baseSepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  RainbowKitProvider,
-  connectorsForWallets,
-  getDefaultWallets,
-} from "@rainbow-me/rainbowkit";
-import {
-  metaMaskWallet,
-  walletConnectWallet,
-  rainbowWallet,
-  trustWallet,
-} from "@rainbow-me/rainbowkit/wallets";
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
-import "@rainbow-me/rainbowkit/styles.css";
+import { metaMask } from "wagmi/connectors";
+import { walletConnect } from "@wagmi/connectors";
 import { handleError } from "@/lib/error-handler";
 
 // ENHANCEMENT: Graceful fallback for WalletConnect project ID
@@ -35,24 +24,24 @@ function getWagmiConfig() {
   if (wagmiConfigSingleton) return wagmiConfigSingleton;
 
   try {
-    // Configure wallet connectors with mobile wallet support (create once)
-    // Explicitly define connectors to avoid problematic Base connector
-    const connectors = connectorsForWallets(
-      [
-        {
-          groupName: "Popular",
-          wallets: [metaMaskWallet, walletConnectWallet],
+    // RADICAL SIMPLIFICATION: Use only essential wagmi connectors
+    // This completely eliminates the RainbowKit + @base-org/account dependency chain
+    const connectors = [
+      metaMask({ 
+        dappMetadata: {
+          name: "saywaht - Video Creator Coins",
         },
-        {
-          groupName: "Mobile",
-          wallets: [trustWallet, rainbowWallet],
-        },
-      ],
-      {
-        appName: "saywaht - Video Creator Coins",
+      }),
+      walletConnect({
         projectId,
-      }
-    );
+        metadata: {
+          name: "saywaht - Video Creator Coins",
+          description: "Video Creator Coins Platform",
+          url: "https://saywaht.netlify.app",
+          icons: ["https://saywaht.netlify.app/logo.png"],
+        },
+      }),
+    ];
 
     wagmiConfigSingleton = createConfig({
       connectors,
@@ -104,14 +93,7 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider
-          modalSize="compact"
-          showRecentTransactions={true}
-          coolMode
-          initialChain={base}
-        >
-          {children}
-        </RainbowKitProvider>
+        {children}
       </QueryClientProvider>
     </WagmiProvider>
   );
