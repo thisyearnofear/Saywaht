@@ -1,5 +1,6 @@
 {
   "name": "saywaht",
+  "description": "Video commentary coins platform",
   "version": "0.1.0",
   "private": true,
   "scripts": {
