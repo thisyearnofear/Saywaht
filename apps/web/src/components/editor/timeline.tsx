@@ -16,6 +16,7 @@ import {
   Pause,
   Play,
   ArrowLeftRight,
+  Layers,
 } from "@/lib/icons";
 import {
   Tooltip,
@@ -41,6 +42,8 @@ import { useSelectionBox } from "@/hooks/use-selection-box";
 import { useTimelinePlayhead } from "@/hooks/use-timeline-playhead";
 import { useTimelineZoom } from "@/hooks/use-timeline-zoom";
 import { TimelineTrackContent } from "./TimelineTrackContent";
+import { ScenesView } from "./scenes-view";
+import { useSceneStore } from "@/stores/scene-store";
 
 export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their clips.
@@ -63,6 +66,7 @@ export function Timeline() {
     undo,
     redo,
   } = useTimelineStore();
+  const { currentScene, scenes } = useSceneStore();
   const { mediaItems, addMediaItem } = useMediaStore();
   const {
     currentTime,
@@ -624,6 +628,19 @@ export function Timeline() {
           >
             {currentTime.toFixed(1)}s / {duration.toFixed(1)}s
           </div>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          {/* Scenes Button */}
+          <ScenesView>
+            <Button variant="text" size="sm" className="text-xs">
+              <Layers className="h-3 w-3 mr-1" />
+              {currentScene?.name || "Scenes"}
+              {scenes.length > 1 && (
+                <span className="ml-1 text-muted-foreground">({scenes.length})</span>
+              )}
+            </Button>
+          </ScenesView>
 
           {/* Test Clip Button - for debugging */}
           {tracks.length === 0 && (

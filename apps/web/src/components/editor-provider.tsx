@@ -3,6 +3,8 @@
 import { useEffect, ReactNode } from "react";
 import { useEditorStore } from "@/stores/editor-store";
 import { useTemplateStore } from "@/stores/template-store";
+import { useSceneStore } from "@/stores/scene-store";
+import { useProjectStore } from "@/stores/project-store";
 
 interface EditorProviderProps {
   children: ReactNode;
@@ -11,11 +13,22 @@ interface EditorProviderProps {
 export function EditorProvider({ children }: EditorProviderProps) {
   const { isInitializing, isPanelsReady, initializeApp } = useEditorStore();
   const { selectedTemplate, applySelectedTemplate, clearSelectedTemplate } = useTemplateStore();
+  const { initializeScenes } = useSceneStore();
+  const { activeProject } = useProjectStore();
 
   // Initialize editor on mount
   useEffect(() => {
     initializeApp();
   }, [initializeApp]);
+
+  // Initialize scenes when project loads
+  useEffect(() => {
+    if (activeProject && isPanelsReady) {
+      const scenes = activeProject.scenes || [];
+      const currentSceneId = activeProject.currentSceneId;
+      initializeScenes(scenes, currentSceneId);
+    }
+  }, [activeProject, isPanelsReady, initializeScenes]);
 
   // Apply selected template after editor is ready
   useEffect(() => {
