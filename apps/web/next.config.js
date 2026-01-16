@@ -60,11 +60,21 @@ const nextConfig = {
       "@react-native-async-storage/async-storage": false,
     };
 
-    // Add bs58 to externals to ensure it's properly resolved
-    config.externals = {
-      ...config.externals,
-      bs58: "bs58",
+    // Handle ESM imports for Coinbase SDK
+    config.experiments = {
+      ...config.experiments,
+      topLevelAwait: true,
     };
+
+    // Add special handling for Coinbase SDK modules
+    config.module.rules.push({
+      test: /\.js$/,
+      include: [
+        /node_modules\/@coinbase\/cdp-sdk/,
+        /node_modules\/@base-org\/account/,
+      ],
+      type: 'javascript/auto',
+    });
 
     return config;
   },
