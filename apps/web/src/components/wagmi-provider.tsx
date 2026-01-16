@@ -14,6 +14,7 @@ import {
   rainbowWallet,
   trustWallet,
 } from "@rainbow-me/rainbowkit/wallets";
+import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
 import { handleError } from "@/lib/error-handler";
 
@@ -35,11 +36,9 @@ function getWagmiConfig() {
 
   try {
     // Configure wallet connectors with mobile wallet support (create once)
-    const { wallets } = getDefaultWallets();
-
+    // Explicitly define connectors to avoid problematic Base connector
     const connectors = connectorsForWallets(
       [
-        ...wallets,
         {
           groupName: "Popular",
           wallets: [metaMaskWallet, walletConnectWallet],
