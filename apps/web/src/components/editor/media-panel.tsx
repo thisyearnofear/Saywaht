@@ -19,6 +19,7 @@ import {
   Cloud,
   Zap,
   Globe,
+  Type,
 } from "@/lib/icons";
 import Image from "next/image";
 import { useDragDrop } from "@/hooks/use-drag-drop";
@@ -26,6 +27,7 @@ import { useEffect, useRef, useState, ChangeEvent } from "react";
 import { toast } from "sonner";
 import { VoiceoverRecorder } from "./voiceover-recorder";
 import { AiVoiceGenerator } from "./ai-voice-generator";
+import { TextPanel } from "./text-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { FileUpload } from "./file-upload";
 import { GroveUpload } from "./grove-upload";
@@ -48,7 +50,7 @@ export function MediaPanel() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAudioOpen, setIsAudioOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"upload" | "audio">("upload");
+  const [activeTab, setActiveTab] = useState<"upload" | "audio" | "text">("upload");
   const [filStatus, setFilStatus] = useState<{
     configured: boolean;
     allowanceSufficient: boolean;
@@ -315,6 +317,15 @@ export function MediaPanel() {
             Upload
           </Button>
           <Button
+            variant={activeTab === "text" ? "secondary" : "ghost"}
+            size="sm"
+            className="flex-1 rounded-none"
+            onClick={() => setActiveTab("text")}
+          >
+            <Type className="h-4 w-4 mr-2" />
+            Text
+          </Button>
+          <Button
             variant={activeTab === "audio" ? "secondary" : "ghost"}
             size="sm"
             className="flex-1 rounded-none"
@@ -509,6 +520,8 @@ export function MediaPanel() {
               </div>
             </>
           )}
+
+          {activeTab === "text" && <TextPanel />}
 
           {activeTab === "audio" && (
             <div className="flex-1 overflow-y-auto p-3">
