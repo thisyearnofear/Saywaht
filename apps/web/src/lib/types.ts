@@ -107,12 +107,23 @@ export interface GestureState {
 // PROJECT & TEMPLATE TYPES (Consolidated from separate files)
 // ============================================================================
 
+// Scene type for multi-scene editing
+export interface Scene {
+  id: string;
+  name: string;
+  isMain: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Basic project type
 export interface TProject {
   id: string;
   name: string;
   createdAt: Date;
   updatedAt: Date;
+  scenes?: Scene[];              // Array of scenes for multi-part videos
+  currentSceneId?: string;       // Active scene being edited
 }
 
 // Enhanced project type

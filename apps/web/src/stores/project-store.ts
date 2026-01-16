@@ -1,4 +1,4 @@
-import { TProject } from "@/lib/types";
+import { TProject, Scene } from "@/lib/types";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { customStorage } from "@/lib/utils";
@@ -10,6 +10,7 @@ interface ProjectStore {
   createNewProject: (name: string) => void;
   closeProject: () => void;
   updateProjectName: (name: string) => void;
+  updateProject: (project: TProject) => void;  // For scene store integration
 }
 
 export const useProjectStore = create<ProjectStore>()(
@@ -18,11 +19,22 @@ export const useProjectStore = create<ProjectStore>()(
       activeProject: null,
 
       createNewProject: (name: string) => {
+        const sceneId = crypto.randomUUID();
+        const mainScene: Scene = {
+          id: sceneId,
+          name: "Main scene",
+          isMain: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
         const newProject: TProject = {
           id: crypto.randomUUID(),
           name,
           createdAt: new Date(),
           updatedAt: new Date(),
+          scenes: [mainScene],
+          currentSceneId: sceneId,
         };
         set({ activeProject: newProject });
       },
@@ -41,6 +53,10 @@ export const useProjectStore = create<ProjectStore>()(
               }
             : null,
         }));
+      },
+
+      updateProject: (project: TProject) => {
+        set({ activeProject: project });
       },
     }),
     {
