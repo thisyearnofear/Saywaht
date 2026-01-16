@@ -19,6 +19,7 @@ import { useTimelineStore, type TimelineTrack } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useTimelineClipResize } from "@/hooks/use-timeline-clip-resize";
+import { AudioWaveform } from "./audio-waveform";
 import { toast } from "sonner";
 
 export function TimelineTrackContent({
@@ -588,7 +589,20 @@ export function TimelineTrackContent({
       );
     }
 
-    // Fallback for audio or videos without thumbnails
+    // Audio clips - show waveform
+    if (mediaItem.type === "audio") {
+      return (
+        <div className="w-full h-full flex items-center gap-2">
+          <AudioWaveform
+            audioUrl={mediaItem.url}
+            height={40}
+            className="flex-1"
+          />
+        </div>
+      );
+    }
+
+    // Fallback for videos without thumbnails
     return (
       <span className="text-xs text-foreground/80 truncate">{clip.name}</span>
     );
