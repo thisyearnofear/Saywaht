@@ -60,6 +60,12 @@ const nextConfig = {
       "@react-native-async-storage/async-storage": false,
     };
 
+    // Add bs58 to externals to ensure it's properly resolved
+    config.externals = {
+      ...config.externals,
+      bs58: "bs58",
+    };
+
     return config;
   },
 };
