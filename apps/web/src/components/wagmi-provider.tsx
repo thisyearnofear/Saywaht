@@ -11,7 +11,6 @@ import {
 import {
   metaMaskWallet,
   walletConnectWallet,
-  coinbaseWallet,
   rainbowWallet,
   trustWallet,
 } from "@rainbow-me/rainbowkit/wallets";
@@ -43,7 +42,7 @@ function getWagmiConfig() {
         ...wallets,
         {
           groupName: "Popular",
-          wallets: [metaMaskWallet, coinbaseWallet, walletConnectWallet],
+          wallets: [metaMaskWallet, walletConnectWallet],
         },
         {
           groupName: "Mobile",

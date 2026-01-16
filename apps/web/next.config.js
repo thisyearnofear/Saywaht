@@ -56,25 +56,8 @@ const nextConfig = {
     // Ensure bs58 and other Node.js modules work in browser
     config.resolve.alias = {
       ...config.resolve.alias,
-      bs58: require.resolve("bs58"),
       "@react-native-async-storage/async-storage": false,
     };
-
-    // Handle ESM imports for Coinbase SDK
-    config.experiments = {
-      ...config.experiments,
-      topLevelAwait: true,
-    };
-
-    // Add special handling for Coinbase SDK modules
-    config.module.rules.push({
-      test: /\.js$/,
-      include: [
-        /node_modules\/@coinbase\/cdp-sdk/,
-        /node_modules\/@base-org\/account/,
-      ],
-      type: 'javascript/auto',
-    });
 
     return config;
   },
