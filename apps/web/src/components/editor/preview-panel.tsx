@@ -6,6 +6,7 @@ import { usePlaybackStore } from "@/stores/playback-store";
 import { useMediaStore } from "@/stores/media-store";
 import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
 import { useEditorStore } from "@/stores/editor-store";
+import { useTextStore } from "@/stores/text-store";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
 import { VideoPlayer } from "../ui/video-player";
@@ -30,6 +31,7 @@ export function PreviewPanel() {
     usePlaybackStore();
   const { canvasSize, setCanvasSize, setCanvasPreset, getAspectRatio } = useCanvasStore();
   const { videoObjectFit, toggleVideoObjectFit, previewZoom, setPreviewZoom, resetPreviewZoom } = useEditorStore();
+  const { textElements } = useTextStore();
   const [showDebug, setShowDebug] = useState(SHOW_DEBUG_INFO);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -72,7 +74,15 @@ export function PreviewPanel() {
     );
   };
 
+  // Get active text elements at current time
+  const getActiveTextElements = () => {
+    return textElements.filter(
+      (text) => currentTime >= text.startTime && currentTime < text.endTime
+    );
+  };
+
   const activeClips = getActiveClips();
+  const activeTextElements = getActiveTextElements();
   const aspectRatio = getAspectRatio();
 
   // Render a clip
@@ -162,7 +172,31 @@ export function PreviewPanel() {
     return null;
   };
 
-
+  // Render text element
+  const renderTextElement = (text: any) => {
+    return (
+      <div
+        key={text.id}
+        className="absolute pointer-events-none"
+        style={{
+          left: `${text.x * 100}%`,
+          top: `${text.y * 100}%`,
+          transform: "translate(-50%, -50%)",
+          fontSize: `${text.fontSize}px`,
+          fontFamily: text.fontFamily,
+          color: text.color,
+          fontWeight: text.fontWeight || "normal",
+          textAlign: text.textAlign || "center",
+          opacity: text.opacity || 1,
+          whiteSpace: "pre-wrap",
+          maxWidth: "90%",
+          textShadow: "2px 2px 4px rgba(0, 0, 0, 0.8)",
+        }}
+      >
+        {text.content}
+      </div>
+    );
+  };
 
   return (
     <div className="h-full w-full flex flex-col min-h-0 min-w-0">
@@ -339,6 +373,8 @@ export function PreviewPanel() {
           ) : (
             activeClips.map((clipData, index) => renderClip(clipData, index))
           )}
+          {/* Text elements layer - always render on top */}
+          {activeTextElements.map((text) => renderTextElement(text))}
         </div>
       </div>
 
