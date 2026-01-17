@@ -236,6 +236,7 @@ export async function exportVideoWithStreamingWebCodecs(
   const blob = await new Promise<Blob>((resolve, reject) => {
     let timeoutId: NodeJS.Timeout;
     let abortListener: (() => void) | null = null;
+    let resolved = false; // Prevent double resolution
     
     const cleanup = () => {
       clearTimeout(timeoutId);
@@ -244,17 +245,32 @@ export async function exportVideoWithStreamingWebCodecs(
       }
     };
     
+    const tryResolve = (blob: Blob) => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        resolve(blob);
+      }
+    };
+    
+    const tryReject = (error: Error) => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        reject(error);
+      }
+    };
+    
     recorder.onstop = () => {
-      cleanup();
       onProgress(95); // Update progress when recorder stops
       
       try {
         const finalBlob = new Blob(chunks, { type: selectedCodec });
         onProgress(98); // Update progress when blob is created
-        resolve(finalBlob);
+        tryResolve(finalBlob);
       } catch (error) {
         console.error('Error creating blob:', error);
-        reject(new Error('Failed to create video blob'));
+        tryReject(new Error('Failed to create video blob'));
       }
     };
 
@@ -262,11 +278,10 @@ export async function exportVideoWithStreamingWebCodecs(
     if (abortSignal) {
       abortListener = () => {
         console.log('🛑 WebCodecs export aborted during recording');
-        cleanup();
         if (recorder.state === 'recording') {
           recorder.stop();
         }
-        reject(new Error('Export was cancelled'));
+        tryReject(new Error('Export was cancelled'));
       };
       
       if (abortSignal.aborted) {
@@ -280,23 +295,31 @@ export async function exportVideoWithStreamingWebCodecs(
     // Add timeout to prevent hanging at 90%
     const timeoutDuration = getExportTimeout(totalDuration);
     timeoutId = setTimeout(() => {
-      if (!renderingComplete || recorder.state === 'recording') {
-        console.error('Export timeout - forcing completion');
-        cleanup();
+      if (!resolved) {
+        console.error('🚨 Export timeout at recorder - forcing completion');
+        
+        // Stop recording if still active
         if (recorder.state === 'recording') {
           recorder.stop();
+          
+          // Give recorder a moment to process stop, then resolve with whatever we have
+          setTimeout(() => {
+            if (!resolved && chunks.length > 0) {
+              const partialBlob = new Blob(chunks, { type: selectedCodec });
+              console.warn(`⚠️ Created partial blob due to timeout: ${(partialBlob.size / 1024 / 1024).toFixed(2)}MB`);
+              tryResolve(partialBlob);
+            } else if (!resolved) {
+              tryReject(new Error('Export timeout with no data'));
+            }
+          }, 500);
+        } else if (chunks.length > 0) {
+          // Recorder already stopped but onstop didn't fire
+          const partialBlob = new Blob(chunks, { type: selectedCodec });
+          console.warn(`⚠️ Created blob from stopped recorder: ${(partialBlob.size / 1024 / 1024).toFixed(2)}MB`);
+          tryResolve(partialBlob);
+        } else {
+          tryReject(new Error('Export timeout with no data'));
         }
-        
-        // Still try to create a blob with what we have
-        setTimeout(() => {
-          if (chunks.length > 0) {
-            const partialBlob = new Blob(chunks, { type: selectedCodec });
-            console.warn('Created partial blob due to timeout');
-            resolve(partialBlob);
-          } else {
-            reject(new Error('Export timeout with no data'));
-          }
-        }, 1000);
       }
     }, timeoutDuration);
   });

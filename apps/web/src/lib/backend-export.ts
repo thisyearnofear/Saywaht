@@ -4,7 +4,49 @@ import { ExportOptions } from "./canvas-export-utils";
 import { FORMAT_DIMENSIONS } from "./video-utils";
 
 // Backend export service configuration
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || 'http://157.180.36.156:3001';
+// Try multiple possible backend URLs
+const BACKEND_URLS = [
+  process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL,
+  'http://157.180.36.156:3001', // FFmpeg service on port 3001
+  'http://157.180.36.156:3100', // Legacy port
+  'http://localhost:3001', // Local development
+  'http://localhost:3100'  // Local development legacy
+].filter(Boolean) as string[];
+
+let cachedBackendUrl: string | null = null;
+
+/**
+ * Get the working backend URL with automatic fallback detection
+ */
+async function getBackendUrl(): Promise<string> {
+  // Return cached URL if we've already found a working one
+  if (cachedBackendUrl) {
+    return cachedBackendUrl;
+  }
+
+  // Try each URL until we find one that responds
+  for (const url of BACKEND_URLS) {
+    try {
+      const response = await fetch(`${url}/api/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(2000) // 2 second timeout per URL
+      });
+      
+      if (response.ok) {
+        cachedBackendUrl = url;
+        console.log(`✅ Backend service found at: ${url}`);
+        return url;
+      }
+    } catch (err) {
+      // This URL didn't work, try the next one
+      continue;
+    }
+  }
+
+  // No working URL found, default to first configured URL
+  console.warn('⚠️ Could not detect working backend URL, using default');
+  return BACKEND_URLS[0] || 'http://157.180.36.156:3001';
+}
 
 export interface BackendExportOptions extends ExportOptions {
   maxFileSizeMB?: number;
@@ -47,6 +89,9 @@ export const exportVideoBackend = async (
   
   try {
     console.log('⚡ Starting Pro Export for best quality...');
+    
+    // Get the working backend URL
+    const BACKEND_URL = await getBackendUrl();
     
     // Prepare export options
     const dimensions = FORMAT_DIMENSIONS[options.format];
@@ -106,10 +151,10 @@ export const exportVideoBackend = async (
     onProgress(10);
     
     // Poll for completion
-    const result = await pollForCompletion(jobId, onProgress, options.timeout);
+    const result = await pollForCompletion(BACKEND_URL, jobId, onProgress, options.timeout);
     
     // Download the completed file
-    const blob = await downloadExportedFile(jobId);
+    const blob = await downloadExportedFile(BACKEND_URL, jobId);
     
     const processingTime = performance.now() - startTime;
     
@@ -133,6 +178,7 @@ export const exportVideoBackend = async (
  * Poll backend service for job completion
  */
 async function pollForCompletion(
+  backendUrl: string,
   jobId: string, 
   onProgress: (progress: number) => void,
   timeout: number = 300000 // 5 minutes default
@@ -142,7 +188,7 @@ async function pollForCompletion(
   
   while (Date.now() - startTime < timeout) {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/export/status/${jobId}`);
+      const response = await fetch(`${backendUrl}/api/export/status/${jobId}`);
       
       if (!response.ok) {
         throw new Error(`Status check failed: ${response.statusText}`);
@@ -179,9 +225,9 @@ async function pollForCompletion(
 /**
  * Download the exported file from backend
  */
-async function downloadExportedFile(jobId: string): Promise<Blob> {
+async function downloadExportedFile(backendUrl: string, jobId: string): Promise<Blob> {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/export/download/${jobId}`);
+    const response = await fetch(`${backendUrl}/api/export/download/${jobId}`);
     
     if (!response.ok) {
       throw new Error(`Download failed: ${response.statusText}`);
@@ -203,7 +249,8 @@ async function downloadExportedFile(jobId: string): Promise<Blob> {
  */
 export async function isBackendExportAvailable(): Promise<boolean> {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/health`, {
+    const backendUrl = await getBackendUrl();
+    const response = await fetch(`${backendUrl}/api/health`, {
       method: 'GET',
       signal: AbortSignal.timeout(5000) // 5 second timeout
     });
@@ -223,7 +270,8 @@ export async function isBackendExportAvailable(): Promise<boolean> {
  * Get backend service health information
  */
 export async function getBackendExportHealth(): Promise<any> {
-  const response = await fetch(`${BACKEND_URL}/api/health`);
+  const backendUrl = await getBackendUrl();
+  const response = await fetch(`${backendUrl}/api/health`);
   if (!response.ok) {
     throw new Error(`Health check failed: ${response.statusText}`);
   }

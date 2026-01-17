@@ -419,16 +419,24 @@ export class OfflineVideoRenderer {
           // More precise seeking threshold (1 frame at 30fps = 0.033s)
           const seekThreshold = 1 / 30;
 
+          // Ensure video is ready first before seeking
+          const videoReady = await this.ensureVideoReady(video, videoTime);
+          if (!videoReady) {
+            console.warn(`Video failed to become ready at time ${videoTime}`);
+            continue;
+          }
+
           // Seek if necessary
           if (Math.abs(video.currentTime - videoTime) > seekThreshold) {
             // Store the target time to avoid race conditions
             const targetTime = videoTime;
             video.currentTime = targetTime;
 
-            // Wait for seek to complete with simplified logic
+            // Wait for seek to complete with better timing
             await new Promise<void>((resolve) => {
               let seekTimeout: NodeJS.Timeout;
               let resolved = false;
+              let checkInterval: NodeJS.Timeout | null = null;
 
               const cleanup = () => {
                 if (resolved) return;
@@ -436,6 +444,7 @@ export class OfflineVideoRenderer {
                 video.removeEventListener('seeked', onSeeked);
                 video.removeEventListener('loadeddata', onLoadedData);
                 clearTimeout(seekTimeout);
+                if (checkInterval) clearInterval(checkInterval);
               };
 
               const onSeeked = () => {
@@ -457,65 +466,36 @@ export class OfflineVideoRenderer {
               video.addEventListener('seeked', onSeeked);
               video.addEventListener('loadeddata', onLoadedData);
 
-              // Shorter timeout to avoid blocking
+              // Periodically check if we're close enough (for browsers that don't fire events reliably)
+              checkInterval = setInterval(() => {
+                if (Math.abs(video.currentTime - targetTime) <= seekThreshold && video.readyState >= 2) {
+                  cleanup();
+                  resolve();
+                }
+              }, 10);
+
+              // Timeout to prevent hanging
               seekTimeout = setTimeout(() => {
                 cleanup();
                 resolve();
-              }, 50);
+              }, 200);
             });
           }
           
-          // Wait for video to have current frame data with improved logic
-          if (video.readyState < 2) {
-            // Try to wait for data with better timeout handling
-            await new Promise<void>((resolve) => {
-              let attempts = 0;
-              const maxAttempts = 5;
-
-              const checkReady = () => {
-                attempts++;
-                if (video.readyState >= 2 || attempts >= maxAttempts) {
-                  resolve();
-                } else {
-                  // Shorter intervals for faster response
-                  setTimeout(checkReady, 5);
-                }
-              };
-
-              checkReady();
-            });
-          }
+          // Final readiness check with extended waiting
+          const frameReady = await this.ensureVideoFrameReady(video, videoTime, 30);
           
-          // Ensure video is ready before drawing
-          if (video.readyState >= 2) { // HAVE_CURRENT_DATA
+          // Draw if ready
+          if (frameReady && video.readyState >= 2) {
             // Draw video frame with high quality
             drawWithAspectRatio(this.ctx, video, this.canvas.width, this.canvas.height);
             hasContent = true;
+          } else if (video.readyState >= 2) {
+            // Even if frame might not be perfect, try drawing
+            drawWithAspectRatio(this.ctx, video, this.canvas.width, this.canvas.height);
+            hasContent = true;
           } else {
-            console.warn(`Video not ready at time ${videoTime}, readyState: ${video.readyState}`);
-            // Wait for video to be ready - this is critical for quality
-            await new Promise<void>((resolve) => {
-              let attempts = 0;
-              const maxAttempts = 20; // More attempts for better reliability
-
-              const checkReady = () => {
-                attempts++;
-                if (video.readyState >= 2) {
-                  // Video is ready, draw the frame
-                  drawWithAspectRatio(this.ctx, video, this.canvas.width, this.canvas.height);
-                  hasContent = true;
-                  resolve();
-                } else if (attempts >= maxAttempts) {
-                  console.error(`Video failed to become ready after ${maxAttempts} attempts at time ${videoTime}`);
-                  resolve();
-                } else {
-                  // Wait a bit longer for video to be ready
-                  setTimeout(checkReady, 10);
-                }
-              };
-
-              checkReady();
-            });
+            console.warn(`Video not ready for drawing at time ${videoTime}, readyState: ${video.readyState}`);
           }
         }
       }
@@ -527,6 +507,62 @@ export class OfflineVideoRenderer {
 
     // Return composed frame
     return this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  /**
+   * Helper: Ensure video element is ready for use
+   */
+  private async ensureVideoReady(video: HTMLVideoElement, targetTime: number): Promise<boolean> {
+    // If already at a valid readyState, return immediately
+    if (video.readyState >= 2) {
+      return true;
+    }
+
+    // Wait for video to become ready
+    return new Promise<boolean>((resolve) => {
+      let attempts = 0;
+      const maxAttempts = 30; // More attempts for reliability
+
+      const checkReady = () => {
+        attempts++;
+        if (video.readyState >= 2) {
+          resolve(true);
+        } else if (attempts >= maxAttempts) {
+          console.error(`Video failed to become ready after ${maxAttempts} attempts at time ${targetTime}`);
+          resolve(false);
+        } else {
+          setTimeout(checkReady, 20);
+        }
+      };
+
+      checkReady();
+    });
+  }
+
+  /**
+   * Helper: Ensure video has the current frame available
+   */
+  private async ensureVideoFrameReady(video: HTMLVideoElement, targetTime: number, maxAttempts: number = 20): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      let attempts = 0;
+      const seekThreshold = 1 / 30;
+
+      const checkFrame = () => {
+        attempts++;
+        
+        // Check if we're at the right time and have frame data
+        if (Math.abs(video.currentTime - targetTime) <= seekThreshold && video.readyState >= 2) {
+          resolve(true);
+        } else if (attempts >= maxAttempts) {
+          // Give up but don't fail completely
+          resolve(false);
+        } else {
+          setTimeout(checkFrame, 15);
+        }
+      };
+
+      checkFrame();
+    });
   }
 
   /**
