@@ -352,17 +352,22 @@ export function PreviewPanel() {
         </div>
 
         <div
-          ref={previewRef}
-          className="relative overflow-hidden rounded-sm bg-black border border-gray-600 transition-transform duration-300 ease-out"
+          className="flex items-center justify-center flex-1"
           style={{
-            aspectRatio: aspectRatio.toString(),
-            maxWidth: "100%",
-            maxHeight: "100%",
-            width: "auto",
-            height: "auto",
             zoom: previewZoom,
+            transformOrigin: "center",
           }}
         >
+          <div
+            ref={previewRef}
+            className="relative overflow-hidden rounded-sm bg-black border border-gray-600"
+            style={{
+              aspectRatio: aspectRatio.toString(),
+              width: "100%",
+              maxWidth: "100%",
+              maxHeight: "100%",
+            }}
+          >
           {activeClips.length === 0 ? (
             <div className="absolute inset-0 flex items-center justify-center text-white/50">
               {tracks.length === 0
@@ -374,8 +379,8 @@ export function PreviewPanel() {
           )}
           {/* Text elements layer - always render on top */}
           {activeTextElements.map((text) => renderTextElement(text))}
-        </div>
-      </div>
+          </div>
+          </div>
 
       {/* Debug Info Panel - Conditionally rendered */}
       {showDebug && (
