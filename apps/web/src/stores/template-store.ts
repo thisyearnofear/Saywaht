@@ -13,12 +13,16 @@ interface TemplateStore {
   isLoading: boolean;
   error: string | null;
   selectedTemplate: Template | null;
+  recentTemplates: Template[]; // Track recently used templates
   
   // Actions
   fetchCategories: () => Promise<void>;
   selectTemplate: (templateId: string) => Promise<void>;
   clearSelectedTemplate: () => void;
-  applySelectedTemplate: (projectName?: string) => Promise<boolean>;
+  applySelectedTemplate: (projectName?: string, mergeStrategy?: 'replace' | 'merge') => Promise<boolean>;
+  mergeTemplateToProject: () => Promise<boolean>;
+  addToRecentTemplates: (template: Template) => void;
+  clearRecentTemplates: () => void;
 }
 
 export const useTemplateStore = create<TemplateStore>((set, get) => ({
@@ -26,6 +30,7 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
   isLoading: false,
   error: null,
   selectedTemplate: null,
+  recentTemplates: [],
   
   /**
    * Fetches all template categories
@@ -67,61 +72,81 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
   clearSelectedTemplate: () => {
     set({ selectedTemplate: null });
   },
+
+  /**
+   * Adds a template to recent templates list (max 5)
+   */
+  addToRecentTemplates: (template: Template) => {
+    set((state) => {
+      // Remove duplicate if exists
+      const existingIndex = state.recentTemplates.findIndex(t => t.id === template.id);
+      let updatedRecents = existingIndex >= 0 
+        ? [...state.recentTemplates.slice(0, existingIndex), ...state.recentTemplates.slice(existingIndex + 1)]
+        : [...state.recentTemplates];
+      
+      // Add new template at beginning
+      updatedRecents = [template, ...updatedRecents];
+      
+      // Limit to 5 most recent
+      return { recentTemplates: updatedRecents.slice(0, 5) };
+    });
+  },
+
+  /**
+   * Clears all recent templates
+   */
+  clearRecentTemplates: () => {
+    set({ recentTemplates: [] });
+  },
   
   /**
    * Applies the selected template to the current project
+   * @param projectName Optional project name for new projects
+   * @param mergeStrategy Strategy for merging with existing content: 'replace' (default) or 'merge'
    * Returns true if successful, false otherwise
    */
-  applySelectedTemplate: async (projectName?: string) => {
+  applySelectedTemplate: async (projectName?: string, mergeStrategy: 'replace' | 'merge' = 'replace') => {
     const { selectedTemplate } = get();
     if (!selectedTemplate) {
       toast.error('No template selected');
       return false;
     }
     
-    console.log('🎬 Starting to apply template:', selectedTemplate.name);
     set({ isLoading: true });
     
     try {
       // Get required stores
       const { clearAllMedia, addMediaItem } = useMediaStore.getState();
       const { tracks, addTrack, addClipToTrack, removeTrack } = useTimelineStore.getState();
-      const { createNewProject } = useProjectStore.getState();
+      const { createNewProject, activeProject } = useProjectStore.getState();
       const { setCurrentTime, pause } = usePlaybackStore.getState();
       
-      // Create a new project with the template name or provided name
-      const newProjectName = projectName || selectedTemplate.name;
-      console.log('📝 Creating new project:', newProjectName);
-      createNewProject(newProjectName);
+      // Determine if we're creating a new project or working with existing one
+      const isNewProject = !activeProject || projectName;
+      if (isNewProject) {
+        const newProjectName = projectName || selectedTemplate.name;
+        createNewProject(newProjectName);
+      }
       
-      // Clear existing media and tracks
-      console.log('🗑️ Clearing existing media and tracks');
-      clearAllMedia();
-      // Clear all existing tracks
-      const currentTracks = useTimelineStore.getState().tracks;
-      currentTracks.forEach(track => removeTrack(track.id));
+      // Handle media based on merge strategy
+      if (mergeStrategy === 'replace') {
+        clearAllMedia();
+        const currentTracks = useTimelineStore.getState().tracks;
+        currentTracks.forEach(track => removeTrack(track.id));
+      }
       
       // Load template media and tracks
-      console.log('📦 Loading template media and tracks');
       const { mediaItems, tracks: templateTracks } = await applyTemplate(selectedTemplate);
-      console.log('✅ Template loaded:', mediaItems.length, 'media items,', templateTracks.length, 'tracks');
       
       // Add media items to the store
-      console.log('📥 Adding media items to store');
-      mediaItems.forEach(item => {
-        console.log('  - Adding media item:', item.name, item.type, item.url);
-        addMediaItem(item);
-      });
+      mediaItems.forEach(item => addMediaItem(item));
       
       // Add tracks and clips to the timeline
-      console.log('🎞️ Adding tracks and clips to timeline');
-      templateTracks.forEach((track, trackIndex) => {
-        console.log(`  - Adding track ${trackIndex + 1}/${templateTracks.length}:`, track.name, track.type);
+      templateTracks.forEach((track) => {
         const trackId = addTrack(track.type);
         
         // Add clips to the track
-        track.clips.forEach((clip, clipIndex) => {
-          console.log(`    - Adding clip ${clipIndex + 1}/${track.clips.length}:`, clip.name, 'mediaId:', clip.mediaId);
+        track.clips.forEach((clip) => {
           addClipToTrack(trackId, {
             mediaId: clip.mediaId,
             name: clip.name,
@@ -133,13 +158,14 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
         });
       });
       
-      // Reset playhead to 0 and pause playback to ensure clips are visible
-      console.log('⏸️ Resetting playback');
+      // Reset playhead and pause playback
       pause();
       setCurrentTime(0);
-      
-      console.log('✨ Template application complete!');
       toast.success(`Template "${selectedTemplate.name}" applied successfully!`);
+      
+      // Track this template as recently used
+      get().addToRecentTemplates(selectedTemplate);
+      
       set({ isLoading: false });
       return true;
     } catch (error) {
@@ -151,5 +177,12 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       });
       return false;
     }
+  },
+
+  /**
+   * Adds template to existing project by merging content
+   */
+  mergeTemplateToProject: async () => {
+    return get().applySelectedTemplate(undefined, 'merge');
   }
 }));

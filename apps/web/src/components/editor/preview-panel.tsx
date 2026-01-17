@@ -360,8 +360,7 @@ export function PreviewPanel() {
             maxHeight: "100%",
             width: "auto",
             height: "auto",
-            transform: `scale(${previewZoom})`,
-            transformOrigin: "center",
+            zoom: previewZoom,
           }}
         >
           {activeClips.length === 0 ? (

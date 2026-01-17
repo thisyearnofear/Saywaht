@@ -367,6 +367,16 @@ export function EditorHeader() {
           </Button>
         )}
 
+        <Button
+          variant="text"
+          size="sm"
+          onClick={() => window.location.href = "/templates"}
+          className="text-xs font-medium"
+        >
+          <span className="inline-block h-4 w-4 mr-1">🎬</span>
+          Templates
+        </Button>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="text" size="sm" className="h-8 w-8 p-0">

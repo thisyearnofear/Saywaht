@@ -13,9 +13,10 @@ import { LuSmartphone, LuSquare, LuMonitor } from "react-icons/lu";
 
 interface TemplateCategoryCardProps {
   template: Template;
+  showRecentBadge?: boolean;
 }
 
-export function TemplateCategoryCard({ template }: TemplateCategoryCardProps) {
+export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCategoryCardProps) {
   const router = useRouter();
   const { selectTemplate } = useTemplateStore();
 
@@ -100,8 +101,19 @@ export function TemplateCategoryCard({ template }: TemplateCategoryCardProps) {
           </div>
         )}
 
-        {/* Aspect Ratio Badge */}
-        <div className="absolute top-2 right-2">
+        {/* Badges */}
+        <div className="absolute top-2 right-2 flex flex-col gap-1">
+          {showRecentBadge && (
+            <Badge
+              className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30 text-xs flex items-center gap-1"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path>
+                <path d="M12 6v6l4 2"></path>
+              </svg>
+              Recent
+            </Badge>
+          )}
           <Badge
             className={`${aspectRatioInfo.color} border-0 text-xs flex items-center gap-1`}
           >

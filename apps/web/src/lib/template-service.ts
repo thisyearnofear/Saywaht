@@ -86,14 +86,9 @@ export async function fetchTemplateById(id: string): Promise<Template | null> {
 
 /**
  * Converts a template media item to an actual MediaItem
- * for use in the application
+ * for use in the application. Keeps original URLs to ensure proper video playback.
  */
 export async function convertTemplateMediaItem(item: TemplateMediaItem): Promise<MediaItem> {
-  // For template items, we'll use the original URL directly instead of creating blob URLs
-  // This ensures the video player can properly access the media
-  
-  console.log('Converting template media item:', item.name, item.url);
-  
   try {
     // Fetch to get the file size
     const response = await fetch(item.url);
@@ -109,20 +104,19 @@ export async function convertTemplateMediaItem(item: TemplateMediaItem): Promise
     
     const file = new File([blob], item.name, { type: mimeType });
     
-    // Create the media item using the original URL
+    // Create the media item using the original URL for direct playback
     const mediaItem: MediaItem = {
       id: item.id,
       name: item.name,
       type: item.type,
       file,
-      url: item.url, // Use the original URL instead of blob URL
-      thumbnailUrl: item.thumbnailUrl || item.url, // Fallback to main URL if no thumbnail
+      url: item.url, // Use original URL for video player compatibility
+      thumbnailUrl: item.thumbnailUrl || item.url,
       duration: item.duration || 0,
       aspectRatio: item.aspectRatio,
       size: blob.size
     };
     
-    console.log('Successfully converted media item:', mediaItem.name, 'size:', mediaItem.size);
     return mediaItem;
   } catch (error) {
     console.error('Error converting template media item:', item.name, error);
