@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { getVideoDebugInfo, logVideoDebugInfo, checkVideoRenderingIssues } from "@/lib/video-debug-utils";
 
 // Debug flag - set to false to hide active clips info
 const SHOW_DEBUG_INFO = process.env.NODE_ENV === "development";
@@ -35,7 +36,7 @@ export function PreviewPanel() {
   const [showDebug, setShowDebug] = useState(SHOW_DEBUG_INFO);
   const previewRef = useRef<HTMLDivElement>(null);
 
-  // Get active clips at current time
+  // Get active clips at current time with debug info
   const getActiveClips = () => {
     const activeClips: Array<{
       clip: any;
@@ -57,6 +58,17 @@ export function PreviewPanel() {
 
           if (mediaItem || clip.mediaId === "test") {
             activeClips.push({ clip, track, mediaItem });
+
+            // Debug logging for video clips
+            if (mediaItem?.type === "video" && SHOW_DEBUG_INFO) {
+              console.log(`Active video clip: ${clip.name}`, {
+                clipStart,
+                clipEnd,
+                currentTime,
+                videoTime: currentTime - clipStart + clip.trimStart,
+                mediaUrl: mediaItem.url
+              });
+            }
           }
         }
       });
@@ -204,34 +216,53 @@ export function PreviewPanel() {
       <div className="border-b p-2 flex items-center gap-2 text-xs flex-shrink-0">
         <span className="text-muted-foreground">Canvas:</span>
         <select
-            value={canvasPresets.find(p => 
-              p.size.width === canvasSize.width && p.size.height === canvasSize.height
-            )?.name || "Custom"}
-            onChange={(e) => {
-              const preset = canvasPresets.find(p => p.name === e.target.value);
-              if (preset) {
-                setCanvasPreset(preset);
-              }
-            }}
-            className="bg-background border rounded px-2 py-1 text-xs"
-          >
-            {canvasPresets.map((preset) => (
-              <option key={preset.name} value={preset.name}>
-                {preset.name} ({preset.size.width}x{preset.size.height})
-              </option>
-            ))}
+          value={canvasPresets.find(p =>
+            p.size.width === canvasSize.width && p.size.height === canvasSize.height
+          )?.name || "Custom"}
+          onChange={(e) => {
+            const preset = canvasPresets.find(p => p.name === e.target.value);
+            if (preset) {
+              setCanvasPreset(preset);
+            }
+          }}
+          className="bg-background border rounded px-2 py-1 text-xs"
+        >
+          {canvasPresets.map((preset) => (
+            <option key={preset.name} value={preset.name}>
+              {preset.name} ({preset.size.width}x{preset.size.height})
+            </option>
+          ))}
         </select>
 
         {/* Debug Toggle - Only show in development */}
         {SHOW_DEBUG_INFO && (
-          <Button
-            variant="text"
-            size="sm"
-            onClick={() => setShowDebug(!showDebug)}
-            className="text-xs"
-          >
-            Debug {showDebug ? "ON" : "OFF"}
-          </Button>
+          <>
+            <Button
+              variant="text"
+              size="sm"
+              onClick={() => setShowDebug(!showDebug)}
+              className="text-xs"
+            >
+              Debug {showDebug ? "ON" : "OFF"}
+            </Button>
+            <Button
+              variant="text"
+              size="sm"
+              onClick={() => {
+                const debugInfo = getVideoDebugInfo(tracks, mediaItems, currentTime);
+                logVideoDebugInfo(debugInfo);
+                const issues = checkVideoRenderingIssues(debugInfo);
+                if (issues.length > 0) {
+                  console.warn("🚨 Video Rendering Issues:", issues);
+                } else {
+                  console.log("✅ No video rendering issues detected");
+                }
+              }}
+              className="text-xs"
+            >
+              Debug Videos
+            </Button>
+          </>
         )}
 
         {/* Fit Mode Toggle */}
@@ -276,9 +307,9 @@ export function PreviewPanel() {
           {muted || volume === 0 ? "Unmute" : "Mute"}
         </Button>
 
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           onClick={toggle}
           className="transition-all duration-200 hover:scale-105 active:scale-95"
         >
@@ -368,47 +399,48 @@ export function PreviewPanel() {
               maxHeight: "100%",
             }}
           >
-          {activeClips.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center text-white/50">
-              {tracks.length === 0
-                ? "Drop media to start editing"
-                : "No clips at current time"}
-            </div>
-          ) : (
-            activeClips.map((clipData, index) => renderClip(clipData, index))
-          )}
-          {/* Text elements layer - always render on top */}
-          {activeTextElements.map((text) => renderTextElement(text))}
-          </div>
-          </div>
-
-      {/* Debug Info Panel - Conditionally rendered */}
-      {showDebug && (
-        <div className="border-t bg-background p-2 flex-shrink-0">
-          <div className="text-xs font-medium mb-1">
-            Debug: Active Clips ({activeClips.length})
-          </div>
-          <div className="flex gap-2 overflow-x-auto">
-            {activeClips.map((clipData, index) => (
-              <div
-                key={clipData.clip.id}
-                className="flex items-center gap-1 px-2 py-1 bg-muted rounded text-xs whitespace-nowrap"
-              >
-                <span className="w-4 h-4 bg-primary/20 rounded text-center text-xs leading-4">
-                  {index + 1}
-                </span>
-                <span>{clipData.clip.name}</span>
-                <span className="text-muted-foreground">
-                  ({clipData.mediaItem?.type || "test"})
-                </span>
+            {activeClips.length === 0 ? (
+              <div className="absolute inset-0 flex items-center justify-center text-white/50">
+                {tracks.length === 0
+                  ? "Drop media to start editing"
+                  : "No clips at current time"}
               </div>
-            ))}
-            {activeClips.length === 0 && (
-              <span className="text-muted-foreground">No active clips</span>
+            ) : (
+              activeClips.map((clipData, index) => renderClip(clipData, index))
             )}
+            {/* Text elements layer - always render on top */}
+            {activeTextElements.map((text) => renderTextElement(text))}
           </div>
         </div>
-      )}
-    </div>
-  );
+
+        {/* Debug Info Panel - Conditionally rendered */}
+        {showDebug && (
+          <div className="border-t bg-background p-2 flex-shrink-0">
+            <div className="text-xs font-medium mb-1">
+              Debug: Active Clips ({activeClips.length})
+            </div>
+            <div className="flex gap-2 overflow-x-auto">
+              {activeClips.map((clipData, index) => (
+                <div
+                  key={clipData.clip.id}
+                  className="flex items-center gap-1 px-2 py-1 bg-muted rounded text-xs whitespace-nowrap"
+                >
+                  <span className="w-4 h-4 bg-primary/20 rounded text-center text-xs leading-4">
+                    {index + 1}
+                  </span>
+                  <span>{clipData.clip.name}</span>
+                  <span className="text-muted-foreground">
+                    ({clipData.mediaItem?.type || "test"})
+                  </span>
+                </div>
+              ))}
+              {activeClips.length === 0 && (
+                <span className="text-muted-foreground">No active clips</span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+      </div>
+    );
 }
