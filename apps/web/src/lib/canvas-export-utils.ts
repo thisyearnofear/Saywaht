@@ -219,9 +219,9 @@ export const exportVideo = async (
         return result;
       }
 
-      // Canvas export for simple content
-      console.log("🎨 Using Basic Export for simple content");
-      const result = await executeExport("canvas", trackedProgress);
+      // Fallback to offline if no other method selected (canvas disabled due to frame dropping)
+      console.log("🎯 Using Reliable Export (canvas export disabled)");
+      const result = await executeExport("offline", trackedProgress);
       exportDiagnostics.stopExport(true);
       return result;
     }
@@ -255,8 +255,9 @@ export const exportVideo = async (
       return result;
     }
 
-    // Default to canvas method
-    const result = await executeExport("canvas", trackedProgress);
+    // Default to offline method (canvas disabled)
+    console.log("🎯 Using Reliable Export (canvas export disabled)");
+    const result = await executeExport("offline", trackedProgress);
     exportDiagnostics.stopExport(true);
     return result;
   
