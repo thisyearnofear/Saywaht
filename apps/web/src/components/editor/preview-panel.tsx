@@ -20,7 +20,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { getVideoDebugInfo, logVideoDebugInfo, checkVideoRenderingIssues } from "@/lib/video-debug-utils";
 
 // Debug flag - set to false to hide active clips info
 const SHOW_DEBUG_INFO = process.env.NODE_ENV === "development";
@@ -66,7 +65,9 @@ export function PreviewPanel() {
                 clipEnd,
                 currentTime,
                 videoTime: currentTime - clipStart + clip.trimStart,
-                mediaUrl: mediaItem.url
+                mediaUrl: mediaItem.url,
+                trackType: track.type,
+                isInRange: true
               });
             }
           }
@@ -249,14 +250,7 @@ export function PreviewPanel() {
               variant="text"
               size="sm"
               onClick={() => {
-                const debugInfo = getVideoDebugInfo(tracks, mediaItems, currentTime);
-                logVideoDebugInfo(debugInfo);
-                const issues = checkVideoRenderingIssues(debugInfo);
-                if (issues.length > 0) {
-                  console.warn("🚨 Video Rendering Issues:", issues);
-                } else {
-                  console.log("✅ No video rendering issues detected");
-                }
+                console.log("Debug videos - feature not yet implemented");
               }}
               className="text-xs"
             >
@@ -322,8 +316,8 @@ export function PreviewPanel() {
         </Button>
       </div>
 
-      {/* Preview Area */}
-      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 bg-gray-900 min-h-0 min-w-0 relative">
+      {/* Preview Area - Ensure minimum height */}
+      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 bg-gray-900 relative" style={{ minHeight: "300px" }}>
         {/* Canvas Size Indicator */}
         <div className="absolute top-4 left-4 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded border border-white/20 backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-500">
           {canvasSize.width} × {canvasSize.height}px
@@ -397,6 +391,9 @@ export function PreviewPanel() {
               width: "100%",
               maxWidth: "100%",
               maxHeight: "100%",
+              // Ensure minimum size for video visibility
+              minWidth: "200px",
+              minHeight: "200px",
             }}
           >
             {activeClips.length === 0 ? (
@@ -406,7 +403,15 @@ export function PreviewPanel() {
                   : "No clips at current time"}
               </div>
             ) : (
-              activeClips.map((clipData, index) => renderClip(clipData, index))
+              <>
+                {/* Debug info for active clips */}
+                {SHOW_DEBUG_INFO && (
+                  <div className="absolute top-2 left-2 z-20 bg-black/80 text-white text-xs p-2 rounded">
+                    Active: {activeClips.length} clips at {currentTime.toFixed(2)}s
+                  </div>
+                )}
+                {activeClips.map((clipData, index) => renderClip(clipData, index))}
+              </>
             )}
             {/* Text elements layer - always render on top */}
             {activeTextElements.map((text) => renderTextElement(text))}
@@ -440,7 +445,10 @@ export function PreviewPanel() {
             </div>
           </div>
         )}
+
+        {/* Video Initialization Test - Development only */}
+        <VideoInitializationTest />
       </div>
-      </div>
-    );
+    </div>
+  );
 }
