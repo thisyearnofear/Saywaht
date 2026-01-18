@@ -168,10 +168,10 @@ export function TimelineTrackContent({
             return;
           }
         }
-      } catch (error) {}
+      } catch (error) { }
     }
 
-    // Calculate drop position for overlap checking
+    // Calculate drop position for overlap checking with improved precision
     const trackContainer = e.currentTarget.querySelector(
       ".track-clips-container"
     ) as HTMLElement;
@@ -179,6 +179,7 @@ export function TimelineTrackContent({
     if (trackContainer) {
       const rect = trackContainer.getBoundingClientRect();
       const mouseX = Math.max(0, e.clientX - rect.left);
+      // Use higher precision calculation - avoid rounding until final placement
       dropTime = mouseX / (50 * zoomLevel);
     }
 
@@ -193,7 +194,7 @@ export function TimelineTrackContent({
           const { clipId } = JSON.parse(timelineClipData);
           movingClipId = clipId;
         }
-      } catch (error) {}
+      } catch (error) { }
     }
 
     // Find nearest clip edge for snapping
@@ -223,7 +224,7 @@ export function TimelineTrackContent({
           if (mediaItem) {
             const newClipDuration = mediaItem.duration || 5;
             const snappedTime =
-              snapTarget !== null ? snapTarget : Math.round(dropTime * 10) / 10;
+              snapTarget !== null ? snapTarget : Math.round(dropTime * 100) / 100; // Improved precision: 0.01s instead of 0.1s
             const newClipEnd = snappedTime + newClipDuration;
 
             wouldOverlap = track.clips.some((existingClip) => {
@@ -258,7 +259,7 @@ export function TimelineTrackContent({
             const movingClipDuration =
               movingClip.duration - movingClip.trimStart - movingClip.trimEnd;
             const snappedTime =
-              snapTarget !== null ? snapTarget : Math.round(dropTime * 10) / 10;
+              snapTarget !== null ? snapTarget : Math.round(dropTime * 100) / 100; // Improved precision: 0.01s instead of 0.1s
             const movingClipEnd = snappedTime + movingClipDuration;
 
             wouldOverlap = track.clips.some((existingClip) => {
@@ -285,7 +286,7 @@ export function TimelineTrackContent({
       setIsDraggedOver(true);
       setWouldOverlap(true);
       setDropPosition(
-        snapTarget !== null ? snapTarget : Math.round(dropTime * 10) / 10
+        snapTarget !== null ? snapTarget : Math.round(dropTime * 100) / 100 // Improved precision: 0.01s instead of 0.1s
       );
       return;
     }
@@ -294,12 +295,12 @@ export function TimelineTrackContent({
     setIsDraggedOver(true);
     setWouldOverlap(false);
     setDropPosition(
-      snapTarget !== null ? snapTarget : Math.round(dropTime * 10) / 10
+      snapTarget !== null ? snapTarget : Math.round(dropTime * 100) / 100 // Improved precision: 0.01s instead of 0.1s
     );
 
     // Update time indicator
     setTimeIndicator(
-      snapTarget !== null ? snapTarget : Math.round(dropTime * 10) / 10
+      snapTarget !== null ? snapTarget : Math.round(dropTime * 100) / 100 // Improved precision: 0.01s instead of 0.1s
     );
   };
 
@@ -562,8 +563,8 @@ export function TimelineTrackContent({
         <div className="w-full h-full flex items-center gap-2">
           <div className="w-8 h-8 flex-shrink-0 relative">
             {mediaItem.thumbnailUrl.endsWith(".mp4") ||
-            mediaItem.thumbnailUrl.endsWith(".webm") ||
-            mediaItem.thumbnailUrl.endsWith(".mov") ? (
+              mediaItem.thumbnailUrl.endsWith(".webm") ||
+              mediaItem.thumbnailUrl.endsWith(".mov") ? (
               // For video files, use a video element to show first frame
               <video
                 src={mediaItem.thumbnailUrl}
@@ -675,15 +676,14 @@ export function TimelineTrackContent({
 
   return (
     <div
-      className={`w-full h-full transition-all duration-150 ease-out ${
-        isDraggedOver
-          ? wouldOverlap
-            ? "bg-red-500/15 border-2 border-dashed border-red-400 shadow-lg"
-            : isSnapping
-              ? "bg-green-500/15 border-2 border-dashed border-green-400 shadow-lg"
-              : "bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg"
-          : "hover:bg-muted/20"
-      }`}
+      className={`w-full h-full transition-all duration-150 ease-out ${isDraggedOver
+        ? wouldOverlap
+          ? "bg-red-500/15 border-2 border-dashed border-red-400 shadow-lg"
+          : isSnapping
+            ? "bg-green-500/15 border-2 border-dashed border-green-400 shadow-lg"
+            : "bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg"
+        : "hover:bg-muted/20"
+        }`}
       onContextMenu={(e) => {
         e.preventDefault();
         // Only show track menu if we didn't click on a clip
@@ -716,15 +716,14 @@ export function TimelineTrackContent({
         )}
         {track.clips.length === 0 ? (
           <div
-            className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${
-              isDropping
-                ? wouldOverlap
-                  ? "border-red-500 bg-red-500/10 text-red-600"
-                  : isSnapping
-                    ? "border-green-500 bg-green-500/10 text-green-600"
-                    : "border-blue-500 bg-blue-500/10 text-blue-600"
-                : "border-muted/30"
-            }`}
+            className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${isDropping
+              ? wouldOverlap
+                ? "border-red-500 bg-red-500/10 text-red-600"
+                : isSnapping
+                  ? "border-green-500 bg-green-500/10 text-green-600"
+                  : "border-blue-500 bg-blue-500/10 text-blue-600"
+              : "border-muted/30"
+              }`}
           >
             {isDropping
               ? wouldOverlap
@@ -794,35 +793,32 @@ export function TimelineTrackContent({
             {/* Drop position indicator */}
             {isDraggedOver && dropPosition !== null && (
               <div
-                className={`absolute top-0 bottom-0 w-1 pointer-events-none z-30 transition-all duration-75 ease-out ${
-                  wouldOverlap
-                    ? "bg-red-500"
-                    : isSnapping
-                      ? "bg-green-500 w-2"
-                      : "bg-blue-500"
-                }`}
+                className={`absolute top-0 bottom-0 w-1 pointer-events-none z-30 transition-all duration-75 ease-out ${wouldOverlap
+                  ? "bg-red-500"
+                  : isSnapping
+                    ? "bg-green-500 w-2"
+                    : "bg-blue-500"
+                  }`}
                 style={{
                   left: `${dropPosition * 50 * zoomLevel}px`,
                   transform: "translateX(-50%)",
                 }}
               >
                 <div
-                  className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${
-                    wouldOverlap
-                      ? "bg-red-500"
-                      : isSnapping
-                        ? "bg-green-500"
-                        : "bg-blue-500"
-                  }`}
+                  className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${wouldOverlap
+                    ? "bg-red-500"
+                    : isSnapping
+                      ? "bg-green-500"
+                      : "bg-blue-500"
+                    }`}
                 ></div>
                 <div
-                  className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${
-                    wouldOverlap
-                      ? "bg-red-500"
-                      : isSnapping
-                        ? "bg-green-500"
-                        : "bg-blue-500"
-                  }`}
+                  className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${wouldOverlap
+                    ? "bg-red-500"
+                    : isSnapping
+                      ? "bg-green-500"
+                      : "bg-blue-500"
+                    }`}
                 ></div>
               </div>
             )}

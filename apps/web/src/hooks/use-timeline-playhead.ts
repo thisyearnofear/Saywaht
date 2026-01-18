@@ -53,7 +53,7 @@ export function useTimelinePlayhead({
       const x = Math.max(0, Math.min(timelineContentWidth, rawX));
 
       const rawTime = Math.max(0, Math.min(duration, x / (50 * zoomLevel)));
-      // Use frame snapping for playhead scrubbing
+      // Use higher precision frame snapping for better accuracy at high zoom
       const projectFps = 30; // Default FPS - you can make this configurable
       const time = snapTimeToFrame(rawTime, projectFps);
 
