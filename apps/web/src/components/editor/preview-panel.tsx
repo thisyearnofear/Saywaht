@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { VideoInitializationTest } from "./video-initialization-test";
 
 // Debug flag - set to false to hide active clips info
 const SHOW_DEBUG_INFO = process.env.NODE_ENV === "development";
@@ -462,7 +463,7 @@ export function PreviewPanel() {
         )}
 
         {/* Video Initialization Test - Development only */}
-        <VideoInitializationTest />
+        {SHOW_DEBUG_INFO && <VideoInitializationTest />}
       </div>
     </div>
   );
