@@ -56,25 +56,55 @@ export const exportVideoTrueOffline = async (
   let videoRenderer: OfflineVideoRenderer | null = null;
 
   try {
-    // Phase 1: Initialize true offline video renderer (5% progress)
-    onProgress(2);
+    // ENHANCEMENT: Unified progress tracking
+    const progressPhases = {
+      init: { min: 0, max: 10 },
+      extract: { min: 10, max: 25 },
+      compose: { min: 25, max: 50 },
+      audio: { min: 50, max: 65 },
+      setup: { min: 65, max: 70 },
+      encode: { min: 70, max: 95 },
+      final: { min: 95, max: 100 }
+    };
+
+    const reportProgress = (phase: keyof typeof progressPhases, phaseProgress: number) => {
+      const { min, max } = progressPhases[phase];
+      onProgress(Math.round(min + ((max - min) * phaseProgress / 100)));
+    };
+
+    // Phase 1: Initialize true offline video renderer
+    console.log('🎬 Initializing video renderer...');
+    reportProgress('init', 50);
     videoRenderer = new OfflineVideoRenderer(dimensions.width, dimensions.height);
 
-    // Phase 2: Initialize video renderer (5-10% progress)
-    console.log('🎬 Initializing video renderer...');
+    // Phase 2: Initialize video clips (5-10% progress)
     await videoRenderer.initialize(tracks, mediaItems, () => {
-      // No progress reporting needed for initialization
+      reportProgress('init', 100);
     });
-    onProgress(10);
+    reportProgress('init', 100);
 
-    // Phase 3: Render offline audio (10-20% progress)
-    onProgress(10);
+    // Phase 3: Extract frames (10-25% progress)
+    console.log('🎬 Extracting video frames...');
+    await videoRenderer.extractAllFrames((progress) => {
+      reportProgress('extract', progress);
+    });
+    reportProgress('extract', 100);
+
+    // Phase 4: Pre-compose frames (25-50% progress)
+    console.log('🎨 Pre-composing frames...');
+    await videoRenderer.preComposeAllFrames(totalDuration, frameRate, (progress) => {
+      reportProgress('compose', progress);
+    });
+    reportProgress('compose', 100);
+
+    // Phase 5: Render offline audio (50-65% progress)
+    reportProgress('audio', 0);
     let audioStream: MediaStream | null = null;
 
     if (options.includeAudio) {
       console.log('🎵 Rendering audio offline...');
       const audioResult = await createOfflineAudioStream(tracks, mediaItems, totalDuration, (progress) => {
-        onProgress(10 + (progress * 0.10)); // 10-20%
+        reportProgress('audio', progress);
       });
       const audioContext = new AudioContext();
       const source = audioContext.createBufferSource();
@@ -86,11 +116,12 @@ export const exportVideoTrueOffline = async (
       audioCleanup = audioResult.cleanup;
     }
 
-    // Phase 4: Setup MediaRecorder (20% progress)
-    onProgress(20);
+    // Phase 6: Setup MediaRecorder (65-70% progress)
+    reportProgress('setup', 50);
     const canvas = videoRenderer.getCanvas();
     // Use captureStream() without frame rate for manual frame control
     const videoStream = canvas.captureStream(); // Manual frame control
+    reportProgress('setup', 100);
 
     let combinedStream: MediaStream;
     if (audioStream) {
@@ -123,7 +154,7 @@ export const exportVideoTrueOffline = async (
       }
     };
 
-    // Phase 5: Render and encode frames on-demand (20-95% progress)
+    // Phase 7: Render and encode pre-composed frames (70-95% progress)
     recorder.start(100);
 
     const totalFrames = Math.ceil(totalDuration * frameRate);
@@ -136,7 +167,7 @@ export const exportVideoTrueOffline = async (
       
       let processedFrames = 0;
 
-      // Use frame controller for precise timing
+      // ENHANCEMENT: Use pre-composed frames for instant access (no seeking)
       const playNextFrame = async () => {
         if (processedFrames >= totalFrames) {
           const stats = frameController.getStats();
@@ -162,24 +193,13 @@ export const exportVideoTrueOffline = async (
           processedFrames += timing.framesToSkip;
         }
         
-        const frameStartTime = performance.now();
+        // ENHANCEMENT: Render pre-composed frame (instant, no seeking delay)
+        videoRenderer!.renderComposedFrame(timing.currentFrame);
         
-        // Render frame on-demand (with video seeking as needed)
-        const frameData = await videoRenderer!.composeSingleFrame(timing.currentFrame, frameRate);
-        if (frameData) {
-          // Render the frame to canvas
-          const canvas = videoRenderer!.getCanvas();
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.putImageData(frameData, 0, 0);
-            // Manually trigger frame capture for MediaRecorder
-            const videoTrack = videoStream.getVideoTracks()[0];
-            if ('requestFrame' in videoTrack) {
-              (videoTrack as any).requestFrame();
-            }
-          }
-        } else {
-          console.warn(`⚠️ No content for frame ${timing.currentFrame}`);
+        // Manually trigger frame capture for MediaRecorder
+        const videoTrack = videoStream.getVideoTracks()[0];
+        if ('requestFrame' in videoTrack) {
+          (videoTrack as any).requestFrame();
         }
 
         // Mark frame as completed
@@ -187,8 +207,7 @@ export const exportVideoTrueOffline = async (
         processedFrames++;
 
         // Update progress
-        const progress = 20 + ((processedFrames / totalFrames) * 75); // 20-95%
-        onProgress(Math.min(progress, 95));
+        reportProgress('encode', (processedFrames / totalFrames) * 100);
 
         // Schedule next frame with optimal timing
         scheduleNextFrame(playNextFrame, timing.delay);
@@ -198,18 +217,17 @@ export const exportVideoTrueOffline = async (
       requestAnimationFrame(playNextFrame);
     });
 
-    // Phase 6: Finalize recording (95-100% progress)
-    onProgress(95);
+    // Phase 8: Finalize recording (95-100% progress)
+    reportProgress('final', 0);
     recorder.stop();
 
     const blob = await new Promise<Blob>((resolve) => {
       recorder.onstop = () => {
         const finalBlob = new Blob(chunks, { type: mimeType });
+        reportProgress('final', 100);
         resolve(finalBlob);
       };
     });
-
-    onProgress(100);
     const exportEndTime = performance.now();
     const totalExportTime = (exportEndTime - exportStartTime) / 1000;
 

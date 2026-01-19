@@ -31,6 +31,11 @@ export class FrameRateController {
   /**
    * Calculate timing for the next frame
    * Returns: { shouldRender: boolean, delay: number, framesToSkip: number }
+   * 
+   * ENHANCEMENT: Smarter frame dropping strategy
+   * - Don't drop frames unless really behind
+   * - Prefer waiting over dropping
+   * - Only drop if performance is consistently poor
    */
   getNextFrameTiming(): {
     shouldRender: boolean;
@@ -56,18 +61,27 @@ export class FrameRateController {
       }
     }
     
-    // Determine if we should skip frames to maintain timing
-    const shouldSkip = framesToSkip > 0 && this.getAverageFrameTime() > this.frameInterval * 1.5;
+    // ENHANCEMENT: Intelligent frame dropping strategy
+    // Only drop frames if:
+    // 1. We're significantly behind (more than 2 frames)
+    // 2. AND performance is consistently poor (>2x slower than target)
+    const averageFrameTime = this.getAverageFrameTime();
+    const isConsistentlyLate = averageFrameTime > this.frameInterval * 2;
+    const shouldDropFrames = framesToSkip > 2 && isConsistentlyLate;
     
-    if (shouldSkip && framesToSkip > 0) {
-      this.droppedFrames += framesToSkip;
-      this.frameCount += framesToSkip;
+    if (shouldDropFrames) {
+      // Only drop half the frames to maintain quality
+      const framesToActuallyDrop = Math.floor(framesToSkip / 2);
+      this.droppedFrames += framesToActuallyDrop;
+      this.frameCount += framesToActuallyDrop;
+      
+      console.warn(`⏩ Performance alert: Skipping ${framesToActuallyDrop}/${framesToSkip} frames (avg frame time: ${averageFrameTime.toFixed(1)}ms)`);
     }
     
     return {
       shouldRender: true,
       delay,
-      framesToSkip: shouldSkip ? framesToSkip : 0,
+      framesToSkip: shouldDropFrames ? Math.floor(framesToSkip / 2) : 0,
       currentFrame: this.frameCount
     };
   }

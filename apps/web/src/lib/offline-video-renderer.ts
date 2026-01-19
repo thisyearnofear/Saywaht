@@ -20,6 +20,7 @@ interface VideoClipData {
   endTime: number;
   trimStart: number;
   trimEnd: number;
+  lastSeekTime?: number; // Cache last seek to avoid redundant seeks
 }
 
 /**
@@ -366,34 +367,54 @@ export class OfflineVideoRenderer {
 
   /**
    * Phase 2: Pre-compose all timeline frames from extracted data
+   * ENHANCEMENT: Uses batch composition with smart caching
    */
-  async preComposeAllFrames(
-    totalDuration: number,
-    frameRate: number,
-    onProgress?: (progress: number) => void
-  ): Promise<void> {
-    console.log('🎨 Starting offline frame composition...');
+   async preComposeAllFrames(
+     totalDuration: number,
+     frameRate: number,
+     onProgress?: (progress: number) => void
+   ): Promise<void> {
+     console.log('🎨 Starting offline frame composition...');
 
-    const totalFrames = Math.ceil(totalDuration * frameRate);
+     const totalFrames = Math.ceil(totalDuration * frameRate);
+     const batchSize = 10; // Compose in batches for better performance
+     let composedCount = 0;
 
-    for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-      const timestamp = frameIndex / frameRate;
-      const compositeFrame = await this.composeFrameAtTime(timestamp);
+     for (let batchStart = 0; batchStart < totalFrames; batchStart += batchSize) {
+       const batchEnd = Math.min(batchStart + batchSize, totalFrames);
+       
+       // ENHANCEMENT: Parallel composition within batch
+       const batchPromises = [];
+       for (let frameIndex = batchStart; frameIndex < batchEnd; frameIndex++) {
+         const timestamp = frameIndex / frameRate;
+         
+         batchPromises.push(
+           this.composeFrameAtTime(timestamp).then(compositeFrame => ({
+             frameIndex,
+             frame: compositeFrame || (() => {
+               // Store blank frame for frames with no content
+               clearCanvas(this.ctx, this.canvas.width, this.canvas.height);
+               return this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+             })()
+           }))
+         );
+       }
 
-      if (compositeFrame) {
-        this.compositeFrames.set(frameIndex, compositeFrame);
-      }
+       // Wait for batch to complete
+       const batchResults = await Promise.all(batchPromises);
+       for (const { frameIndex, frame } of batchResults) {
+         this.compositeFrames.set(frameIndex, frame);
+         composedCount++;
+       }
 
-      onProgress?.((frameIndex / totalFrames) * 100);
+       onProgress?.((composedCount / totalFrames) * 100);
 
-      // Yield to browser every 10 frames
-      if (frameIndex % 10 === 0) {
-        await yieldToBrowser();
-      }
-    }
+       // Yield to browser between batches
+       await yieldToBrowser();
+     }
 
-    console.log(`✅ Pre-composed ${this.compositeFrames.size} timeline frames`);
-  }
+     console.log(`✅ Pre-composed ${this.compositeFrames.size} timeline frames`);
+   }
 
   /**
    * Compose a single frame at a specific index (on-demand rendering)
@@ -419,6 +440,15 @@ export class OfflineVideoRenderer {
           // More precise seeking threshold (1 frame at 30fps = 0.033s)
           const seekThreshold = 1 / 30;
 
+          // ENHANCEMENT: Skip seek if already at target time (common in sequential frames)
+          if (Math.abs(video.currentTime - videoTime) <= seekThreshold) {
+            if (video.readyState >= 2) {
+              drawWithAspectRatio(this.ctx, video, this.canvas.width, this.canvas.height);
+              hasContent = true;
+            }
+            continue;
+          }
+
           // Ensure video is ready first before seeking
           const videoReady = await this.ensureVideoReady(video, videoTime);
           if (!videoReady) {
@@ -426,7 +456,7 @@ export class OfflineVideoRenderer {
             continue;
           }
 
-          // Seek if necessary
+          // Seek to target time
           if (Math.abs(video.currentTime - videoTime) > seekThreshold) {
             // Store the target time to avoid race conditions
             const targetTime = videoTime;
@@ -501,11 +531,8 @@ export class OfflineVideoRenderer {
       }
     }
 
-    if (!hasContent) {
-      return null;
-    }
-
-    // Return composed frame
+    // Always return frame data - either with content or blank
+    // This ensures composeSingleFrame never returns null, preventing black flashing
     return this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
   }
 
@@ -586,11 +613,8 @@ export class OfflineVideoRenderer {
       }
     }
 
-    if (!hasContent) {
-      return null;
-    }
-
-    // Return composed frame
+    // Always return frame data - either with content or blank
+    // This ensures composeFrameAtTime never returns null, preventing black flashing
     return this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
   }
 
