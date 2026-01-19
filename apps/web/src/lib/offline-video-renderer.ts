@@ -224,7 +224,14 @@ export class OfflineVideoRenderer {
         if ('requestVideoFrameCallback' in video) {
           console.log(`🎬 Using requestVideoFrameCallback for frame extraction`);
           
+          let callbackTimeout: NodeJS.Timeout | null = null;
+          let lastProgressTime = Date.now();
+          
           const extractFrame = () => {
+            // Reset timeout - callback is still firing
+            if (callbackTimeout) clearTimeout(callbackTimeout);
+            lastProgressTime = Date.now();
+            
             // Draw current frame to extraction canvas
             extractionCtx.drawImage(video, 0, 0);
             const imageData = extractionCtx.getImageData(0, 0, extractionCanvas.width, extractionCanvas.height);
@@ -246,12 +253,21 @@ export class OfflineVideoRenderer {
             const nextTimestamp = currentFrameIndex / targetFrameRate;
 
             if (nextTimestamp < video.duration) {
+              // Set a short timeout to detect if callback stops firing
+              callbackTimeout = setTimeout(() => {
+                console.warn(`⚠️ requestVideoFrameCallback stalled at ${frames.length}/${totalFrames} frames, falling back to seeked events`);
+                clearTimeout(timeout);
+                // Fall back to seeked-based extraction
+                fallbackToSeekEvents();
+              }, 3000); // 3 second timeout if callback doesn't fire
+              
               // Seek to next frame
               video.currentTime = nextTimestamp;
               // @ts-ignore - requestVideoFrameCallback not in types yet
               video.requestVideoFrameCallback(extractFrame);
             } else {
               // Extraction complete
+              if (callbackTimeout) clearTimeout(callbackTimeout);
               clearTimeout(timeout);
               console.log(`✅ Frame extraction completed: ${frames.length} frames`);
               resolve({
@@ -260,6 +276,42 @@ export class OfflineVideoRenderer {
                 frameRate: targetFrameRate
               });
             }
+          };
+
+          // Fallback function
+          const fallbackToSeekEvents = async () => {
+            console.log(`🔄 Switching to seeked-based extraction from frame ${frames.length}/${totalFrames}`);
+            
+            const extractFrameAtTime = async (timestamp: number) => {
+              return new Promise<void>((resolveFrame) => {
+                const onSeeked = () => {
+                  video.removeEventListener('seeked', onSeeked);
+                  extractionCtx.drawImage(video, 0, 0);
+                  const imageData = extractionCtx.getImageData(0, 0, extractionCanvas.width, extractionCanvas.height);
+                  frames.push({
+                    imageData: imageData,
+                    timestamp: video.currentTime
+                  });
+                  resolveFrame();
+                };
+                video.addEventListener('seeked', onSeeked);
+                video.currentTime = timestamp;
+              });
+            };
+
+            // Continue from where we left off
+            for (let i = frames.length; i < totalFrames; i++) {
+              const timestamp = i / targetFrameRate;
+              await extractFrameAtTime(Math.min(timestamp, video.duration - 0.01));
+              onProgress?.((i / totalFrames) * 100);
+            }
+
+            clearTimeout(timeout);
+            resolve({
+              frames,
+              duration: video.duration,
+              frameRate: targetFrameRate
+            });
           };
 
           // Start extraction
