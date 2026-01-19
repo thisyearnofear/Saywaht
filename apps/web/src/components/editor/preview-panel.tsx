@@ -332,15 +332,15 @@ export function PreviewPanel() {
         </Button>
       </div>
 
-      {/* Preview Area - Ensure minimum height */}
-      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 bg-gray-900 relative" style={{ minHeight: "300px" }}>
-        {/* Canvas Size Indicator */}
-        <div className="absolute top-4 left-4 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded border border-white/20 backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-500">
-          {canvasSize.width} × {canvasSize.height}px
-        </div>
+      {/* Preview Area - Scrollable to prevent portrait format from dominating */}
+      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 bg-gray-900 relative overflow-auto" style={{ minHeight: "300px" }}>
+         {/* Canvas Size Indicator */}
+         <div className="sticky top-4 left-4 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded border border-white/20 backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-500">
+           {canvasSize.width} × {canvasSize.height}px
+         </div>
 
-        {/* Zoom Controls */}
-        <div className="absolute top-4 right-4 z-10 flex gap-1 animate-in fade-in slide-in-from-top-2 duration-500">
+         {/* Zoom Controls */}
+         <div className="sticky top-4 right-4 z-10 flex gap-1 animate-in fade-in slide-in-from-top-2 duration-500">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -405,8 +405,8 @@ export function PreviewPanel() {
             style={{
               aspectRatio: aspectRatio.toString(),
               width: "100%",
-              maxWidth: "100%",
-              maxHeight: "100%",
+              maxWidth: "calc(100vw - 2rem)",
+              maxHeight: "calc(100vh - 200px)", // Leave room for controls
               // Ensure minimum size for video visibility
               minWidth: "200px",
               minHeight: "200px",
