@@ -86,10 +86,9 @@ export function VideoPlayer({
   // Sync playback events
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !isInClipRange) return;
+    if (!video) return;
 
     const handleSeekEvent = (e: CustomEvent) => {
-      // Always update video time, even if outside clip range
       const timelineTime = e.detail.time;
       const videoTime = Math.max(
         trimStart,
@@ -102,7 +101,6 @@ export function VideoPlayer({
     };
 
     const handleUpdateEvent = (e: CustomEvent) => {
-      // Always update video time, even if outside clip range
       const timelineTime = e.detail.time;
       const targetTime = Math.max(
         trimStart,
@@ -112,7 +110,7 @@ export function VideoPlayer({
         )
       );
 
-      // Reduce threshold for more precise seeking - was 0.5, now 0.1
+      // Reduce threshold for more precise seeking
       if (Math.abs(video.currentTime - targetTime) > 0.1) {
         video.currentTime = targetTime;
       }
@@ -143,7 +141,7 @@ export function VideoPlayer({
         handleSpeed as EventListener
       );
     };
-  }, [clipStartTime, trimStart, trimEnd, clipDuration, isInClipRange]);
+  }, [clipStartTime, trimStart, trimEnd, clipDuration]);
 
   // Sync playback state
   useEffect(() => {
