@@ -1,7 +1,7 @@
 import { FrameRenderer, EnhancedFrameRenderer, GroveIntegration } from "./frame-renderer";
 import { Canvas2DRenderer } from "./canvas-2d-renderer";
 import { WebGLRenderer } from "./webgl-renderer";
-import { WebCodecsExportOptions } from "../webcodecs-export";
+import { ExportOptions } from "../canvas-export-utils";
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
 import { isTouchDevice } from "../mobile-utils";
@@ -107,7 +107,7 @@ export class RendererFactory {
   }
 
   static async createOptimalRenderer(
-    options: WebCodecsExportOptions,
+    options: ExportOptions,
     capabilities: DeviceCapabilities
   ): Promise<FrameRenderer> {
     const factory = RendererFactory.getInstance();
@@ -132,7 +132,7 @@ export class RendererFactory {
   selectRenderer(params: {
     tracks: TimelineTrack[];
     mediaItems: MediaItem[];
-    options: WebCodecsExportOptions;
+    options: ExportOptions;
   }): FrameRenderer {
     const availableRenderers = Array.from(this.renderers.values())
       .filter(renderer => {

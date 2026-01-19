@@ -1,6 +1,6 @@
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
-import { WebCodecsExportOptions } from "../webcodecs-export";
+import { ExportOptions } from "../canvas-export-utils";
 
 export interface FrameRenderer {
   name: string;
@@ -10,7 +10,7 @@ export interface FrameRenderer {
     tracks: TimelineTrack[];
     mediaItems: MediaItem[];
     timestamp: number;
-    options: WebCodecsExportOptions;
+    options: ExportOptions;
   }): boolean;
   renderFrame(params: {
     tracks: TimelineTrack[];
@@ -19,7 +19,7 @@ export interface FrameRenderer {
     canvas: OffscreenCanvas;
     ctx: OffscreenCanvasRenderingContext2D;
     videoFrames: ImageData[];
-    options: WebCodecsExportOptions;
+    options: ExportOptions;
   }): Promise<boolean>;
   cleanup(): void;
 }

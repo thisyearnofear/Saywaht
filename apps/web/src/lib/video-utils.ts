@@ -53,7 +53,7 @@ export function drawWithAspectRatio(
 ): void {
   const sourceWidth = source instanceof HTMLVideoElement ? source.videoWidth : source.width;
   const sourceHeight = source instanceof HTMLVideoElement ? source.videoHeight : source.height;
-  
+
   const { drawWidth, drawHeight, drawX, drawY } = calculateAspectRatioDimensions(
     sourceWidth,
     sourceHeight,
@@ -62,21 +62,21 @@ export function drawWithAspectRatio(
   );
 
   ctx.save();
-  
+
   // Use high-quality rendering settings
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  
+
   // Clear the area first for cleaner compositing
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-  
+
   // Fill with black background for letterboxing/pillarboxing
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-  
+
   // Draw the video/canvas with high quality
   ctx.drawImage(source, drawX, drawY, drawWidth, drawHeight);
-  
+
   ctx.restore();
 }
 
@@ -85,7 +85,7 @@ export function drawWithAspectRatio(
  */
 export function getVideoBitrate(quality: "low" | "medium" | "high", customBitrate?: number): number {
   if (customBitrate) return customBitrate;
-  
+
   // Higher bitrates for better quality
   switch (quality) {
     case "low": return 3000000;     // 3 Mbps (increased from 2)
@@ -111,18 +111,18 @@ export function setupHighQualityCanvas(canvas: HTMLCanvasElement): CanvasRenderi
     desynchronized: true, // Allow async rendering
     willReadFrequently: false // Optimize for drawing
   });
-  
+
   if (!ctx) {
     throw new Error('Failed to get 2D context from canvas');
   }
-  
+
   // Set high quality rendering
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  
+
   // Additional quality settings
   (ctx as any).filter = 'none'; // Disable browser filtering
-  
+
   return ctx;
 }
 
@@ -146,7 +146,7 @@ export function createOptimalMediaRecorder(
   audioBitrate: number
 ): MediaRecorder {
   const mimeType = outputFormat === 'mp4' ? 'video/mp4' : 'video/webm';
-  
+
   return new MediaRecorder(stream, {
     mimeType: mimeType,
     videoBitsPerSecond: videoBitrate,
@@ -165,7 +165,7 @@ export function yieldToBrowser(): Promise<void> {
  * Check if project has video content
  */
 export function hasVideoContent(tracks: any[], mediaItems: any[]): boolean {
-  return tracks.some(track => 
+  return tracks.some(track =>
     track.clips.some((clip: any) => {
       const mediaItem = mediaItems.find(item => item.id === clip.mediaId);
       return mediaItem?.type === 'video';
@@ -177,7 +177,7 @@ export function hasVideoContent(tracks: any[], mediaItems: any[]): boolean {
  * Check if project has audio content
  */
 export function hasAudioContent(tracks: any[], mediaItems: any[]): boolean {
-  return tracks.some(track => 
+  return tracks.some(track =>
     track.clips.some((clip: any) => {
       const mediaItem = mediaItems.find(item => item.id === clip.mediaId);
       return mediaItem?.type === 'audio' || mediaItem?.type === 'video';
@@ -219,8 +219,8 @@ export function detectWebCodecsSupport(): {
     fullSupport: false
   };
 
-  support.fullSupport = support.videoEncoder && support.audioEncoder && 
-                       support.videoFrame && support.audioData;
+  support.fullSupport = support.videoEncoder && support.audioEncoder &&
+    support.videoFrame && support.audioData;
 
   return support;
 }
@@ -264,8 +264,8 @@ export function getOptimalWebCodecsCodec(
   frameRate: number
 ): { video: string; audio: string } {
   // Chrome/Edge prefer different codecs than Firefox
-  const isChrome = typeof window !== 'undefined' && 
-                   /Chrome|Chromium|Edge/.test(navigator.userAgent);
+  const isChrome = typeof window !== 'undefined' &&
+    /Chrome|Chromium|Edge/.test(navigator.userAgent);
 
   if (outputFormat === 'mp4') {
     const avcLevel = getAVCLevel(dimensions.width, dimensions.height, frameRate);
@@ -293,10 +293,10 @@ export function getWebCodecsBitrates(
 ): { video: number; audio: number } {
   const pixelCount = width * height;
   const baseMultiplier = frameRate / 30; // Adjust for frame rate
-  
+
   // Bitrate calculation based on resolution and quality
   let videoBitrate: number;
-  
+
   if (quality === 'low') {
     videoBitrate = Math.floor((pixelCount * 0.08) * baseMultiplier); // 0.08 bits per pixel
   } else if (quality === 'medium') {
@@ -304,13 +304,13 @@ export function getWebCodecsBitrates(
   } else { // high
     videoBitrate = Math.floor((pixelCount * 0.25) * baseMultiplier); // 0.25 bits per pixel
   }
-  
+
   // Clamp to reasonable ranges
   videoBitrate = Math.max(1000000, Math.min(videoBitrate, 20000000)); // 1-20 Mbps
-  
-  const audioBitrate = quality === 'high' ? 256000 : 
-                      quality === 'medium' ? 192000 : 128000;
-  
+
+  const audioBitrate = quality === 'high' ? 256000 :
+    quality === 'medium' ? 192000 : 128000;
+
   return { video: videoBitrate, audio: audioBitrate };
 }
 
@@ -324,26 +324,26 @@ export function createWebCodecsCanvas(
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  
+
   const ctx = canvas.getContext('2d', {
     alpha: false, // Opaque canvas for better performance
     desynchronized: true, // Allow async rendering
     willReadFrequently: false, // Optimize for drawing, not reading
     colorSpace: 'srgb' // Ensure consistent color space
   });
-  
+
   if (!ctx) {
     throw new Error('Failed to create WebCodecs canvas context');
   }
-  
+
   // Optimize for video rendering
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  
+
   // Additional quality optimizations
   (ctx as any).filter = 'none';
   (ctx as any).pixelFormat = 'rgba8'; // Ensure 8-bit color depth
-  
+
   return { canvas, ctx };
 }
 
@@ -357,48 +357,9 @@ export function calculateKeyframeInterval(
   // Keyframe every 2 seconds, but at least every 120 frames
   const keyframeEverySeconds = 2;
   const maxKeyframeInterval = 120;
-  
+
   const calculatedInterval = Math.floor(frameRate * keyframeEverySeconds);
   return Math.min(calculatedInterval, maxKeyframeInterval);
 }
 
-/**
- * Estimate WebCodecs export performance
- */
-export function estimateWebCodecsPerformance(
-  totalFrames: number,
-  resolution: { width: number; height: number },
-  quality: 'low' | 'medium' | 'high'
-): {
-  estimatedTimeSeconds: number;
-  estimatedSpeedMultiplier: number;
-  memoryUsageMB: number;
-} {
-  const pixelCount = resolution.width * resolution.height;
-  
-  // Performance factors (frames per second during export)
-  const basePerformance = 120; // Base frames per second for processing
-  
-  // Adjust for quality and resolution
-  const qualityMultiplier = quality === 'high' ? 0.7 : quality === 'medium' ? 0.85 : 1.0;
-  const resolutionMultiplier = Math.max(0.3, 1.0 - (pixelCount / 4000000)); // Slower for higher res
-  
-  const effectiveFrameRate = basePerformance * qualityMultiplier * resolutionMultiplier;
-  const estimatedTimeSeconds = totalFrames / effectiveFrameRate;
-  
-  // Speed multiplier compared to real-time
-  const videoFrameRate = 30; // Assume 30fps video
-  const realTimeSeconds = totalFrames / videoFrameRate;
-  const estimatedSpeedMultiplier = realTimeSeconds / estimatedTimeSeconds;
-  
-  // Memory usage estimation (very rough)
-  const frameMemoryMB = (pixelCount * 4) / (1024 * 1024); // 4 bytes per pixel
-  const bufferFrames = Math.min(10, totalFrames); // Buffer up to 10 frames
-  const memoryUsageMB = frameMemoryMB * bufferFrames;
-  
-  return {
-    estimatedTimeSeconds,
-    estimatedSpeedMultiplier,
-    memoryUsageMB
-  };
-}
+

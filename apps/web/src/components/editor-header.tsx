@@ -53,13 +53,11 @@ export function EditorHeader() {
       return;
     }
 
-    // Show delightful feedback based on method
+    // CLEAN: Simplified method messages
     const methodMessages = {
-      auto: "✨ Using Smart Export - choosing the best method for you!",
-      backend: "⚡ Using Pro Export - maximum quality and speed!",
-      webcodecs: "🚀 Using Quick Export - fast processing!",
-      offline: "🎯 Using Reliable Export - works on any device!",
-      canvas: "🎨 Using Basic Export - simple and compatible!",
+      auto: "✨ Smart Export - choosing the best method for you!",
+      backend: "⚡ Server Export - maximum quality and speed!",
+      offline: "🎯 Offline Export - works on any device!",
     };
 
     if (method !== "auto") {
@@ -72,7 +70,7 @@ export function EditorHeader() {
       const totalDuration = Math.max(getTotalDuration(), 5); // Minimum 5 seconds
       console.log(`📏 Export duration: ${totalDuration}s`);
 
-      // Dynamic import to avoid loading export utils unless needed
+      // ENHANCEMENT: Use consolidated export function
       const { exportVideo } = await import("@/lib/canvas-export-utils");
 
       const blob = await exportVideo(
@@ -85,11 +83,11 @@ export function EditorHeader() {
           });
         },
         {
-          format: getFormat(), // Use canvas size from preview panel
+          format: getFormat(),
           quality: "medium",
           includeAudio: true,
-          method: method, // Use selected method
-          outputFormat: "mp4", // MP4 for better compatibility
+          method: method,
+          outputFormat: "mp4",
         }
       );
 
@@ -117,11 +115,10 @@ export function EditorHeader() {
         action: {
           label: "View Diagnostics",
           onClick: () => {
-            // Log diagnostics to console for debugging
+            // CONSOLIDATION: Use new diagnostics from monitoring
             console.log("=== Export Diagnostics ===");
-            if ((window as any).exportDiagnostics) {
-              (window as any).exportDiagnostics.getReport();
-            }
+            const { getExportDiagnostics } = require("@/lib/monitoring");
+            console.log(getExportDiagnostics());
           },
         },
       });
@@ -285,37 +282,19 @@ export function EditorHeader() {
                 <DropdownMenuItem onClick={() => handleExport("backend")}>
                   <span className="inline-block h-4 w-4 mr-2">⚡</span>
                   <div className="flex flex-col">
-                    <span className="font-medium">Pro Export</span>
+                    <span className="font-medium">Server Export</span>
                     <span className="text-xs text-muted-foreground">
                       Premium • Fastest & highest quality
                     </span>
                   </div>
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onClick={() => handleExport("webcodecs")}>
-                <span className="inline-block h-4 w-4 mr-2">🚀</span>
-                <div className="flex flex-col">
-                  <span className="font-medium">Quick Export</span>
-                  <span className="text-xs text-muted-foreground">
-                    Fast • Modern browsers only
-                  </span>
-                </div>
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleExport("offline")}>
                 <span className="inline-block h-4 w-4 mr-2">🎯</span>
                 <div className="flex flex-col">
-                  <span className="font-medium">Reliable Export</span>
+                  <span className="font-medium">Offline Export</span>
                   <span className="text-xs text-muted-foreground">
-                    Stable • Works on any device
-                  </span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport("canvas")}>
-                <span className="inline-block h-4 w-4 mr-2">🎨</span>
-                <div className="flex flex-col">
-                  <span className="font-medium">Basic Export</span>
-                  <span className="text-xs text-muted-foreground">
-                    Simple • Maximum compatibility
+                    Reliable • Works on any device
                   </span>
                 </div>
               </DropdownMenuItem>

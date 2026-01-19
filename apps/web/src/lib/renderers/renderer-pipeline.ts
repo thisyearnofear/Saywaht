@@ -1,7 +1,7 @@
 import { FrameRenderer, RendererMetrics, GroveIntegration } from "./frame-renderer";
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
-import { WebCodecsExportOptions } from "../webcodecs-export";
+import { ExportOptions } from "../canvas-export-utils";
 import { isTouchDevice } from "../mobile-utils";
 import { groveStorage } from "../grove-storage";
 
@@ -12,7 +12,7 @@ interface RenderParams {
   canvas: OffscreenCanvas;
   ctx: OffscreenCanvasRenderingContext2D;
   videoFrames: ImageData[];
-  options: WebCodecsExportOptions;
+  options: ExportOptions;
 }
 
 interface PipelineStage {
@@ -32,13 +32,13 @@ export class RendererPipeline implements FrameRenderer {
   };
   public name: string = 'pipeline';
   public priority: number = 90;
-  
+
   constructor(baseRenderer: FrameRenderer) {
     this.baseRenderer = baseRenderer;
     this.name = `pipeline-${(baseRenderer as any).name || 'unknown'}`;
     this.priority = ((baseRenderer as any).priority || 0) + 10;
   }
-  
+
   // Fluent API for composition
   withMobileOptimization(): this {
     this.stages.push({
@@ -59,7 +59,7 @@ export class RendererPipeline implements FrameRenderer {
     console.log('🔧 Added mobile optimization to renderer pipeline');
     return this;
   }
-  
+
   withGroveSupport(): this {
     this.stages.push({
       name: 'grove-integration',
@@ -68,16 +68,16 @@ export class RendererPipeline implements FrameRenderer {
       processor: async (params, next) => {
         console.log('🌿 Processing frame with Grove integration...');
         const startTime = performance.now();
-        
+
         try {
           const result = await next();
-          
+
           // Grove-specific processing could happen here
           if (result && groveStorage) {
             // Example: Store frame metadata for potential chunking
             console.log('🌿 Frame processed successfully with Grove awareness');
           }
-          
+
           return result;
         } catch (error) {
           console.error('🌿 Grove processing error:', error);
@@ -91,7 +91,7 @@ export class RendererPipeline implements FrameRenderer {
     console.log('🔧 Added Grove/IPFS support to renderer pipeline');
     return this;
   }
-  
+
   withPerformanceMonitoring(): this {
     this.stages.push({
       name: 'performance-monitoring',
@@ -100,7 +100,7 @@ export class RendererPipeline implements FrameRenderer {
       processor: async (params, next) => {
         const startTime = performance.now();
         const initialMemory = (performance as any).memory?.usedJSHeapSize || 0;
-        
+
         try {
           const result = await next();
           this.metrics.frameProcessed = result;
@@ -111,10 +111,10 @@ export class RendererPipeline implements FrameRenderer {
         } finally {
           const endTime = performance.now();
           const finalMemory = (performance as any).memory?.usedJSHeapSize || 0;
-          
+
           this.metrics.renderTime = endTime - startTime;
           this.metrics.memoryUsage = finalMemory - initialMemory;
-          
+
           if (this.metrics.renderTime > 16.67) { // > 60fps threshold
             console.warn(`⚠️ Slow render: ${this.metrics.renderTime.toFixed(2)}ms`);
           }
@@ -124,21 +124,21 @@ export class RendererPipeline implements FrameRenderer {
     console.log('🔧 Added performance monitoring to renderer pipeline');
     return this;
   }
-  
-  canRender(params: { tracks: TimelineTrack[]; mediaItems: MediaItem[]; timestamp: number; options: WebCodecsExportOptions; }): boolean {
+
+  canRender(params: { tracks: TimelineTrack[]; mediaItems: MediaItem[]; timestamp: number; options: ExportOptions; }): boolean {
     const canRender = (this.baseRenderer as any).canRender;
     return canRender ? canRender(params) : true;
   }
-  
+
   async initialize(width: number, height: number): Promise<void> {
     console.log('🚀 Initializing renderer pipeline...');
-    
+
     // Sort stages by order
     this.stages.sort((a, b) => a.order - b.order);
-    
+
     return this.baseRenderer.initialize(width, height);
   }
-  
+
   async renderFrame(params: RenderParams): Promise<boolean> {
     // Create a chain of processors
     const executeStage = (index: number): Promise<boolean> => {
@@ -146,26 +146,26 @@ export class RendererPipeline implements FrameRenderer {
         // All stages processed, run the base renderer
         return this.baseRenderer.renderFrame(params);
       }
-      
+
       const stage = this.stages[index];
       if (!stage.enabled) {
         return executeStage(index + 1);
       }
-      
+
       return stage.processor(params, () => executeStage(index + 1));
     };
-    
+
     return executeStage(0);
   }
-  
+
   getMetrics(): RendererMetrics {
     return { ...this.metrics };
   }
-  
+
   supportsGrove(): boolean {
     return this.stages.some(stage => stage.name === 'grove-integration' && stage.enabled);
   }
-  
+
   configureGrove(config: GroveIntegration): void {
     console.log('🌿 Grove integration configured for pipeline');
     // Apply Grove configuration to relevant stages
@@ -174,7 +174,7 @@ export class RendererPipeline implements FrameRenderer {
       groveStage.enabled = config.enabled;
     }
   }
-  
+
   cleanup(): void {
     console.log('🧹 Cleaning up renderer pipeline...');
     this.baseRenderer.cleanup();

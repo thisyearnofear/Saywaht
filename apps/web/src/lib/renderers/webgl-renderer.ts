@@ -1,7 +1,7 @@
 import { FrameRenderer } from "./frame-renderer";
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
-import { WebCodecsExportOptions } from "../webcodecs-export";
+import { ExportOptions } from "../canvas-export-utils";
 
 export class WebGLRenderer implements FrameRenderer {
   public name: string = 'webgl';
@@ -12,7 +12,7 @@ export class WebGLRenderer implements FrameRenderer {
   private texCoordBuffer: WebGLBuffer | null = null;
   private texture: WebGLTexture | null = null;
 
-  canRender(params: { tracks: TimelineTrack[]; mediaItems: MediaItem[]; timestamp: number; options: WebCodecsExportOptions; }): boolean {
+  canRender(params: { tracks: TimelineTrack[]; mediaItems: MediaItem[]; timestamp: number; options: ExportOptions; }): boolean {
     try {
       const canvas = document.createElement('canvas');
       return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'));
@@ -77,11 +77,11 @@ export class WebGLRenderer implements FrameRenderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
       -1.0, -1.0, // bottom-left
-       1.0, -1.0, // bottom-right
-      -1.0,  1.0, // top-left
-      -1.0,  1.0, // top-left
-       1.0, -1.0, // bottom-right
-       1.0,  1.0, // top-right
+      1.0, -1.0, // bottom-right
+      -1.0, 1.0, // top-left
+      -1.0, 1.0, // top-left
+      1.0, -1.0, // bottom-right
+      1.0, 1.0, // top-right
     ]), gl.STATIC_DRAW);
 
     this.texCoordBuffer = gl.createBuffer();
@@ -127,7 +127,7 @@ export class WebGLRenderer implements FrameRenderer {
     canvas: OffscreenCanvas;
     ctx: OffscreenCanvasRenderingContext2D;
     videoFrames: ImageData[];
-    options: WebCodecsExportOptions;
+    options: ExportOptions;
   }): Promise<boolean> {
     const { gl, program } = this;
     if (!gl || !program) throw new Error("WebGL not initialized.");

@@ -165,7 +165,7 @@ The saywaht video editor now supports both frontend and backend video export met
 
 #### 2. Frontend Integration
 - **Client**: `apps/web/src/lib/backend-export.ts`
-- **Method Selection**: `apps/web/src/lib/export-method-selector.ts`
+- **Method Selection**: Consolidated into `apps/web/src/lib/canvas-export-utils.ts`
 - **UI Integration**: Export dropdown in editor header
 
 #### 3. Export Method Selection
@@ -177,9 +177,9 @@ The system intelligently chooses between export methods:
    - When browser performance is limited
    - Maximum reliability and quality
 
-2. **WebCodecs Export** (Fast for simple content)
-   - Simple timelines on capable browsers
-   - Short duration videos (<30 seconds)
+2. **Offline Export** (Reliable for all content)
+   - Complex timelines and longer videos
+   - Works on any device
    - Good system performance required
 
 3. **Offline Export** (Reliable fallback)

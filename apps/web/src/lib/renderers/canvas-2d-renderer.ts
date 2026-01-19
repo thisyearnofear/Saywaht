@@ -1,7 +1,7 @@
 import { FrameRenderer } from "./frame-renderer";
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
-import { WebCodecsExportOptions } from "../webcodecs-export";
+import { ExportOptions } from "../canvas-export-utils";
 import { clearCanvas } from "../video-utils";
 
 export class Canvas2DRenderer implements FrameRenderer {
@@ -10,7 +10,7 @@ export class Canvas2DRenderer implements FrameRenderer {
   private canvas: OffscreenCanvas | null = null;
   private ctx: OffscreenCanvasRenderingContext2D | null = null;
 
-  canRender(params: { tracks: TimelineTrack[]; mediaItems: MediaItem[]; timestamp: number; options: WebCodecsExportOptions; }): boolean {
+  canRender(params: { tracks: TimelineTrack[]; mediaItems: MediaItem[]; timestamp: number; options: ExportOptions; }): boolean {
     return true; // Canvas2D always works
   }
 
@@ -33,12 +33,12 @@ export class Canvas2DRenderer implements FrameRenderer {
     canvas: OffscreenCanvas;
     ctx: OffscreenCanvasRenderingContext2D;
     videoFrames: ImageData[];
-    options: WebCodecsExportOptions;
+    options: ExportOptions;
   }): Promise<boolean> {
     const { tracks, mediaItems, timestamp, canvas, ctx, videoFrames, options } = params;
 
     clearCanvas(ctx, canvas.width, canvas.height);
-    
+
     let hasContent = false;
 
     for (const track of tracks) {
@@ -50,7 +50,7 @@ export class Canvas2DRenderer implements FrameRenderer {
 
         if (timestamp >= clipStart && timestamp < clipEnd) {
           const mediaItem = mediaItems.find(item => item.id === clip.mediaId);
-          
+
           if (mediaItem) {
             if (mediaItem.type === 'video') {
               const frameIndex = Math.floor(timestamp * (options.frameRate || 30));
@@ -70,7 +70,7 @@ export class Canvas2DRenderer implements FrameRenderer {
                   canvas.width,
                   canvas.height
                 );
-                
+
                 ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
                 hasContent = true;
                 img.close(); // Clean up ImageBitmap

@@ -10,10 +10,10 @@ export { RendererPipeline } from './renderer-pipeline';
 // Convenience factory function
 import { RendererFactory } from './renderer-factory';
 import { RendererPipeline } from './renderer-pipeline';
-import { WebCodecsExportOptions } from '../webcodecs-export';
+import { ExportOptions } from '../canvas-export-utils';
 
 export async function createOptimalRenderer(
-  options: WebCodecsExportOptions,
+  options: ExportOptions,
   context: 'mobile' | 'desktop' | 'auto' = 'auto'
 ): Promise<RendererPipeline> {
   const capabilities = RendererFactory.detectDeviceCapabilities();

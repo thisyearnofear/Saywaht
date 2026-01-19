@@ -1,40 +1,170 @@
+/**
+ * ENHANCED EXPORT SYSTEM
+ * Consolidated export functionality following CLEAN and DRY principles
+ * ENHANCEMENT FIRST: Improved existing export with consolidated features
+ */
+
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
 import { exportVideoTrueOffline } from "./optimized-export";
-import { isWebCodecsSupported, WebCodecsExportOptions } from "./webcodecs-export";
-import { exportVideoWithTransferableFrames } from "./webcodecs-streaming-export";
-import { FORMAT_DIMENSIONS, VideoFormat } from "./video-utils";
-import { selectBestExportMethod, recordWebCodecsFailure, recordWebCodecsSuccess, getExportMethodRecommendation } from "./export-method-selector";
-import { exportDiagnostics } from "./export-diagnostics";
-import { getExportConfig, getWebCodecsConfig, getExportTimeout } from "./export-config";
+import { FORMAT_DIMENSIONS, VideoFormat, getVideoBitrate } from "./video-utils";
 import { exportVideoBackend, BackendExportOptions } from "./backend-export";
-import { withExportRetry, withMethodFallback, EXPORT_RETRY_CONFIGS, exportWithReliability } from "./export-retry-system";
+import { getExportErrorMessage } from "./export-error-handler";
+import { startExportDiagnostics, updateExportProgress, finishExportDiagnostics } from "./monitoring";
 
-export type ExportMethod = "backend" | "canvas" | "offline" | "webcodecs" | "auto";
-export type { VideoFormat }; // Re-export for backward compatibility
+// CLEAN: Simplified export methods (removed unreliable WebCodecs)
+export type ExportMethod = "backend" | "offline" | "auto";
+export type { VideoFormat };
 
 export interface ExportOptions {
   format: VideoFormat;
   quality: "low" | "medium" | "high";
   includeAudio?: boolean;
-  method?: ExportMethod; // Choose export method
-  outputFormat?: 'mp4' | 'webm'; // Output format options
-  frameRate?: number; // Frame rate for export
-  videoBitrate?: number; // Custom video bitrate
-  audioBitrate?: number; // Custom audio bitrate
+  method?: ExportMethod;
+  outputFormat?: 'mp4' | 'webm';
+  frameRate?: number;
+  videoBitrate?: number;
+  audioBitrate?: number;
 }
 
-interface AudioTrackData {
-  audioElement: HTMLAudioElement;
-  gainNode: GainNode;
-  sourceNode: MediaElementAudioSourceNode;
+// CONSOLIDATION: Export configuration (from deleted export-config.ts)
+interface ExportConfig {
+  outputFormat: 'mp4' | 'webm';
+  frameRate: number;
+  videoBitrate: number;
+  audioBitrate: number;
 }
 
-// FORMAT_DIMENSIONS moved to video-utils.ts for DRY code
+function getExportConfig(options: ExportOptions): ExportConfig {
+  return {
+    outputFormat: options.outputFormat || 'mp4',
+    frameRate: options.frameRate || 30,
+    videoBitrate: options.videoBitrate || getVideoBitrate(options.quality || 'medium'),
+    audioBitrate: options.audioBitrate || 192000
+  };
+}
+
+// CONSOLIDATION: Content complexity analysis (from deleted export-method-selector.ts)
+interface ContentComplexity {
+  score: number;
+  hasVideo: boolean;
+  hasAudio: boolean;
+  hasMultipleTracks: boolean;
+  totalClips: number;
+  reason: string;
+}
+
+function analyzeContentComplexity(
+  tracks: TimelineTrack[],
+  mediaItems: MediaItem[],
+  totalDuration: number
+): ContentComplexity {
+  const videoTracks = tracks.filter(track =>
+    track.clips.some(clip => {
+      const mediaItem = mediaItems.find(item => item.id === clip.mediaId);
+      return mediaItem?.type === "video";
+    })
+  );
+
+  const totalClips = tracks.reduce((sum, track) => sum + track.clips.length, 0);
+  const hasVideo = videoTracks.length > 0;
+  const hasAudio = tracks.some(track => !track.muted);
+  const hasMultipleTracks = tracks.length > 2;
+
+  let score = 0;
+  let reasons: string[] = [];
+
+  if (hasVideo) {
+    score += 0.4;
+    reasons.push("video content");
+  }
+
+  if (hasAudio) {
+    score += 0.2;
+    reasons.push("audio tracks");
+  }
+
+  if (hasMultipleTracks) {
+    score += 0.2;
+    reasons.push("multiple tracks");
+  }
+
+  if (totalClips > 5) {
+    score += 0.2;
+    reasons.push(`${totalClips} clips`);
+  }
+
+  return {
+    score: Math.min(score, 1),
+    hasVideo,
+    hasAudio,
+    hasMultipleTracks,
+    totalClips,
+    reason: reasons.join(", ")
+  };
+}
+
+// CONSOLIDATION: Method selection logic (simplified from deleted files)
+async function selectExportMethod(
+  tracks: TimelineTrack[],
+  mediaItems: MediaItem[],
+  totalDuration: number,
+  options: ExportOptions
+): Promise<ExportMethod> {
+  if (options.method && options.method !== "auto") {
+    return options.method;
+  }
+
+  const complexity = analyzeContentComplexity(tracks, mediaItems, totalDuration);
+
+  // Check if backend is available
+  try {
+    const response = await fetch('/api/health', {
+      method: 'GET',
+      signal: AbortSignal.timeout(2000)
+    });
+
+    if (response.ok) {
+      // Use backend for complex content or high quality
+      if (complexity.score > 0.5 || options.quality === "high" || totalDuration > 60) {
+        return "backend";
+      }
+    }
+  } catch {
+    // Backend unavailable, use offline
+  }
+
+  return "offline";
+}
+
+// CONSOLIDATION: Simple retry logic (from deleted export-retry-system.ts)
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts: number = 2,
+  delay: number = 1000
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < maxAttempts) {
+        console.warn(`Export attempt ${attempt} failed, retrying in ${delay}ms:`, error);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
+      }
+    }
+  }
+
+  throw lastError;
+}
 
 /**
- * Main export function - intelligently chooses between WebCodecs, Offline, and Canvas export methods
- * Prioritizes performance and quality based on browser support and project complexity
+ * ENHANCED: Main export function with consolidated functionality
+ * CLEAN: Simplified to 2 reliable methods with automatic fallback
  */
 export const exportVideo = async (
   tracks: TimelineTrack[],
@@ -49,602 +179,83 @@ export const exportVideo = async (
     outputFormat: "mp4"
   }
 ): Promise<Blob> => {
-  const method = options.method || "auto";
+  // CONSOLIDATION: Start diagnostics tracking
+  const contentInfo = {
+    tracks: tracks.length,
+    clips: tracks.reduce((sum, track) => sum + track.clips.length, 0),
+    hasVideo: tracks.some(track =>
+      track.clips.some(clip => {
+        const mediaItem = mediaItems.find(item => item.id === clip.mediaId);
+        return mediaItem?.type === "video";
+      })
+    ),
+    hasAudio: tracks.some(track => !track.muted),
+    totalDuration
+  };
 
-  // Start diagnostics tracking - determine method first
-  let selectedMethod = method;
-  if (method === "auto") {
-    const methodInfo = await selectBestExportMethod(tracks, mediaItems, options, totalDuration);
-    selectedMethod = methodInfo.method;
-  }
+  // Select export method
+  const method = await selectExportMethod(tracks, mediaItems, totalDuration, options);
 
-  exportDiagnostics.startExport(selectedMethod, tracks, mediaItems, totalDuration);
+  startExportDiagnostics(method, contentInfo);
 
-  // Wrap progress callback to track in diagnostics
+  // Enhanced progress tracking
   const trackedProgress = (progress: number) => {
-    exportDiagnostics.updateProgress(progress);
+    updateExportProgress(progress);
     onProgress(progress);
   };
 
-  // ENHANCEMENT: Helper function to execute export with retry logic
-  const executeExport = async (
-    exportMethod: "backend" | "webcodecs" | "offline" | "canvas",
-    progress: (p: number) => void,
-    abortSignal?: AbortSignal
-  ): Promise<Blob> => {
-    switch (exportMethod) {
-      case "backend": {
-        // ENHANCEMENT: Backend export with retry logic
-        return withExportRetry(async () => {
-          const backendOptions: BackendExportOptions = {
-            ...options,
-            maxFileSizeMB: 50,
-            timeout: 300000 // 5 minutes
-          };
-          const result = await exportVideoBackend(
-            tracks,
-            mediaItems,
-            totalDuration,
-            progress,
-            backendOptions
-          );
-          return result.blob;
-        }, 'backend-export', {
-          config: EXPORT_RETRY_CONFIGS.backend
-        });
-      }
-
-      case "webcodecs": {
-        // ENHANCEMENT: WebCodecs export with retry logic
-        return withExportRetry(async () => {
-          const config = getWebCodecsConfig(options);
-          return exportVideoWithTransferableFrames(
-            tracks,
-            mediaItems,
-            totalDuration,
-            progress,
-            { ...options, ...config } as WebCodecsExportOptions,
-            abortSignal
-          );
-        }, 'webcodecs-export', {
-          config: EXPORT_RETRY_CONFIGS.webcodecs
-        });
-      }
-
-      case "offline": {
-        // ENHANCEMENT: Offline export with retry logic
-        return withExportRetry(async () => {
-          const config = getExportConfig(options);
-          return exportVideoTrueOffline(
-            tracks,
-            mediaItems,
-            totalDuration,
-            progress,
-            { ...options, ...config }
-          );
-        }, 'offline-export', {
-          config: EXPORT_RETRY_CONFIGS.canvas
-        });
-      }
-
-      case "canvas":
-      default:
-        // ENHANCEMENT: Canvas export with retry logic
-        return withExportRetry(async () => {
-          return exportVideoWithCanvas(tracks, mediaItems, totalDuration, progress, options);
-        }, 'canvas-export', {
-          config: EXPORT_RETRY_CONFIGS.canvas
-        });
-    }
-  };
-
-  // ENHANCEMENT: WebCodecs with intelligent fallback using retry system
-  const executeWebCodecsWithFallback = async (progress: (p: number) => void): Promise<Blob> => {
-    return withMethodFallback(
-      // Primary method: WebCodecs with timeout
-      async () => {
-        let webCodecsController: AbortController | null = null;
-
-        try {
-          webCodecsController = new AbortController();
-
-          const webCodecsPromise = executeExport("webcodecs", progress, webCodecsController.signal);
-          const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => {
-              if (webCodecsController) {
-                webCodecsController.abort();
-              }
-              reject(new Error('WebCodecs export timeout'));
-            }, getExportTimeout(totalDuration));
-          });
-
-          const result = await Promise.race([webCodecsPromise, timeoutPromise]);
-          recordWebCodecsSuccess();
-          return result;
-        } catch (error) {
-          recordWebCodecsFailure();
-          if (webCodecsController) {
-            webCodecsController.abort();
-          }
-          // Small delay for cleanup
-          await new Promise(resolve => setTimeout(resolve, 100));
-          throw error;
-        }
-      },
-      // Fallback method: Offline export
-      async () => {
-        progress(0); // Reset progress for fallback
-        return executeExport("offline", progress);
-      },
-      'webcodecs',
-      'offline',
-      'webcodecs-with-fallback',
-      {
-        onMethodFallback: (from, to, reason) => {
-          console.log(`🔄 Falling back from ${from} to ${to}: ${reason}`);
-        }
-      }
-    );
-  };
-
   try {
-    // Auto-select method based on intelligent analysis
-    if (method === "auto") {
-      const methodInfo = await selectBestExportMethod(tracks, mediaItems, options, totalDuration);
-      const recommendation = await getExportMethodRecommendation(tracks, mediaItems, options, totalDuration);
+    let result: Blob;
 
-      console.log("🤖 Export Method Analysis:");
-      console.log(recommendation);
-      console.log(`📊 Selected: ${methodInfo.method} (${Math.round(methodInfo.confidence * 100)}% confidence)`);
-
-      // Execute based on selected method
-      if (methodInfo.method === "backend") {
-        console.log("⚡ Using Pro Export for maximum quality and speed");
-        const result = await executeExport("backend", trackedProgress);
-        exportDiagnostics.stopExport(true);
-        return result;
-      }
-
-      if (methodInfo.method === "webcodecs") {
-        console.log("🚀 Using Quick Export for fast processing");
-        const result = await executeWebCodecsWithFallback(trackedProgress);
-        exportDiagnostics.stopExport(true);
-        return result;
-      }
-
-      if (methodInfo.method === "offline") {
-        console.log("🎯 Using Reliable Export for maximum compatibility");
-        const result = await executeExport("offline", trackedProgress);
-        exportDiagnostics.stopExport(true);
-        return result;
-      }
-
-      // Fallback to offline if no other method selected (canvas disabled due to frame dropping)
-      console.log("🎯 Using Reliable Export (canvas export disabled)");
-      const result = await executeExport("offline", trackedProgress);
-      exportDiagnostics.stopExport(true);
-      return result;
-    }
-
-    // Manual method selection
     if (method === "backend") {
-      console.log("⚡ Using Pro Export - Maximum quality and speed");
-      const result = await executeExport("backend", trackedProgress);
-      exportDiagnostics.stopExport(true);
-      return result;
-    }
-
-    if (method === "webcodecs") {
-      if (!isWebCodecsSupported()) {
-        console.warn("WebCodecs not supported, falling back to offline export");
-        const result = await executeExport("offline", trackedProgress);
-        exportDiagnostics.stopExport(true);
-        return result;
+      // ENHANCEMENT: Backend export with automatic fallback
+      try {
+        result = await withRetry(async () => {
+          const backendResult = await exportVideoBackend(
+            tracks,
+            mediaItems,
+            totalDuration,
+            trackedProgress,
+            {
+              ...options,
+              maxFileSizeMB: 100,
+              timeout: Math.max(totalDuration * 5000, 60000)
+            }
+          );
+          return backendResult.blob;
+        });
+      } catch (backendError) {
+        console.warn("Backend export failed, falling back to offline:", backendError);
+        trackedProgress(0); // Reset progress
+        result = await exportVideoTrueOffline(
+          tracks,
+          mediaItems,
+          totalDuration,
+          trackedProgress,
+          options
+        );
       }
-
-      console.log("🚀 Using Quick Export - Fast processing");
-      const result = await executeWebCodecsWithFallback(trackedProgress);
-      exportDiagnostics.stopExport(true);
-      return result;
+    } else {
+      // Offline export
+      result = await withRetry(async () => {
+        return await exportVideoTrueOffline(
+          tracks,
+          mediaItems,
+          totalDuration,
+          trackedProgress,
+          options
+        );
+      });
     }
 
-    if (method === "offline") {
-      console.log("🎯 Using Reliable Export - Works on any device");
-      const result = await executeExport("offline", trackedProgress);
-      exportDiagnostics.stopExport(true);
-      return result;
-    }
-
-    // Default to offline method (canvas disabled)
-    console.log("🎯 Using Reliable Export (canvas export disabled)");
-    const result = await executeExport("offline", trackedProgress);
-    exportDiagnostics.stopExport(true);
+    // CONSOLIDATION: Track successful export
+    finishExportDiagnostics(true);
     return result;
 
   } catch (error) {
-    // Catch any unhandled errors
-    console.error("Export failed with error:", error);
-    exportDiagnostics.recordError(error instanceof Error ? error : new Error(String(error)));
-    exportDiagnostics.stopExport(false);
+    // CONSOLIDATION: Track failed export with enhanced error handling
+    const errorMessage = getExportErrorMessage(error);
+    finishExportDiagnostics(false, errorMessage);
     throw error;
   }
-};
-
-// Removed shouldUseEnhancedExport - complexity analysis now handled by export-method-selector.ts
-
-/**
- * Export video using HTML5 Canvas and MediaRecorder API with Web Audio API integration.
- * Phase 1: Enhanced audio support using Web Audio API for mixing multiple tracks.
- */
-export const exportVideoWithCanvas = async (
-  tracks: TimelineTrack[],
-  mediaItems: MediaItem[],
-  totalDuration: number,
-  onProgress: (progress: number) => void,
-  options: ExportOptions = { format: "portrait", quality: "medium", includeAudio: true }
-): Promise<Blob> => {
-  // Get dimensions based on selected format
-  const dimensions = FORMAT_DIMENSIONS[options.format];
-
-  // Create a canvas element to render video frames
-  const canvas = document.createElement("canvas");
-  canvas.width = dimensions.width;
-  canvas.height = dimensions.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    throw new Error("Failed to get canvas context");
-  }
-
-  // Initialize video stream from canvas
-  const videoStream = canvas.captureStream(30); // Higher frame rate for smoother video
-
-  // Phase 1: Web Audio API Integration
-  let audioContext: AudioContext | null = null;
-  let audioDestination: MediaStreamAudioDestinationNode | null = null;
-  let audioTracks: AudioTrackData[] = [];
-  let combinedStream: MediaStream = videoStream;
-
-  if (options.includeAudio) {
-    try {
-      // Create audio context for mixing
-      audioContext = new AudioContext();
-      audioDestination = audioContext.createMediaStreamDestination();
-
-      // Setup audio tracks for mixing
-      audioTracks = await setupAudioTracks(tracks, mediaItems, audioContext, audioDestination);
-
-      // Combine video and audio streams
-      combinedStream = new MediaStream([
-        ...videoStream.getVideoTracks(),
-        ...audioDestination.stream.getAudioTracks()
-      ]);
-
-      console.log("🎵 Audio mixing enabled with", audioTracks.length, "tracks");
-    } catch (error) {
-      console.warn("Audio mixing failed, falling back to video-only:", error);
-      combinedStream = videoStream;
-    }
-  }
-
-  // Initialize MediaRecorder with combined stream
-  let recorder: MediaRecorder;
-  try {
-    const mimeType = options.includeAudio && audioContext
-      ? "video/webm;codecs=vp9,opus"
-      : "video/webm;codecs=vp9";
-
-    recorder = new MediaRecorder(combinedStream, {
-      mimeType,
-      videoBitsPerSecond: 2500000, // 2.5 Mbps for good quality
-      audioBitsPerSecond: options.includeAudio ? 128000 : undefined, // 128 kbps audio
-    });
-  } catch (error) {
-    console.warn("Advanced codec not supported, using fallback");
-    recorder = new MediaRecorder(combinedStream, {
-      mimeType: "video/webm"
-    });
-  }
-  const chunks: Blob[] = [];
-
-  recorder.ondataavailable = (event) => {
-    if (event.data.size > 0) {
-      chunks.push(event.data);
-    }
-  };
-
-  // Pre-load video elements to avoid flashing
-  const videoElements = new Map<string, HTMLVideoElement>();
-
-  // Pre-load all video media items
-  for (const mediaItem of mediaItems) {
-    if (mediaItem.type === "video") {
-      const video = document.createElement("video");
-      // Only mute if we're handling audio separately, otherwise preserve audio
-      video.muted = !!(options.includeAudio && audioContext);
-      video.preload = "metadata";
-
-      if (mediaItem.file && mediaItem.file instanceof File) {
-        video.src = URL.createObjectURL(mediaItem.file);
-      } else if (mediaItem.url) {
-        video.src = mediaItem.url;
-        video.crossOrigin = "anonymous";
-      }
-
-      // Wait for video to be ready
-      await new Promise((resolve) => {
-        video.onloadedmetadata = () => resolve(null);
-        video.onerror = () => resolve(null);
-        video.load();
-      });
-
-      videoElements.set(mediaItem.id, video);
-    }
-  }
-
-  // Start recording
-  recorder.start();
-
-  // Simulate video playback by drawing frames to the canvas
-  let currentTime = 0;
-  const frameRate = 30; // Higher fps for smoother video
-  const frameDuration = 1000 / frameRate; // ms per frame
-
-  // Function to draw the current frame based on timeline data
-  const drawFrame = async (time: number) => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Iterate through tracks and clips to render the current frame
-    for (const track of tracks) {
-      if (track.muted) continue; // Skip muted tracks
-
-      for (const clip of track.clips) {
-        const clipStart = clip.startTime;
-        const clipEnd = clip.startTime + clip.duration - clip.trimStart - clip.trimEnd;
-
-        if (time >= clipStart && time < clipEnd) {
-          const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
-          if (mediaItem && mediaItem.type === "video") {
-            const video = videoElements.get(mediaItem.id);
-            if (video && video.readyState >= 2) { // HAVE_CURRENT_DATA
-              // Calculate video time accounting for trim
-              const videoTime = time - clipStart + clip.trimStart;
-
-              // Only seek if necessary (reduces flashing) - improved precision
-              if (Math.abs(video.currentTime - videoTime) > 0.05) {
-                video.currentTime = videoTime;
-                // Wait for seek to complete with timeout
-                await new Promise(resolve => {
-                  const timeout = setTimeout(() => resolve(null), 100); // 100ms timeout
-                  video.onseeked = () => {
-                    clearTimeout(timeout);
-                    resolve(null);
-                  };
-                  video.onerror = () => {
-                    clearTimeout(timeout);
-                    resolve(null);
-                  };
-                });
-              }
-
-              // Calculate proper scaling to maintain aspect ratio while filling the canvas
-              const videoAspect = video.videoWidth / video.videoHeight;
-              const canvasAspect = canvas.width / canvas.height;
-
-              let drawWidth, drawHeight, drawX, drawY;
-
-              if (videoAspect > canvasAspect) {
-                // Video is wider than canvas - crop sides
-                drawHeight = canvas.height;
-                drawWidth = drawHeight * videoAspect;
-                drawX = (canvas.width - drawWidth) / 2;
-                drawY = 0;
-              } else {
-                // Video is taller than canvas - crop top/bottom
-                drawWidth = canvas.width;
-                drawHeight = drawWidth / videoAspect;
-                drawX = 0;
-                drawY = (canvas.height - drawHeight) / 2;
-              }
-
-              ctx.drawImage(video, drawX, drawY, drawWidth, drawHeight);
-            }
-          }
-        }
-      }
-    }
-  };
-
-  /**
-   * Setup audio tracks for Web Audio API mixing
-   * Phase 1: Create audio elements and connect them to the audio context
-   */
-  async function setupAudioTracks(
-    tracks: TimelineTrack[],
-    mediaItems: MediaItem[],
-    audioContext: AudioContext,
-    destination: MediaStreamAudioDestinationNode
-  ): Promise<AudioTrackData[]> {
-    const audioTracks: AudioTrackData[] = [];
-
-    for (const track of tracks) {
-      if (track.muted) continue; // Skip muted tracks
-
-      for (const clip of track.clips) {
-        const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
-        if (!mediaItem) continue;
-
-        // Handle both video files (for separated audio) and pure audio files
-        if (mediaItem.type === "video" || mediaItem.type === "audio") {
-          try {
-            const audioElement = document.createElement("audio");
-            audioElement.preload = "metadata";
-            audioElement.crossOrigin = "anonymous";
-
-            if (mediaItem.file && mediaItem.file instanceof File) {
-              audioElement.src = URL.createObjectURL(mediaItem.file);
-            } else if (mediaItem.url) {
-              audioElement.src = mediaItem.url;
-            }
-
-            // Wait for audio to be ready
-            await new Promise((resolve, reject) => {
-              audioElement.onloadedmetadata = () => resolve(null);
-              audioElement.onerror = () => reject(new Error(`Failed to load audio: ${mediaItem.name}`));
-              audioElement.load();
-
-              // Timeout after 5 seconds
-              setTimeout(() => reject(new Error(`Audio load timeout: ${mediaItem.name}`)), 5000);
-            });
-
-            // Create Web Audio API nodes
-            const sourceNode = audioContext.createMediaElementSource(audioElement);
-            const gainNode = audioContext.createGain();
-
-            // Set initial volume (can be adjusted based on track settings)
-            gainNode.gain.value = track.muted ? 0 : 1;
-
-            // Connect audio graph: source -> gain -> destination
-            sourceNode.connect(gainNode);
-            gainNode.connect(destination);
-
-            audioTracks.push({
-              audioElement,
-              gainNode,
-              sourceNode,
-            });
-
-            console.log(`🎵 Audio track setup: ${mediaItem.name}`);
-          } catch (error) {
-            console.warn(`Failed to setup audio track for ${mediaItem.name}:`, error);
-          }
-        }
-      }
-    }
-
-    return audioTracks;
-  }
-
-  /**
-   * Synchronize audio tracks with the current timeline position
-   * Phase 1: Basic time synchronization for audio playback
-   */
-  async function syncAudioTracks(
-    audioTracks: AudioTrackData[],
-    tracks: TimelineTrack[],
-    currentTime: number
-  ): Promise<void> {
-    for (let i = 0; i < audioTracks.length; i++) {
-      const { audioElement, gainNode } = audioTracks[i];
-
-      try {
-        // Find the corresponding track and clip for this audio element
-        let shouldPlay = false;
-        let audioTime = 0;
-        let volume = 1;
-
-        for (const track of tracks) {
-          if (track.muted) continue;
-
-          for (const clip of track.clips) {
-            const clipStart = clip.startTime;
-            const clipEnd = clip.startTime + clip.duration - clip.trimStart - clip.trimEnd;
-
-            // Check if current time is within this clip's range
-            if (currentTime >= clipStart && currentTime < clipEnd) {
-              // Calculate the audio time accounting for trim
-              audioTime = currentTime - clipStart + clip.trimStart;
-              shouldPlay = true;
-              volume = track.muted ? 0 : 1;
-              break;
-            }
-          }
-
-          if (shouldPlay) break;
-        }
-
-        // Update gain node volume
-        gainNode.gain.value = volume;
-
-        if (shouldPlay) {
-          // Seek to the correct time if necessary
-          if (Math.abs(audioElement.currentTime - audioTime) > 0.1) {
-            audioElement.currentTime = audioTime;
-          }
-
-          // Play if not already playing
-          if (audioElement.paused) {
-            await audioElement.play().catch((error) => {
-              console.warn("Failed to play audio track:", error);
-            });
-          }
-        } else {
-          // Pause if playing but shouldn't be
-          if (!audioElement.paused) {
-            audioElement.pause();
-          }
-        }
-      } catch (error) {
-        console.warn("Error syncing audio track:", error);
-      }
-    }
-  }
-
-  // Render frames until the total duration is reached
-  while (currentTime < totalDuration) {
-    await drawFrame(currentTime);
-
-    // Sync audio playback with video timeline
-    if (options.includeAudio && audioTracks.length > 0) {
-      await syncAudioTracks(audioTracks, tracks, currentTime);
-    }
-
-    currentTime += frameDuration / 1000; // Convert ms to seconds
-    onProgress((currentTime / totalDuration) * 100);
-
-    // Use requestAnimationFrame for smoother rendering instead of setTimeout
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-  }
-
-  // Stop recording
-  recorder.stop();
-
-  // Wait for recording to finish
-  await new Promise((resolve) => {
-    recorder.onstop = resolve;
-  });
-
-  // Cleanup video elements
-  videoElements.forEach((video) => {
-    if (video.src.startsWith('blob:')) {
-      URL.revokeObjectURL(video.src);
-    }
-    video.remove();
-  });
-
-  // Cleanup audio resources
-  if (audioContext) {
-    audioTracks.forEach(({ audioElement, sourceNode, gainNode }) => {
-      try {
-        sourceNode.disconnect();
-        gainNode.disconnect();
-        audioElement.pause();
-        if (audioElement.src.startsWith('blob:')) {
-          URL.revokeObjectURL(audioElement.src);
-        }
-      } catch (error) {
-        console.warn("Error cleaning up audio track:", error);
-      }
-    });
-
-    await audioContext.close();
-    console.log("🎵 Audio context cleaned up");
-  }
-
-  // Combine recorded chunks into a single Blob
-  const blob = new Blob(chunks, { type: "video/webm" });
-  const audioStatus = options.includeAudio ? `with ${audioTracks.length} audio tracks` : "video-only";
-  console.log(`🎬 Export completed: ${blob.size} bytes, ${totalDuration}s duration, ${audioStatus}`);
-  return blob;
 };
