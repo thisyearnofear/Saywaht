@@ -98,6 +98,21 @@ export function PreviewPanel() {
   const activeTextElements = getActiveTextElements();
   const aspectRatio = getAspectRatio();
 
+  // Debug logging
+  if (tracks.length > 0 && activeClips.length === 0) {
+    console.log("🎬 No active clips. Debug info:", {
+      currentTime,
+      tracksCount: tracks.length,
+      totalClips: tracks.reduce((sum, track) => sum + track.clips.length, 0),
+      firstTrackClips: tracks[0]?.clips.map(clip => ({
+        name: clip.name,
+        startTime: clip.startTime,
+        endTime: clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd),
+        isActive: currentTime >= clip.startTime && currentTime < (clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd))
+      }))
+    });
+  }
+
   // Render a clip
   const renderClip = (clipData: any, index: number) => {
     const { clip, track, mediaItem } = clipData;
