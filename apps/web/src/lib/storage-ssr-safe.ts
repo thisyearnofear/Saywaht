@@ -23,7 +23,7 @@ export const createSSRSafeStorage = <T>(): PersistStorage<T> => {
         return null;
       }
     },
-    setItem: (name: string, value: T) => {
+    setItem: (name: string, value: unknown) => {
       if (!isBrowser) {
         return;
       }
