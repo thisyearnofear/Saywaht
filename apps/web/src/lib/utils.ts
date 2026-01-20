@@ -113,6 +113,33 @@ export function isValidAddress(address: string): address is Address {
   return /^0x[a-fA-F0-9]{40}$/.test(address);
 }
 
+/**
+ * Resolves IPFS or Lens URIs to public gateway URLs
+ */
+export function resolveIpfsUrl(uri: string): string {
+  if (!uri) return uri;
+  
+  // Already a HTTP(S) URL
+  if (uri.startsWith('http://') || uri.startsWith('https://')) {
+    return uri;
+  }
+  
+  // IPFS URI
+  if (uri.startsWith('ipfs://')) {
+    const hash = uri.replace('ipfs://', '');
+    // Prefer Grove gateway for better performance/reliability if configured
+    return `https://ipfs.io/ipfs/${hash}`;
+  }
+  
+  // Lens URI (storage-client uses lens:// prefix)
+  if (uri.startsWith('lens://')) {
+    const hash = uri.replace('lens://', '');
+    return `https://api.grove.storage/ipfs/${hash}`;
+  }
+  
+  return uri;
+}
+
 // ============================================================================
 // ARRAY & OBJECT UTILITIES
 // ============================================================================

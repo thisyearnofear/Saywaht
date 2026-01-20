@@ -17,10 +17,33 @@ export function VideoThumbnail({
 }: VideoThumbnailProps) {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [error, setError] = useState<boolean>(false);
+  const [isInView, setIsInView] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
+    if (!isInView || thumbnailUrl) return;
+
     // Create video element
     const video = videoRef.current;
     if (!video) return;
@@ -78,11 +101,8 @@ export function VideoThumbnail({
     return () => {
       video.removeEventListener("canplay", handleCanPlay);
       video.removeEventListener("error", handleError);
-      if (thumbnailUrl) {
-        URL.revokeObjectURL(thumbnailUrl);
-      }
     };
-  }, [videoSrc, thumbnailUrl]);
+  }, [videoSrc, thumbnailUrl, isInView]);
 
   // Show fallback if error
   if (error) {
@@ -108,9 +128,11 @@ export function VideoThumbnail({
   }
 
   return (
-    <>
+    <div ref={containerRef} className="w-full h-full">
       {/* Hidden video element used for capturing thumbnail */}
-      <video ref={videoRef} className="hidden" muted playsInline />
+      {isInView && !thumbnailUrl && (
+        <video ref={videoRef} className="hidden" muted playsInline />
+      )}
 
       {/* Hidden canvas used for capturing thumbnail */}
       <canvas ref={canvasRef} className="hidden" />
@@ -148,6 +170,6 @@ export function VideoThumbnail({
           </svg>
         </div>
       )}
-    </>
+    </div>
   );
 }

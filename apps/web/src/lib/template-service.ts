@@ -90,31 +90,41 @@ export async function fetchTemplateById(id: string): Promise<Template | null> {
  */
 export async function convertTemplateMediaItem(item: TemplateMediaItem): Promise<MediaItem> {
   try {
-    // Fetch to get the file size
-    const response = await fetch(item.url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch media: ${response.statusText}`);
+    // Try to get file size via HEAD request first (much faster than downloading)
+    let size = 0;
+    try {
+      const headResponse = await fetch(item.url, { method: 'HEAD' });
+      if (headResponse.ok) {
+        const contentLength = headResponse.headers.get('Content-Length');
+        if (contentLength) {
+          size = parseInt(contentLength, 10);
+        }
+      }
+    } catch (e) {
+      console.warn(`Could not get size via HEAD request for ${item.name}, falling back...`);
     }
-    const blob = await response.blob();
+
+    // Create a minimal File-like object if we can't get the real file immediately
+    // or if we want to avoid downloading it now.
+    // In most cases, the editor will fetch the file when it needs it.
     
-    // Create a File object from the blob
     const mimeType = item.type === 'video' ? 'video/mp4' :
                     item.type === 'audio' ? 'audio/mp3' :
                     'image/jpeg';
     
-    const file = new File([blob], item.name, { type: mimeType });
+    // Create a dummy File object - the URL is what matters for playback
+    const file = new File([], item.name, { type: mimeType });
     
-    // Create the media item using the original URL for direct playback
     const mediaItem: MediaItem = {
       id: item.id,
       name: item.name,
       type: item.type,
       file,
-      url: item.url, // Use original URL for video player compatibility
+      url: item.url, 
       thumbnailUrl: item.thumbnailUrl || item.url,
       duration: item.duration || 0,
       aspectRatio: item.aspectRatio,
-      size: blob.size
+      size: size || 0
     };
     
     return mediaItem;

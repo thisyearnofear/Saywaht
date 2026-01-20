@@ -16,10 +16,31 @@ export function VideoThumbnailSimple({
 }: VideoThumbnailSimpleProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  // Intersection Observer for lazy loading
+  React.useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "100px" }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <div className={`relative w-full h-full bg-gray-800 ${className}`}>
-      {!hasError && (
+    <div ref={containerRef} className={`relative w-full h-full bg-gray-800 ${className}`}>
+      {!hasError && isInView && (
         <video
           className="w-full h-full object-cover"
           src={videoSrc}
@@ -34,8 +55,8 @@ export function VideoThumbnailSimple({
         />
       )}
 
-      {/* Loading state */}
-      {isLoading && !hasError && (
+      {/* Placeholder/Loading state */}
+      {(!isInView || (isLoading && !hasError)) && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
           <svg
             className="w-8 h-8 animate-spin text-white"

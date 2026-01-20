@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTemplateStore } from "@/stores/template-store";
 import { HoverVideoPreview } from "./hover-video-preview";
 import { LuSmartphone, LuSquare, LuMonitor } from "react-icons/lu";
+import { resolveIpfsUrl } from "@/lib/utils";
 
 interface TemplateCategoryCardProps {
   template: Template;
@@ -19,6 +20,8 @@ interface TemplateCategoryCardProps {
 export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCategoryCardProps) {
   const router = useRouter();
   const { selectTemplate } = useTemplateStore();
+
+  const resolvedThumbnailUrl = template.thumbnailUrl ? resolveIpfsUrl(template.thumbnailUrl) : null;
 
   const handleSelect = () => {
     selectTemplate(template.id);
@@ -65,24 +68,25 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
       onClick={handleSelect}
     >
       <div className="relative aspect-video overflow-hidden">
-        {template.thumbnailUrl ? (
-          template.thumbnailUrl.endsWith(".mp4") ? (
+        {resolvedThumbnailUrl ? (
+          resolvedThumbnailUrl.endsWith(".mp4") || resolvedThumbnailUrl.includes("video") ? (
             // Use HoverVideoPreview component for MP4 files
             <HoverVideoPreview
-              videoSrc={template.thumbnailUrl}
+              videoSrc={resolvedThumbnailUrl}
               alt={template.name}
               className="w-full h-full"
             />
           ) : (
             // Image thumbnail
             <Image
-              src={template.thumbnailUrl}
+              src={resolvedThumbnailUrl}
               alt={template.name}
               fill
               className="object-cover"
             />
           )
         ) : (
+// ...
           // Fallback when no thumbnail is available
           <div className="w-full h-full flex items-center justify-center bg-gray-800">
             <svg

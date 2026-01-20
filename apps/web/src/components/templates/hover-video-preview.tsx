@@ -18,12 +18,33 @@ export function HoverVideoPreview({
   const [isHovering, setIsHovering] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [isInView, setIsInView] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Intersection Observer to only load video when in view
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" } // Load slightly before it comes into view
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   // Start/stop video on hover
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || hasError) return;
+    if (!video || hasError || !isInView) return;
 
     if (isHovering) {
       // Try to play the video when hovering
@@ -38,16 +59,19 @@ export function HoverVideoPreview({
     } else {
       // Pause when not hovering
       video.pause();
+      // Reset to beginning when not hovering to save resources
+      video.currentTime = 0;
     }
-  }, [isHovering, hasError]);
+  }, [isHovering, hasError, isInView]);
 
   return (
     <div
+      ref={containerRef}
       className={`relative w-full h-full bg-gray-800 ${className}`}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
-      {!hasError && (
+      {!hasError && isInView && (
         <video
           ref={videoRef}
           className="w-full h-full object-cover"
@@ -65,11 +89,11 @@ export function HoverVideoPreview({
         />
       )}
 
-      {/* Loading state */}
-      {isLoading && !hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+      {/* Placeholder when not in view or loading */}
+      {(!isInView || isLoading) && !hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800/50">
           <svg
-            className="w-8 h-8 animate-spin text-white"
+            className={`w-8 h-8 ${!isInView ? "opacity-20" : "animate-spin text-white"}`}
             xmlns="http://www.w3.org/2000/svg"
             width="24"
             height="24"

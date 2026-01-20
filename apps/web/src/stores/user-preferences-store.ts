@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createSSRSafeStorage } from "@/lib/storage-ssr-safe";
 
 export interface UserPreferences {
   // Editor preferences
@@ -107,6 +108,7 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
     }),
     {
       name: "saywaht-user-preferences",
+      storage: createSSRSafeStorage(),
       // Storage key includes wallet address for user-specific preferences
       partialize: (state) => ({ preferences: state.preferences }),
     }
