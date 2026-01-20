@@ -152,11 +152,19 @@ export function EditorHeader() {
 
       toast.loading("Uploading project data to IPFS...", { id: "deploy-progress" });
 
-      const uploadResult = await storageManager.exportProjectData(projectData, {
+      // Add timeout and better error handling for storage upload
+      const uploadPromise = storageManager.exportProjectData(projectData, {
         onProgress: (progress) => {
           toast.loading(`Uploading to IPFS... ${Math.round(progress)}%`, { id: "deploy-progress" });
         }
       });
+
+      // Add 60 second timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Upload timeout after 60 seconds')), 60000);
+      });
+
+      const uploadResult = await Promise.race([uploadPromise, timeoutPromise]) as any;
 
       toast.dismiss("deploy-progress");
       toast.success("🚀 Project ready for deployment!");
@@ -168,11 +176,31 @@ export function EditorHeader() {
     } catch (error) {
       console.error("Deploy preparation failed:", error);
       toast.dismiss("deploy-progress");
-      toast.error(
-        error instanceof Error
-          ? `Failed to prepare deployment: ${error.message}`
-          : "Failed to prepare project for deployment"
-      );
+
+      // Provide more helpful error messages
+      let errorMessage = "Failed to prepare project for deployment";
+
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          errorMessage = "Upload timed out. Please try again with a smaller project or check your internet connection.";
+        } else if (error.message.includes('Grove')) {
+          errorMessage = "Storage service temporarily unavailable. Please try again in a few moments.";
+        } else if (error.message.includes('network')) {
+          errorMessage = "Network error. Please check your internet connection and try again.";
+        } else if (error.message.includes('size') || error.message.includes('limit')) {
+          errorMessage = "Project is too large for deployment. Please reduce the number of media files.";
+        } else {
+          errorMessage = `Deployment failed: ${error.message}`;
+        }
+      }
+
+      toast.error(errorMessage, {
+        duration: 8000,
+        action: {
+          label: "Try Again",
+          onClick: () => handleDeploy(),
+        },
+      });
     } finally {
       setIsDeploying(false);
     }

@@ -33,7 +33,13 @@ export class GroveStorageService {
     try {
       console.log(`📤 Uploading ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB) to Grove...`);
 
-      const response = await this.client.uploadFile(file, { acl: this.acl });
+      // Add timeout to prevent hanging
+      const uploadPromise = this.client.uploadFile(file, { acl: this.acl });
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Grove upload timeout after 30 seconds')), 30000);
+      });
+
+      const response = await Promise.race([uploadPromise, timeoutPromise]) as any;
 
       console.log(`✅ File uploaded successfully!`);
       console.log(`  URI: ${response.uri}`);
@@ -48,7 +54,19 @@ export class GroveStorageService {
       };
     } catch (error) {
       console.error('❌ Grove upload failed:', error);
-      throw new Error(`Failed to upload ${file.name} to Grove: ${error}`);
+
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          throw new Error(`Grove upload timed out for ${file.name}. Please try again or use a smaller file.`);
+        } else if (error.message.includes('network')) {
+          throw new Error(`Network error uploading ${file.name} to Grove. Please check your connection.`);
+        } else if (error.message.includes('size') || error.message.includes('limit')) {
+          throw new Error(`File ${file.name} is too large for Grove storage. Please use a smaller file.`);
+        }
+      }
+
+      throw new Error(`Failed to upload ${file.name} to Grove: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

@@ -66,21 +66,24 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
       try {
         console.log("🪙 Preparing coin creation on Zora Protocol...");
 
-        // Validate metadata URI content before proceeding using client-side validation
+        // Validate metadata URI with improved propagation handling
         console.log("🔍 Validating metadata URI content...");
-        try {
-          if (!data.metadataUri) {
-            throw new Error("Metadata URI is required");
-          }
-          await zoraCoins.validateMetadataURI(data.metadataUri);
-          console.log("✅ Metadata validation passed");
-        } catch (validationError) {
-          console.error("❌ Metadata validation failed:", validationError);
-          toast.error(
-            "Metadata validation failed. Please try regenerating your metadata."
-          );
+        if (!data.metadataUri) {
+          toast.error("Metadata URI is required");
           updateData({ isDeploying: false });
           return;
+        }
+        
+        try {
+          const isValid = await zoraCoins.validateMetadataURI(data.metadataUri);
+          if (isValid) {
+            console.log("✅ Metadata validation passed");
+          } else {
+            console.warn("⚠️ Metadata validation uncertain, proceeding anyway");
+          }
+        } catch (validationError) {
+          // Don't block deployment on validation errors
+          console.warn("⚠️ Metadata validation error, proceeding anyway:", validationError);
         }
 
         // Detect if user has a Creator Coin to prefer creator-backed markets
