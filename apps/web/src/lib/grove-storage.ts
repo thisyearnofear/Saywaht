@@ -17,24 +17,43 @@ export interface GroveMetadataUploadResult {
 }
 
 export class GroveStorageService {
-  private client: StorageClient;
-  private acl: any;
+  private client: StorageClient | null = null;
+  private acl: any = null;
 
   constructor() {
-    this.client = StorageClient.create();
-    // Use testnet for development, mainnet for production
-    this.acl = immutable(chains.testnet.id);
+    // Don't initialize during SSR - will be lazy-loaded on first use
+    if (typeof window !== 'undefined') {
+      this.initializeClient();
+    }
+  }
+
+  private initializeClient() {
+    if (!this.client) {
+      this.client = StorageClient.create();
+      // Use testnet for development, mainnet for production
+      this.acl = immutable(chains.testnet.id);
+    }
+  }
+
+  private ensureInitialized() {
+    if (typeof window === 'undefined') {
+      throw new Error('Grove storage can only be used in the browser');
+    }
+    if (!this.client) {
+      this.initializeClient();
+    }
   }
 
   /**
    * Upload a single file to Grove/IPFS
    */
   async uploadFile(file: File): Promise<GroveUploadResult> {
+    this.ensureInitialized();
     try {
       console.log(`📤 Uploading ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB) to Grove...`);
 
       // Add timeout to prevent hanging
-      const uploadPromise = this.client.uploadFile(file, { acl: this.acl });
+      const uploadPromise = this.client!.uploadFile(file, { acl: this.acl });
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Grove upload timeout after 30 seconds')), 30000);
       });
@@ -77,6 +96,7 @@ export class GroveStorageService {
     folder: GroveUploadResult;
     files: GroveUploadResult[];
   }> {
+    this.ensureInitialized();
     try {
       const fileArray = Array.from(files);
       console.log(`📤 Uploading ${fileArray.length} files as folder to Grove...`);
@@ -95,7 +115,7 @@ export class GroveStorageService {
         platform: "saywaht",
       });
 
-      const response = await this.client.uploadFolder(fileArray, {
+      const response = await this.client!.uploadFolder(fileArray, {
         acl: this.acl,
         index,
       });
@@ -130,10 +150,11 @@ export class GroveStorageService {
    * Upload JSON metadata to Grove/IPFS
    */
   async uploadMetadata(metadata: object): Promise<GroveMetadataUploadResult & { ipfsUri?: string; publicGatewayUrl?: string }> {
+    this.ensureInitialized();
     try {
       console.log('📄 Uploading metadata to Grove...');
 
-      const response = await this.client.uploadAsJson(metadata, { acl: this.acl });
+      const response = await this.client!.uploadAsJson(metadata, { acl: this.acl });
 
       // Convert lens:// URI to standard ipfs:// format for better compatibility
       let ipfsUri = '';

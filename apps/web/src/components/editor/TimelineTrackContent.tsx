@@ -110,6 +110,13 @@ export function TimelineTrackContent({
     let nearestEdge = null;
     let minDistance = snapThreshold;
 
+    // Always check snap to timeline start (0)
+    const distanceToZero = Math.abs(dropTime - 0);
+    if (distanceToZero < minDistance) {
+      minDistance = distanceToZero;
+      nearestEdge = 0;
+    }
+
     // Check all clips on this track for potential snap points
     track.clips.forEach((existingClip) => {
       // Skip the clip being moved
