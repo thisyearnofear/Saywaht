@@ -169,8 +169,9 @@ export function EditorHeader() {
       toast.dismiss("deploy-progress");
       toast.success("🚀 Project ready for deployment!");
 
-      // Open mint page with project data URL
-      const mintUrl = `/mint/${activeProject.id}?dataUrl=${encodeURIComponent(uploadResult.url)}`;
+      // Open mint page without dataUrl - users will manually configure coin details
+      // This avoids Grove propagation issues
+      const mintUrl = `/mint/${activeProject.id}`;
       window.open(mintUrl, "_blank");
 
     } catch (error) {
