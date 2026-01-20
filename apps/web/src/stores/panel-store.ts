@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createSSRSafeStorage } from "@/lib/storage-ssr-safe";
 
 interface PanelState {
   // Panel sizes as percentages
@@ -48,6 +49,7 @@ export const usePanelStore = create<PanelState>()(
     }),
     {
       name: "panel-preferences",
+      storage: createSSRSafeStorage(),
       // Persist panel sizes and visibility
       partialize: (state) => ({
         toolsPanel: state.toolsPanel,

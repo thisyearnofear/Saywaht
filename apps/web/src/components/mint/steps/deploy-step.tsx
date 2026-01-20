@@ -13,7 +13,7 @@ import { base } from "viem/chains";
 // Using CreateCoinArgs and CreateConstants via namespace import
 import { PLATFORM_ADDRESS } from "@/lib";
 import { triggerCoinCelebration } from "@/lib/confetti";
-import { zoraCoins } from "@/lib/zora-coins";
+import { getZoraCoins } from "@/lib/zora-coins";
 import { sdk } from "@farcaster/miniapp-sdk";
 import {
   hapticSelection,
@@ -75,7 +75,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         }
         
         try {
-          const isValid = await zoraCoins.validateMetadataURI(data.metadataUri);
+          const isValid = await getZoraCoins().validateMetadataURI(data.metadataUri);
           if (isValid) {
             console.log("✅ Metadata validation passed");
           } else {

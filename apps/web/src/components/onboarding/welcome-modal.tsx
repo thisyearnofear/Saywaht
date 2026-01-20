@@ -58,14 +58,18 @@ export function WelcomeModal() {
 
   useEffect(() => {
     // Check if user has seen onboarding before
-    const hasSeenOnboarding = localStorage.getItem("saywaht-onboarding-seen");
-    if (!hasSeenOnboarding) {
-      setIsOpen(true);
+    if (typeof window !== "undefined") {
+      const hasSeenOnboarding = localStorage.getItem("saywaht-onboarding-seen");
+      if (!hasSeenOnboarding) {
+        setIsOpen(true);
+      }
     }
   }, []);
 
   const handleClose = () => {
-    localStorage.setItem("saywaht-onboarding-seen", "true");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("saywaht-onboarding-seen", "true");
+    }
     setIsOpen(false);
   };
 

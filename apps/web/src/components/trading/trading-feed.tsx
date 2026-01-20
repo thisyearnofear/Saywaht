@@ -13,7 +13,7 @@ import {
   AlertCircle,
   Search,
 } from "@/lib/icons";
-import { zoraCoins, type VideoCoin } from "@/lib/zora-coins";
+import { getZoraCoins, type VideoCoin } from "@/lib/zora-coins";
 import { useWalletAuth } from "@opencut/auth";
 import { useTrading } from "@/hooks/use-trading";
 import { toast } from "sonner";
@@ -45,8 +45,8 @@ export function TradingFeed() {
 
       // ENHANCEMENT FIRST: Fetch market insights alongside coins
       const [trendingCoins, insights] = await Promise.all([
-        zoraCoins.getTrendingCoins(),
-        zoraCoins.getMarketInsights().catch(() => null) // Graceful fallback
+        getZoraCoins().getTrendingCoins(),
+        getZoraCoins().getMarketInsights().catch(() => null) // Graceful fallback
       ]);
 
       setCoins(trendingCoins);

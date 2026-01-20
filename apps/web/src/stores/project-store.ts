@@ -1,7 +1,7 @@
 import { TProject, Scene } from "@/lib/types";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { customStorage } from "@/lib/utils";
+import { createSSRSafeStorage } from "@/lib/storage-ssr-safe";
 
 interface ProjectStore {
   activeProject: TProject | null;
@@ -61,7 +61,7 @@ export const useProjectStore = create<ProjectStore>()(
     }),
     {
       name: "project-storage", // unique name
-      storage: customStorage, // define the storage medium
+      storage: createSSRSafeStorage(), // define the storage medium
     }
   )
 );

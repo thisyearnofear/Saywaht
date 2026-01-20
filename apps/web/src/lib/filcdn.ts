@@ -1,6 +1,3 @@
-import { Synapse } from '@filoz/synapse-sdk';
-import { BrowserProvider } from 'ethers';
-
 // FilCDN Configuration
 const FILECOIN_CALIBRATION_RPC = 'https://api.calibration.node.glif.io/rpc/v1';
 
@@ -17,7 +14,7 @@ export interface FilCDNConfig {
 }
 
 export class FilCDNService {
-  private synapse: Synapse | null = null;
+  private synapse: any = null;
   private storageService: any = null;
   private config: FilCDNConfig;
 
@@ -26,12 +23,15 @@ export class FilCDNService {
   }
 
   async initialize(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    
     if (!this.config.privateKey) {
       throw new Error('Private key is required for FilCDN operations');
     }
 
     try {
       console.log('🚀 Initializing FilCDN with Synapse SDK...');
+      const { Synapse } = await import('@filoz/synapse-sdk');
       this.synapse = await Synapse.create({
         withCDN: true,
         privateKey: this.config.privateKey,
@@ -69,6 +69,10 @@ export class FilCDNService {
   }
 
   async uploadFile(file: File): Promise<UploadResult> {
+    if (typeof window === 'undefined') {
+      throw new Error('Upload is only available in the browser');
+    }
+    
     if (!this.synapse || !this.storageService) {
       throw new Error('FilCDN service not initialized. Call initialize() first.');
     }
@@ -117,6 +121,9 @@ export class FilCDNService {
   }
 
   async downloadFile(cid: string): Promise<Uint8Array> {
+    if (typeof window === 'undefined') {
+      throw new Error('Download is only available in the browser');
+    }
     if (!this.synapse) {
       throw new Error('FilCDN service not initialized. Call initialize() first.');
     }
@@ -133,8 +140,8 @@ export class FilCDNService {
   }
 
   async getDownloadUrl(cid: string): Promise<string> {
-    if (!this.synapse) {
-      throw new Error('FilCDN service not initialized. Call initialize() first.');
+    if (typeof window === 'undefined' || !this.synapse) {
+      return '';
     }
 
     const walletAddress = await this.synapse.getSigner().getAddress();
@@ -258,9 +265,11 @@ export async function uploadViaWallet(file: File): Promise<UploadResult> {
     throw new Error(`File size ${(file.size / 1024 / 1024).toFixed(1)}MB exceeds FilCDN limit of 254MB`);
   }
 
+  const { BrowserProvider } = await import('ethers');
   const provider = new BrowserProvider(eth);
   const signer = await provider.getSigner();
 
+  const { Synapse } = await import('@filoz/synapse-sdk');
   const synapse = await Synapse.create({
     withCDN: true,
     signer,
@@ -294,8 +303,12 @@ export async function checkClientPreflight(): Promise<{ allow: boolean; error?: 
     if (typeof window === 'undefined') return { allow: false, error: 'not-browser' };
     const eth = (window as any).ethereum;
     if (!eth) return { allow: false, error: 'no-wallet' };
+    
+    const { BrowserProvider } = await import('ethers');
     const provider = new BrowserProvider(eth);
     const signer = await provider.getSigner();
+    
+    const { Synapse } = await import('@filoz/synapse-sdk');
     const synapse = await Synapse.create({ withCDN: true, signer, rpcURL: FILECOIN_CALIBRATION_RPC });
     const storageService = await synapse.createStorage({});
     const preflight = await storageService.preflightUpload(1);

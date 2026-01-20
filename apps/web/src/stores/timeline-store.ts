@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { customStorage } from "@/lib/utils";
+import { createSSRSafeStorage } from "@/lib/storage-ssr-safe";
 
 export interface TimelineClip {
   id: string;
@@ -478,7 +478,7 @@ export const useTimelineStore = create<TimelineStore>()(
     }),
     {
       name: "timeline-storage",
-      storage: customStorage,
+      storage: createSSRSafeStorage(),
       // You might need to customize serialization/deserialization if your clips contain non-serializable data
     }
   )

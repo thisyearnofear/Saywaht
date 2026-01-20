@@ -182,25 +182,31 @@ export function useMobileOnboarding() {
 
   useEffect(() => {
     // Check if user has seen onboarding before
-    const hasSeenOnboarding = localStorage.getItem("saywaht-mobile-onboarding");
+    if (typeof window !== "undefined") {
+      const hasSeenOnboarding = localStorage.getItem("saywaht-mobile-onboarding");
 
-    if (!hasSeenOnboarding) {
-      // Show onboarding after a short delay
-      const timer = setTimeout(() => {
-        setShowOnboarding(true);
-      }, 1000);
+      if (!hasSeenOnboarding) {
+        // Show onboarding after a short delay
+        const timer = setTimeout(() => {
+          setShowOnboarding(true);
+        }, 1000);
 
-      return () => clearTimeout(timer);
+        return () => clearTimeout(timer);
+      }
     }
   }, []);
 
   const completeOnboarding = () => {
-    localStorage.setItem("saywaht-mobile-onboarding", "completed");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("saywaht-mobile-onboarding", "completed");
+    }
     setShowOnboarding(false);
   };
 
   const skipOnboarding = () => {
-    localStorage.setItem("saywaht-mobile-onboarding", "skipped");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("saywaht-mobile-onboarding", "skipped");
+    }
     setShowOnboarding(false);
   };
 

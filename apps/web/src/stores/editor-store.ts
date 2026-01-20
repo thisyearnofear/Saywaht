@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createSSRSafeStorage } from "@/lib/storage-ssr-safe";
 
 interface EditorState {
   // Loading states
@@ -65,6 +66,7 @@ export const useEditorStore = create<EditorState>()(
     }),
     {
       name: "editor-preferences",
+      storage: createSSRSafeStorage(),
       // Only persist user preferences, not app state
       partialize: (state) => ({
         videoObjectFit: state.videoObjectFit,

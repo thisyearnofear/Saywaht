@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createSSRSafeStorage } from "@/lib/storage-ssr-safe";
 import type { VideoFormat } from "../lib/video-utils";
 
 export interface CanvasSize {
@@ -82,6 +83,7 @@ export const useCanvasStore = create<CanvasState>()(
     }),
     {
       name: "canvas-settings",
+      storage: createSSRSafeStorage(),
     }
   )
 );

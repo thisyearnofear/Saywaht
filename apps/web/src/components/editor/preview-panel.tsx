@@ -99,20 +99,28 @@ export function PreviewPanel() {
   const activeTextElements = getActiveTextElements();
   const aspectRatio = getAspectRatio();
 
-  // Debug logging
-  if (tracks.length > 0 && activeClips.length === 0) {
-    console.log("🎬 No active clips. Debug info:", {
-      currentTime,
-      tracksCount: tracks.length,
-      totalClips: tracks.reduce((sum, track) => sum + track.clips.length, 0),
-      firstTrackClips: tracks[0]?.clips.map(clip => ({
-        name: clip.name,
-        startTime: clip.startTime,
-        endTime: clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd),
-        isActive: currentTime >= clip.startTime && currentTime < (clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd))
-      }))
-    });
-  }
+  // Debug logging - refined to be less noisy
+  useEffect(() => {
+    if (!SHOW_DEBUG_INFO) return;
+
+    const hasClips = tracks.some(t => t.clips.length > 0);
+    if (hasClips && activeClips.length === 0) {
+      // Small timeout to avoid logging during rapid state changes (like seeking)
+      const timer = setTimeout(() => {
+        console.log("🎬 No active clips at current time. Debug info:", {
+          currentTime,
+          tracksCount: tracks.length,
+          totalClips: tracks.reduce((sum, track) => sum + track.clips.length, 0),
+          firstTrackClips: tracks[0]?.clips.slice(0, 3).map(clip => ({
+            name: clip.name,
+            startTime: clip.startTime,
+            endTime: clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd),
+          }))
+        });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentTime, tracks, activeClips.length]);
 
   // Render a clip
   const renderClip = (clipData: any, index: number) => {

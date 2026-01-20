@@ -18,7 +18,7 @@ import {
     MessageCircle,
     Share2,
 } from "@/lib/icons";
-import { zoraCoins, type VideoCoin } from "@/lib/zora-coins";
+import { getZoraCoins, type VideoCoin } from "@/lib/zora-coins";
 import { useWalletAuth } from "@opencut/auth";
 import { motion } from "motion/react";
 
@@ -54,9 +54,10 @@ export function CreatorDashboard() {
         setError(null);
 
         try {
-            const data = await zoraCoins.getCreatorAnalytics(user.address);
+            const data = await getZoraCoins().getCreatorAnalytics(user.address);
             setAnalytics(data);
         } catch (err) {
+
             setError(err instanceof Error ? err.message : 'Failed to load analytics');
         } finally {
             setIsLoading(false);

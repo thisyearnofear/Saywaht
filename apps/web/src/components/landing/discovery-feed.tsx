@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { zoraCoins, type VideoCoin } from "@/lib/zora-coins";
+import { getZoraCoins, type VideoCoin } from "@/lib/zora-coins";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { SimpleVideoPlayer } from "../ui/simple-video-player";
 import { Badge } from "../ui/badge";
@@ -15,7 +15,7 @@ export function DiscoveryFeed() {
     const fetchCoins = async () => {
       try {
         console.log("🔄 DiscoveryFeed: Starting to fetch coins...");
-        const data = await zoraCoins.getTrendingCoins();
+        const data = await getZoraCoins().getTrendingCoins();
         console.log(
           "✅ DiscoveryFeed: Coins fetched successfully:",
           data.length

@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware";
 import { groveStorage } from "@/lib/grove-storage";
 import { useWalletAuth } from "@opencut/auth";
 import { useEffect } from 'react';
+import { createSSRSafeStorage } from "@/lib/storage-ssr-safe";
 
 export interface ProjectData {
   id: string;
@@ -250,6 +251,7 @@ export const useProjectIPFSStore = create<ProjectIPFSStore>()(
     }),
     {
       name: "saywaht-project-ipfs-store",
+      storage: createSSRSafeStorage(),
       partialize: (state) => ({
         projectCache: state.projectCache,
       }),

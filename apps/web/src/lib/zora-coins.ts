@@ -72,10 +72,10 @@ export class ZoraCoinsService {
 
   // MODULAR: Separate initialization logic
   private initializeService() {
-    console.log(`🔗 Initializing Zora Coins service on Base Mainnet`);
+    // PERFORMANT: Only initialize on client-side and only once
+    if (typeof window === 'undefined' || this.isInitialized) return;
 
-    // PERFORMANT: Only initialize once
-    if (this.isInitialized) return;
+    console.log(`🔗 Initializing Zora Coins service on Base Mainnet`);
 
     // Initialize clients for Base mainnet (as per Zora docs)
     this.publicClient = createPublicClient({
@@ -104,6 +104,7 @@ export class ZoraCoinsService {
    * Uses official Zora SDK getCoinsNew function with proper error handling
    */
   async getTrendingCoins(count: number = 10): Promise<VideoCoin[]> {
+    if (typeof window === 'undefined') return [];
     return zoraCircuitBreaker.execute(async () => {
       return withRetry(async () => {
         // CLEAN: Use official SDK method with proper parameters
@@ -126,6 +127,7 @@ export class ZoraCoinsService {
    * Uses official Zora SDK getCoin function
    */
   async getCoinData(coinAddress: string): Promise<VideoCoin | null> {
+    if (typeof window === 'undefined') return null;
     return zoraCircuitBreaker.execute(async () => {
       return withRetry(async () => {
         try {
@@ -154,6 +156,7 @@ export class ZoraCoinsService {
     totalValue: string;
     totalPnl: number;
   }> {
+    if (typeof window === 'undefined') return { coins: [], totalValue: "0", totalPnl: 0 };
     return zoraCircuitBreaker.execute(async () => {
       return withRetry(async () => {
         try {
@@ -396,6 +399,17 @@ export class ZoraCoinsService {
       retentionRate: number;
     };
   }> {
+  if (typeof window === 'undefined') {
+    return {
+      totalCoins: 0,
+      totalVolume: "0",
+      totalRevenue: "0",
+      avgCoinPerformance: 0,
+      topPerformingCoin: null,
+      recentActivity: [],
+      audienceMetrics: { uniqueHolders: 0, avgHoldingTime: 0, retentionRate: 0 }
+    };
+  }
   return zoraCircuitBreaker.execute(async () => {
     return withRetry(async () => {
       try {
@@ -483,6 +497,16 @@ export class ZoraCoinsService {
       totalVolume: string;
     }>;
   }> {
+  if (typeof window === 'undefined') {
+    return {
+      trendingTopics: [],
+      marketSentiment: 'neutral',
+      topGainers: [],
+      topLosers: [],
+      volumeLeaders: [],
+      newCreators: []
+    };
+  }
   return zoraCircuitBreaker.execute(async () => {
     return withRetry(async () => {
       try {
@@ -534,5 +558,31 @@ export class ZoraCoinsService {
 }
 }
 
-// MODULAR: Export singleton instance for consistent usage
-export const zoraCoins = new ZoraCoinsService();
+// singleton instance for client-side
+let zoraCoinsInstance: ZoraCoinsService | null = null;
+
+export function getZoraCoins(): ZoraCoinsService {
+  if (typeof window === 'undefined') {
+    // Return a dummy instance that won't throw
+    return {
+      getTrendingCoins: async () => [],
+      getCoinData: async () => null,
+      getUserPortfolio: async () => ({ coins: [], totalValue: "0", totalPnl: 0 }),
+      validateMetadataURI: async () => true,
+      getCreatorAnalytics: async () => ({
+        totalCoins: 0, totalVolume: "0", totalRevenue: "0", avgCoinPerformance: 0,
+        topPerformingCoin: null, recentActivity: [], 
+        audienceMetrics: { uniqueHolders: 0, avgHoldingTime: 0, retentionRate: 0 }
+      }),
+      getMarketInsights: async () => ({
+        trendingTopics: [], marketSentiment: 'neutral', topGainers: [],
+        topLosers: [], volumeLeaders: [], newCreators: []
+      })
+    } as unknown as ZoraCoinsService;
+  }
+  
+  if (!zoraCoinsInstance) {
+    zoraCoinsInstance = new ZoraCoinsService();
+  }
+  return zoraCoinsInstance;
+}

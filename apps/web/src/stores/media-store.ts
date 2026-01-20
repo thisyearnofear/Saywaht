@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { customStorage } from "@/lib/utils";
+import { createSSRSafeStorage } from "@/lib/storage-ssr-safe";
 
 export interface MediaItem {
   id: string;
@@ -201,7 +201,7 @@ export const useMediaStore = create<MediaStore>()(
     }),
     {
       name: "media-storage",
-      storage: customStorage,
+      storage: createSSRSafeStorage(),
     }
   )
 );
