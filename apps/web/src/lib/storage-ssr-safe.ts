@@ -1,4 +1,4 @@
-import { StateStorage } from 'zustand/middleware';
+import { PersistStorage } from 'zustand/middleware';
 
 /**
  * SSR-safe storage wrapper for Zustand persist middleware
@@ -6,33 +6,34 @@ import { StateStorage } from 'zustand/middleware';
  * This prevents "indexedDB is not defined" errors during server-side rendering
  * by checking if we're in a browser environment before accessing storage APIs.
  */
-export const createSSRSafeStorage = (): StateStorage => {
+export const createSSRSafeStorage = <T>(): PersistStorage<T> => {
   // Check if we're in a browser environment
   const isBrowser = typeof window !== 'undefined';
 
   return {
-    getItem: (name: string): string | null => {
+    getItem: (name: string) => {
       if (!isBrowser) {
         return null;
       }
       try {
-        return localStorage.getItem(name);
+        const value = localStorage.getItem(name);
+        return value ? JSON.parse(value) : null;
       } catch (error) {
         console.warn(`Error reading from localStorage for key "${name}":`, error);
         return null;
       }
     },
-    setItem: (name: string, value: string): void => {
+    setItem: (name: string, value: T) => {
       if (!isBrowser) {
         return;
       }
       try {
-        localStorage.setItem(name, value);
+        localStorage.setItem(name, JSON.stringify(value));
       } catch (error) {
         console.warn(`Error writing to localStorage for key "${name}":`, error);
       }
     },
-    removeItem: (name: string): void => {
+    removeItem: (name: string) => {
       if (!isBrowser) {
         return;
       }

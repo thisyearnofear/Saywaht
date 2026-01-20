@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { VideoPreview } from "./video-preview";
 import { VideoThumbnailSimple } from "./video-thumbnail-simple";
 import { useState, useEffect } from "react";
+import { resolveIpfsUrl } from "@/lib/utils";
 
 interface TemplateDetailsProps {
   templateId: string;
@@ -29,6 +30,9 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
       selectTemplate(templateId);
     }
   }, [templateId, selectTemplate]);
+
+  const resolvedVideoUrl = selectedTemplate?.videoUrl ? resolveIpfsUrl(selectedTemplate.videoUrl) : null;
+  const resolvedThumbnailUrl = selectedTemplate?.thumbnailUrl ? resolveIpfsUrl(selectedTemplate.thumbnailUrl) : null;
 
   // Loading state
   if (isLoading) {
@@ -121,18 +125,18 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
                   : "aspect-video"
             }`}
           >
-            {selectedTemplate.videoUrl ||
-            (selectedTemplate.thumbnailUrl &&
-              selectedTemplate.thumbnailUrl.endsWith(".mp4")) ? (
+            {resolvedVideoUrl ||
+            (resolvedThumbnailUrl &&
+              resolvedThumbnailUrl.endsWith(".mp4")) ? (
               // Use VideoPreview for playback when video is available
               <VideoPreview
-                src={selectedTemplate.videoUrl || selectedTemplate.thumbnailUrl}
+                src={resolvedVideoUrl || resolvedThumbnailUrl!}
                 title={selectedTemplate.name}
               />
-            ) : selectedTemplate.thumbnailUrl ? (
+            ) : resolvedThumbnailUrl ? (
               // Regular image thumbnail
               <Image
-                src={selectedTemplate.thumbnailUrl}
+                src={resolvedThumbnailUrl}
                 alt={selectedTemplate.name}
                 fill
                 className="object-cover"
