@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useMediaStore } from "@/stores/media-store";
-import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
+import { useCanvasStore } from "@/stores/canvas-store";
 import { useEditorStore } from "@/stores/editor-store";
 import { useTextStore } from "@/stores/text-store";
 import { Button } from "../ui/button";
@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { VideoPlayer } from "../ui/video-player";
 import { ImageTimelineTreatment } from "../ui/image-timeline-treatment";
 import { AudioPlayer } from "@/components/ui/audio-player";
-import { Play, Pause, Volume2, VolumeX, Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw } from "@/lib/icons";
+import { Play, Pause, Volume2, VolumeX, Maximize2, Minimize2 } from "@/lib/icons";
 import Image from "next/image";
 import {
   Tooltip,
@@ -30,8 +30,8 @@ export function PreviewPanel() {
   const { mediaItems } = useMediaStore();
   const { isPlaying, toggle, currentTime, muted, toggleMute, volume } =
     usePlaybackStore();
-  const { canvasSize, setCanvasSize, setCanvasPreset, getAspectRatio } = useCanvasStore();
-  const { videoObjectFit, toggleVideoObjectFit, previewZoom, setPreviewZoom, resetPreviewZoom } = useEditorStore();
+  const { canvasSize, getAspectRatio } = useCanvasStore();
+  const { videoObjectFit, toggleVideoObjectFit, previewZoom } = useEditorStore();
   const { textElements } = useTextStore();
   const [showDebug, setShowDebug] = useState(SHOW_DEBUG_INFO);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -231,26 +231,6 @@ export function PreviewPanel() {
     <div className="h-full w-full flex flex-col min-h-0 min-w-0">
       {/* Controls */}
       <div className="border-b p-2 flex items-center gap-2 text-xs flex-shrink-0">
-        <span className="text-muted-foreground">Canvas:</span>
-        <select
-          value={canvasPresets.find(p =>
-            p.size.width === canvasSize.width && p.size.height === canvasSize.height
-          )?.name || "Custom"}
-          onChange={(e) => {
-            const preset = canvasPresets.find(p => p.name === e.target.value);
-            if (preset) {
-              setCanvasPreset(preset);
-            }
-          }}
-          className="bg-background border rounded px-2 py-1 text-xs"
-        >
-          {canvasPresets.map((preset) => (
-            <option key={preset.name} value={preset.name}>
-              {preset.name} ({preset.size.width}x{preset.size.height})
-            </option>
-          ))}
-        </select>
-
         {/* Debug Toggle - Only show in development */}
         {SHOW_DEBUG_INFO && (
           <>
@@ -334,64 +314,6 @@ export function PreviewPanel() {
 
       {/* Preview Area - Scrollable to prevent portrait format from dominating */}
       <div className="flex-1 flex items-center justify-center p-2 sm:p-4 bg-gray-900 relative overflow-auto" style={{ minHeight: "300px" }}>
-         {/* Canvas Size Indicator */}
-         <div className="sticky top-4 left-4 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded border border-white/20 backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-500">
-           {canvasSize.width} × {canvasSize.height}px
-         </div>
-
-         {/* Zoom Controls */}
-         <div className="sticky top-4 right-4 z-10 flex gap-1 animate-in fade-in slide-in-from-top-2 duration-500">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setPreviewZoom(previewZoom - 0.25)}
-                  disabled={previewZoom <= 0.25}
-                  className="h-7 w-7 p-0 transition-all duration-200 hover:scale-110 active:scale-95"
-                >
-                  <ZoomOut className="h-3 w-3" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Zoom Out</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={resetPreviewZoom}
-                  className="h-7 px-2 text-xs transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  {Math.round(previewZoom * 100)}%
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Reset Zoom (100%)</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setPreviewZoom(previewZoom + 0.25)}
-                  disabled={previewZoom >= 3}
-                  className="h-7 w-7 p-0 transition-all duration-200 hover:scale-110 active:scale-95"
-                >
-                  <ZoomIn className="h-3 w-3" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Zoom In</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
         <div
           className="flex items-center justify-center flex-1"
           style={{

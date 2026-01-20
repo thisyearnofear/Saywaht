@@ -7,7 +7,8 @@ import { useProjectStore } from "@/stores/project-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
-import { useCanvasStore } from "@/stores/canvas-store";
+import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
+import { useEditorStore } from "@/stores/editor-store";
 import { badgeVariants } from "./ui/badge";
 import { cn } from "@/lib/utils";
 import { useAccount } from "wagmi";
@@ -20,6 +21,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { ZoomIn, ZoomOut } from "@/lib/icons";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 import { getExportErrorMessage } from "@/lib/export-error-handler";
 import { isBackendExportAvailable } from "@/lib/backend-export";
 import { ExportMethod } from "@/lib/canvas-export-utils";
@@ -31,7 +39,8 @@ export function EditorHeader() {
   const { activeProject } = useProjectStore();
   const { isPlaying, toggle } = usePlaybackStore();
   const { address } = useAccount();
-  const { getFormat } = useCanvasStore();
+  const { getFormat, canvasSize, setCanvasPreset } = useCanvasStore();
+  const { previewZoom, setPreviewZoom, resetPreviewZoom } = useEditorStore();
   const { isFarcasterMiniApp } = useFarcasterContext();
   const { shareToFarcaster, isSharing } = useFarcasterShare();
 
@@ -164,7 +173,7 @@ export function EditorHeader() {
         setTimeout(() => reject(new Error('Upload timeout after 60 seconds')), 60000);
       });
 
-      const uploadResult = await Promise.race([uploadPromise, timeoutPromise]) as any;
+      const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
 
       toast.dismiss("deploy-progress");
       toast.success("🚀 Project ready for deployment!");
@@ -240,8 +249,96 @@ export function EditorHeader() {
         </div>
       </div>
 
-      {/* Center Section - Playback Controls */}
-      <div className="flex items-center gap-2">
+      {/* Center Section - Canvas Format, Zoom Controls & Playback */}
+      <div className="flex items-center gap-3">
+        {/* Canvas Format Dropdown */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Canvas:</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="text-xs h-7">
+                {canvasPresets.find(p =>
+                  p.size.width === canvasSize.width && p.size.height === canvasSize.height
+                )?.name || "Custom"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="w-48">
+              {canvasPresets.map((preset) => (
+                <DropdownMenuItem
+                  key={preset.name}
+                  onClick={() => setCanvasPreset(preset)}
+                  className="text-xs"
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium">{preset.name}</span>
+                    <span className="text-muted-foreground">
+                      {preset.size.width} × {preset.size.height}px
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <div className="w-px h-4 bg-border" />
+
+        {/* Zoom Controls */}
+        <div className="flex items-center gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPreviewZoom(previewZoom - 0.25)}
+                  disabled={previewZoom <= 0.25}
+                  className="h-7 w-7 p-0"
+                >
+                  <ZoomOut className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Zoom Out</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetPreviewZoom}
+                  className="h-7 px-2 text-xs"
+                >
+                  {Math.round(previewZoom * 100)}%
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Reset Zoom (100%)</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPreviewZoom(previewZoom + 0.25)}
+                  disabled={previewZoom >= 3}
+                  className="h-7 w-7 p-0"
+                >
+                  <ZoomIn className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Zoom In</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        <div className="w-px h-4 bg-border" />
+
+        {/* Playback Controls */}
         <Button
           variant="text"
           size="sm"
