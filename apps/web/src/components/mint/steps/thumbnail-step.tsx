@@ -79,10 +79,11 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
   const generateAIThumbnail = async () => {
     setIsGenerating(true);
 
+    // Declare videoFrame at function scope so it's accessible in catch block
+    let videoFrame: string | null = null;
+
     try {
       // Find the first video in the timeline
-      let videoFrame: string | null = null;
-
       for (const track of tracks) {
         for (const clip of track.clips) {
           const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
@@ -102,21 +103,36 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
         throw new Error("No video found to generate thumbnail from");
       }
 
-      // Generate AI thumbnail using our API
-      const response = await fetch("/api/ai/generate-thumbnail", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: customPrompt,
-          videoFrame: videoFrame,
-        }),
-      });
+      // Generate AI thumbnail using our API with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate thumbnail");
+      let response;
+      try {
+        response = await fetch("/api/ai/generate-thumbnail", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt: customPrompt,
+            videoFrame: videoFrame,
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to generate thumbnail");
+        }
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          throw new Error("Thumbnail generation timed out. Using video frame instead.");
+        }
+        throw fetchError;
       }
 
       const responseData = await response.json();
@@ -141,11 +157,22 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
       }
     } catch (error) {
       console.error("Failed to generate thumbnail:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to generate thumbnail. Please try again."
-      );
+      
+      // If API fails, fall back to using the video frame directly
+      if (videoFrame) {
+        console.log("Falling back to video frame as thumbnail");
+        updateData({
+          thumbnail: videoFrame,
+          thumbnailPrompt: customPrompt,
+        });
+        toast.success("Using video frame as thumbnail");
+      } else {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to generate thumbnail. Please try again."
+        );
+      }
     } finally {
       setIsGenerating(false);
     }

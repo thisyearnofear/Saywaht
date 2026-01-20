@@ -102,7 +102,14 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   // Ensure we're on client side before doing anything
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    
+    // Log any initialization errors
+    if (typeof window !== 'undefined') {
+      console.log('🪙 Mint wizard initialized');
+      console.log('Project ID:', projectId);
+      console.log('Data URL:', dataUrl ? 'provided' : 'not provided');
+    }
+  }, [projectId, dataUrl]);
 
   const updateWizardData = useCallback((updates: Partial<MintWizardData>) => {
     setWizardData((prev: MintWizardData) => ({ ...prev, ...updates }));
@@ -119,6 +126,29 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
       console.log("Users can manually configure their coin details");
     }
   }, [dataUrl, isClient]);
+
+  // Add error boundary for any runtime errors
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('Mint wizard error:', event.error);
+      toast.error('An error occurred. Please refresh the page and try again.');
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      toast.error('An error occurred. Please refresh the page and try again.');
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('error', handleError);
+      window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+      return () => {
+        window.removeEventListener('error', handleError);
+        window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      };
+    }
+  }, []);
 
   // Trigger confetti when deployment is complete
   useEffect(() => {
