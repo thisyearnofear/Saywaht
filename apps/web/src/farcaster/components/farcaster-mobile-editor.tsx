@@ -26,16 +26,44 @@ export function FarcasterMobileEditorLayout({
   const { showOnboarding, completeOnboarding, skipOnboarding } =
     useMobileOnboarding();
   const [showFarcasterOnboarding, setShowFarcasterOnboarding] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
+
+  // Debug mode toggle (for development)
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'D' && e.shiftKey && e.ctrlKey) {
+        setDebugMode(prev => !prev);
+        console.log("Debug mode:", !debugMode);
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [debugMode]);
 
   // Initialize Mini App SDK with proper error handling and context detection
   useEffect(() => {
-    const initializeMiniApp = async () => {};
-    initializeMiniApp();
+    const initializeMiniApp = async () => {
+      // Add fallback timeout to prevent infinite loading
+      const fallbackTimeout = setTimeout(() => {
+        console.log("Farcaster initialization timeout, showing editor anyway");
+        if (isFarcasterMiniApp && isInitializing) {
+          // Force show the editor if initialization takes too long
+          setShowFarcasterOnboarding(false);
+        }
+      }, 10000); // 10 second fallback
 
-    // Show Mini App specific onboarding
-    if (isFarcasterMiniApp && showOnboarding) {
-      setShowFarcasterOnboarding(true);
-    }
+      // Show Mini App specific onboarding
+      if (isFarcasterMiniApp && showOnboarding && isReady) {
+        setShowFarcasterOnboarding(true);
+      }
+
+      return () => clearTimeout(fallbackTimeout);
+    };
+
+    const cleanup = initializeMiniApp();
+    return () => {
+      cleanup.then(fn => fn && fn());
+    };
   }, [isFarcasterMiniApp, isReady, isInitializing, showOnboarding]);
 
   // Handle Mini App navigation actions
@@ -62,6 +90,23 @@ export function FarcasterMobileEditorLayout({
   return (
     <div className={`h-screen w-screen flex flex-col bg-background overflow-hidden mobile-editor safe-area ${isFarcasterMiniApp ? 'farcaster-miniapp' : ''
       }`}>
+      {/* Debug Panel */}
+      {debugMode && (
+        <div className="fixed top-0 left-0 z-50 bg-black/90 text-white p-2 text-xs max-w-sm">
+          <div>isFarcasterMiniApp: {String(isFarcasterMiniApp)}</div>
+          <div>isInitializing: {String(isInitializing)}</div>
+          <div>isReady: {String(isReady)}</div>
+          <div>showOnboarding: {String(showOnboarding)}</div>
+          <div>frameState: {JSON.stringify(frameState)}</div>
+          <button
+            onClick={() => setDebugMode(false)}
+            className="mt-2 px-2 py-1 bg-red-500 rounded text-xs"
+          >
+            Close Debug
+          </button>
+        </div>
+      )}
+
       {/* Farcaster client logic */}
       <FarcasterClientLogic />
 
@@ -69,13 +114,12 @@ export function FarcasterMobileEditorLayout({
       <FarcasterSplashScreen
         isVisible={isFarcasterMiniApp && isInitializing}
         onComplete={() => {
-          // Splash screen completion is handled by the provider
           console.log("Farcaster splash screen completed");
         }}
       />
 
-      {/* Enhanced mobile editor layout with Farcaster features - only show when ready */}
-      {(!isFarcasterMiniApp || isReady) && (
+      {/* Enhanced mobile editor layout with Farcaster features - show when ready OR after timeout */}
+      {(!isFarcasterMiniApp || isReady || (!isInitializing && !isReady)) && (
         <div className="flex-1 min-h-0 overflow-y-auto scrollable flex flex-col">
           {/* Show Cast Context if available */}
           {frameState.castHash && (
@@ -86,7 +130,7 @@ export function FarcasterMobileEditorLayout({
       )}
 
       {/* Farcaster-specific onboarding */}
-      {showFarcasterOnboarding && isFarcasterMiniApp && isReady && (
+      {showFarcasterOnboarding && isFarcasterMiniApp && (isReady || !isInitializing) && (
         <MobileOnboardingOverlay
           isOpen={showFarcasterOnboarding}
           onClose={() => {

@@ -28,6 +28,12 @@ export function FarcasterSplashScreen({
   useEffect(() => {
     if (!isVisible) return;
 
+    // Maximum splash screen duration - prevent infinite loading
+    const maxTimeout = setTimeout(() => {
+      console.log("Splash screen max timeout reached, proceeding to app");
+      onComplete();
+    }, 8000); // 8 second maximum
+
     const stages = [
       { stage: "initializing" as const, duration: 800, progress: 33 },
       { stage: "connecting" as const, duration: 1000, progress: 66 },
@@ -41,8 +47,8 @@ export function FarcasterSplashScreen({
       if (currentStageIndex >= stages.length) {
         // Complete the splash screen
         setTimeout(() => {
+          clearTimeout(maxTimeout);
           onComplete();
-          // SDK ready is now called directly in the FarcasterProvider
         }, 300);
         return;
       }
@@ -62,6 +68,7 @@ export function FarcasterSplashScreen({
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
+      clearTimeout(maxTimeout);
     };
   }, [isVisible, onComplete]);
 
@@ -91,7 +98,7 @@ export function FarcasterSplashScreen({
     >
       {/* Farcaster-style gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-purple-500/10 pointer-events-none" />
-      
+
       {/* Main content */}
       <div className="relative flex flex-col items-center space-y-8 px-8 text-center">
         {/* Logo/Brand */}
@@ -101,12 +108,12 @@ export function FarcasterSplashScreen({
             <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-2xl">
               <span className="text-2xl font-bold text-white">S</span>
             </div>
-            
+
             {/* Pulsing ring animation */}
             <div className="absolute inset-0 rounded-2xl border-2 border-purple-500/30 animate-ping" />
             <div className="absolute inset-0 rounded-2xl border border-blue-500/20 animate-pulse" />
           </div>
-          
+
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-foreground">Saywaht</h1>
             <p className="text-sm text-muted-foreground">Video Commentary Coins</p>
@@ -122,7 +129,7 @@ export function FarcasterSplashScreen({
               style={{ width: `${progress}%` }}
             />
           </div>
-          
+
           {/* Loading message with spinner */}
           <div className="flex items-center space-x-3">
             <Loader2 className="h-4 w-4 animate-spin text-purple-500" />

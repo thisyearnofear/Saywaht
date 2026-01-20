@@ -38,24 +38,53 @@ export function FarcasterProvider({
   const [isInitializing, setIsInitializing] = useState(true);
   const [isReady, setIsReady] = useState(false);
 
-  // Initialize Farcaster Mini App SDK
+  // Initialize Farcaster Mini App SDK with timeout and better error handling
   useEffect(() => {
     const initializeSDK = async () => {
       try {
         setIsInitializing(true);
+
+        // Add timeout to prevent hanging
+        const initTimeout = setTimeout(() => {
+          console.warn("SDK initialization timeout, proceeding anyway");
+          setIsFarcasterMiniApp(isMobile);
+          setIsReady(true);
+          setIsInitializing(false);
+        }, 5000); // 5 second timeout
+
         let miniAppDetected = false;
         try {
+          // Check if we're in a Farcaster context
           const detector = (sdk as any).isInMiniApp;
-          miniAppDetected =
-            typeof detector === "function" ? await detector() : false;
-        } catch {}
-        const isMiniApp = miniAppDetected || isMobile;
+          if (typeof detector === "function") {
+            miniAppDetected = await Promise.race([
+              detector(),
+              new Promise(resolve => setTimeout(() => resolve(false), 2000))
+            ]) as boolean;
+          }
+        } catch (error) {
+          console.log("Mini app detection failed:", error);
+        }
+
+        // Also check URL parameters for Farcaster context
+        const urlHasFarcasterParams = typeof window !== "undefined" && (
+          window.location.search.includes("farcaster") ||
+          window.location.search.includes("fid") ||
+          window.location.pathname.includes("farcaster")
+        );
+
+        const isMiniApp = miniAppDetected || urlHasFarcasterParams || isMobile;
         setIsFarcasterMiniApp(isMiniApp);
 
         if (isMiniApp) {
-          // Get user context if available (before calling ready)
+          // Try to get user context with timeout
           try {
-            const context = await sdk.context;
+            const contextPromise = sdk.context;
+            const context = await Promise.race([
+              contextPromise,
+              new Promise((_, reject) => setTimeout(() => reject(new Error("Context timeout")), 3000))
+            ]) as any;
+
             if (context?.user) {
               setFarcasterUser({
                 fid: context.user.fid,
@@ -71,32 +100,37 @@ export function FarcasterProvider({
               });
             }
           } catch (error) {
-            // No user context available (expected for some Mini App contexts)
-            console.log("No user context available:", error);
+            console.log("User context not available:", error);
           }
 
-          // Call sdk.actions.ready() to signal the mini app is ready
+          // Try to call ready() with timeout
           try {
-            await sdk.actions.ready();
+            await Promise.race([
+              sdk.actions.ready(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error("Ready timeout")), 2000))
+            ]);
             console.log("Farcaster SDK ready() called successfully");
           } catch (error) {
-            console.error("Failed to call sdk.actions.ready():", error);
+            console.log("SDK ready() failed or timed out:", error);
+            // Continue anyway - some contexts don't require ready()
           }
         }
 
-        // Mark as ready after initialization
+        clearTimeout(initTimeout);
         setIsReady(true);
         setIsInitializing(false);
       } catch (error) {
-        console.error("Failed to initialize Farcaster SDK:", error);
-        // Fallback: still mark as ready even if initialization fails
+        console.error("SDK initialization error:", error);
+        // Always mark as ready to prevent infinite loading
         setIsFarcasterMiniApp(isMobile);
         setIsReady(true);
         setIsInitializing(false);
       }
     };
 
-    initializeSDK();
+    // Add small delay to ensure DOM is ready
+    const timer = setTimeout(initializeSDK, 100);
+    return () => clearTimeout(timer);
   }, [isMobile]);
 
   return (
