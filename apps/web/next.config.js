@@ -57,6 +57,12 @@ const nextConfig = {
         path: false,
         crypto: false,
       };
+    } else {
+      // Mock indexedDB on server to prevent SSR errors
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'idb-keyval': false,
+      };
     }
 
     // Ensure bs58 and other Node.js modules work in browser

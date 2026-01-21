@@ -5,16 +5,19 @@ import { PersistStorage } from 'zustand/middleware';
  * 
  * This prevents "indexedDB is not defined" errors during server-side rendering
  * by checking if we're in a browser environment before accessing storage APIs.
+ * 
+ * IMPORTANT: This must be called lazily (inside the persist config) to avoid
+ * evaluation during server-side bundle creation.
  */
-export const createSSRSafeStorage = <T>(): PersistStorage<T> => {
-  // Check if we're in a browser environment
-  const isBrowser = typeof window !== 'undefined';
+export const createSSRSafeStorage = <T>(): PersistStorage<T> | undefined => {
+  // Return undefined during SSR - Zustand will handle this gracefully
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
 
+  // Only create the storage object in browser environment
   return {
     getItem: (name: string) => {
-      if (!isBrowser) {
-        return null;
-      }
       try {
         const value = localStorage.getItem(name);
         return value ? JSON.parse(value) : null;
@@ -24,9 +27,6 @@ export const createSSRSafeStorage = <T>(): PersistStorage<T> => {
       }
     },
     setItem: (name: string, value: unknown) => {
-      if (!isBrowser) {
-        return;
-      }
       try {
         localStorage.setItem(name, JSON.stringify(value));
       } catch (error) {
@@ -34,9 +34,6 @@ export const createSSRSafeStorage = <T>(): PersistStorage<T> => {
       }
     },
     removeItem: (name: string) => {
-      if (!isBrowser) {
-        return;
-      }
       try {
         localStorage.removeItem(name);
       } catch (error) {
