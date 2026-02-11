@@ -3,17 +3,21 @@
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { useProjectStore } from "@/stores/project-store";
+import { usePlaybackStore } from "@/stores/playback-store";
 import { PreviewPanel } from "@/components/editor/preview-panel";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { Loader2 } from "@/lib/icons";
 
 export function MintVideoPreview() {
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
   const { activeProject } = useProjectStore();
+  const { toggle, isPlaying } = usePlaybackStore();
   const [thumbnailUrl, setThumbnailUrl] = useState<string>("");
   const [isClient, setIsClient] = useState(false);
   const [showPlayer, setShowPlayer] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Ensure we're on the client
@@ -66,14 +70,69 @@ export function MintVideoPreview() {
     );
   }
 
+  // Handle play button click
+  const handlePlayClick = () => {
+    setIsLoading(true);
+    setShowPlayer(true);
+
+    // Small delay to allow PreviewPanel to mount, then start playback
+    setTimeout(() => {
+      if (!isPlaying) {
+        toggle();
+      }
+      // Hide loading state after a brief moment
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 500);
+    }, 100);
+  };
+
   // Show the actual video player if requested
   if (showPlayer) {
     return (
       <div className="relative w-full h-full">
-        <PreviewPanel />
+        {/* Show thumbnail with loading overlay during initialization */}
+        {isLoading && thumbnailUrl && (
+          <div className="absolute inset-0 z-10 bg-black/90 flex flex-col items-center justify-center transition-opacity duration-300">
+            <Image
+              src={thumbnailUrl}
+              alt="Video preview"
+              fill
+              className="object-cover opacity-30"
+              unoptimized={true}
+            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              {/* Brand/Logo stays visible */}
+              {activeProject && (
+                <div className="mb-8 text-center">
+                  <h3 className="text-white font-bold text-2xl mb-2">
+                    {activeProject.name || "Untitled Project"}
+                  </h3>
+                  <p className="text-white/60 text-sm">
+                    {mediaItems.length} media items • {tracks.length} tracks
+                  </p>
+                </div>
+              )}
+
+              {/* Loading spinner */}
+              <div className="bg-black/60 rounded-full p-6">
+                <Loader2 className="w-12 h-12 text-white animate-spin" />
+              </div>
+              <p className="text-white/80 text-sm mt-4">Loading video...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Video player */}
+        <PreviewPanel controlsVariant="overlay" />
+
+        {/* Close button */}
         <button
-          onClick={() => setShowPlayer(false)}
-          className="absolute top-3 right-3 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-colors z-20 shadow-sm"
+          onClick={() => {
+            setShowPlayer(false);
+            setIsLoading(false);
+          }}
+          className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-white p-2.5 rounded-full transition-colors z-30 shadow-sm"
           title="Close player"
         >
           <svg
@@ -108,7 +167,7 @@ export function MintVideoPreview() {
   return (
     <div
       className="relative w-full h-full group overflow-hidden rounded-lg cursor-pointer"
-      onClick={() => setShowPlayer(true)}
+      onClick={handlePlayClick}
     >
       {/* Use Image component with unoptimized prop to avoid SSR issues */}
       <div className="relative w-full h-full">
@@ -124,11 +183,11 @@ export function MintVideoPreview() {
         />
       </div>
 
-      {/* Play button overlay */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="bg-black/50 rounded-full p-4 group-hover:bg-black/70 transition-colors">
+      {/* Play button overlay with hover effect */}
+      <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+        <div className="bg-black/60 backdrop-blur-sm rounded-full p-6 group-hover:bg-black/80 group-hover:scale-110 transition-all duration-300 shadow-2xl">
           <svg
-            className="w-8 h-8 text-white fill-white"
+            className="w-12 h-12 text-white fill-white"
             viewBox="0 0 24 24"
             fill="currentColor"
           >
@@ -137,13 +196,13 @@ export function MintVideoPreview() {
         </div>
       </div>
 
-      {/* Project info overlay */}
+      {/* Project info overlay - Beautiful branding */}
       {activeProject && (
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent pointer-events-none">
-          <h3 className="text-white font-semibold text-lg">
+        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none">
+          <h3 className="text-white font-bold text-xl mb-1 drop-shadow-lg">
             {activeProject.name || "Untitled Project"}
           </h3>
-          <p className="text-white/80 text-sm">
+          <p className="text-white/90 text-sm drop-shadow-md">
             {mediaItems.length} media items • {tracks.length} tracks
           </p>
         </div>

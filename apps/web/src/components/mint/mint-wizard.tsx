@@ -21,15 +21,13 @@ import { DeployStep } from "./steps/deploy-step";
 import { triggerCelebration } from "@/lib/confetti";
 import { useEffect } from "react";
 import type { VideoFormat } from "@/lib/video-utils";
-import { useProjectStore } from "@/stores/project-store";
-import { useTimelineStore } from "@/stores/timeline-store";
-import { useMediaStore } from "@/stores/media-store";
 import { toast } from "sonner";
 
 export interface MintWizardData {
   // Thumbnail data
   thumbnail: string | null;
   thumbnailPrompt: string;
+  thumbnailSource: "ai" | "video_frame" | "timeline_media" | "upload" | null;
 
   // Coin details
   coinName: string;
@@ -81,15 +79,13 @@ interface MintWizardProps {
 }
 
 export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
-  const { activeProject, createNewProject } = useProjectStore();
-  const { tracks, addTrack, addClipToTrack } = useTimelineStore();
-  const { mediaItems, addMediaItem } = useMediaStore();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [wizardData, setWizardData] = useState<MintWizardData>({
     thumbnail: null,
     thumbnailPrompt: "",
+    thumbnailSource: null,
     coinName: "",
     coinSymbol: "",
     coinDescription: "",
@@ -196,6 +192,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   };
 
   const progress = ((currentStep + 1) / STEPS.length) * 100;
+  const isLastStep = currentStep === STEPS.length - 1;
 
   const renderStep = () => {
     switch (currentStep) {
@@ -302,7 +299,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 pb-28 md:pb-0">
       {/* Progress Header */}
       <Card>
         <CardHeader className="pb-4">
@@ -381,7 +378,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
       </AnimatePresence>
 
       {/* Navigation */}
-      <Card>
+      <Card className="hidden md:block">
         <CardContent className="pt-6">
           <div className="flex justify-between">
             <Button
@@ -399,7 +396,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
               onClick={nextStep}
               disabled={!canProceedToNext() || wizardData.isDeploying}
             >
-              {currentStep === STEPS.length - 1 ? (
+              {isLastStep ? (
                 wizardData.isDeploying ? (
                   "Deploying..."
                 ) : (
@@ -417,6 +414,49 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Mobile Sticky Navigation */}
+      <div
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+      >
+        <div className="max-w-4xl mx-auto px-4 pt-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="outline"
+              onClick={prevStep}
+              disabled={currentStep === 0}
+              className="h-11"
+            >
+              <div className="w-4 h-4 mr-2">
+                <ChevronLeft />
+              </div>
+              Previous
+            </Button>
+
+            <Button
+              onClick={nextStep}
+              disabled={!canProceedToNext() || wizardData.isDeploying}
+              className="h-11"
+            >
+              {isLastStep ? (
+                wizardData.isDeploying ? (
+                  "Deploying..."
+                ) : (
+                  "Deploy Coin"
+                )
+              ) : (
+                <>
+                  Next
+                  <div className="w-4 h-4 ml-2">
+                    <ChevronRight />
+                  </div>
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

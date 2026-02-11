@@ -25,7 +25,11 @@ import { VideoInitializationTest } from "./video-initialization-test";
 // Debug flag - set to false to hide active clips info
 const SHOW_DEBUG_INFO = process.env.NODE_ENV === "development";
 
-export function PreviewPanel() {
+interface PreviewPanelProps {
+  controlsVariant?: "topbar" | "overlay";
+}
+
+export function PreviewPanel({ controlsVariant = "topbar" }: PreviewPanelProps) {
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
   const { isPlaying, toggle, currentTime, muted, toggleMute, volume } =
@@ -34,7 +38,11 @@ export function PreviewPanel() {
   const { videoObjectFit, toggleVideoObjectFit, previewZoom } = useEditorStore();
   const { textElements } = useTextStore();
   const [showDebug, setShowDebug] = useState(SHOW_DEBUG_INFO);
+  const [showOverlayControls, setShowOverlayControls] = useState(
+    controlsVariant === "overlay"
+  );
   const previewRef = useRef<HTMLDivElement>(null);
+  const controlsAreOverlay = controlsVariant === "overlay";
 
   // Get active clips at current time with debug info
   const getActiveClips = () => {
@@ -121,6 +129,22 @@ export function PreviewPanel() {
       return () => clearTimeout(timer);
     }
   }, [currentTime, tracks, activeClips.length]);
+
+  // Auto-hide floating controls while video is playing.
+  useEffect(() => {
+    if (!controlsAreOverlay) return;
+
+    if (!isPlaying) {
+      setShowOverlayControls(true);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowOverlayControls(false);
+    }, 2200);
+
+    return () => clearTimeout(timer);
+  }, [controlsAreOverlay, isPlaying, currentTime]);
 
   // Render a clip
   const renderClip = (clipData: any, index: number) => {
@@ -235,93 +259,104 @@ export function PreviewPanel() {
     );
   };
 
+  const renderPlaybackControls = () => (
+    <>
+      {SHOW_DEBUG_INFO && controlsVariant === "topbar" && (
+        <>
+          <Button
+            variant="text"
+            size="sm"
+            onClick={() => setShowDebug(!showDebug)}
+            className="text-xs"
+          >
+            Debug {showDebug ? "ON" : "OFF"}
+          </Button>
+          <Button
+            variant="text"
+            size="sm"
+            onClick={() => {
+              console.log("Debug videos - feature not yet implemented");
+            }}
+            className="text-xs"
+          >
+            Debug Videos
+          </Button>
+        </>
+      )}
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={controlsAreOverlay ? "secondary" : "outline"}
+              size="sm"
+              onClick={toggleVideoObjectFit}
+              className="transition-all duration-200 hover:scale-105 active:scale-95"
+            >
+              {videoObjectFit === "contain" ? (
+                <Maximize2 className="h-3 w-3 mr-1 transition-transform duration-200" />
+              ) : (
+                <Minimize2 className="h-3 w-3 mr-1 transition-transform duration-200" />
+              )}
+              {videoObjectFit === "contain" ? "Fit" : "Fill"}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>
+              {videoObjectFit === "contain"
+                ? "Switch to Fill (crop to fit frame)"
+                : "Switch to Fit (show full video)"}
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <Button
+        variant={controlsAreOverlay ? "secondary" : "outline"}
+        size="sm"
+        onClick={toggleMute}
+        className="transition-all duration-200 hover:scale-105 active:scale-95"
+      >
+        {muted || volume === 0 ? (
+          <VolumeX className="h-3 w-3 mr-1 transition-transform duration-200" />
+        ) : (
+          <Volume2 className="h-3 w-3 mr-1 transition-transform duration-200" />
+        )}
+        {muted || volume === 0 ? "Unmute" : "Mute"}
+      </Button>
+
+      <Button
+        variant={controlsAreOverlay ? "secondary" : "outline"}
+        size="sm"
+        onClick={toggle}
+        className="transition-all duration-200 hover:scale-105 active:scale-95"
+      >
+        {isPlaying ? (
+          <Pause className="h-3 w-3 mr-1 transition-transform duration-200" />
+        ) : (
+          <Play className="h-3 w-3 mr-1 transition-transform duration-200" />
+        )}
+        {isPlaying ? "Pause" : "Play"}
+      </Button>
+    </>
+  );
+
   return (
     <div className="h-full w-full flex flex-col min-h-0 min-w-0">
-      {/* Controls */}
-      <div className="border-b p-2 flex items-center justify-center gap-2 text-xs flex-shrink-0">
-        {/* Debug Toggle - Only show in development */}
-        {SHOW_DEBUG_INFO && (
-          <>
-            <Button
-              variant="text"
-              size="sm"
-              onClick={() => setShowDebug(!showDebug)}
-              className="text-xs"
-            >
-              Debug {showDebug ? "ON" : "OFF"}
-            </Button>
-            <Button
-              variant="text"
-              size="sm"
-              onClick={() => {
-                console.log("Debug videos - feature not yet implemented");
-              }}
-              className="text-xs"
-            >
-              Debug Videos
-            </Button>
-          </>
-        )}
-
-        {/* Fit Mode Toggle */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleVideoObjectFit}
-                className="transition-all duration-200 hover:scale-105 active:scale-95"
-              >
-                {videoObjectFit === "contain" ? (
-                  <Maximize2 className="h-3 w-3 mr-1 transition-transform duration-200" />
-                ) : (
-                  <Minimize2 className="h-3 w-3 mr-1 transition-transform duration-200" />
-                )}
-                {videoObjectFit === "contain" ? "Fit" : "Fill"}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>
-                {videoObjectFit === "contain"
-                  ? "Switch to Fill (crop to fit frame)"
-                  : "Switch to Fit (show full video)"}
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={toggleMute}
-          className="transition-all duration-200 hover:scale-105 active:scale-95"
-        >
-          {muted || volume === 0 ? (
-            <VolumeX className="h-3 w-3 mr-1 transition-transform duration-200" />
-          ) : (
-            <Volume2 className="h-3 w-3 mr-1 transition-transform duration-200" />
-          )}
-          {muted || volume === 0 ? "Unmute" : "Mute"}
-        </Button>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={toggle}
-          className="transition-all duration-200 hover:scale-105 active:scale-95"
-        >
-          {isPlaying ? (
-            <Pause className="h-3 w-3 mr-1 transition-transform duration-200" />
-          ) : (
-            <Play className="h-3 w-3 mr-1 transition-transform duration-200" />
-          )}
-          {isPlaying ? "Pause" : "Play"}
-        </Button>
-      </div>
+      {controlsVariant === "topbar" && (
+        <div className="border-b p-2 flex items-center justify-center gap-2 text-xs flex-shrink-0">
+          {renderPlaybackControls()}
+        </div>
+      )}
 
       {/* Preview Area - Scrollable to prevent portrait format from dominating */}
-      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 bg-gray-900 relative overflow-auto" style={{ minHeight: "300px" }}>
+      <div
+        className="flex-1 flex items-center justify-center p-2 sm:p-4 bg-gray-900 relative overflow-auto"
+        style={{ minHeight: "300px" }}
+        onPointerMove={() => controlsAreOverlay && setShowOverlayControls(true)}
+        onTouchStart={() => controlsAreOverlay && setShowOverlayControls(true)}
+        onClick={() => controlsAreOverlay && setShowOverlayControls(true)}
+      >
         <div
           className="flex items-center justify-center flex-1"
           style={{
@@ -364,8 +399,23 @@ export function PreviewPanel() {
           </div>
         </div>
 
+        {controlsAreOverlay && (
+          <div
+            className={cn(
+              "absolute bottom-4 left-1/2 -translate-x-1/2 z-20 transition-all duration-200",
+              showOverlayControls
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-2 pointer-events-none"
+            )}
+          >
+            <div className="flex items-center justify-center gap-2 rounded-full border border-white/20 bg-black/65 px-2 py-2 backdrop-blur-sm">
+              {renderPlaybackControls()}
+            </div>
+          </div>
+        )}
+
         {/* Debug Info Panel - Conditionally rendered */}
-        {showDebug && (
+        {showDebug && controlsVariant === "topbar" && (
           <div className="border-t bg-background p-2 flex-shrink-0">
             <div className="text-xs font-medium mb-1">
               Debug: Active Clips ({activeClips.length})

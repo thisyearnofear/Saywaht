@@ -57,6 +57,14 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
   const { activeProject } = useProjectStore();
   const { tracks, getTotalDuration } = useTimelineStore();
   const { mediaItems } = useMediaStore();
+  const thumbnailSourceLabel = data.thumbnailSource
+    ? {
+        ai: "AI",
+        video_frame: "Video Frame",
+        timeline_media: "Timeline Media",
+        upload: "Uploaded",
+      }[data.thumbnailSource]
+    : null;
 
   // Generate metadata when component mounts or data changes
   useEffect(() => {
@@ -394,7 +402,14 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Thumbnail */}
             <div className="space-y-3">
-              <h4 className="font-medium">Thumbnail</h4>
+              <div className="flex items-center gap-2">
+                <h4 className="font-medium">Thumbnail</h4>
+                {thumbnailSourceLabel && (
+                  <Badge variant="secondary" className="text-xs">
+                    {thumbnailSourceLabel}
+                  </Badge>
+                )}
+              </div>
               {data.thumbnail ? (
                 <div className="relative aspect-video rounded-lg overflow-hidden border">
                   <Image
