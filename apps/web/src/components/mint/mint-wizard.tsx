@@ -176,13 +176,15 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
           wizardData.coinName.trim() !== "" &&
           wizardData.coinSymbol.trim() !== ""
         );
-      case 2: // Format step
+      case 2: // Currency selection step
+        return wizardData.currency !== undefined;
+      case 3: // Format step
         return wizardData.videoFormat !== undefined;
-      case 3: // Preview step
+      case 4: // Preview step
         // Allow proceeding if metadata is ready, regardless of video upload status
         // This allows users to deploy with thumbnail only if video upload fails
         return wizardData.metadataUri !== null;
-      case 4: // Deploy step
+      case 5: // Deploy step
         return wizardData.deployedCoin !== null;
       default:
         return false;
