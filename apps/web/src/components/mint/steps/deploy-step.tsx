@@ -86,32 +86,30 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
           console.warn("⚠️ Metadata validation error, proceeding anyway:", validationError);
         }
 
-        // Detect if user has a Creator Coin to prefer creator-backed markets
-        let selectedCurrency = "ZORA";
+        // Use the currency selected by the user in the currency selection step
+        const selectedCurrency = data.currency || "ZORA";
+
+        // Still check for creator coin to show info, but use user's selection
+        let hasCreatorCoin = false;
+
         if (preferences.hasCreatorCoin !== undefined) {
-          const hasCreatorCoin = !!preferences.hasCreatorCoin;
-          if (hasCreatorCoin) {
-            selectedCurrency = "CREATOR_COIN_OR_ZORA";
-          }
+          hasCreatorCoin = !!preferences.hasCreatorCoin;
           setBackingInfo({
-            label: hasCreatorCoin ? "Creator Coin (preferred)" : "ZORA",
-            creatorBacked: hasCreatorCoin,
+            label: selectedCurrency === "CREATOR_COIN" ? "Creator Coin" : selectedCurrency,
+            creatorBacked: selectedCurrency === "CREATOR_COIN",
           });
         } else {
           try {
             const prof = await getProfile({ identifier: address });
-            const hasCreatorCoin = !!prof?.data?.profile?.creatorCoin?.address;
-            if (hasCreatorCoin) {
-              selectedCurrency = "CREATOR_COIN_OR_ZORA";
-            }
+            hasCreatorCoin = !!prof?.data?.profile?.creatorCoin?.address;
             setHasCreatorCoin(hasCreatorCoin);
             setBackingInfo({
-              label: hasCreatorCoin ? "Creator Coin (preferred)" : "ZORA",
-              creatorBacked: hasCreatorCoin,
+              label: selectedCurrency === "CREATOR_COIN" ? "Creator Coin" : selectedCurrency,
+              creatorBacked: selectedCurrency === "CREATOR_COIN",
             });
           } catch {
             setHasCreatorCoin(false);
-            setBackingInfo({ label: "ZORA", creatorBacked: false });
+            setBackingInfo({ label: selectedCurrency, creatorBacked: false });
           }
         }
 

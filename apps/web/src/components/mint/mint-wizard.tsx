@@ -15,6 +15,7 @@ import {
 // Step components
 import { ThumbnailStep } from "./steps/thumbnail-step";
 import { CoinDetailsStep } from "./steps/coin-details-step";
+import { CurrencySelectionStep } from "./steps/currency-selection-step";
 import { FormatStep } from "./steps/format-step";
 import { PreviewStep } from "./steps/preview-step";
 import { DeployStep } from "./steps/deploy-step";
@@ -33,6 +34,9 @@ export interface MintWizardData {
   coinName: string;
   coinSymbol: string;
   coinDescription: string;
+
+  // Currency selection
+  currency: "ZORA" | "CREATOR_COIN" | "ETH";
 
   // Metadata
   metadataUri: string | null;
@@ -55,6 +59,11 @@ const STEPS = [
     id: "details",
     title: "Coin Details",
     description: "Set your coin name, symbol, and description",
+  },
+  {
+    id: "currency",
+    title: "Backing Currency",
+    description: "Choose what currency backs your coin",
   },
   {
     id: "format",
@@ -89,6 +98,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
     coinName: "",
     coinSymbol: "",
     coinDescription: "",
+    currency: "ZORA", // Default to ZORA
     metadataUri: null,
     videoFormat: "portrait", // Default to mobile-first format
     isDeploying: false,
@@ -98,7 +108,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   // Ensure we're on client side before doing anything
   useEffect(() => {
     setIsClient(true);
-    
+
     // Log any initialization errors
     if (typeof window !== 'undefined') {
       console.log('🪙 Mint wizard initialized');
@@ -205,10 +215,12 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
           <CoinDetailsStep data={wizardData} updateData={updateWizardData} />
         );
       case 2:
-        return <FormatStep data={wizardData} updateData={updateWizardData} />;
+        return <CurrencySelectionStep data={wizardData} updateData={updateWizardData} />;
       case 3:
-        return <PreviewStep data={wizardData} updateData={updateWizardData} />;
+        return <FormatStep data={wizardData} updateData={updateWizardData} />;
       case 4:
+        return <PreviewStep data={wizardData} updateData={updateWizardData} />;
+      case 5:
         return <DeployStep data={wizardData} updateData={updateWizardData} />;
       default:
         return null;
@@ -330,18 +342,16 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
             {STEPS.map((step, index) => (
               <div
                 key={step.id}
-                className={`flex items-center ${
-                  index < STEPS.length - 1 ? "flex-1" : ""
-                }`}
+                className={`flex items-center ${index < STEPS.length - 1 ? "flex-1" : ""
+                  }`}
               >
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    index < currentStep
-                      ? "bg-primary text-primary-foreground"
-                      : index === currentStep
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${index < currentStep
+                    ? "bg-primary text-primary-foreground"
+                    : index === currentStep
                       ? "bg-primary/20 text-primary border-2 border-primary"
                       : "bg-muted text-muted-foreground"
-                  }`}
+                    }`}
                 >
                   {index < currentStep ? (
                     <div className="w-4 h-4">
@@ -353,9 +363,8 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
                 </div>
                 {index < STEPS.length - 1 && (
                   <div
-                    className={`flex-1 h-0.5 mx-2 ${
-                      index < currentStep ? "bg-primary" : "bg-muted"
-                    }`}
+                    className={`flex-1 h-0.5 mx-2 ${index < currentStep ? "bg-primary" : "bg-muted"
+                      }`}
                   />
                 )}
               </div>
