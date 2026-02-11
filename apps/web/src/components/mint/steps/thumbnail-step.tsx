@@ -27,6 +27,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
 
   const { mediaItems } = useMediaStore();
   const { tracks } = useTimelineStore();
+  const hasTimelineMedia = tracks.some((track) => track.clips.length > 0);
 
   const extractFrameFromVideo = async (videoUrl: string): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -81,26 +82,48 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
 
     // Declare videoFrame at function scope so it's accessible in catch block
     let videoFrame: string | null = null;
+    let fallbackThumbnail: string | null = null;
 
     try {
-      // Find the first video in the timeline
+      // Find the first usable thumbnail candidate in the timeline.
       for (const track of tracks) {
         for (const clip of track.clips) {
           const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
-          if (mediaItem && mediaItem.type === "video") {
-            try {
-              videoFrame = await extractFrameFromVideo(mediaItem.url);
-              break;
-            } catch (error) {
-              console.error("Failed to extract frame:", error);
+          if (!mediaItem) continue;
+
+          // Save a fallback thumbnail while we try to extract a frame from video.
+          if (!fallbackThumbnail) {
+            if (mediaItem.thumbnailUrl) {
+              fallbackThumbnail = mediaItem.thumbnailUrl;
+            } else if (mediaItem.type === "image") {
+              fallbackThumbnail = mediaItem.url;
             }
+          }
+
+          if (mediaItem.type !== "video") continue;
+
+          try {
+            videoFrame = await extractFrameFromVideo(mediaItem.url);
+            break;
+          } catch (error) {
+            console.error("Failed to extract frame:", error);
           }
         }
         if (videoFrame) break;
       }
 
-      if (!videoFrame) {
-        throw new Error("No video found to generate thumbnail from");
+      // If no video frame is available, fall back to an existing media thumbnail.
+      if (!videoFrame && fallbackThumbnail) {
+        updateData({
+          thumbnail: fallbackThumbnail,
+          thumbnailPrompt: customPrompt,
+        });
+        toast.success("Using existing media thumbnail");
+        return;
+      }
+
+      if (!videoFrame && !fallbackThumbnail) {
+        throw new Error("No media found to generate a thumbnail from");
       }
 
       // Generate AI thumbnail using our API with timeout
@@ -211,7 +234,8 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
         <CardTitle>Create Your Coin Thumbnail</CardTitle>
         <p className="text-sm text-muted-foreground">
           Generate an AI-powered thumbnail or upload your own to represent your
-          coin. Thumbnails will be uploaded to IPFS during deployment.
+          coin. Current generation uses your timeline media as a reliable
+          fallback and uploads the thumbnail to IPFS during deployment.
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -267,7 +291,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
           <Button
             onClick={generateAIThumbnail}
             disabled={
-              isGenerating || tracks.length === 0 || !customPrompt.trim()
+              isGenerating || !hasTimelineMedia || !customPrompt.trim()
             }
             className="flex-1"
           >
@@ -283,7 +307,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
                 <div className="w-4 h-4 mr-2">
                   <LuSparkles />
                 </div>
-                Generate AI Thumbnail
+                Generate Thumbnail
               </>
             )}
           </Button>
@@ -307,9 +331,9 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
           </Button>
         </div>
 
-        {tracks.length === 0 && (
+        {!hasTimelineMedia && (
           <p className="text-xs text-muted-foreground text-center bg-muted/50 p-3 rounded">
-            Add video content to your timeline to generate a thumbnail
+            Add media content to your timeline to generate a thumbnail
           </p>
         )}
       </CardContent>

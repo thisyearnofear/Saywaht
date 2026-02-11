@@ -73,7 +73,7 @@ export function MintVideoPreview() {
         <PreviewPanel />
         <button
           onClick={() => setShowPlayer(false)}
-          className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-lg transition-colors z-10"
+          className="absolute top-3 right-3 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-colors z-20 shadow-sm"
           title="Close player"
         >
           <svg

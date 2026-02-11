@@ -670,7 +670,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               <p className="text-xs text-muted-foreground">
                 {videoUploadError
                   ? "Your coin will deploy with the thumbnail only. You can add video content later or try a different storage solution."
-                  : "You&apos;ll earn from trading activity and can share it across social platforms."}
+                  : "You'll earn from trading activity and can share it across social platforms."}
               </p>
             </div>
           </div>

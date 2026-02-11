@@ -238,7 +238,7 @@ export function PreviewPanel() {
   return (
     <div className="h-full w-full flex flex-col min-h-0 min-w-0">
       {/* Controls */}
-      <div className="border-b p-2 flex items-center gap-2 text-xs flex-shrink-0">
+      <div className="border-b p-2 flex items-center justify-center gap-2 text-xs flex-shrink-0">
         {/* Debug Toggle - Only show in development */}
         {SHOW_DEBUG_INFO && (
           <>
@@ -271,7 +271,7 @@ export function PreviewPanel() {
                 variant="outline"
                 size="sm"
                 onClick={toggleVideoObjectFit}
-                className="ml-auto transition-all duration-200 hover:scale-105 active:scale-95"
+                className="transition-all duration-200 hover:scale-105 active:scale-95"
               >
                 {videoObjectFit === "contain" ? (
                   <Maximize2 className="h-3 w-3 mr-1 transition-transform duration-200" />

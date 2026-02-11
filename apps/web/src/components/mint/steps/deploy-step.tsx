@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { LuLoader as Loader2, LuCheck, LuX } from "react-icons/lu";
 import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { toast } from "sonner";
-import { createCoin, getProfile } from "@zoralabs/coins-sdk";
+import { getProfile } from "@zoralabs/coins-sdk";
 import { submitReferral } from "@divvi/referral-sdk";
 import { MintWizardData } from "../mint-wizard";
 import { base } from "viem/chains";
@@ -73,7 +73,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
           updateData({ isDeploying: false });
           return;
         }
-        
+
         try {
           const isValid = await getZoraCoins().validateMetadataURI(data.metadataUri);
           if (isValid) {
@@ -158,17 +158,43 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
       setStatus("pending");
 
       try {
-        console.log("🚀 Deploying coin via Coins SDK...");
-        const result = await createCoin({
-          call: contractCallParams as any,
-          walletClient: walletClient as any,
-          publicClient: publicClient as any,
+        console.log("🚀 Getting coin calldata from server...");
+
+        // Call our API route to get calldata (keeps API key server-side)
+        const response = await fetch("/api/zora/create-coin-calldata", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(contractCallParams),
         });
-        setTxHash(result.hash);
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to get coin calldata");
+        }
+
+        const { calls, predictedCoinAddress } = await response.json();
+
+        console.log("🚀 Deploying coin via wallet...");
+
+        // Send the transaction using the calldata from our server
+        const hash = await walletClient.sendTransaction({
+          to: calls[0].to,
+          data: calls[0].data,
+          value: calls[0].value,
+          account: walletClient.account,
+          chain: publicClient.chain,
+        });
+
+        setTxHash(hash);
+
+        // Wait for transaction confirmation
+        console.log("⏳ Waiting for transaction confirmation...");
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
         setIsSuccess(true);
         setIsConfirming(false);
 
-        const coinAddress = result.address || result.deployment?.coin;
+        const coinAddress = predictedCoinAddress;
         console.log("🪙 Coin deployed successfully!");
         console.log("📍 Coin address:", coinAddress);
 
@@ -189,8 +215,8 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         // Submit Divvi referral tracking (optional, non-blocking)
         try {
           const chainId = await publicClient.getChainId();
-          await submitReferral({ txHash: result.hash, chainId });
-        } catch {}
+          await submitReferral({ txHash: hash, chainId });
+        } catch { }
 
         setStatus("idle");
       } catch (err) {
@@ -364,38 +390,34 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
           <div className="w-full max-w-md space-y-3">
             <div className="flex items-center gap-3">
               <div
-                className={`w-2 h-2 rounded-full ${
-                  data.metadataUri ? "bg-green-500" : "bg-muted"
-                }`}
+                className={`w-2 h-2 rounded-full ${data.metadataUri ? "bg-green-500" : "bg-muted"
+                  }`}
               />
               <span className="text-sm">Metadata uploaded to IPFS</span>
             </div>
 
             <div className="flex items-center gap-3">
               <div
-                className={`w-2 h-2 rounded-full ${
-                  status === "pending" || isConfirming || isSuccess
-                    ? "bg-green-500"
-                    : "bg-muted"
-                }`}
+                className={`w-2 h-2 rounded-full ${status === "pending" || isConfirming || isSuccess
+                  ? "bg-green-500"
+                  : "bg-muted"
+                  }`}
               />
               <span className="text-sm">Transaction submitted</span>
             </div>
 
             <div className="flex items-center gap-3">
               <div
-                className={`w-2 h-2 rounded-full ${
-                  isSuccess ? "bg-green-500" : "bg-muted"
-                }`}
+                className={`w-2 h-2 rounded-full ${isSuccess ? "bg-green-500" : "bg-muted"
+                  }`}
               />
               <span className="text-sm">Coin deployed on blockchain</span>
             </div>
 
             <div className="flex items-center gap-3">
               <div
-                className={`w-2 h-2 rounded-full ${
-                  data.deployedCoin ? "bg-green-500" : "bg-muted"
-                }`}
+                className={`w-2 h-2 rounded-full ${data.deployedCoin ? "bg-green-500" : "bg-muted"
+                  }`}
               />
               <span className="text-sm">Ready for trading</span>
             </div>
@@ -443,7 +465,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
                         );
                       }
                       hapticNotify("success");
-                    } catch {}
+                    } catch { }
                   }}
                 >
                   <span className="text-sm">🚀</span>
