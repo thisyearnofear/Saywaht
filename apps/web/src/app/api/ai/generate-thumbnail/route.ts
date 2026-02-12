@@ -1,11 +1,108 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Allow up to 60s for image generation (Vercel Pro default is 15s)
+export const maxDuration = 60;
+
 /**
  * AI Thumbnail Generation API
  *
- * Uses Venice AI image generation to create thumbnails from the user's prompt.
- * Falls back to the supplied video frame when VENICE_API_KEY is not configured.
+ * Tries Venice AI models in order of speed, with fallback to video frame.
  */
+
+interface VeniceModelConfig {
+  model: string;
+  label: string;
+  width: number;
+  height: number;
+  timeoutMs: number;
+}
+
+// Models ordered by speed — fast turbo first, quality fallback second
+const VENICE_MODELS: VeniceModelConfig[] = [
+  {
+    model: "z-image-turbo",
+    label: "Venice Turbo",
+    width: 1024,
+    height: 576,
+    timeoutMs: 20_000,
+  },
+  {
+    model: "nano-banana-pro",
+    label: "Nano Banana Pro",
+    width: 1024,
+    height: 576,
+    timeoutMs: 40_000,
+  },
+];
+
+async function tryVeniceModel(
+  apiKey: string,
+  prompt: string,
+  config: VeniceModelConfig
+): Promise<{ dataUrl: string; model: string; label: string } | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
+
+  try {
+    console.log(`🎨 Trying ${config.label} (${config.model})...`);
+
+    const response = await fetch(
+      "https://api.venice.ai/api/v1/image/generate",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: config.model,
+          prompt,
+          width: config.width,
+          height: config.height,
+          format: "webp",
+          safe_mode: true,
+          hide_watermark: false,
+          cfg_scale: 7.5,
+        }),
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      const errBody = await response.text();
+      console.error(
+        `❌ ${config.label} error ${response.status}:`,
+        errBody.slice(0, 200)
+      );
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (data.images?.[0]) {
+      console.log(`✅ ${config.label} generated successfully`);
+      return {
+        dataUrl: `data:image/webp;base64,${data.images[0]}`,
+        model: config.model,
+        label: config.label,
+      };
+    }
+
+    console.error(`❌ ${config.label}: no image data in response`);
+    return null;
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error instanceof Error && error.name === "AbortError") {
+      console.error(`⏱️ ${config.label} timed out after ${config.timeoutMs}ms`);
+    } else {
+      console.error(`❌ ${config.label} failed:`, error);
+    }
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -20,59 +117,25 @@ export async function POST(req: NextRequest) {
 
     const VENICE_API_KEY = process.env.VENICE_API_KEY;
 
-    // ── Venice AI generation ────────────────────────────────────────
+    // ── Venice AI generation with model fallback ────────────────────
     if (VENICE_API_KEY && prompt) {
-      try {
-        console.log("🎨 Generating thumbnail with Venice AI...");
-        console.log("Prompt:", prompt);
+      console.log("🎨 Generating thumbnail with Venice AI...");
+      console.log("Prompt:", prompt);
 
-        const veniceResponse = await fetch(
-          "https://api.venice.ai/api/v1/image/generate",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${VENICE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "nano-banana-pro",
-              prompt,
-              width: 1024,
-              height: 576, // ~16:9 for thumbnails
-              format: "webp",
-              safe_mode: true,
-              hide_watermark: false,
-              cfg_scale: 7.5,
-            }),
-          }
-        );
-
-        if (!veniceResponse.ok) {
-          const errBody = await veniceResponse.text();
-          console.error("Venice AI error:", veniceResponse.status, errBody);
-          throw new Error(`Venice AI returned ${veniceResponse.status}`);
-        }
-
-        const veniceData = await veniceResponse.json();
-
-        if (veniceData.images?.[0]) {
-          const base64Image = veniceData.images[0];
-          const dataUrl = `data:image/webp;base64,${base64Image}`;
-
-          console.log("✅ Venice AI thumbnail generated successfully");
+      for (const modelConfig of VENICE_MODELS) {
+        const result = await tryVeniceModel(VENICE_API_KEY, prompt, modelConfig);
+        if (result) {
           return NextResponse.json({
             success: true,
-            thumbnailUrl: dataUrl,
+            thumbnailUrl: result.dataUrl,
             method: "venice_ai",
-            message: "AI thumbnail generated with Venice AI!",
+            model: result.model,
+            message: `AI thumbnail generated with ${result.label}!`,
           });
         }
-
-        throw new Error("No image data in Venice AI response");
-      } catch (veniceError) {
-        console.error("Venice AI generation failed, falling back to video frame:", veniceError);
-        // Fall through to video frame fallback
       }
+
+      console.warn("⚠️ All Venice AI models failed, falling back to video frame");
     } else if (!VENICE_API_KEY) {
       console.log("📸 VENICE_API_KEY not set; using video frame fallback");
     }
@@ -82,14 +145,18 @@ export async function POST(req: NextRequest) {
       success: true,
       thumbnailUrl: videoFrame,
       method: "video_frame",
-      message: "Using video frame as thumbnail. Set VENICE_API_KEY for AI generation.",
+      message:
+        "Using video frame as thumbnail. Set VENICE_API_KEY for AI generation.",
     });
   } catch (error) {
     console.error("Thumbnail generation error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to generate thumbnail",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to generate thumbnail",
       },
       { status: 500 }
     );
@@ -101,7 +168,7 @@ export async function GET(_req: NextRequest) {
   return NextResponse.json({
     status: "ok",
     service: "ai-thumbnail-generation",
-    methods: hasKey ? ["venice_ai", "video_frame"] : ["video_frame"],
+    models: VENICE_MODELS.map((m) => m.model),
     aiEnabled: hasKey,
   });
 }

@@ -126,7 +126,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
   const generateAIThumbnail = async () => {
     setIsGenerating(true);
     setGenerationStatus("working");
-    setGenerationMessage("Generating thumbnail...");
+    setGenerationMessage("Generating AI thumbnail — this can take 20-30 seconds...");
     if (data.thumbnail) setPreviousThumbnail(data.thumbnail);
 
     // Declare videoFrame at function scope so it's accessible in catch block
@@ -179,8 +179,9 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
       }
 
       // Generate AI thumbnail using our API with timeout
+      // Venice AI image generation can take 20-40s depending on model
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s (server maxDuration is 60s)
 
       let response;
       try {
