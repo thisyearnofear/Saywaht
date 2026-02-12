@@ -175,10 +175,11 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         console.log("🚀 Deploying coin via wallet...");
 
         // Send the transaction using the calldata from our server
+        // Convert value back to BigInt (serialized as string from API)
         const hash = await walletClient.sendTransaction({
           to: calls[0].to,
           data: calls[0].data,
-          value: calls[0].value,
+          value: calls[0].value ? BigInt(calls[0].value) : undefined,
           account: walletClient.account,
           chain: publicClient.chain,
         });

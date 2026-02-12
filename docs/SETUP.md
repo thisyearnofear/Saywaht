@@ -63,7 +63,7 @@ A decentralized video commentary platform that enables users to create memetic c
 ELEVENLABS_API_KEY=your-elevenlabs-key
 
 # Blockchain Integration
-NEXT_PUBLIC_ZORA_API_KEY=your-zora-api-key
+ZORA_API_KEY=your-zora-api-key
 ```
 
 ### Required for FilCDN (Hackathon)
@@ -81,7 +81,7 @@ NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS=0xYourWalletAddress
 ELEVENLABS_API_KEY=your-elevenlabs-key
 
 # Zora API (recommended to avoid rate limits)
-NEXT_PUBLIC_ZORA_API_KEY=your-zora-api-key
+ZORA_API_KEY=your-zora-api-key
 ```
 
 ## FilCDN Setup (Hackathon Demo)
@@ -430,7 +430,7 @@ const MobileTradePanel = ({ coinAddress }) => {
 ### **Zora Issues**
 
 - **"No coins found"**: Normal if no coins exist yet, will show fallback
-- **Rate limiting**: Add `NEXT_PUBLIC_ZORA_API_KEY` for higher limits
+- **Rate limiting**: Add `ZORA_API_KEY` for higher limits
 - **Transaction failures**: Check wallet connection and testnet balance
 
 ## Health Checks

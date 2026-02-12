@@ -99,7 +99,7 @@ Before you begin, ensure you have the following installed on your system:
     # Core Features (Required for FilCDN + Trading)
     NEXT_PUBLIC_FILECOIN_PRIVATE_KEY=your-filecoin-private-key
     NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS=0xYourWalletAddress
-    NEXT_PUBLIC_ZORA_API_KEY=your-zora-api-key
+    ZORA_API_KEY=your-zora-api-key
 
     # Backend Export Service (Optional - enables server-side video processing)
     NEXT_PUBLIC_BACKEND_EXPORT_URL=http://157.180.36.156:3001

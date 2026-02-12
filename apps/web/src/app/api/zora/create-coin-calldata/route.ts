@@ -49,7 +49,14 @@ export async function POST(request: NextRequest) {
         });
 
         console.log("✅ Successfully got calldata from Zora SDK");
-        return NextResponse.json(result);
+
+        // Serialize BigInt values to strings for JSON transport
+        const serialized = JSON.parse(
+            JSON.stringify(result, (_key, value) =>
+                typeof value === "bigint" ? value.toString() : value
+            )
+        );
+        return NextResponse.json(serialized);
     } catch (error) {
         console.error("❌ Failed to create coin calldata:", error);
 

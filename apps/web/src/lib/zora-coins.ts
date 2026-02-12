@@ -85,12 +85,13 @@ export class ZoraCoinsService {
 
     // CLEAN: Proper API key initialization with error handling
     try {
-      const apiKey = process.env.NEXT_PUBLIC_ZORA_API_KEY;
+      const apiKey = process.env.ZORA_API_KEY;
       if (apiKey) {
         setApiKey(apiKey);
         console.log("🔑 Zora Coins SDK API key initialized");
       } else {
-        console.warn("⚠️ NEXT_PUBLIC_ZORA_API_KEY not set; queries may be rate limited");
+        // API key is server-side only; coin creation uses the API route
+        console.log("ℹ️ Zora API key is server-side only; coin creation uses /api/zora/create-coin-calldata");
       }
     } catch (error) {
       console.warn("Failed to set Zora API key:", error);
