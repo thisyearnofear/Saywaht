@@ -178,37 +178,42 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
         throw new Error("No media found to generate a thumbnail from");
       }
 
-      // Generate AI thumbnail using our API with timeout
-      // Venice AI image generation can take 20-40s depending on model
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s (server maxDuration is 60s)
+      // Try backend server first (no serverless timeout limits), then
+      // fall back to the Vercel API route.
+      const BACKEND_URL =
+        process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || "http://157.180.36.156:3100";
+      const endpoints = [
+        { url: `${BACKEND_URL}/api/ai/generate-thumbnail`, label: "backend", timeoutMs: 55_000 },
+        { url: "/api/ai/generate-thumbnail", label: "vercel", timeoutMs: 55_000 },
+      ];
 
-      let response;
-      try {
-        response = await fetch("/api/ai/generate-thumbnail", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt: customPrompt,
-            videoFrame: videoFrame,
-          }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || "Failed to generate thumbnail");
+      let response: Response | undefined;
+      for (const ep of endpoints) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), ep.timeoutMs);
+        try {
+          console.log(`🎨 Trying thumbnail generation via ${ep.label}...`);
+          const res = await fetch(ep.url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: customPrompt, videoFrame }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          if (res.ok) {
+            response = res;
+            console.log(`✅ Thumbnail generated via ${ep.label}`);
+            break;
+          }
+          console.warn(`⚠️ ${ep.label} returned ${res.status}, trying next...`);
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          console.warn(`⚠️ ${ep.label} failed:`, fetchError instanceof Error ? fetchError.message : fetchError);
         }
-      } catch (fetchError) {
-        clearTimeout(timeoutId);
-        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-          throw new Error("Thumbnail generation timed out. Using video frame instead.");
-        }
-        throw fetchError;
+      }
+
+      if (!response) {
+        throw new Error("All thumbnail generation endpoints failed.");
       }
 
       const responseData = await response.json();
