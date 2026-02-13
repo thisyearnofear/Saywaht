@@ -191,8 +191,8 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         // Improvement 3: Pre-flight Balance & Gas Check
         try {
           const userBalance = await publicClient.getBalance({ address: address as `0x${string}` });
-          const requiredValue = calls[0].value ? BigInt(calls[0].value) : 0n;
-          const estimatedGasBuffer = 1000000000000000n; // 0.001 ETH buffer for gas
+          const requiredValue = calls[0].value ? BigInt(calls[0].value) : BigInt(0);
+          const estimatedGasBuffer = BigInt(1000000000000000); // 0.001 ETH buffer for gas
           
           if (userBalance < (requiredValue + estimatedGasBuffer)) {
             const needed = (requiredValue + estimatedGasBuffer) - userBalance;
