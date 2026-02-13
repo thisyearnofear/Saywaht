@@ -43,15 +43,55 @@ export function TradingFeed() {
       }
       setError(null);
 
-      // ENHANCEMENT FIRST: Fetch market insights alongside coins
-      const [trendingCoins, insights] = await Promise.all([
-        getZoraCoins().getTrendingCoins(),
-        getZoraCoins().getMarketInsights().catch(() => null) // Graceful fallback
-      ]);
+      // Fetch Saywaht coins from database (not all Zora coins)
+      const response = await fetch('/api/coins');
+      const data = await response.json();
+      
+      // Transform database coins to VideoCoin format
+      const dbCoins = data.coins || [];
+      
+      // Enrich with on-chain data from Zora if available
+      const enrichedCoins = await Promise.all(
+        dbCoins.map(async (dbCoin: any) => {
+          try {
+            // Try to get current price/volume data from Zora
+            const coinData = await getZoraCoins().getCoinData(dbCoin.address);
+            return coinData || {
+              address: dbCoin.address,
+              name: dbCoin.name,
+              symbol: dbCoin.symbol,
+              creator: dbCoin.creatorAddress,
+              price: "0",
+              volume24h: "0",
+              priceChange24h: 0,
+              thumbnailUrl: dbCoin.thumbnailUrl || "",
+              videoUrl: "",
+              description: "",
+              marketCap: "0",
+              createdAt: dbCoin.createdAt,
+            };
+          } catch (error) {
+            // Fallback to database data if Zora fetch fails
+            return {
+              address: dbCoin.address,
+              name: dbCoin.name,
+              symbol: dbCoin.symbol,
+              creator: dbCoin.creatorAddress,
+              price: "0",
+              volume24h: "0",
+              priceChange24h: 0,
+              thumbnailUrl: dbCoin.thumbnailUrl || "",
+              videoUrl: "",
+              description: "",
+              marketCap: "0",
+              createdAt: dbCoin.createdAt,
+            };
+          }
+        })
+      );
 
-      setCoins(trendingCoins);
-      setFilteredCoins(trendingCoins);
-      setMarketInsights(insights);
+      setCoins(enrichedCoins);
+      setFilteredCoins(enrichedCoins);
 
       if (showRefreshIndicator) {
         toast.success("Feed refreshed!");
