@@ -7,6 +7,18 @@ import { SimpleVideoPlayer } from "../ui/simple-video-player";
 import { Badge } from "../ui/badge";
 import { Coins, TrendingUp } from "@/lib/icons";
 
+interface PlatformCoin {
+  id: string;
+  address: string;
+  name: string;
+  symbol: string;
+  creatorAddress: string;
+  txHash?: string;
+  metadataUri?: string;
+  thumbnailUrl?: string;
+  createdAt: string;
+}
+
 export function DiscoveryFeed() {
   const [coins, setCoins] = useState<VideoCoin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -14,67 +26,50 @@ export function DiscoveryFeed() {
   useEffect(() => {
     const fetchCoins = async () => {
       try {
-        console.log("🔄 DiscoveryFeed: Starting to fetch coins...");
-        const data = await getZoraCoins().getTrendingCoins();
-        console.log(
-          "✅ DiscoveryFeed: Coins fetched successfully:",
-          data.length
-        );
-        setCoins(data);
+        // Fetch platform coins first
+        const platformRes = await fetch("/api/coins");
+        const platformData = await platformRes.json();
+        const platformCoins: PlatformCoin[] = platformData.coins || [];
+
+        if (platformCoins.length > 0) {
+          // Enrich with live Zora data where possible
+          const zoraService = getZoraCoins();
+          const enriched = await Promise.all(
+            platformCoins.map(async (pc) => {
+              try {
+                const liveData = await zoraService.getCoinData(pc.address);
+                if (liveData) return liveData;
+              } catch {}
+              // Fallback to platform data only
+              return {
+                address: pc.address,
+                name: pc.name,
+                symbol: pc.symbol,
+                creator: pc.creatorAddress,
+                videoUri: "",
+                metadataUri: pc.metadataUri || "",
+                totalSupply: "0",
+                price: "0",
+                volume24h: "0",
+                priceChange24h: 0,
+                createdAt: pc.createdAt,
+                thumbnail: pc.thumbnailUrl || "",
+              } as VideoCoin;
+            })
+          );
+          setCoins(enriched);
+        } else {
+          // No platform coins yet, fall back to Zora trending
+          const data = await getZoraCoins().getTrendingCoins();
+          setCoins(data);
+        }
       } catch (error) {
         console.error("❌ DiscoveryFeed: Failed to fetch coins:", error);
-        console.log("🔄 DiscoveryFeed: Falling back to mock data");
-        // Enhanced fallback with more variety
-        setCoins([
-          {
-            address: "0x1234567890123456789012345678901234567890",
-            name: "Cheetah Commentary",
-            symbol: "CHEETAH",
-            creator: "0x0000000000000000000000000000000000000000",
-            videoUri: "/templates/voiceovers/animal/cheetah.mp4",
-            metadataUri: "",
-            totalSupply: "1000000",
-            price: "0.001",
-            volume24h: "12.5",
-            priceChange24h: 15.2,
-            createdAt: new Date().toISOString(),
-            thumbnail: "/templates/voiceovers/animal/cheetah.mp4",
-          },
-          {
-            address: "0x2345678901234567890123456789012345678901",
-            name: "Crypto Reactions",
-            symbol: "REACT",
-            creator: "0x1111111111111111111111111111111111111111",
-            videoUri: "/templates/voiceovers/crypto/bitcoin.mp4",
-            metadataUri: "",
-            totalSupply: "500000",
-            price: "0.0025",
-            volume24h: "8.3",
-            priceChange24h: -3.7,
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-            thumbnail: "/templates/voiceovers/crypto/bitcoin.mp4",
-          },
-          {
-            address: "0x3456789012345678901234567890123456789012",
-            name: "Meme Magic",
-            symbol: "MEME",
-            creator: "0x2222222222222222222222222222222222222222",
-            videoUri: "/templates/voiceovers/meme/doge.mp4",
-            metadataUri: "",
-            totalSupply: "2000000",
-            price: "0.0005",
-            volume24h: "25.1",
-            priceChange24h: 42.8,
-            createdAt: new Date(Date.now() - 172800000).toISOString(),
-            thumbnail: "/templates/voiceovers/meme/doge.mp4",
-          },
-        ]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    // Only fetch on client side to avoid SSR issues
     if (typeof window !== "undefined") {
       fetchCoins();
     } else {
@@ -120,66 +115,86 @@ export function DiscoveryFeed() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {coins.map((coin: VideoCoin) => (
-          <Card
+          <a
             key={coin.address}
-            className="hover:shadow-lg transition-shadow"
+            href={`https://zora.co/coin/base:${coin.address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block"
           >
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="truncate">{coin.name}</CardTitle>
-                <Badge variant="secondary">{coin.symbol}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {coin.videoUri && <SimpleVideoPlayer src={coin.videoUri} />}
-
-              <div className="flex flex-col gap-2 mt-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Creator:</span>
-                  <span className="font-mono text-xs">
-                    {String(coin.creator).slice(0, 6)}...
-                    {String(coin.creator).slice(-4)}
-                  </span>
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="truncate">{coin.name}</CardTitle>
+                  <Badge variant="secondary">{coin.symbol}</Badge>
                 </div>
-
-                {coin.price && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Price:</span>
-                    <span className="font-semibold">{coin.price} ETH</span>
+              </CardHeader>
+              <CardContent>
+                {coin.thumbnail && !coin.videoUri && (
+                  <div className="aspect-video rounded overflow-hidden mb-3">
+                    <img
+                      src={coin.thumbnail}
+                      alt={coin.name}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 )}
+                {coin.videoUri && <SimpleVideoPlayer src={coin.videoUri} />}
 
-                {coin.volume24h && (
+                <div className="flex flex-col gap-2 mt-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3" />
-                      24h Volume:
-                    </span>
-                    <span className="font-semibold">{coin.volume24h}</span>
-                  </div>
-                )}
-
-                {coin.createdAt && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Created:</span>
-                    <span className="text-xs">
-                      {new Date(coin.createdAt).toLocaleDateString()}
+                    <span className="text-muted-foreground">Creator:</span>
+                    <span className="font-mono text-xs">
+                      {String(coin.creator).slice(0, 6)}...
+                      {String(coin.creator).slice(-4)}
                     </span>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+
+                  {coin.price && coin.price !== "0" && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Price:</span>
+                      <span className="font-semibold">{coin.price} ETH</span>
+                    </div>
+                  )}
+
+                  {coin.volume24h && coin.volume24h !== "0" && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3" />
+                        24h Volume:
+                      </span>
+                      <span className="font-semibold">{coin.volume24h}</span>
+                    </div>
+                  )}
+
+                  {coin.createdAt && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Created:</span>
+                      <span className="text-xs">
+                        {new Date(coin.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </a>
         ))}
       </div>
 
       {coins.length === 0 && !isLoading && (
         <div className="text-center py-12">
           <Coins className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No coins found</h3>
-          <p className="text-muted-foreground">
-            Be the first to create a video coin!
+          <h3 className="text-lg font-semibold mb-2">No coins yet</h3>
+          <p className="text-muted-foreground mb-4">
+            Be the first to create a commentary coin!
           </p>
+          <a
+            href="/templates"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+          >
+            🎬 Get Started
+          </a>
         </div>
       )}
     </div>

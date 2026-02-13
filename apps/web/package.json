@@ -20,6 +20,7 @@
     "@lens-chain/sdk": "^1.0.3",
     "@lens-chain/storage-client": "^1.0.5",
     "@opencut/auth": "file:../../packages/auth",
+    "@opencut/db": "file:../../packages/db",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-progress": "^1.1.7",
     "@rainbow-me/rainbowkit": "^2.2.8",

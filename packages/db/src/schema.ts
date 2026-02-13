@@ -66,4 +66,18 @@ export const waitlist = pgTable("waitlist", {
   createdAt: timestamp("created_at")
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
+}).enableRLS();
+
+export const coins = pgTable("coins", {
+  id: text("id").primaryKey(),
+  address: text("address").notNull().unique(),
+  name: text("name").notNull(),
+  symbol: text("symbol").notNull(),
+  creatorAddress: text("creator_address").notNull(),
+  txHash: text("tx_hash"),
+  metadataUri: text("metadata_uri"),
+  thumbnailUrl: text("thumbnail_url"),
+  createdAt: timestamp("created_at")
+    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .notNull(),
 }).enableRLS(); 

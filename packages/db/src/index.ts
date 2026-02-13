@@ -13,4 +13,7 @@ const client = postgres(process.env.DATABASE_URL);
 export const db = drizzle(client, { schema });
 
 // Re-export schema for convenience
-export * from "./schema"; 
+export * from "./schema";
+
+// Re-export drizzle operators to avoid duplicate module issues in monorepo
+export { eq, desc, asc, sql, count, and, or } from "drizzle-orm"; 

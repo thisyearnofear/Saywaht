@@ -266,6 +266,23 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
           isDeploying: false,
         });
 
+        // Register coin with platform (non-blocking)
+        if (coinAddress) {
+          fetch('/api/coins', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              address: coinAddress,
+              name: data.coinName,
+              symbol: data.coinSymbol,
+              creatorAddress: address,
+              txHash: hash,
+              metadataUri: data.metadataUri || undefined,
+              thumbnailUrl: data.thumbnail || undefined,
+            }),
+          }).catch(() => {});
+        }
+
         setStatus("idle");
       } catch (err) {
         console.error("Deploy failed:", err);
@@ -486,11 +503,10 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
                 <button
                   className="inline-flex items-center gap-2 px-4 py-2 rounded bg-purple-600 text-white hover:bg-purple-700"
                   onClick={async () => {
-                    const baseUrl =
-                      process.env.NEXT_PUBLIC_APP_URL ||
-                      "https://saywaht.netlify.app";
                     const text = `I just launched ${data.coinName} ($${data.coinSymbol}) on @saywaht`;
-                    const link = `${baseUrl}/trade`;
+                    const link = data.deployedCoin?.address
+                      ? `https://zora.co/coin/base:${data.deployedCoin.address}`
+                      : `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.netlify.app"}/trade`;
                     hapticSelection();
                     hapticImpact("light");
                     try {
@@ -519,6 +535,20 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
                   <span className="text-sm">🚀</span>
                   Share on Farcaster
                 </button>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <a
+                  href="/templates"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded border border-input bg-background hover:bg-accent hover:text-accent-foreground text-sm"
+                >
+                  🎨 Create Another
+                </a>
+                <a
+                  href="/"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded border border-input bg-background hover:bg-accent hover:text-accent-foreground text-sm"
+                >
+                  Browse Gallery
+                </a>
               </div>
             </div>
           )}

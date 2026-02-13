@@ -287,15 +287,12 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
 
         <div className="flex flex-col gap-3 max-w-sm mx-auto">
           <Button asChild className="w-full">
-            <a href="/trade">🚀 Start Trading</a>
-          </Button>
-          <Button asChild variant="outline" className="w-full">
             <a
-              href={wizardData.deployedCoin?.address ? `https://zora.co/coin/base:${wizardData.deployedCoin.address}` : "https://zora.co/"}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={wizardData.deployedCoin?.address ? `https://zora.co/coin/base:${wizardData.deployedCoin.address}` : "/trade"}
+              target={wizardData.deployedCoin?.address ? "_blank" : undefined}
+              rel={wizardData.deployedCoin?.address ? "noopener noreferrer" : undefined}
             >
-              View on Zora
+              🪙 View Your Coin
             </a>
           </Button>
           <Button asChild variant="outline" className="w-full">
@@ -312,6 +309,12 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
             >
               Share to Farcaster
             </a>
+          </Button>
+          <Button asChild variant="outline" className="w-full">
+            <a href="/templates">🎨 Create Another</a>
+          </Button>
+          <Button asChild variant="ghost" className="w-full">
+            <a href="/">Browse Gallery</a>
           </Button>
         </div>
       </motion.div>
