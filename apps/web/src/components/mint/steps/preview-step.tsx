@@ -34,9 +34,9 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
   const getAspectRatioClass = () => {
     switch (data.videoFormat) {
       case "portrait":
-        return "aspect-[9/16] max-w-[200px] mx-auto";
+        return "aspect-[9/16]";
       case "square":
-        return "aspect-square max-w-[250px] mx-auto";
+        return "aspect-square";
       case "landscape":
       default:
         return "aspect-video";
@@ -578,20 +578,33 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
         </CardContent>
       </Card>
 
-      {/* Video Preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Video Preview</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            The video content that will be associated with your coin
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className={`bg-muted ${getAspectRatioClass()} rounded-lg overflow-hidden`}>
-            <MintVideoPreview />
-          </div>
-        </CardContent>
-      </Card>
+            <Card>
+
+              <CardHeader>
+
+                <CardTitle>Video Preview</CardTitle>
+
+                <p className="text-sm text-muted-foreground">
+
+                  The video content that will be associated with your coin
+
+                </p>
+
+              </CardHeader>
+
+              <CardContent className="flex justify-center">
+
+                <div className={`bg-muted ${getAspectRatioClass()} rounded-lg overflow-hidden w-full max-w-full max-h-[500px]`}>
+
+                  <MintVideoPreview />
+
+                </div>
+
+              </CardContent>
+
+            </Card>
+
+      
 
       {/* Size Warning */}
       {showSizeWarning && estimatedSize && (

@@ -101,24 +101,24 @@ export function MintVideoPreview() {
               className="object-cover opacity-30"
               unoptimized={true}
             />
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
               {/* Brand/Logo stays visible */}
               {activeProject && (
-                <div className="mb-8 text-center">
-                  <h3 className="text-white font-bold text-2xl mb-2">
+                <div className="mb-4 sm:mb-8 text-center px-2">
+                  <h3 className="text-white font-bold text-xl sm:text-2xl mb-1 sm:mb-2 line-clamp-2">
                     {activeProject.name || "Untitled Project"}
                   </h3>
-                  <p className="text-white/60 text-sm">
+                  <p className="text-white/60 text-xs sm:text-sm">
                     {mediaItems.length} media items • {tracks.length} tracks
                   </p>
                 </div>
               )}
 
               {/* Loading spinner */}
-              <div className="bg-black/60 rounded-full p-6">
-                <Loader2 className="w-12 h-12 text-white animate-spin" />
+              <div className="bg-black/60 rounded-full p-4 sm:p-6">
+                <Loader2 className="w-8 h-8 sm:w-12 sm:h-12 text-white animate-spin" />
               </div>
-              <p className="text-white/80 text-sm mt-4">Loading video...</p>
+              <p className="text-white/80 text-xs sm:text-sm mt-4">Loading video...</p>
             </div>
           </div>
         )}
@@ -198,11 +198,11 @@ export function MintVideoPreview() {
 
       {/* Project info overlay - Beautiful branding */}
       {activeProject && (
-        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none">
-          <h3 className="text-white font-bold text-xl mb-1 drop-shadow-lg">
+        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none">
+          <h3 className="text-white font-bold text-lg sm:text-xl mb-1 drop-shadow-lg">
             {activeProject.name || "Untitled Project"}
           </h3>
-          <p className="text-white/90 text-sm drop-shadow-md">
+          <p className="text-white/90 text-xs sm:text-sm drop-shadow-md">
             {mediaItems.length} media items • {tracks.length} tracks
           </p>
         </div>

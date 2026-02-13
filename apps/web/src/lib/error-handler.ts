@@ -23,6 +23,17 @@ export function analyzeError(error: unknown, context?: string): AppError {
   const errorMessage = error instanceof Error ? error.message : String(error);
   const lowerMessage = errorMessage.toLowerCase();
   
+  // User rejections (wallet interactions) - CLEAN: User-friendly messages
+  if (isUserRejection(error)) {
+    return {
+      type: 'auth',
+      message: 'Transaction cancelled',
+      originalError: error instanceof Error ? error : undefined,
+      suggestion: 'You cancelled the transaction. No worries!',
+      retryable: false
+    };
+  }
+  
   // Network errors
   if (lowerMessage.includes('fetch') || lowerMessage.includes('network') || lowerMessage.includes('timeout')) {
     return {
@@ -95,10 +106,29 @@ export function analyzeError(error: unknown, context?: string): AppError {
     };
   }
   
+  // CLEAN: Simplify long technical error messages
+  let friendlyMessage = errorMessage;
+  
+  // Truncate very long messages (often technical stack traces)
+  if (friendlyMessage.length > 150) {
+    // Try to extract just the first sentence or line
+    const firstLine = friendlyMessage.split('\n')[0];
+    const firstSentence = friendlyMessage.split('.')[0];
+    friendlyMessage = (firstLine.length < 150 ? firstLine : firstSentence.substring(0, 150)) + '...';
+  }
+  
+  // Remove common technical prefixes
+  friendlyMessage = friendlyMessage
+    .replace(/^Error:\s*/i, '')
+    .replace(/^TypeError:\s*/i, '')
+    .replace(/^ReferenceError:\s*/i, '')
+    .replace(/^NetworkError:\s*/i, '');
+  
   return {
     type: 'unknown',
-    message: errorMessage,
+    message: friendlyMessage || 'Something unexpected happened',
     originalError: error instanceof Error ? error : undefined,
+    suggestion: 'Please try again or contact support if this persists',
     retryable: false
   };
 }
@@ -138,6 +168,25 @@ export function handleError(error: unknown, context?: string): AppError {
 /**
  * MODULAR: Retry mechanism with exponential backoff
  */
+/**
+ * Helper to detect if error is a user rejection (should NOT retry)
+ */
+function isUserRejection(error: unknown): boolean {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const lowerMessage = errorMessage.toLowerCase();
+  
+  return (
+    lowerMessage.includes('user rejected') ||
+    lowerMessage.includes('user denied') ||
+    lowerMessage.includes('user cancelled') ||
+    lowerMessage.includes('rejected by user') ||
+    lowerMessage.includes('denied by user') ||
+    lowerMessage.includes('action_rejected') ||
+    lowerMessage.includes('request rejected') ||
+    lowerMessage.includes('transaction was rejected')
+  );
+}
+
 export async function withRetry<T>(
   operation: () => Promise<T>,
   maxAttempts: number = 3,
@@ -150,6 +199,11 @@ export async function withRetry<T>(
       return await operation();
     } catch (error) {
       lastError = error;
+      
+      // CLEAN: Don't retry user rejections - they made a choice
+      if (isUserRejection(error)) {
+        throw error;
+      }
       
       if (attempt === maxAttempts) {
         throw error;

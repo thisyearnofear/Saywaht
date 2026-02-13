@@ -39,7 +39,8 @@ async function tryVeniceModel(
   apiKey: string,
   prompt: string,
   config: VeniceModelConfig,
-  dimensions?: { width: number; height: number }
+  dimensions?: { width: number; height: number },
+  aspectRatio?: string
 ): Promise<{ dataUrl: string; model: string; label: string } | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
@@ -48,7 +49,7 @@ async function tryVeniceModel(
     const width = dimensions?.width || config.width;
     const height = dimensions?.height || config.height;
     
-    console.log(`🎨 Trying ${config.label} (${config.model}) at ${width}x${height}...`);
+    console.log(`🎨 Trying ${config.label} (${config.model}) at ${width}x${height} (aspect: ${aspectRatio || "default"})...`);
 
     const response = await fetch(
       "https://api.venice.ai/api/v1/image/generate",
@@ -63,6 +64,7 @@ async function tryVeniceModel(
           prompt,
           width,
           height,
+          aspect_ratio: aspectRatio, // Pass explicit aspect ratio
           format: "webp",
           safe_mode: true,
           hide_watermark: false,
@@ -121,23 +123,27 @@ export async function POST(req: NextRequest) {
 
     const VENICE_API_KEY = process.env.VENICE_API_KEY;
 
-    // Determine dimensions based on aspect ratio
+    // Determine dimensions and aspect ratio for Venice AI
     let dimensions = undefined;
+    let veniceAspectRatio = undefined;
     if (aspectRatio === "portrait") {
       dimensions = { width: 720, height: 1280 };
+      veniceAspectRatio = "9:16";
     } else if (aspectRatio === "square") {
       dimensions = { width: 1024, height: 1024 };
+      veniceAspectRatio = "1:1";
     } else if (aspectRatio === "landscape") {
       dimensions = { width: 1280, height: 720 };
+      veniceAspectRatio = "16:9";
     }
 
     // ── Venice AI generation with model fallback ────────────────────
     if (VENICE_API_KEY && prompt) {
       console.log("🎨 Generating thumbnail with Venice AI...");
-      console.log(`Prompt: ${prompt}, Aspect Ratio: ${aspectRatio || "default"}`);
+      console.log(`Prompt: ${prompt}, Aspect Ratio: ${aspectRatio || "default"} (${veniceAspectRatio || "default"})`);
 
       for (const modelConfig of VENICE_MODELS) {
-        const result = await tryVeniceModel(VENICE_API_KEY, prompt, modelConfig, dimensions);
+        const result = await tryVeniceModel(VENICE_API_KEY, prompt, modelConfig, dimensions, veniceAspectRatio);
         if (result) {
           return NextResponse.json({
             success: true,
