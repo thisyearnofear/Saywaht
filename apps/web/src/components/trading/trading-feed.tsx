@@ -64,11 +64,12 @@ export function TradingFeed() {
               price: "0",
               volume24h: "0",
               priceChange24h: 0,
-              thumbnailUrl: dbCoin.thumbnailUrl || "",
-              videoUrl: "",
-              description: "",
-              marketCap: "0",
+              thumbnail: dbCoin.thumbnailUrl || "",
+              videoUri: dbCoin.metadataUri || "",
+              metadataUri: dbCoin.metadataUri || "",
+              totalSupply: "0",
               createdAt: dbCoin.createdAt,
+              marketCap: "0",
             };
           } catch (error) {
             // Fallback to database data if Zora fetch fails
@@ -80,11 +81,12 @@ export function TradingFeed() {
               price: "0",
               volume24h: "0",
               priceChange24h: 0,
-              thumbnailUrl: dbCoin.thumbnailUrl || "",
-              videoUrl: "",
-              description: "",
-              marketCap: "0",
+              thumbnail: dbCoin.thumbnailUrl || "",
+              videoUri: dbCoin.metadataUri || "",
+              metadataUri: dbCoin.metadataUri || "",
+              totalSupply: "0",
               createdAt: dbCoin.createdAt,
+              marketCap: "0",
             };
           }
         })
