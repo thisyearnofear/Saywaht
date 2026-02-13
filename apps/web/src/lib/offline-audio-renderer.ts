@@ -100,6 +100,12 @@ export class OfflineAudioRenderer {
           continue;
         }
 
+        // Skip clips with muted audio (e.g., when audio is separated)
+        if (clip.audioMuted) {
+          console.log(`⏭️ Skipping audio for ${mediaItem.name} (audio muted on clip)`);
+          continue;
+        }
+
         try {
           const audioBuffer = await this.loadAudioBuffer(mediaItem);
           

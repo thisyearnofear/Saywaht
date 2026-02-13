@@ -366,26 +366,103 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
           </p>
         </div>
 
-        {/* Thumbnail Preview */}
+        {/* Thumbnail Preview with Comparison */}
         {data.thumbnail && !isGenerating ? (
-          <div className="relative aspect-video rounded-lg overflow-hidden border">
-            <Image
-              src={data.thumbnail}
-              alt="Generated thumbnail"
-              fill
-              className="object-cover"
-              unoptimized={true}
-              priority
-            />
-            <div className="absolute top-2 right-2 flex items-center gap-2">
-              {sourceMeta && (
-                <Badge variant={sourceMeta.variant}>{sourceMeta.label}</Badge>
-              )}
-              <div className="bg-black/50 text-white text-xs px-2 py-1 rounded">
-                Current
+          hasComparison ? (
+            // Show before/after comparison when regenerating
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Compare Versions</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setPreviousThumbnail(null);
+                    setComparePosition(50);
+                  }}
+                  className="h-7 text-xs"
+                >
+                  Keep New
+                </Button>
+              </div>
+              <div className="relative aspect-video rounded-lg overflow-hidden border">
+                <Image
+                  src={previousThumbnail}
+                  alt="Previous thumbnail"
+                  fill
+                  className="object-cover"
+                  unoptimized={true}
+                />
+                <div
+                  className="absolute inset-0"
+                  style={{ clipPath: `inset(0 ${100 - comparePosition}% 0 0)` }}
+                >
+                  <Image
+                    src={data.thumbnail || ""}
+                    alt="New thumbnail"
+                    fill
+                    className="object-cover"
+                    unoptimized={true}
+                  />
+                </div>
+                {/* Visual divider */}
+                <div
+                  className="absolute inset-y-0 w-0.5 bg-white shadow-lg z-10"
+                  style={{ left: `${comparePosition}%` }}
+                >
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center">
+                    <div className="text-xs font-bold">⟷</div>
+                  </div>
+                </div>
+                {/* Labels */}
+                <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                  Previous
+                </div>
+                <div className="absolute top-2 right-2 flex items-center gap-2">
+                  {sourceMeta && (
+                    <Badge variant={sourceMeta.variant}>{sourceMeta.label}</Badge>
+                  )}
+                  <div className="bg-black/70 text-white text-xs px-2 py-1 rounded">
+                    New
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <input
+                  id="thumbnail-compare"
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={comparePosition}
+                  onChange={(event) => setComparePosition(Number(event.target.value))}
+                  className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0"
+                />
+                <p className="text-xs text-muted-foreground text-center">
+                  Drag to compare • Click "Keep New" to dismiss
+                </p>
               </div>
             </div>
-          </div>
+          ) : (
+            // Show single thumbnail when not comparing
+            <div className="relative aspect-video rounded-lg overflow-hidden border">
+              <Image
+                src={data.thumbnail}
+                alt="Generated thumbnail"
+                fill
+                className="object-cover"
+                unoptimized={true}
+                priority
+              />
+              <div className="absolute top-2 right-2 flex items-center gap-2">
+                {sourceMeta && (
+                  <Badge variant={sourceMeta.variant}>{sourceMeta.label}</Badge>
+                )}
+                <div className="bg-black/50 text-white text-xs px-2 py-1 rounded">
+                  Current
+                </div>
+              </div>
+            </div>
+          )
         ) : isGenerating ? (
           <div className="relative aspect-video rounded-lg overflow-hidden border bg-muted flex flex-col items-center justify-center p-6 text-center animate-pulse">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
@@ -417,42 +494,6 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
                 Generate or upload one below
               </p>
             </div>
-          </div>
-        )}
-
-        {hasComparison && (
-          <div className="space-y-2">
-            <Label htmlFor="thumbnail-compare">Before / After</Label>
-            <div className="relative aspect-video rounded-lg overflow-hidden border">
-              <Image
-                src={previousThumbnail}
-                alt="Previous thumbnail"
-                fill
-                className="object-cover"
-                unoptimized={true}
-              />
-              <div
-                className="absolute inset-0"
-                style={{ clipPath: `inset(0 ${100 - comparePosition}% 0 0)` }}
-              >
-                <Image
-                  src={data.thumbnail || ""}
-                  alt="Updated thumbnail"
-                  fill
-                  className="object-cover"
-                  unoptimized={true}
-                />
-              </div>
-            </div>
-            <input
-              id="thumbnail-compare"
-              type="range"
-              min={0}
-              max={100}
-              value={comparePosition}
-              onChange={(event) => setComparePosition(Number(event.target.value))}
-              className="w-full"
-            />
           </div>
         )}
 

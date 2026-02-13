@@ -112,8 +112,12 @@ export const exportVideoBackend = async (
       tracks,
       mediaItems: mediaItems.map(item => ({
         ...item,
-        // Convert File objects to URLs for backend processing
-        url: item.file instanceof File ? URL.createObjectURL(item.file) : item.url,
+        // Convert File objects to URLs and make relative URLs absolute
+        url: item.file instanceof File 
+          ? URL.createObjectURL(item.file) 
+          : (item.url.startsWith('http') || item.url.startsWith('blob:') 
+              ? item.url 
+              : `${window.location.origin}${item.url}`),
         isLocal: item.file instanceof File
       })),
       totalDuration

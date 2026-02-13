@@ -13,6 +13,7 @@ export interface TimelineClip {
   // Per-clip playback properties (optional, fallbacks to global settings)
   speed?: number;     // Playback speed multiplier (1.0 = normal)
   reversed?: boolean; // Reverse playback direction
+  audioMuted?: boolean; // Mute audio for this clip (used when audio is separated)
 }
 
 export interface TimelineTrack {
@@ -67,6 +68,7 @@ interface TimelineStore {
     speed: number
   ) => void;
   toggleClipReversed: (trackId: string, clipId: string) => void;
+  updateClipAudioMuted: (trackId: string, clipId: string, muted: boolean) => void;
   toggleTrackMute: (trackId: string) => void;
 
   // Computed values
@@ -281,6 +283,22 @@ export const useTimelineStore = create<TimelineStore>()(
                   ...track,
                   clips: track.clips.map((clip: TimelineClip) =>
                     clip.id === clipId ? { ...clip, reversed: !clip.reversed } : clip
+                  ),
+                }
+              : track
+          ),
+        }));
+      },
+
+      updateClipAudioMuted: (trackId: string, clipId: string, muted: boolean) => {
+        get().pushHistory();
+        set((state: TimelineStore) => ({
+          tracks: state.tracks.map((track: TimelineTrack) =>
+            track.id === trackId
+              ? {
+                  ...track,
+                  clips: track.clips.map((clip: TimelineClip) =>
+                    clip.id === clipId ? { ...clip, audioMuted: muted } : clip
                   ),
                 }
               : track

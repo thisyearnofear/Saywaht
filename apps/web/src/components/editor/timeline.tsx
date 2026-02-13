@@ -200,8 +200,31 @@ export function Timeline() {
             return;
           }
 
-          // Create audio track if it doesn't exist
-          let audioTrackId = tracks.find((t) => t.type === "audio")?.id;
+          // Find an audio track that has space for this clip (no overlap)
+          // or create a new one
+          const clipStart = clip.startTime;
+          const clipEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+          
+          let audioTrackId: string | undefined;
+          
+          // Check existing audio tracks for space
+          for (const track of tracks.filter(t => t.type === "audio")) {
+            const hasOverlap = track.clips.some(existingClip => {
+              const existingStart = existingClip.startTime;
+              const existingEnd = existingClip.startTime + 
+                (existingClip.duration - existingClip.trimStart - existingClip.trimEnd);
+              
+              // Check if clips overlap
+              return !(clipEnd <= existingStart || clipStart >= existingEnd);
+            });
+            
+            if (!hasOverlap) {
+              audioTrackId = track.id;
+              break;
+            }
+          }
+          
+          // If no suitable track found, create a new one
           if (!audioTrackId) {
             audioTrackId = addTrack("audio");
           }
@@ -217,6 +240,10 @@ export function Timeline() {
           };
 
           useTimelineStore.getState().addClipToTrack(audioTrackId, audioClip);
+
+          // Mute audio on the original video clip
+          useTimelineStore.getState().updateClipAudioMuted(trackId, clipId, true);
+          
           separatedCount++;
         }
       }
