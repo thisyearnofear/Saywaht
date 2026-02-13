@@ -367,7 +367,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
         </div>
 
         {/* Thumbnail Preview */}
-        {data.thumbnail ? (
+        {data.thumbnail && !isGenerating ? (
           <div className="relative aspect-video rounded-lg overflow-hidden border">
             <Image
               src={data.thumbnail}
@@ -385,6 +385,26 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
                 Current
               </div>
             </div>
+          </div>
+        ) : isGenerating ? (
+          <div className="relative aspect-video rounded-lg overflow-hidden border bg-muted flex flex-col items-center justify-center p-6 text-center animate-pulse">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
+            <div className="relative z-10 flex flex-col items-center space-y-4">
+              <div className="w-16 h-16 rounded-full border-4 border-primary border-t-transparent animate-spin flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full border-4 border-primary/30 border-t-transparent animate-spin-slow" />
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-foreground">
+                  Crafting Your Thumbnail
+                </h4>
+                <p className="text-xs text-muted-foreground animate-pulse">
+                  {generationMessage}
+                </p>
+              </div>
+            </div>
+            {/* Animated decorative elements */}
+            <div className="absolute top-4 left-4 w-12 h-1 bg-primary/20 rounded-full" />
+            <div className="absolute bottom-4 right-4 w-24 h-1 bg-primary/20 rounded-full" />
           </div>
         ) : (
           <div className="aspect-video bg-muted rounded-lg flex items-center justify-center border-2 border-dashed">
