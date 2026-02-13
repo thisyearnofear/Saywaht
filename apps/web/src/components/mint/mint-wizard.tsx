@@ -291,7 +291,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
           </Button>
           <Button asChild variant="outline" className="w-full">
             <a
-              href="https://zora.co/"
+              href={wizardData.deployedCoin?.address ? `https://zora.co/coin/base:${wizardData.deployedCoin.address}` : "https://zora.co/"}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -300,7 +300,13 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
           </Button>
           <Button asChild variant="outline" className="w-full">
             <a
-              href="https://warpcast.com/~/compose?text=Check%20out%20my%20new%20commentary!"
+              href={`https://warpcast.com/~/compose?text=${encodeURIComponent(
+                `Check out my new commentary coin "${wizardData.deployedCoin?.name || ""}" on SayWaht! 🎬🪙`
+              )}&embeds[]=${encodeURIComponent(
+                wizardData.deployedCoin?.address
+                  ? `https://zora.co/coin/base:${wizardData.deployedCoin.address}`
+                  : "https://saywaht.app"
+              )}`}
               target="_blank"
               rel="noopener noreferrer"
             >

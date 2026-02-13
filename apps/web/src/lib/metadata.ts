@@ -136,7 +136,7 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
   // Build the metadata object
   const metadata: CoinMetadata = {
     name: coinName,
-    description: `A memetic video commentary created with OpenCut. ${filcdnItems.length > 0 ? 'Powered by FilCDN for lightning-fast delivery.' : ''} Deploy, trade, and collect unique video coins.`,
+    description: `A memetic commentary coin created with SayWaht. ${filcdnItems.length > 0 ? 'Powered by FilCDN for lightning-fast delivery.' : ''} Deploy, trade, and collect unique commentary coins.`,
     image: imageUrl, // Always set the image
     external_url: `https://saywaht.app/project/${projectId}`,
     attributes
