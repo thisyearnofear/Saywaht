@@ -181,8 +181,8 @@ export function PreviewPanel({ controlsVariant = "topbar" }: PreviewPanelProps) 
         );
       }
 
-      // If video is on a video track, show video (mute audio if separated)
-      const shouldMuteAudio = hasSeparatedAudio(clip.mediaId);
+      // If video is on a video track, show video (mute audio if separated or explicitly muted)
+      const shouldMuteAudio = clip.audioMuted || hasSeparatedAudio(clip.mediaId);
       return (
         <div key={clip.id} className="absolute inset-0">
           <VideoPlayer
