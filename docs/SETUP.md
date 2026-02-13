@@ -10,7 +10,7 @@ A decentralized video commentary platform that enables users to create memetic c
 - Lint: `bun run lint`, `bun run format` (uses Biome)
 - Dev: `bun run dev` (all), `cd apps/web && bun run dev` (single app)
 - Type check: `bun run check-types`
-- Database: `cd packages/db && bun run db:studio`, `cd apps/web && bun run db:push:local`
+- Database: `cd apps/web && npx drizzle-kit studio` (visual DB manager), `cd apps/web && npx drizzle-kit push` (push schema changes)
 
 ## Architecture
 
@@ -54,7 +54,62 @@ A decentralized video commentary platform that enables users to create memetic c
 - **Export**: Canvas-based video rendering (supports FilCDN URLs)
 - **AI Voice**: ElevenLabs integration for commentary generation
 
+## Database Setup
+
+### Neon PostgreSQL (Recommended)
+
+Saywaht uses PostgreSQL for user authentication, sessions, and creator coin tracking.
+
+1. **Create a Neon account** at [https://neon.tech](https://neon.tech)
+2. **Create a new project** named `saywaht`
+   - Postgres version: **17**
+   - Region: **AWS US East 1** (or closest to your app)
+   - **SKIP Neon Auth** - saywaht has its own auth system in `packages/auth`
+3. **Copy your connection string**
+4. **Configure environment variables:**
+
+```bash
+# packages/db/.env.local
+DATABASE_URL=postgresql://neondb_owner:npg_xxx@ep-xxx.neon.tech/neondb?sslmode=require
+
+# apps/web/.env.local
+DATABASE_URL=postgresql://neondb_owner:npg_xxx@ep-xxx.neon.tech/neondb?sslmode=require
+```
+
+5. **Push the database schema:**
+
+```bash
+cd apps/web
+npx drizzle-kit push
+```
+
+6. **(Optional) Explore your database:**
+
+```bash
+cd apps/web
+npx drizzle-kit studio
+# Opens https://local.drizzle.studio
+```
+
+### Database Tables
+
+The schema (`packages/db/src/schema.ts`) includes:
+
+- **users** - User accounts with wallet addresses
+- **sessions** - User sessions with JWT tokens
+- **accounts** - OAuth and wallet provider accounts
+- **verifications** - Email verification tokens
+- **waitlist** - Early access waitlist
+- **coins** - Zora creator coin metadata and tracking
+
 ## Environment Variables
+
+### Required for Auth Features
+
+```bash
+# PostgreSQL Database (Neon recommended)
+DATABASE_URL=postgresql://user:password@host.neon.tech/neondb?sslmode=require
+```
 
 ### Optional for Enhanced Features
 
@@ -402,6 +457,42 @@ const MobileTradePanel = ({ coinAddress }) => {
 - Prepare for production deployment
 
 ## Troubleshooting
+
+### **Database Issues**
+
+**"Cannot find module 'drizzle-orm/pg-core'"**
+```bash
+cd packages/db
+npm install --no-save
+```
+
+**"esbuild version mismatch"**
+- The `packages/db/package.json` no longer includes explicit esbuild dependencies
+- drizzle-kit manages its own esbuild version internally
+- If you see this error, delete `packages/db/node_modules` and reinstall dependencies
+
+**"DATABASE_URL is not set"**
+- Ensure both `.env.local` files exist:
+  - `packages/db/.env.local`
+  - `apps/web/.env.local`
+- Both need the same `DATABASE_URL` value from Neon
+
+**Schema push fails**
+```bash
+# Always run from apps/web directory
+cd apps/web
+npx drizzle-kit push
+
+# Or specify the URL explicitly:
+DATABASE_URL="your-connection-string" npx drizzle-kit push
+```
+
+**Viewing database contents**
+```bash
+cd apps/web
+npx drizzle-kit studio
+# Opens https://local.drizzle.studio
+```
 
 ### **Mobile Optimization Issues**
 

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { db, eq, desc, coins } from "@opencut/db";
+import { db, eq, desc, coins } from "@saywaht/db";
 
 export async function GET(request: NextRequest) {
   try {

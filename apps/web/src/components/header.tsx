@@ -7,7 +7,7 @@ import { ArrowRight, Star, Menu, X } from "@/lib/icons";
 import { HeaderBase } from "./header-base";
 import { useEffect, useState } from "react";
 
-import { useWalletAuth } from "@opencut/auth";
+import { useWalletAuth } from "@saywaht/auth";
 import { useAccount } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 

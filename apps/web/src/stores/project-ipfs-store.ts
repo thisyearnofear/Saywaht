@@ -2,7 +2,7 @@ import React from 'react';
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { groveStorage } from "@/lib/grove-storage";
-import { useWalletAuth } from "@opencut/auth";
+import { useWalletAuth } from "@saywaht/auth";
 import { useEffect } from 'react';
 import { createSSRSafeStorage } from "@/lib/storage-ssr-safe";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useWalletAuth } from "@opencut/auth";
+import { useWalletAuth } from "@saywaht/auth";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import {
   Card,

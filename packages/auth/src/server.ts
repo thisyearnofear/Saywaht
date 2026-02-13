@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "@opencut/db";
+import { db } from "@saywaht/db";
 
 // Validate required environment variables
 if (!process.env.BETTER_AUTH_SECRET) {

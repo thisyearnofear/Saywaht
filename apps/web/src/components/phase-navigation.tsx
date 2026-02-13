@@ -17,7 +17,7 @@ import {
   useDragControls,
   PanInfo,
 } from "motion/react";
-import { useWalletAuth } from "@opencut/auth";
+import { useWalletAuth } from "@saywaht/auth";
 import { useMounted } from "@/hooks/use-mobile";
 import { useState, useEffect, useCallback } from "react";
 import { useAccount } from "wagmi";

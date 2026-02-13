@@ -1,5 +1,5 @@
 {
-  "name": "@opencut/db",
+  "name": "@saywaht/db",
   "version": "0.0.0",
   "description": "Database package for saywaht",
   "main": "./src/index.ts",
@@ -20,8 +20,8 @@
     "postgres": "^3.4.5"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.1",
+    "@types/pg": "^8.11.10",
     "dotenv": "^16.4.7",
-    "@types/pg": "^8.11.10"
+    "drizzle-kit": "^0.31.1"
   }
 }

@@ -1,4 +1,4 @@
-import { db, count, waitlist } from "@opencut/db";
+import { db, count, waitlist } from "@saywaht/db";
 
 export async function getWaitlistCount() {
   try {

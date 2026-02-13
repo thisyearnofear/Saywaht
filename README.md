@@ -88,11 +88,38 @@ Before you begin, ensure you have the following installed on your system:
     bun install
     ```
 
-3.  **Environment Setup (Optional)**
+3.  **Database Setup (Recommended for Auth)**
+
+    Create a Neon PostgreSQL database:
+
+    a. Sign up at [Neon](https://neon.tech) and create a new project
+    b. **Skip Neon Auth** - saywaht has its own auth system
+    c. Copy your connection string
+    d. Configure environment variables:
+
+    ```bash
+    # packages/db/.env.local
+    DATABASE_URL=postgresql://user:password@host.neon.tech/neondb?sslmode=require
+
+    # apps/web/.env.local  
+    DATABASE_URL=postgresql://user:password@host.neon.tech/neondb?sslmode=require
+    ```
+
+    e. Push the database schema:
+
+    ```bash
+    cd apps/web
+    npx drizzle-kit push
+    ```
+
+4.  **Environment Setup (Optional)**
 
     For full functionality, create `apps/web/.env.local`:
 
     ```bash
+    # Database (Required for auth features)
+    DATABASE_URL=your-postgresql-connection-string
+
     # Wallet Connection (Required for mobile wallet support)
     NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your-walletconnect-project-id
 
@@ -117,18 +144,18 @@ Before you begin, ensure you have the following installed on your system:
 
     **Note:** To enable mobile wallet connections (MetaMask Mobile, Trust Wallet, etc.), get a free WalletConnect Project ID from [https://cloud.walletconnect.com/](https://cloud.walletconnect.com/) and add it to your `.env.local` file. Without this, only browser extension wallets will be available.
 
-4.  **Start the development server**
+5.  **Start the development server**
 
     ```bash
     bun run dev
     ```
 
-5.  **Connect your wallet & start creating**
+6.  **Connect your wallet & start creating**
     - Open [http://localhost:3000](http://localhost:3000)
     - Connect your Web3 wallet (MetaMask, WalletConnect, etc.)
     - Start creating and trading video coins immediately!
 
-6.  **Explore the platform**
+7.  **Explore the platform**
     - **Landing** (`/`) - Wallet connection and coin discovery
     - **Editor** (`/editor`) - Professional video editing with FilCDN
     - **Trading** (`/trade`) - Creator coin marketplace
@@ -178,6 +205,29 @@ saywaht follows a **mobile-first, three-phase design**:
 - **Creator economy** - Supporters invest in creators, creators earn from trading
 
 ## Troubleshooting
+
+### Database Issues
+
+**"Cannot find module 'drizzle-orm/pg-core'"**
+```bash
+cd packages/db
+npm install --no-save
+```
+
+**"esbuild version mismatch"**
+- This is resolved - the packages/db no longer includes explicit esbuild dependencies
+- If you still see this, delete `packages/db/node_modules` and run `npm install` in the workspace root
+
+**"DATABASE_URL is not set"**
+- Make sure you've created both `packages/db/.env.local` and `apps/web/.env.local`
+- Both files need the same `DATABASE_URL` value
+
+**Schema push fails**
+```bash
+# Make sure you're in the correct directory
+cd apps/web
+DATABASE_URL="your-connection-string" npx drizzle-kit push
+```
 
 ### Common Issues
 

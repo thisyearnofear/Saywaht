@@ -14,7 +14,7 @@ import {
   Search,
 } from "@/lib/icons";
 import { getZoraCoins, type VideoCoin } from "@/lib/zora-coins";
-import { useWalletAuth } from "@opencut/auth";
+import { useWalletAuth } from "@saywaht/auth";
 import { useTrading } from "@/hooks/use-trading";
 import { toast } from "sonner";
 

@@ -1,5 +1,5 @@
 {
-  "name": "@opencut/auth",
+  "name": "@saywaht/auth",
   "version": "0.0.0",
   "description": "Authentication package for saywaht",
   "main": "./src/index.ts",
@@ -10,7 +10,7 @@
     "./server": "./src/server.ts"
   },
   "dependencies": {
-    "@opencut/db": "file:../db",
+    "@saywaht/db": "file:../db",
     "@types/react": "^19.1.12",
     "better-auth": "^1.1.1",
     "wagmi": "^2.15.6",
