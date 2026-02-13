@@ -30,6 +30,19 @@ interface PreviewStepProps {
 
 export function PreviewStep({ data, updateData }: PreviewStepProps) {
   const { preferences } = useUserPreferencesStore();
+  
+  const getAspectRatioClass = () => {
+    switch (data.videoFormat) {
+      case "portrait":
+        return "aspect-[9/16] max-w-[200px] mx-auto";
+      case "square":
+        return "aspect-square max-w-[250px] mx-auto";
+      case "landscape":
+      default:
+        return "aspect-video";
+    }
+  };
+
   const [isGeneratingMetadata, setIsGeneratingMetadata] = useState(false);
   const [videoUploadStatus, setVideoUploadStatus] = useState<
     | "idle"
@@ -411,7 +424,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
                 )}
               </div>
               {data.thumbnail ? (
-                <div className="relative aspect-video rounded-lg overflow-hidden border">
+                <div className={`relative ${getAspectRatioClass()} rounded-lg overflow-hidden border`}>
                   <Image
                     src={
                       data.thumbnail.startsWith("ipfs://")
@@ -427,7 +440,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
                   />
                 </div>
               ) : (
-                <div className="aspect-video bg-muted rounded-lg flex items-center justify-center border-2 border-dashed">
+                <div className={`${getAspectRatioClass()} bg-muted rounded-lg flex items-center justify-center border-2 border-dashed`}>
                   <p className="text-sm text-muted-foreground">No thumbnail</p>
                 </div>
               )}
@@ -489,24 +502,14 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
                       <div className="w-4 h-4 animate-spin text-primary">
                         <Loader2 />
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-sm text-muted-foreground">
-                          {exportProgress?.message || "Exporting video..."}
-                        </span>
-                        {renderProgressIndicator()}
-                      </div>
+                      {renderProgressIndicator()}
                     </>
                   ) : videoUploadStatus === "uploading" ? (
                     <>
                       <div className="w-4 h-4 animate-spin text-primary">
                         <Loader2 />
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-sm text-muted-foreground">
-                          Uploading to {storageProvider}...
-                        </span>
-                        {renderProgressIndicator()}
-                      </div>
+                      {renderProgressIndicator()}
                     </>
                   ) : videoUploadStatus === "success" ? (
                     <>
@@ -584,7 +587,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           </p>
         </CardHeader>
         <CardContent>
-          <div className="bg-muted aspect-video rounded-lg overflow-hidden">
+          <div className={`bg-muted ${getAspectRatioClass()} rounded-lg overflow-hidden`}>
             <MintVideoPreview />
           </div>
         </CardContent>

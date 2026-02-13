@@ -107,36 +107,63 @@ export const exportVideoBackend = async (
     // Create FormData for multipart upload
     const formData = new FormData();
     
-    // Add timeline data
-    formData.append('timelineData', JSON.stringify({
-      tracks,
-      mediaItems: mediaItems.map(item => ({
-        ...item,
-        // Convert File objects to URLs and make relative URLs absolute
-        url: item.file instanceof File 
-          ? URL.createObjectURL(item.file) 
-          : (item.url.startsWith('http') || item.url.startsWith('blob:') 
-              ? item.url 
-              : `${window.location.origin}${item.url}`),
-        isLocal: item.file instanceof File
-      })),
-      totalDuration
-    }));
+    // We'll update timeline data after processing files
+    // to include blob URL mappings
+    let timelineData: any;
     
     // Add export options
     formData.append('exportOptions', JSON.stringify(exportOptions));
     
-    // Upload media files that are File objects
+    // Upload media files that are File objects or blob URLs
     const uploadedFiles: string[] = [];
+    const blobUrlMapping: Record<string, string> = {};
+    
     for (const item of mediaItems) {
       if (item.file instanceof File) {
+        // Upload File objects directly
         formData.append('mediaFiles', item.file, item.name);
         uploadedFiles.push(item.name);
+      } else if (item.url.startsWith('blob:')) {
+        // Fetch and upload blob URLs (e.g., recorded audio)
+        try {
+          const response = await fetch(item.url);
+          const blob = await response.blob();
+          const fileName = item.name || `media-${item.id}`;
+          formData.append('mediaFiles', blob, fileName);
+          uploadedFiles.push(fileName);
+          blobUrlMapping[item.url] = fileName;
+        } catch (error) {
+          console.error(`Failed to fetch blob URL for ${item.name}:`, error);
+        }
       }
     }
     
     console.log(`📤 Uploading ${uploadedFiles.length} media files for processing...`);
     onProgress(5);
+    
+    // Now add timeline data with blob URL mappings
+    timelineData = {
+      tracks,
+      mediaItems: mediaItems.map(item => ({
+        ...item,
+        // Map URLs appropriately:
+        // - File objects: use the uploaded file name
+        // - Blob URLs: use the uploaded file name from mapping
+        // - Relative URLs: make absolute
+        // - Absolute URLs: keep as-is
+        url: item.file instanceof File 
+          ? item.name
+          : item.url.startsWith('blob:') && blobUrlMapping[item.url]
+            ? blobUrlMapping[item.url]
+            : item.url.startsWith('http') || item.url.startsWith('blob:')
+              ? item.url 
+              : `${window.location.origin}${item.url}`,
+        isLocal: item.file instanceof File || item.url.startsWith('blob:')
+      })),
+      totalDuration
+    };
+    
+    formData.append('timelineData', JSON.stringify(timelineData));
     
     // Start export job
     const response = await fetch(`${BACKEND_URL}/api/export/start`, {
