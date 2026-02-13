@@ -58,11 +58,8 @@ export function DiscoveryFeed() {
             })
           );
           setCoins(enriched);
-        } else {
-          // No platform coins yet, fall back to Zora trending
-          const data = await getZoraCoins().getTrendingCoins();
-          setCoins(data);
         }
+        // If no platform coins, show empty state (no fallback to all Zora coins)
       } catch (error) {
         console.error("❌ DiscoveryFeed: Failed to fetch coins:", error);
       } finally {
