@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { LuLoader as Loader2, LuCheck, LuX } from "react-icons/lu";
 import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { toast } from "sonner";
-import { getProfile } from "@zoralabs/coins-sdk";
+import { getProfile, getCoinCreateFromLogs } from "@zoralabs/coins-sdk";
 import { submitReferral } from "@divvi/referral-sdk";
 import { MintWizardData } from "../mint-wizard";
 import { base } from "viem/chains";
@@ -187,6 +187,26 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         }
 
         console.log("🚀 Deploying coin via wallet...");
+        
+        // Improvement 3: Pre-flight Balance & Gas Check
+        try {
+          const userBalance = await publicClient.getBalance({ address: address as `0x${string}` });
+          const requiredValue = calls[0].value ? BigInt(calls[0].value) : 0n;
+          const estimatedGasBuffer = 1000000000000000n; // 0.001 ETH buffer for gas
+          
+          if (userBalance < (requiredValue + estimatedGasBuffer)) {
+            const needed = (requiredValue + estimatedGasBuffer) - userBalance;
+            const neededEth = Number(needed) / 1e18;
+            throw new Error(`Insufficient balance on Base. You need approximately ${neededEth.toFixed(4)} more ETH to cover the pool creation and gas.`);
+          }
+        } catch (balanceErr) {
+          console.warn("⚠️ Balance check failed or insufficient:", balanceErr);
+          if (balanceErr instanceof Error && balanceErr.message.includes("Insufficient balance")) {
+            throw balanceErr;
+          }
+          // Continue if it's just a RPC failure
+        }
+
         console.log("📝 Transaction details:", {
           to: calls[0].to,
           data: calls[0].data?.substring(0, 66) + "...",
@@ -212,9 +232,25 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         setIsSuccess(true);
         setIsConfirming(false);
 
-        const coinAddress = predictedCoinAddress;
+        // Extract coin address from logs since it's no longer predicted
+        let coinAddress: string | undefined;
+        try {
+          const creationInfo = getCoinCreateFromLogs(receipt);
+          coinAddress = creationInfo?.coin;
+        } catch (logErr) {
+          console.warn("⚠️ Failed to extract coin address from logs:", logErr);
+        }
+
+        // Use predicted address as fallback if extraction failed
+        if (!coinAddress && predictedCoinAddress) {
+          console.log("ℹ️ Using predicted address as fallback:", predictedCoinAddress);
+          coinAddress = predictedCoinAddress;
+        }
+
         console.log("🪙 Coin deployed successfully!");
-        console.log("📍 Coin address:", coinAddress);
+        if (coinAddress) {
+          console.log("📍 Coin address:", coinAddress);
+        }
 
         // Trigger celebration confetti
         triggerCoinCelebration();

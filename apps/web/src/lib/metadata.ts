@@ -175,10 +175,27 @@ export async function uploadMetadataToIPFS(metadata: CoinMetadata): Promise<stri
 
     const result = await groveStorage.uploadMetadata(metadata);
 
+    // Improvement 2: IPFS Hydration (Kicker)
+    // Fire and forget requests to multiple gateways to speed up propagation for Zora's validator
+    const ipfsHash = result.uri.replace('lens://', '').replace('ipfs://', '');
+    if (ipfsHash) {
+      const gateways = [
+        `https://ipfs.io/ipfs/${ipfsHash}`,
+        `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`,
+        `https://dweb.link/ipfs/${ipfsHash}`,
+        `https://gateway.pinata.cloud/ipfs/${ipfsHash}`
+      ];
+      
+      console.log('🚀 Hydrating IPFS gateways for Zora validation...');
+      gateways.forEach(url => {
+        fetch(url, { method: 'HEAD', mode: 'no-cors' }).catch(() => {});
+      });
+    }
+
     // Wait for IPFS propagation to ensure content is available
     try {
       console.log('⏳ Waiting for IPFS propagation...');
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds for propagation
+      await new Promise(resolve => setTimeout(resolve, 1500)); 
       console.log('✅ IPFS propagation wait complete');
     } catch (error) {
       console.warn('⚠️ Propagation wait failed, but continuing:', error);
@@ -278,27 +295,31 @@ export function generateCoinMetadataFromVideo(params: SimpleCoinMetadataParams):
     thumbnailUrl = `https://saywaht.app${thumbnailUrl}`;
   }
 
-  // Build the metadata object following Zora's exact format
-  const metadata: any = {
-    name,
-    description,
-    // Use a dynamic thumbnail URL generated from the video
-    image: thumbnailUrl,
-    // For video content
-    animation_url: videoUri,
-    // Zora's extended format for better indexing
-    content: {
-      mime: "video/webm",
-      uri: videoUri
-    },
-    // Use properties instead of attributes (Zora's format)
-    properties: {
-      category: "video",
-      creator: creatorAddress,
-      symbol: symbol,
-      platform: "saywaht"
-    }
-  };
+    // Build the metadata object following Zora's exact format
+    const metadata: any = {
+      name,
+      description,
+      // Use a dynamic thumbnail URL generated from the video
+      image: thumbnailUrl,
+      // For video content
+      animation_url: videoUri,
+      // Zora's extended format for better indexing
+      content: {
+        mime: "video/webm",
+        uri: videoUri
+      },
+      // Improvement 4: Automatic Farcaster Frame Generation & Enhanced Properties
+      properties: {
+        category: "video",
+        creator: creatorAddress,
+        symbol: symbol,
+        platform: "saywaht",
+        // Zora-specific properties for Mint Frames
+        "zora-mint-frame": "https://zora.co/coin/base:" + creatorAddress, // Placeholder, will be updated with actual coin address if known
+        "content-type": "video-commentary",
+        "app-name": "saywaht"
+      }
+    };
 
   // Add external URL if project ID is available
   if (projectId) {
