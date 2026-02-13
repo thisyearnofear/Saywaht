@@ -7,7 +7,7 @@ import { LuLoader as Loader2, LuCheck, LuX } from "react-icons/lu";
 import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import { toast } from "sonner";
 import { getProfile, getCoinCreateFromLogs } from "@zoralabs/coins-sdk";
-import { submitReferral } from "@divvi/referral-sdk";
+
 import { MintWizardData } from "../mint-wizard";
 import { base } from "viem/chains";
 // Using CreateCoinArgs and CreateConstants via namespace import
@@ -265,12 +265,6 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
           },
           isDeploying: false,
         });
-
-        // Submit Divvi referral tracking (optional, non-blocking)
-        try {
-          const chainId = await publicClient.getChainId();
-          await submitReferral({ txHash: hash, chainId });
-        } catch { }
 
         setStatus("idle");
       } catch (err) {
