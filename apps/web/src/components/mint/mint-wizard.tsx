@@ -51,6 +51,11 @@ export interface MintWizardData {
 
 const STEPS = [
   {
+    id: "format",
+    title: "Video Format",
+    description: "Choose the optimal format for your content",
+  },
+  {
     id: "thumbnail",
     title: "Create Thumbnail",
     description: "Generate an eye-catching thumbnail for your coin",
@@ -64,11 +69,6 @@ const STEPS = [
     id: "currency",
     title: "Backing Currency",
     description: "Choose what currency backs your coin",
-  },
-  {
-    id: "format",
-    title: "Video Format",
-    description: "Choose the optimal format for your content",
   },
   {
     id: "preview",
@@ -169,17 +169,17 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
 
   const canProceedToNext = () => {
     switch (currentStep) {
-      case 0: // Thumbnail step
+      case 0: // Format step
+        return wizardData.videoFormat !== undefined;
+      case 1: // Thumbnail step
         return wizardData.thumbnail !== null;
-      case 1: // Details step
+      case 2: // Details step
         return (
           wizardData.coinName.trim() !== "" &&
           wizardData.coinSymbol.trim() !== ""
         );
-      case 2: // Currency selection step
+      case 3: // Currency selection step
         return wizardData.currency !== undefined;
-      case 3: // Format step
-        return wizardData.videoFormat !== undefined;
       case 4: // Preview step
         // Allow proceeding if metadata is ready, regardless of video upload status
         // This allows users to deploy with thumbnail only if video upload fails
@@ -209,17 +209,17 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   const renderStep = () => {
     switch (currentStep) {
       case 0:
+        return <FormatStep data={wizardData} updateData={updateWizardData} />;
+      case 1:
         return (
           <ThumbnailStep data={wizardData} updateData={updateWizardData} />
         );
-      case 1:
+      case 2:
         return (
           <CoinDetailsStep data={wizardData} updateData={updateWizardData} />
         );
-      case 2:
-        return <CurrencySelectionStep data={wizardData} updateData={updateWizardData} />;
       case 3:
-        return <FormatStep data={wizardData} updateData={updateWizardData} />;
+        return <CurrencySelectionStep data={wizardData} updateData={updateWizardData} />;
       case 4:
         return <PreviewStep data={wizardData} updateData={updateWizardData} />;
       case 5:

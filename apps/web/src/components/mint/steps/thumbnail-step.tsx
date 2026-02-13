@@ -75,6 +75,18 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
     ? SOURCE_META[data.thumbnailSource]
     : null;
 
+  const getAspectRatioClass = () => {
+    switch (data.videoFormat) {
+      case "portrait":
+        return "aspect-[9/16] max-w-[300px] mx-auto";
+      case "square":
+        return "aspect-square max-w-[400px] mx-auto";
+      case "landscape":
+      default:
+        return "aspect-video";
+    }
+  };
+
   const extractFrameFromVideo = async (videoUrl: string): Promise<string> => {
     return new Promise((resolve, reject) => {
       const video = document.createElement("video");
@@ -88,8 +100,24 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
       video.addEventListener("seeked", () => {
         try {
           const canvas = document.createElement("canvas");
-          canvas.width = 1920;
-          canvas.height = 1080;
+          
+          // Use format-specific dimensions
+          let targetWidth = 1920;
+          let targetHeight = 1080;
+          let targetAspect = 16 / 9;
+
+          if (data.videoFormat === "portrait") {
+            targetWidth = 1080;
+            targetHeight = 1920;
+            targetAspect = 9 / 16;
+          } else if (data.videoFormat === "square") {
+            targetWidth = 1080;
+            targetHeight = 1080;
+            targetAspect = 1;
+          }
+
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
 
           const ctx = canvas.getContext("2d");
           if (ctx) {
@@ -99,15 +127,15 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
               sw = video.videoWidth,
               sh = video.videoHeight;
 
-            if (videoAspect > 16 / 9) {
-              sw = video.videoHeight * (16 / 9);
+            if (videoAspect > targetAspect) {
+              sw = video.videoHeight * targetAspect;
               sx = (video.videoWidth - sw) / 2;
             } else {
-              sh = video.videoWidth / (16 / 9);
+              sh = video.videoWidth / targetAspect;
               sy = (video.videoHeight - sh) / 2;
             }
 
-            ctx.drawImage(video, sx, sy, sw, sh, 0, 0, 1920, 1080);
+            ctx.drawImage(video, sx, sy, sw, sh, 0, 0, targetWidth, targetHeight);
             resolve(canvas.toDataURL("image/jpeg", 0.9));
           } else {
             reject(new Error("Failed to get canvas context"));
@@ -196,7 +224,11 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
           const res = await fetch(ep.url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: customPrompt, videoFrame }),
+            body: JSON.stringify({ 
+              prompt: customPrompt, 
+              videoFrame,
+              aspectRatio: data.videoFormat
+            }),
             signal: controller.signal,
           });
           clearTimeout(timeoutId);
@@ -385,7 +417,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
                   Keep New
                 </Button>
               </div>
-              <div className="relative aspect-video rounded-lg overflow-hidden border">
+              <div className={`relative ${getAspectRatioClass()} rounded-lg overflow-hidden border`}>
                 <Image
                   src={previousThumbnail}
                   alt="Previous thumbnail"
@@ -444,7 +476,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
             </div>
           ) : (
             // Show single thumbnail when not comparing
-            <div className="relative aspect-video rounded-lg overflow-hidden border">
+            <div className={`relative ${getAspectRatioClass()} rounded-lg overflow-hidden border`}>
               <Image
                 src={data.thumbnail}
                 alt="Generated thumbnail"
@@ -464,7 +496,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
             </div>
           )
         ) : isGenerating ? (
-          <div className="relative aspect-video rounded-lg overflow-hidden border bg-muted flex flex-col items-center justify-center p-6 text-center animate-pulse">
+          <div className={`relative ${getAspectRatioClass()} rounded-lg overflow-hidden border bg-muted flex flex-col items-center justify-center p-6 text-center animate-pulse`}>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
             <div className="relative z-10 flex flex-col items-center space-y-4">
               <div className="w-16 h-16 rounded-full border-4 border-primary border-t-transparent animate-spin flex items-center justify-center">
@@ -484,7 +516,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
             <div className="absolute bottom-4 right-4 w-24 h-1 bg-primary/20 rounded-full" />
           </div>
         ) : (
-          <div className="aspect-video bg-muted rounded-lg flex items-center justify-center border-2 border-dashed">
+          <div className={`${getAspectRatioClass()} bg-muted rounded-lg flex items-center justify-center border-2 border-dashed`}>
             <div className="text-center">
               <div className="w-12 h-12 text-muted-foreground mx-auto mb-2">
                 <LuSparkles />
