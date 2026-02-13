@@ -170,9 +170,28 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
           throw new Error(error.error || "Failed to get coin calldata");
         }
 
-        const { calls, predictedCoinAddress } = await response.json();
+        const responseData = await response.json();
+        console.log("📦 Received response from server:", responseData);
+
+        const { calls, predictedCoinAddress } = responseData;
+
+        // Validate that we have the required data
+        if (!calls || !Array.isArray(calls) || calls.length === 0) {
+          console.error("❌ Invalid response: missing or empty calls array", responseData);
+          throw new Error("Invalid response from server: missing transaction calls");
+        }
+
+        if (!calls[0].to || !calls[0].data) {
+          console.error("❌ Invalid call data:", calls[0]);
+          throw new Error("Invalid transaction call data");
+        }
 
         console.log("🚀 Deploying coin via wallet...");
+        console.log("📝 Transaction details:", {
+          to: calls[0].to,
+          data: calls[0].data?.substring(0, 66) + "...",
+          value: calls[0].value,
+        });
 
         // Send the transaction using the calldata from our server
         // Convert value back to BigInt (serialized as string from API)

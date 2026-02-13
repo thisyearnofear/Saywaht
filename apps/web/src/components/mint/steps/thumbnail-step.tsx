@@ -181,7 +181,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
       // Try backend server first (no serverless timeout limits), then
       // fall back to the Vercel API route.
       const BACKEND_URL =
-        process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || "http://157.180.36.156:3100";
+        process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || "https://persidian.com";
       const endpoints = [
         { url: `${BACKEND_URL}/api/ai/generate-thumbnail`, label: "backend", timeoutMs: 55_000 },
         { url: "/api/ai/generate-thumbnail", label: "vercel", timeoutMs: 55_000 },

@@ -49,6 +49,18 @@ export async function POST(request: NextRequest) {
         });
 
         console.log("✅ Successfully got calldata from Zora SDK");
+        console.log("📦 Result structure:", JSON.stringify(result, (_key, value) =>
+            typeof value === "bigint" ? `BigInt(${value.toString()})` : value
+        , 2));
+
+        // Validate result structure
+        if (!result || typeof result !== 'object') {
+            console.error("❌ Invalid result from Zora SDK:", result);
+            return NextResponse.json(
+                { error: "Invalid response from Zora SDK" },
+                { status: 500 }
+            );
+        }
 
         // Serialize BigInt values to strings for JSON transport
         const serialized = JSON.parse(
@@ -56,6 +68,8 @@ export async function POST(request: NextRequest) {
                 typeof value === "bigint" ? value.toString() : value
             )
         );
+        
+        console.log("📤 Sending serialized response:", JSON.stringify(serialized, null, 2));
         return NextResponse.json(serialized);
     } catch (error) {
         console.error("❌ Failed to create coin calldata:", error);
