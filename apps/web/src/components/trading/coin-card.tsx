@@ -133,7 +133,7 @@ export function CoinCard({ coin, onBuy, onSell, onPlay }: CoinCardProps) {
         whileHover={{ y: -4 }}
         transition={{ duration: 0.2 }}
       >
-        <Card className="w-full max-w-sm mx-auto bg-card border-border hover:shadow-xl transition-all duration-300 group overflow-hidden">
+        <Card className="w-full bg-card border-border hover:shadow-xl transition-all duration-300 group overflow-hidden h-full flex flex-col">
           <CardContent className="p-0">
             {/* Enhanced Video Preview Section */}
             <div className="relative aspect-video bg-muted rounded-t-lg overflow-hidden">
