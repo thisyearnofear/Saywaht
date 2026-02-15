@@ -1,5 +1,8 @@
 // FilCDN Configuration
-const FILECOIN_CALIBRATION_RPC = 'https://api.calibration.node.glif.io/rpc/v1';
+const FILECOIN_CALIBRATION_RPC =
+  process.env.NEXT_PUBLIC_FILECOIN_CALIBRATION_RPC ||
+  process.env.FILECOIN_CALIBRATION_RPC ||
+  'https://api.calibration.node.glif.io/rpc/v1';
 
 export interface UploadResult {
   cid: string;
@@ -23,8 +26,6 @@ export class FilCDNService {
   }
 
   async initialize(): Promise<void> {
-    if (typeof window === 'undefined') return;
-    
     if (!this.config.privateKey) {
       throw new Error('Private key is required for FilCDN operations');
     }
@@ -69,10 +70,6 @@ export class FilCDNService {
   }
 
   async uploadFile(file: File): Promise<UploadResult> {
-    if (typeof window === 'undefined') {
-      throw new Error('Upload is only available in the browser');
-    }
-    
     if (!this.synapse || !this.storageService) {
       throw new Error('FilCDN service not initialized. Call initialize() first.');
     }
@@ -121,9 +118,6 @@ export class FilCDNService {
   }
 
   async downloadFile(cid: string): Promise<Uint8Array> {
-    if (typeof window === 'undefined') {
-      throw new Error('Download is only available in the browser');
-    }
     if (!this.synapse) {
       throw new Error('FilCDN service not initialized. Call initialize() first.');
     }
@@ -140,7 +134,7 @@ export class FilCDNService {
   }
 
   async getDownloadUrl(cid: string): Promise<string> {
-    if (typeof window === 'undefined' || !this.synapse) {
+    if (!this.synapse) {
       return '';
     }
 

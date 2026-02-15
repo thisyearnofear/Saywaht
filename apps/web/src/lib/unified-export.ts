@@ -149,7 +149,7 @@ export async function unifiedExport(
       const res = await fetch('/api/filecoin/status');
       if (res.ok) {
         const data = await res.json();
-        if (data.configured && data.allowanceSufficient) return 254;
+        if (data.configured) return 254;
       }
       return 8;
     } catch {

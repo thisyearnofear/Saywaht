@@ -30,6 +30,8 @@ node_modules
 .turbo
 
 *.env
+**/.env.local
+**/.env.*.local
 dump.rdb
 
 # Lock files (allow bun.lock, block others for consistency)

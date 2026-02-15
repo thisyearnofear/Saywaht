@@ -28,6 +28,8 @@ export interface GenerateMetadataParams {
   projectId: string;
   exportedVideoUrl?: string; // Optional exported video URL from canvas export
   thumbnailUrl?: string; // Optional custom thumbnail URL (for metadata)
+  archiveManifestUrl?: string;
+  captionsUrl?: string;
 }
 
 /**
@@ -42,7 +44,9 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
     tracks,
     projectId,
     exportedVideoUrl,
-    thumbnailUrl
+    thumbnailUrl,
+    archiveManifestUrl,
+    captionsUrl
   } = params;
 
   // Find the primary video/media content (first FilCDN item or first video)
@@ -105,6 +109,13 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
     });
   }
 
+  if (captionsUrl) {
+    attributes.push({
+      trait_type: "Captions",
+      value: "On-chain storage index"
+    });
+  }
+
   // Add duration if available
   if (totalDuration > 0) {
     attributes.push({
@@ -138,9 +149,23 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
     name: coinName,
     description: `A memetic commentary coin created with SayWaht. ${filcdnItems.length > 0 ? 'Powered by FilCDN for lightning-fast delivery.' : ''} Deploy, trade, and collect unique commentary coins.`,
     image: imageUrl, // Always set the image
-    external_url: `https://saywaht.app/project/${projectId}`,
+    external_url: archiveManifestUrl || `https://saywaht.app/project/${projectId}`,
     attributes
   };
+
+  if (archiveManifestUrl) {
+    attributes.push({
+      trait_type: "Archive Manifest",
+      value: archiveManifestUrl
+    });
+  }
+
+  if (captionsUrl) {
+    attributes.push({
+      trait_type: "Captions URL",
+      value: captionsUrl
+    });
+  }
 
   // Add animation URL for videos - prioritize exported video, then FilCDN/Grove content
   if (exportedVideoUrl) {

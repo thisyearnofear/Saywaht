@@ -26,6 +26,7 @@
     "@saywaht/auth": "file:../../packages/auth",
     "@saywaht/db": "file:../../packages/db",
     "@tanstack/react-query": "^5.90.10",
+    "@web3-storage/w3up-client": "^17.1.2",
     "@zoralabs/coins-sdk": "^0.3.3",
     "bs58": "^6.0.0",
     "canvas-confetti": "^1.9.3",

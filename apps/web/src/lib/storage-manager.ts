@@ -25,7 +25,7 @@ export type StorageProvider = "grove" | "filcdn" | "ipfs" | "local";
 // Storage limits by provider (in MB)
 export const STORAGE_LIMITS = {
   grove: 8,
-  filcdn: 100,
+  filcdn: 254,
   ipfs: 50,
   local: 0, // No limit for local storage
 };
@@ -56,6 +56,26 @@ export interface UploadResult {
   size: number;
   provider: StorageProvider;
   optimized: boolean;
+}
+
+export interface CaptionTranscriptEntry {
+  startTime: number;
+  endTime: number;
+  text: string;
+}
+
+export interface FilecoinArchiveResult {
+  video: UploadResult;
+  transcript?: UploadResult;
+  manifest: UploadResult;
+  retrieval: {
+    videoUrl: string;
+    videoCid?: string;
+    transcriptUrl?: string;
+    transcriptCid?: string;
+    manifestUrl: string;
+    manifestCid?: string;
+  };
 }
 
 // Upload options interface
@@ -112,6 +132,20 @@ function checkSizeLimit(
     size: sizeInMB,
     limit,
   };
+}
+
+function slugifyFileBasename(value: string): string {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "") || "export"
+  );
+}
+
+function extractCid(upload: UploadResult): string | undefined {
+  if (!upload.ipfsUrl?.startsWith("ipfs://")) return undefined;
+  return upload.ipfsUrl.replace("ipfs://", "");
 }
 
 /**
@@ -644,6 +678,106 @@ class StorageManager {
       allowFallback: true,
       ...options,
     });
+  }
+
+  /**
+   * Archive exported video + captions to Filecoin (FilCDN via Synapse SDK).
+   * Stores media and a manifest for deterministic retrieval.
+   */
+  async archiveExportToFilecoin(params: {
+    projectName: string;
+    videoBlob: Blob;
+    outputExt?: string;
+    captions?: CaptionTranscriptEntry[];
+    metadata?: Record<string, any>;
+  }): Promise<FilecoinArchiveResult> {
+    const timestamp = Date.now();
+    const baseName = slugifyFileBasename(params.projectName);
+    const outputExt = params.outputExt || "mp4";
+
+    const videoFile = new File(
+      [params.videoBlob],
+      `${baseName}_${timestamp}.${outputExt}`,
+      { type: params.videoBlob.type || `video/${outputExt}` }
+    );
+
+    const video = await this.uploadFile(videoFile, {
+      preferredProvider: "filcdn",
+      allowFallback: false,
+      optimize: false,
+      maxRetries: 2,
+    });
+
+    let transcript: UploadResult | undefined;
+    if (params.captions && params.captions.length > 0) {
+      const transcriptPayload = {
+        projectName: params.projectName,
+        createdAt: new Date(timestamp).toISOString(),
+        captions: params.captions,
+        metadata: params.metadata || {},
+      };
+      const transcriptFile = new File(
+        [JSON.stringify(transcriptPayload, null, 2)],
+        `${baseName}_captions_${timestamp}.json`,
+        { type: "application/json" }
+      );
+
+      transcript = await this.uploadFile(transcriptFile, {
+        preferredProvider: "filcdn",
+        allowFallback: false,
+        optimize: false,
+        maxRetries: 2,
+      });
+    }
+
+    const manifestPayload = {
+      version: "1.0",
+      type: "saywaht-filecoin-export",
+      projectName: params.projectName,
+      createdAt: new Date(timestamp).toISOString(),
+      assets: {
+        video: {
+          url: video.url,
+          cid: extractCid(video),
+          sizeMB: video.size,
+        },
+        transcript: transcript
+          ? {
+              url: transcript.url,
+              cid: extractCid(transcript),
+              sizeMB: transcript.size,
+            }
+          : null,
+      },
+      metadata: params.metadata || {},
+    };
+
+    const manifestFile = new File(
+      [JSON.stringify(manifestPayload, null, 2)],
+      `${baseName}_manifest_${timestamp}.json`,
+      { type: "application/json" }
+    );
+
+    const manifest = await this.uploadFile(manifestFile, {
+      preferredProvider: "filcdn",
+      allowFallback: false,
+      optimize: false,
+      maxRetries: 2,
+    });
+
+    return {
+      video,
+      transcript,
+      manifest,
+      retrieval: {
+        videoUrl: video.url,
+        videoCid: extractCid(video),
+        transcriptUrl: transcript?.url,
+        transcriptCid: transcript ? extractCid(transcript) : undefined,
+        manifestUrl: manifest.url,
+        manifestCid: extractCid(manifest),
+      },
+    };
   }
   
   /**

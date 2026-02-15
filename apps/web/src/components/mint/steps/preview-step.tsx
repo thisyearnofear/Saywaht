@@ -20,8 +20,8 @@ import {
   checkExportFeasibility,
 } from "@/lib/unified-export";
 import { storageManager, StorageErrorType } from "@/lib/storage-manager";
-import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { useTextStore } from "@/stores/text-store";
 
 interface PreviewStepProps {
   data: MintWizardData;
@@ -66,10 +66,18 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
     frameRate: number;
     videoBitrate?: number;
   } | null>(null);
+  const [filecoinMaxSizeMB, setFilecoinMaxSizeMB] = useState(8);
+  const [archiveManifestUrl, setArchiveManifestUrl] = useState<string | null>(
+    null
+  );
+  const [archiveCaptionsUrl, setArchiveCaptionsUrl] = useState<string | null>(
+    null
+  );
 
   const { activeProject } = useProjectStore();
   const { tracks, getTotalDuration } = useTimelineStore();
   const { mediaItems } = useMediaStore();
+  const { textElements } = useTextStore();
   const thumbnailSourceLabel = data.thumbnailSource
     ? {
         ai: "AI",
@@ -79,13 +87,41 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
       }[data.thumbnailSource]
     : null;
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadFilecoinCapacity = async () => {
+      try {
+        const res = await fetch("/api/filecoin/status");
+        if (!res.ok) return;
+        const status = await res.json();
+        if (cancelled) return;
+        if (status?.configured) {
+          setFilecoinMaxSizeMB(254);
+        } else {
+          setFilecoinMaxSizeMB(8);
+        }
+      } catch {
+        if (!cancelled) {
+          setFilecoinMaxSizeMB(8);
+        }
+      }
+    };
+
+    loadFilecoinCapacity();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Generate metadata when component mounts or data changes
   useEffect(() => {
     if (
       !data.coinName ||
       !data.coinSymbol ||
       !activeProject ||
-      data.metadataUri
+      data.metadataUri ||
+      isGeneratingMetadata
     )
       return;
 
@@ -104,7 +140,7 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           tracks,
           mediaItems,
           totalDuration,
-          8, // Grove's 8MB limit
+          filecoinMaxSizeMB,
           data.videoFormat
         );
 
@@ -125,9 +161,9 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
 
           console.warn(`⚠️ ${feasibility.message}`);
 
-          // If size is way too large, show warning but don't attempt export
-          if (feasibility.estimatedSize > 15) {
-            // If over 15MB, probably won't work even with adjustments
+          // If size is way too large for current configured storage, skip export.
+          if (feasibility.estimatedSize > filecoinMaxSizeMB * 1.25) {
+            // Even adjusted settings are unlikely to fit the active storage target.
             setVideoUploadStatus("warning");
             setVideoUploadError(feasibility.message);
             // Still generate metadata without video
@@ -155,7 +191,8 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               outputFormat: "mp4",
               frameRate: feasibility.recommendedSettings?.frameRate || 30,
               videoBitrate: feasibility.recommendedSettings?.videoBitrate,
-              maxFileSizeMB: 7.5, // Target 7.5MB to be safe with Grove's 8MB limit
+              maxFileSizeMB:
+                filecoinMaxSizeMB > 8 ? 220 : 7.5,
               onSizeEstimate: async (estimatedSize, maxSize) => {
                 // Always continue, but with adjusted settings
                 return true;
@@ -163,38 +200,40 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
             }
           );
 
-          // Step 3: Upload video using storage manager
+          // Step 3: Archive video + captions + manifest to Filecoin-first storage
           setVideoUploadStatus("uploading");
 
-          const videoFile = new File(
-            [videoBlob],
-            `${data.coinName.replace(/[^a-zA-Z0-9]/g, "_")}.mp4`,
-            { type: "video/mp4" }
-          );
+          const captions = textElements
+            .filter((item) => item.content?.trim().length > 0)
+            .map((item) => ({
+              startTime: item.startTime,
+              endTime: item.endTime,
+              text: item.content,
+            }));
 
-          const uploadResult = await storageManager.uploadFile(videoFile, {
-            preferredProvider: "grove",
-            allowFallback: true,
-            onProgress: (progress) => {
-              setExportProgress({
-                phase: "finalizing",
-                percentage: progress,
-                message: `Uploading to ${storageProvider}... ${Math.round(progress)}%`,
-              });
-            },
-            onProviderFallback: async (from, to, reason) => {
-              setStorageProvider(to);
-              toast.info(`Switching to ${to} storage: ${reason}`);
-              return true; // Allow fallback
+          const archive = await storageManager.archiveExportToFilecoin({
+            projectName: activeProject?.name || data.coinName || "untitled",
+            videoBlob,
+            outputExt: "mp4",
+            captions,
+            metadata: {
+              projectId: activeProject?.id || "",
+              coinName: data.coinName,
             },
           });
 
-          setExportedVideoUrl(uploadResult.url);
-          setStorageProvider(uploadResult.provider);
+          setExportedVideoUrl(archive.retrieval.videoUrl);
+          setStorageProvider(archive.video.provider);
+          setArchiveManifestUrl(archive.retrieval.manifestUrl);
+          setArchiveCaptionsUrl(archive.retrieval.transcriptUrl || null);
           setVideoUploadStatus("success");
 
           // Step 4: Generate metadata with the uploaded video
-          await generateMetadataWithVideo(uploadResult.url);
+          await generateMetadataWithVideo(
+            archive.retrieval.videoUrl,
+            archive.retrieval.manifestUrl,
+            archive.retrieval.transcriptUrl
+          );
         } catch (error) {
           console.error("Failed to export/upload video:", error);
 
@@ -234,7 +273,11 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
     };
 
     // Generate metadata with video URL
-    async function generateMetadataWithVideo(videoUrl: string) {
+    async function generateMetadataWithVideo(
+      videoUrl: string,
+      manifestUrl?: string,
+      captionsUrl?: string
+    ) {
       try {
         // Prepare thumbnail for metadata
         let finalThumbnailUrl = data.thumbnail;
@@ -275,6 +318,8 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           projectId: activeProject?.id || "",
           exportedVideoUrl: videoUrl,
           thumbnailUrl: finalThumbnailUrl || undefined,
+          archiveManifestUrl: manifestUrl,
+          captionsUrl,
         });
 
         // Add custom description if provided
@@ -317,6 +362,8 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           tracks,
           projectId: activeProject?.id || "",
           thumbnailUrl: finalThumbnailUrl || undefined,
+          archiveManifestUrl: archiveManifestUrl || undefined,
+          captionsUrl: archiveCaptionsUrl || undefined,
         });
 
         // Add custom description if provided
@@ -356,12 +403,16 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
     activeProject?.id,
     data.metadataUri,
     data.thumbnail,
+    isGeneratingMetadata,
     updateData,
     tracks,
     mediaItems,
     getTotalDuration,
     activeProject,
-    storageProvider,
+    filecoinMaxSizeMB,
+    textElements,
+    archiveManifestUrl,
+    archiveCaptionsUrl,
   ]);
 
   // Render progress indicator

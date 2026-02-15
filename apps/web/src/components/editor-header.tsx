@@ -7,6 +7,7 @@ import { useProjectStore } from "@/stores/project-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
+import { useTextStore } from "@/stores/text-store";
 import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
 import { useEditorStore } from "@/stores/editor-store";
 import { badgeVariants } from "./ui/badge";
@@ -34,6 +35,8 @@ import { ExportMethod } from "@/lib/canvas-export-utils";
 import { storageManager } from "@/lib/storage-manager";
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 import { useFarcasterShare } from "@/farcaster/hooks/use-farcaster-share";
+import { saveFilecoinArchive } from "@/lib/filecoin-archives";
+import { FilecoinArchivesDialog } from "@/components/editor/filecoin-archives-dialog";
 
 export function EditorHeader() {
   const { activeProject } = useProjectStore();
@@ -50,6 +53,7 @@ export function EditorHeader() {
   const [backendAvailable, setBackendAvailable] = useState(false);
   const { tracks, getTotalDuration } = useTimelineStore();
   const { mediaItems } = useMediaStore();
+  const { textElements } = useTextStore();
 
   // Check backend availability on mount
   useEffect(() => {
@@ -109,6 +113,54 @@ export function EditorHeader() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      const captions = textElements
+        .filter((el) => el.content.trim().length > 0)
+        .map((el) => ({
+          startTime: el.startTime,
+          endTime: el.endTime,
+          text: el.content,
+        }))
+        .sort((a, b) => a.startTime - b.startTime);
+
+      // Filecoin-first archive for large exports and captioned videos.
+      const shouldArchiveToFilecoin =
+        blob.size > 8 * 1024 * 1024 || captions.length > 0;
+
+      if (shouldArchiveToFilecoin) {
+        toast.loading("Archiving exported video + captions to Filecoin...", {
+          id: "filecoin-archive",
+        });
+
+        try {
+          const archiveResult = await storageManager.archiveExportToFilecoin({
+            projectName: activeProject.name,
+            videoBlob: blob,
+            outputExt: "mp4",
+            captions,
+            metadata: {
+              exportMethod: method,
+              durationSeconds: totalDuration,
+              captionCount: captions.length,
+            },
+          });
+
+          saveFilecoinArchive({
+            projectId: activeProject.id,
+            projectName: activeProject.name,
+            createdAt: new Date().toISOString(),
+            ...archiveResult.retrieval,
+          });
+
+          toast.dismiss("filecoin-archive");
+          toast.success("Archived on Filecoin. Retrieval manifest is ready.");
+          console.log("Filecoin archive retrieval:", archiveResult.retrieval);
+        } catch (archiveError) {
+          toast.dismiss("filecoin-archive");
+          console.warn("Filecoin archive failed:", archiveError);
+          toast.error("Export saved locally, but Filecoin archive failed.");
+        }
+      }
 
       toast.dismiss("export-progress");
       toast.success("Video exported successfully!");
@@ -481,6 +533,7 @@ export function EditorHeader() {
           <span className="inline-block h-4 w-4 mr-1">🎬</span>
           Templates
         </Button>
+        <FilecoinArchivesDialog />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
