@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { VoiceoverRecorder } from "./voiceover-recorder";
 import { AiVoiceGenerator } from "./ai-voice-generator";
 import { TextPanel } from "./text-panel";
-import { CaptionsPanel } from "./captions-panel";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { FileUpload } from "./file-upload";
 import { GroveUpload } from "./grove-upload";
@@ -51,7 +51,7 @@ export function MediaPanel() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAudioOpen, setIsAudioOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"upload" | "audio" | "text" | "captions">("upload");
+  const [activeTab, setActiveTab] = useState<"upload" | "audio" | "text">("upload");
   const [filStatus, setFilStatus] = useState<{
     configured: boolean;
     allowanceSufficient: boolean;
@@ -335,15 +335,6 @@ export function MediaPanel() {
             <Mic className="h-4 w-4 mr-2" />
             Audio
           </Button>
-          <Button
-            variant={activeTab === "captions" ? "secondary" : "ghost"}
-            size="sm"
-            className="flex-1 rounded-none"
-            onClick={() => setActiveTab("captions")}
-          >
-            <Type className="h-4 w-4 mr-2" />
-            Captions
-          </Button>
         </div>
 
         {/* Content sections */}
@@ -555,8 +546,6 @@ export function MediaPanel() {
               </Tabs>
             </div>
           )}
-
-          {activeTab === "captions" && <CaptionsPanel />}
         </div>
       </div>
     </>
