@@ -72,6 +72,12 @@ const nextConfig = {
       "@react-native-async-storage/async-storage": false,
     };
 
+    // Support WASM files (used by @huggingface/transformers)
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+    };
+
     return config;
   },
 
