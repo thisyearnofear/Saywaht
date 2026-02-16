@@ -65,15 +65,15 @@ export function MobileEditorLayout({ children, className }: MobileEditorLayoutPr
   const { isEditorMobileMode, toggleEditorMobileMode } = useMobileContext();
   const { isPlaying, toggle } = usePlaybackStore();
   
-  // Tab state
+  // View mode: 'fullscreen' (default) or 'tools'
+  const [viewMode, setViewMode] = useState<'fullscreen' | 'tools'>('fullscreen');
+  
+  // Active tool when in tools mode
   const [activeTab, setActiveTab] = useState<string>("media");
   
-  // Timeline state - larger default for better usability
+  // Timeline state
   const [timelineExpanded, setTimelineExpanded] = useState<boolean>(false);
-  const [timelineHeight, setTimelineHeight] = useState<number>(120); // Increased from 80px
-  
-  // Preview state
-  const [previewExpanded, setPreviewExpanded] = useState<boolean>(false);
+  const [timelineHeight, setTimelineHeight] = useState<number>(120);
   
   // Onboarding state
   const { showOnboarding, completeOnboarding, skipOnboarding } = useMobileOnboarding();
@@ -81,26 +81,126 @@ export function MobileEditorLayout({ children, className }: MobileEditorLayoutPr
   // Set up playback controls
   usePlaybackControls();
 
-  // Handle timeline expand/collapse with animation
+  // Handle timeline expand/collapse
   const toggleTimeline = useCallback(() => {
     addHapticFeedback("light");
     setTimelineExpanded(prev => !prev);
     setTimelineHeight(prev => prev === 120 ? 280 : 120);
   }, []);
 
-  // Handle preview expand/collapse
-  const togglePreview = useCallback(() => {
+  // Switch to tools view with specific tab
+  const openTool = useCallback((tab: string) => {
     addHapticFeedback("medium");
-    setPreviewExpanded(prev => !prev);
+    setActiveTab(tab);
+    setViewMode('tools');
   }, []);
 
-  // Calculate preview height based on state - increased defaults for better usability
-  const getPreviewHeight = () => {
-    if (previewExpanded) return "65vh";
-    if (timelineExpanded) return "30vh";
-    return "45vh"; // Increased from 35vh
-  };
+  // Toggle between fullscreen and tools
+  const toggleViewMode = useCallback(() => {
+    addHapticFeedback("medium");
+    setViewMode(prev => prev === 'fullscreen' ? 'tools' : 'fullscreen');
+  }, []);
 
+  // Fullscreen mode: video takes most of the screen with floating toolbar
+  if (viewMode === 'fullscreen') {
+    return (
+      <div 
+        className={cn(
+          "h-full w-full flex flex-col bg-black overflow-hidden mobile-editor safe-area",
+          className
+        )}
+      >
+        {/* Minimal header - just logo and desktop toggle */}
+        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-3">
+          <div className="text-white/80 text-sm font-medium">saywaht</div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 text-white/80 hover:text-white hover:bg-white/10"
+            onClick={toggleEditorMobileMode}
+          >
+            <Monitor className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Full video preview */}
+        <div className="flex-1 relative">
+          <MobilePreviewPanel />
+          
+          {/* Play/pause overlay */}
+          <button
+            className="absolute inset-0 flex items-center justify-center touch-manipulation"
+            onClick={() => {
+              addHapticFeedback("light");
+              toggle();
+            }}
+          >
+            {!isPlaying && (
+              <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                <Play className="h-10 w-10 text-white ml-1" />
+              </div>
+            )}
+          </button>
+        </div>
+
+        {/* Floating Action Bar */}
+        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 safe-area-bottom">
+          {/* Quick action buttons */}
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <Button
+              variant="secondary"
+              size="lg"
+              className="h-14 px-6 rounded-full bg-white/90 text-black hover:bg-white shadow-lg touch-manipulation"
+              onClick={() => openTool('media')}
+            >
+              <Mic className="h-5 w-5 mr-2" />
+              Record
+            </Button>
+            <Button
+              variant="secondary"
+              size="lg"
+              className="h-14 px-6 rounded-full bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm touch-manipulation"
+              onClick={() => openTool('text')}
+            >
+              <Type className="h-5 w-5 mr-2" />
+              Text
+            </Button>
+            <Button
+              variant="secondary" 
+              size="lg"
+              className="h-14 px-6 rounded-full bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm touch-manipulation"
+              onClick={() => openTool('effects')}
+            >
+              <Layers className="h-5 w-5 mr-2" />
+              FX
+            </Button>
+          </div>
+          
+          {/* Show all tools button */}
+          <Button
+            variant="ghost"
+            className="w-full h-12 text-white/70 hover:text-white hover:bg-white/10 touch-manipulation"
+            onClick={toggleViewMode}
+          >
+            <ChevronUp className="h-5 w-5 mr-2" />
+            Show All Tools & Timeline
+          </Button>
+        </div>
+
+        {/* Onboarding */}
+        <MobileOnboardingOverlay
+          isOpen={showOnboarding}
+          onClose={skipOnboarding}
+          onStartRecording={() => {
+            completeOnboarding();
+            openTool('media');
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Tools mode: traditional editor layout
   return (
     <div 
       className={cn(
@@ -117,46 +217,31 @@ export function MobileEditorLayout({ children, className }: MobileEditorLayoutPr
           className="absolute right-2 top-2 h-10 w-10 min-h-[44px] min-w-[44px] z-10 bg-background/80 backdrop-blur-sm"
           onClick={toggleEditorMobileMode}
         >
-          {isEditorMobileMode ? (
-            <Monitor className="h-4 w-4" />
-          ) : (
-            <Smartphone className="h-4 w-4" />
-          )}
+          <Monitor className="h-4 w-4" />
         </Button>
       </div>
 
       {/* Main content area */}
       <div className="flex-1 min-h-0 flex flex-col">
-        {/* Video Preview - Always visible but resizable */}
-        <div 
-          className={cn(
-            "relative flex-shrink-0 transition-all duration-300 ease-out",
-            previewExpanded ? "h-[65vh]" : timelineExpanded ? "h-[30vh]" : "h-[45vh]"
-          )}
-        >
+        {/* Video Preview - Smaller in tools mode */}
+        <div className={cn(
+          "relative flex-shrink-0 transition-all duration-300 ease-out",
+          timelineExpanded ? "h-[25vh]" : "h-[35vh]"
+        )}>
           <MobilePreviewPanel />
           
-          {/* Expand/collapse preview button - larger and more visible */}
+          {/* Fullscreen button */}
           <Button
             variant="ghost"
             size="sm"
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 h-10 px-4 bg-black/60 text-white hover:bg-black/80 backdrop-blur-sm rounded-full min-h-[44px]"
-            onClick={togglePreview}
+            className="absolute bottom-2 left-1/2 -translate-x-1/2 h-9 px-4 bg-black/60 text-white hover:bg-black/80 backdrop-blur-sm rounded-full touch-manipulation"
+            onClick={toggleViewMode}
           >
-            {previewExpanded ? (
-              <>
-                <ChevronDown className="h-5 w-5 mr-2" />
-                <span className="text-sm font-medium">Show Tools</span>
-              </>
-            ) : (
-              <>
-                <ChevronUp className="h-5 w-5 mr-2" />
-                <span className="text-sm font-medium">Fullscreen</span>
-              </>
-            )}
+            <ChevronDown className="h-4 w-4 mr-1" />
+            <span className="text-xs font-medium">Fullscreen</span>
           </Button>
           
-          {/* Quick play/pause overlay */}
+          {/* Play/pause overlay */}
           <button
             className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 active:bg-black/20 transition-colors touch-manipulation"
             onClick={() => {
@@ -165,14 +250,14 @@ export function MobileEditorLayout({ children, className }: MobileEditorLayoutPr
             }}
           >
             {isPlaying && (
-              <div className="w-20 h-20 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
-                <Pause className="h-10 w-10 text-white" />
+              <div className="w-16 h-16 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                <Pause className="h-8 w-8 text-white" />
               </div>
             )}
           </button>
         </div>
 
-        {/* Tab Navigation - Redesigned with larger touch targets */}
+        {/* Tab Navigation */}
         <div className="flex-shrink-0 border-t border-border bg-background/95 backdrop-blur-md">
           <Tabs
             value={activeTab}
@@ -182,75 +267,59 @@ export function MobileEditorLayout({ children, className }: MobileEditorLayoutPr
             }}
             className="w-full"
           >
-            <TabsList className="w-full grid grid-cols-4 rounded-none border-0 bg-transparent h-16 p-1">
+            <TabsList className="w-full grid grid-cols-4 rounded-none border-0 bg-transparent h-14 p-1">
               <TabsTrigger
                 value="preview"
-                className="relative flex flex-col items-center justify-center gap-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-xl mx-0.5 h-14 touch-manipulation"
+                className="relative flex flex-col items-center justify-center gap-0.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg mx-0.5 h-12 touch-manipulation"
               >
-                <Play className="h-6 w-6" />
-                <span className="text-xs font-medium">Preview</span>
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-1 bg-primary rounded-full opacity-0 data-[state=active]:opacity-100 transition-opacity" />
+                <Play className="h-5 w-5" />
+                <span className="text-[10px] font-medium">Preview</span>
               </TabsTrigger>
               <TabsTrigger
                 value="media"
-                className="relative flex flex-col items-center justify-center gap-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-xl mx-0.5 h-14 touch-manipulation"
+                className="relative flex flex-col items-center justify-center gap-0.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg mx-0.5 h-12 touch-manipulation"
               >
-                <Mic className="h-6 w-6" />
-                <span className="text-xs font-medium">Record</span>
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-1 bg-primary rounded-full opacity-0 data-[state=active]:opacity-100 transition-opacity" />
+                <Mic className="h-5 w-5" />
+                <span className="text-[10px] font-medium">Record</span>
               </TabsTrigger>
               <TabsTrigger
                 value="text"
-                className="relative flex flex-col items-center justify-center gap-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-xl mx-0.5 h-14 touch-manipulation"
+                className="relative flex flex-col items-center justify-center gap-0.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg mx-0.5 h-12 touch-manipulation"
               >
-                <Type className="h-6 w-6" />
-                <span className="text-xs font-medium">Text</span>
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-1 bg-primary rounded-full opacity-0 data-[state=active]:opacity-100 transition-opacity" />
+                <Type className="h-5 w-5" />
+                <span className="text-[10px] font-medium">Text</span>
               </TabsTrigger>
               <TabsTrigger
                 value="effects"
-                className="relative flex flex-col items-center justify-center gap-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-xl mx-0.5 h-14 touch-manipulation"
+                className="relative flex flex-col items-center justify-center gap-0.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg mx-0.5 h-12 touch-manipulation"
               >
-                <Layers className="h-6 w-6" />
-                <span className="text-xs font-medium">Effects</span>
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-1 bg-primary rounded-full opacity-0 data-[state=active]:opacity-100 transition-opacity" />
+                <Layers className="h-5 w-5" />
+                <span className="text-[10px] font-medium">Effects</span>
               </TabsTrigger>
             </TabsList>
 
             {/* Tab Content */}
             <div className="flex-1 min-h-0 overflow-hidden">
-              <TabsContent 
-                value="preview" 
-                className="m-0 h-full data-[state=active]:block"
-              >
+              <TabsContent value="preview" className="m-0 h-full data-[state=active]:block">
                 <div className="p-4 text-center text-muted-foreground">
                   <p className="text-sm">Tap the video to play/pause</p>
                   <p className="text-xs mt-1">Use timeline below to scrub</p>
                 </div>
               </TabsContent>
 
-              <TabsContent 
-                value="media" 
-                className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col"
-              >
+              <TabsContent value="media" className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col">
                 <div className="flex-1 min-h-0 overflow-hidden">
                   <MobileMediaPanel />
                 </div>
               </TabsContent>
 
-              <TabsContent 
-                value="text" 
-                className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col"
-              >
+              <TabsContent value="text" className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col">
                 <div className="flex-1 min-h-0 overflow-hidden">
                   <MobileTextPanel />
                 </div>
               </TabsContent>
 
-              <TabsContent 
-                value="effects" 
-                className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col"
-              >
+              <TabsContent value="effects" className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col">
                 <div className="flex-1 min-h-0 overflow-hidden">
                   <MobileEffectsPanel />
                 </div>
@@ -259,43 +328,29 @@ export function MobileEditorLayout({ children, className }: MobileEditorLayoutPr
           </Tabs>
         </div>
 
-        {/* Timeline - Improved with dedicated expand button */}
+        {/* Timeline */}
         <div 
           data-timeline-area
           className="flex-shrink-0 border-t border-border bg-background transition-all duration-300 ease-out"
           style={{ height: timelineHeight }}
         >
-          {/* Timeline header with expand button */}
-          <div 
-            className="h-10 flex items-center justify-between px-3 bg-muted/30 touch-manipulation"
-          >
+          <div className="h-10 flex items-center justify-between px-3 bg-muted/30">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Timeline</span>
             <Button
               variant="ghost"
               size="sm"
               onClick={toggleTimeline}
-              className="h-8 px-3 text-xs font-medium min-h-[36px] touch-manipulation"
+              className="h-8 px-3 text-xs font-medium touch-manipulation"
             >
               {timelineExpanded ? (
-                <>
-                  <ChevronDown className="h-4 w-4 mr-1" />
-                  Collapse
-                </>
+                <><ChevronDown className="h-4 w-4 mr-1" />Collapse</>
               ) : (
-                <>
-                  <ChevronUp className="h-4 w-4 mr-1" />
-                  Expand
-                </>
+                <><ChevronUp className="h-4 w-4 mr-1" />Expand</>
               )}
             </Button>
           </div>
-          
-          {/* Timeline content */}
           <div className="h-[calc(100%-40px)]">
-            <WorkingMobileTimeline
-              expanded={timelineExpanded}
-              onToggleExpand={toggleTimeline}
-            />
+            <WorkingMobileTimeline expanded={timelineExpanded} onToggleExpand={toggleTimeline} />
           </div>
         </div>
       </div>
@@ -306,7 +361,7 @@ export function MobileEditorLayout({ children, className }: MobileEditorLayoutPr
       {/* Floating UI Elements */}
       <QuickActions />
 
-      {/* Mobile Onboarding Overlay */}
+      {/* Onboarding */}
       <MobileOnboardingOverlay
         isOpen={showOnboarding}
         onClose={skipOnboarding}
