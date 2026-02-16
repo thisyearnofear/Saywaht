@@ -5,13 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { LuLoader as Loader2, LuSparkles, LuUpload } from "react-icons/lu";
+import { 
+  Loader2, 
+  Sparkles, 
+  Upload, 
+  Check, 
+  ArrowLeftRight,
+  Info
+} from "@/lib/icons";
 import { toast } from "sonner";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { MintWizardData } from "../mint-wizard";
+import { cn } from "@/lib/utils";
 
 interface ThumbnailStepProps {
   data: MintWizardData;
@@ -40,10 +48,10 @@ const STYLE_PRESETS = [
 ];
 
 const SOURCE_META = {
-  ai: { label: "AI", variant: "default" as const },
-  video_frame: { label: "Video Frame", variant: "secondary" as const },
-  timeline_media: { label: "Timeline Media", variant: "secondary" as const },
-  upload: { label: "Uploaded", variant: "secondary" as const },
+  ai: { label: "AI Generated", color: "text-purple-500 bg-purple-500/10" },
+  video_frame: { label: "Video Frame", color: "text-blue-500 bg-blue-500/10" },
+  timeline_media: { label: "Media Asset", color: "text-green-500 bg-green-500/10" },
+  upload: { label: "Uploaded", color: "text-orange-500 bg-orange-500/10" },
 };
 
 export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
@@ -60,7 +68,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
   const [comparePosition, setComparePosition] = useState(50);
   const [customPrompt, setCustomPrompt] = useState(
     data.thumbnailPrompt ||
-      "[PLACEHOLDER] Describe your video content for AI thumbnail generation"
+      "A vibrant, cinematic reaction thumbnail"
   );
 
   const { mediaItems } = useMediaStore();
@@ -78,9 +86,9 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
   const getAspectRatioClass = () => {
     switch (data.videoFormat) {
       case "portrait":
-        return "aspect-[9/16] max-w-[300px] mx-auto";
+        return "aspect-[9/16] max-w-[280px] mx-auto";
       case "square":
-        return "aspect-square max-w-[400px] mx-auto";
+        return "aspect-square max-w-[350px] mx-auto";
       case "landscape":
       default:
         return "aspect-video";
@@ -101,7 +109,6 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
         try {
           const canvas = document.createElement("canvas");
           
-          // Use format-specific dimensions
           let targetWidth = 1920;
           let targetHeight = 1080;
           let targetAspect = 16 / 9;
@@ -154,21 +161,18 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
   const generateAIThumbnail = async () => {
     setIsGenerating(true);
     setGenerationStatus("working");
-    setGenerationMessage("Generating AI thumbnail — this can take 20-30 seconds...");
+    setGenerationMessage("Crafting AI thumbnail...");
     if (data.thumbnail) setPreviousThumbnail(data.thumbnail);
 
-    // Declare videoFrame at function scope so it's accessible in catch block
     let videoFrame: string | null = null;
     let fallbackThumbnail: string | null = null;
 
     try {
-      // Find the first usable thumbnail candidate in the timeline.
       for (const track of tracks) {
         for (const clip of track.clips) {
           const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
           if (!mediaItem) continue;
 
-          // Save a fallback thumbnail while we try to extract a frame from video.
           if (!fallbackThumbnail) {
             if (mediaItem.thumbnailUrl) {
               fallbackThumbnail = mediaItem.thumbnailUrl;
@@ -189,7 +193,6 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
         if (videoFrame) break;
       }
 
-      // If no video frame is available, fall back to an existing media thumbnail.
       if (!videoFrame && fallbackThumbnail) {
         updateData({
           thumbnail: fallbackThumbnail,
@@ -197,17 +200,15 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
           thumbnailSource: "timeline_media",
         });
         setGenerationStatus("fallback");
-        setGenerationMessage("Using your timeline media thumbnail.");
-        toast.success("Using existing media thumbnail");
+        setGenerationMessage("Using timeline media.");
+        toast.success("Using existing media");
         return;
       }
 
       if (!videoFrame && !fallbackThumbnail) {
-        throw new Error("No media found to generate a thumbnail from");
+        throw new Error("No media found for thumbnail");
       }
 
-      // Try backend server first (no serverless timeout limits), then
-      // fall back to the Vercel API route.
       const BACKEND_URL =
         process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || "https://persidian.com";
       const endpoints = [
@@ -220,7 +221,6 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), ep.timeoutMs);
         try {
-          console.log(`🎨 Trying thumbnail generation via ${ep.label}...`);
           const res = await fetch(ep.url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -234,24 +234,20 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
           clearTimeout(timeoutId);
           if (res.ok) {
             response = res;
-            console.log(`✅ Thumbnail generated via ${ep.label}`);
             break;
           }
-          console.warn(`⚠️ ${ep.label} returned ${res.status}, trying next...`);
         } catch (fetchError) {
           clearTimeout(timeoutId);
-          console.warn(`⚠️ ${ep.label} failed:`, fetchError instanceof Error ? fetchError.message : fetchError);
         }
       }
 
       if (!response) {
-        throw new Error("All thumbnail generation endpoints failed.");
+        throw new Error("Generation failed.");
       }
 
       const responseData = await response.json();
 
       if (responseData.success && responseData.thumbnailUrl) {
-        // Store thumbnail locally first - will upload to Grove during deployment
         const thumbnailSource =
           responseData.method === "venice_ai" ? "ai" : "video_frame";
         updateData({
@@ -260,49 +256,27 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
           thumbnailSource: thumbnailSource,
         });
         setGenerationStatus("ready");
-        setGenerationMessage(
-          responseData.method === "venice_ai"
-            ? "AI thumbnail generated."
-            : "Thumbnail extracted from video frame."
-        );
-
-        // Show different success messages based on generation method
-        if (responseData.method === "venice_ai") {
-          toast.success("AI thumbnail generated with Venice AI!");
-        } else if (responseData.method === "video_frame") {
-          toast.success("Thumbnail extracted from video frame!");
-        } else {
-          toast.success("Custom thumbnail generated!");
-        }
+        setGenerationMessage("Thumbnail is ready!");
+        toast.success("Thumbnail generated!");
       } else {
-        throw new Error("Invalid response from thumbnail generation API");
+        throw new Error("Invalid API response");
       }
     } catch (error) {
       console.error("Failed to generate thumbnail:", error);
       
-      // If API fails, fall back to using the video frame directly
       if (videoFrame) {
-        console.log("Falling back to video frame as thumbnail");
         updateData({
           thumbnail: videoFrame,
           thumbnailPrompt: customPrompt,
           thumbnailSource: "video_frame",
         });
         setGenerationStatus("fallback");
-        setGenerationMessage("Generation failed. Using a video frame instead.");
-        toast.success("Using video frame as thumbnail");
+        setGenerationMessage("Using extracted video frame.");
+        toast.success("Using video frame");
       } else {
         setGenerationStatus("error");
-        setGenerationMessage(
-          error instanceof Error
-            ? error.message
-            : "Unable to generate thumbnail. Try upload instead."
-        );
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to generate thumbnail. Please try again."
-        );
+        setGenerationMessage("Generation failed.");
+        toast.error("Failed to generate thumbnail.");
       }
     } finally {
       setIsGenerating(false);
@@ -315,7 +289,6 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
       setIsGenerating(true);
 
       try {
-        // Convert file to data URL and store locally first
         const dataUrl = await new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = (e) => resolve(e.target?.result as string);
@@ -328,13 +301,13 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
           thumbnailSource: "upload",
         });
         setGenerationStatus("ready");
-        setGenerationMessage("Uploaded thumbnail is ready.");
-        toast.success("Thumbnail uploaded successfully!");
+        setGenerationMessage("Uploaded successfully.");
+        toast.success("Thumbnail uploaded!");
       } catch (error) {
         console.error("Failed to upload thumbnail:", error);
         setGenerationStatus("error");
-        setGenerationMessage("Upload failed. Please try another image.");
-        toast.error("Failed to upload thumbnail. Please try again.");
+        setGenerationMessage("Upload failed.");
+        toast.error("Failed to upload thumbnail.");
       } finally {
         setIsGenerating(false);
       }
@@ -343,257 +316,178 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
 
   const applyStylePreset = (presetPrompt: string) => {
     setCustomPrompt((prev) => {
-      if (!prev.trim() || prev.includes("[PLACEHOLDER]")) {
+      if (!prev.trim() || prev.includes("A vibrant")) {
         return presetPrompt;
       }
-      return `${prev}. Style direction: ${presetPrompt}`;
+      return `${prev}. Style: ${presetPrompt}`;
     });
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create Your Coin Thumbnail</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Generate an AI-powered thumbnail or upload your own to represent your
-          coin. Current generation uses your timeline media as a reliable
-          fallback and uploads the thumbnail to IPFS during deployment.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label>Quick Styles</Label>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {STYLE_PRESETS.map((preset) => (
-              <Button
-                key={preset.label}
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={() => applyStylePreset(preset.prompt)}
-                disabled={isGenerating}
-              >
-                {preset.label}
-              </Button>
-            ))}
+    <div className="space-y-8 animate-fade-in">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+        {/* Left Column: Preview */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <Label className="text-[10px] uppercase tracking-widest font-black text-muted-foreground">Preview</Label>
+            {sourceMeta && (
+              <Badge className={cn("rounded-full border-none text-[10px] uppercase font-black tracking-tighter", sourceMeta.color)}>
+                {sourceMeta.label}
+              </Badge>
+            )}
           </div>
-        </div>
 
-        {/* Custom Prompt */}
-        <div className="space-y-2">
-          <Label htmlFor="prompt">AI Generation Prompt</Label>
-          <Textarea
-            id="prompt"
-            value={customPrompt}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              setCustomPrompt(e.target.value)
-            }
-            placeholder="Describe the thumbnail you want to generate..."
-            className="min-h-[80px]"
-          />
-          <p className="text-xs text-muted-foreground">
-            Be specific about style, colors, and elements you want in your
-            thumbnail
-          </p>
-        </div>
-
-        {/* Thumbnail Preview with Comparison */}
-        {data.thumbnail && !isGenerating ? (
-          hasComparison ? (
-            // Show before/after comparison when regenerating
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Compare Versions</Label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setPreviousThumbnail(null);
-                    setComparePosition(50);
-                  }}
-                  className="h-7 text-xs"
-                >
-                  Keep New
-                </Button>
-              </div>
-              <div className={`relative ${getAspectRatioClass()} rounded-lg overflow-hidden border`}>
-                <Image
-                  src={previousThumbnail}
-                  alt="Previous thumbnail"
-                  fill
-                  className="object-cover"
-                  unoptimized={true}
-                />
-                <div
-                  className="absolute inset-0"
-                  style={{ clipPath: `inset(0 ${100 - comparePosition}% 0 0)` }}
-                >
+          {data.thumbnail && !isGenerating ? (
+            <div className={cn("relative group rounded-[2rem] overflow-hidden border-2 border-border/50 shadow-2xl transition-all duration-500 hover:border-primary/50", getAspectRatioClass())}>
+              {hasComparison ? (
+                <>
                   <Image
-                    src={data.thumbnail || ""}
-                    alt="New thumbnail"
+                    src={previousThumbnail}
+                    alt="Previous"
                     fill
                     className="object-cover"
                     unoptimized={true}
                   />
-                </div>
-                {/* Visual divider */}
-                <div
-                  className="absolute inset-y-0 w-0.5 bg-white shadow-lg z-10"
-                  style={{ left: `${comparePosition}%` }}
-                >
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center">
-                    <div className="text-xs font-bold">⟷</div>
+                  <div
+                    className="absolute inset-0 z-10"
+                    style={{ clipPath: `inset(0 ${100 - comparePosition}% 0 0)` }}
+                  >
+                    <Image
+                      src={data.thumbnail || ""}
+                      alt="New"
+                      fill
+                      className="object-cover"
+                      unoptimized={true}
+                    />
                   </div>
-                </div>
-                {/* Labels */}
-                <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                  Previous
-                </div>
-                <div className="absolute top-2 right-2 flex items-center gap-2">
-                  {sourceMeta && (
-                    <Badge variant={sourceMeta.variant}>{sourceMeta.label}</Badge>
-                  )}
-                  <div className="bg-black/70 text-white text-xs px-2 py-1 rounded">
-                    New
+                  <div
+                    className="absolute inset-y-0 w-1 bg-white shadow-[0_0_15px_rgba(0,0,0,0.5)] z-20 pointer-events-none"
+                    style={{ left: `${comparePosition}%` }}
+                  >
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-xl flex items-center justify-center">
+                      <ArrowLeftRight className="w-4 h-4 text-black" />
+                    </div>
                   </div>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <input
-                  id="thumbnail-compare"
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={comparePosition}
-                  onChange={(event) => setComparePosition(Number(event.target.value))}
-                  className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0"
+                  <div className="absolute bottom-4 inset-x-4 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={comparePosition}
+                      onChange={(e) => setComparePosition(Number(e.target.value))}
+                      className="w-full accent-primary"
+                    />
+                  </div>
+                </>
+              ) : (
+                <Image
+                  src={data.thumbnail}
+                  alt="Thumbnail"
+                  fill
+                  className="object-cover"
+                  unoptimized={true}
+                  priority
                 />
-                <p className="text-xs text-muted-foreground text-center">
-                  Drag to compare • Click "Keep New" to dismiss
-                </p>
+              )}
+            </div>
+          ) : isGenerating ? (
+            <div className={cn("relative bg-muted/30 rounded-[2rem] border-2 border-dashed border-primary/30 flex flex-col items-center justify-center p-8 text-center animate-pulse", getAspectRatioClass())}>
+              <div className="relative w-16 h-16 mb-4">
+                <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
               </div>
+              <h4 className="font-bold text-foreground">Generating...</h4>
+              <p className="text-xs text-muted-foreground mt-2">{generationMessage}</p>
             </div>
           ) : (
-            // Show single thumbnail when not comparing
-            <div className={`relative ${getAspectRatioClass()} rounded-lg overflow-hidden border`}>
-              <Image
-                src={data.thumbnail}
-                alt="Generated thumbnail"
-                fill
-                className="object-cover"
-                unoptimized={true}
-                priority
-              />
-              <div className="absolute top-2 right-2 flex items-center gap-2">
-                {sourceMeta && (
-                  <Badge variant={sourceMeta.variant}>{sourceMeta.label}</Badge>
-                )}
-                <div className="bg-black/50 text-white text-xs px-2 py-1 rounded">
-                  Current
-                </div>
+            <div className={cn("bg-muted/20 rounded-[2rem] border-2 border-dashed border-border flex flex-col items-center justify-center p-8 text-center", getAspectRatioClass())}>
+              <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4">
+                <Sparkles className="w-6 h-6 text-muted-foreground/50" />
               </div>
+              <p className="text-sm font-medium text-muted-foreground">No thumbnail yet</p>
             </div>
-          )
-        ) : isGenerating ? (
-          <div className={`relative ${getAspectRatioClass()} rounded-lg overflow-hidden border bg-muted flex flex-col items-center justify-center p-6 text-center animate-pulse`}>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
-            <div className="relative z-10 flex flex-col items-center space-y-4">
-              <div className="w-16 h-16 rounded-full border-4 border-primary border-t-transparent animate-spin flex items-center justify-center">
-                <div className="w-10 h-10 rounded-full border-4 border-primary/30 border-t-transparent animate-spin-slow" />
-              </div>
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-foreground">
-                  Crafting Your Thumbnail
-                </h4>
-                <p className="text-xs text-muted-foreground animate-pulse">
-                  {generationMessage}
-                </p>
-              </div>
-            </div>
-            {/* Animated decorative elements */}
-            <div className="absolute top-4 left-4 w-12 h-1 bg-primary/20 rounded-full" />
-            <div className="absolute bottom-4 right-4 w-24 h-1 bg-primary/20 rounded-full" />
-          </div>
-        ) : (
-          <div className={`${getAspectRatioClass()} bg-muted rounded-lg flex items-center justify-center border-2 border-dashed`}>
-            <div className="text-center">
-              <div className="w-12 h-12 text-muted-foreground mx-auto mb-2">
-                <LuSparkles />
-              </div>
-              <p className="text-sm text-muted-foreground">No thumbnail yet</p>
-              <p className="text-xs text-muted-foreground">
-                Generate or upload one below
-              </p>
+          )}
+
+          {hasComparison && (
+             <Button
+               variant="secondary"
+               size="sm"
+               className="w-full rounded-xl h-10 font-bold text-xs"
+               onClick={() => setPreviousThumbnail(null)}
+             >
+               Keep this version
+             </Button>
+          )}
+        </div>
+
+        {/* Right Column: Controls */}
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <Label className="text-[10px] uppercase tracking-widest font-black text-muted-foreground">AI Style Presets</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {STYLE_PRESETS.map((preset) => (
+                <Button
+                  key={preset.label}
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl h-10 text-xs font-bold border-border/50 hover:bg-primary/5 hover:border-primary/30"
+                  onClick={() => applyStylePreset(preset.prompt)}
+                  disabled={isGenerating}
+                >
+                  {preset.label}
+                </Button>
+              ))}
             </div>
           </div>
-        )}
 
-        {/* Action Buttons */}
-        <div className="flex gap-3 flex-col sm:flex-row">
-          <Button
-            onClick={generateAIThumbnail}
-            disabled={
-              isGenerating || !hasTimelineMedia || !customPrompt.trim()
-            }
-            className="flex-1"
-          >
-            {isGenerating ? (
-              <>
-                <div className="w-4 h-4 mr-2 animate-spin">
-                  <Loader2 />
-                </div>
-                Generating...
-              </>
-            ) : (
-              <>
-                <div className="w-4 h-4 mr-2">
-                  <LuSparkles />
-                </div>
-                Generate Thumbnail
-              </>
-            )}
-          </Button>
-
-          <Button
-            variant="outline"
-            className="relative"
-            disabled={isGenerating}
-          >
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              className="absolute inset-0 opacity-0 cursor-pointer"
-              disabled={isGenerating}
+          <div className="space-y-3">
+            <Label htmlFor="prompt" className="text-[10px] uppercase tracking-widest font-black text-muted-foreground">Custom Prompt</Label>
+            <Textarea
+              id="prompt"
+              value={customPrompt}
+              onChange={(e) => setCustomPrompt(e.target.value)}
+              className="min-h-[100px] rounded-2xl bg-muted/30 border-border/50 focus:border-primary/50"
+              placeholder="Describe your thumbnail..."
             />
-            <div className="w-4 h-4 mr-2">
-              <LuUpload />
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={generateAIThumbnail}
+              disabled={isGenerating || !hasTimelineMedia}
+              className="h-12 rounded-2xl font-bold shadow-lg shadow-primary/10"
+            >
+              {isGenerating ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Sparkles className="mr-2 h-4 w-4" />}
+              {data.thumbnail ? "Regenerate AI Thumbnail" : "Generate AI Thumbnail"}
+            </Button>
+
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                disabled={isGenerating}
+              />
+              <Button
+                variant="outline"
+                className="w-full h-12 rounded-2xl font-bold border-border/50"
+                disabled={isGenerating}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Upload Own Image
+              </Button>
             </div>
-            Upload Image
-          </Button>
-        </div>
+          </div>
 
-        <div
-          className={`rounded-lg border px-3 py-2 text-xs ${
-            generationStatus === "error"
-              ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300"
-              : generationStatus === "fallback"
-              ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-300"
-              : generationStatus === "ready"
-              ? "border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-950/20 dark:text-green-300"
-              : "border-border bg-muted/40 text-muted-foreground"
-          }`}
-        >
-          {isGenerating ? "Working on it..." : generationMessage}
+          <div className="glass rounded-2xl p-4 flex items-start gap-3 border-border/40">
+            <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              We'll use frames from your video to guide the AI, ensuring your thumbnail matches your content perfectly.
+            </p>
+          </div>
         </div>
-
-        {!hasTimelineMedia && (
-          <p className="text-xs text-muted-foreground text-center bg-muted/50 p-3 rounded">
-            Add media content to your timeline to generate a thumbnail
-          </p>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

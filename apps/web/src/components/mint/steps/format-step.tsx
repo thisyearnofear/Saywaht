@@ -1,11 +1,11 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LuSmartphone, LuSquare, LuMonitor } from "react-icons/lu";
+import { Smartphone, Square, Monitor, Check } from "@/lib/icons";
 import type { VideoFormat } from "@/lib/video-utils";
 import { MintWizardData } from "../mint-wizard";
+import { cn } from "@/lib/utils";
 
 interface FormatStepProps {
   data: MintWizardData;
@@ -19,15 +19,10 @@ const FORMAT_OPTIONS = [
     subtitle: "9:16 • Mobile-First",
     description:
       "Optimized for mobile viewing and social sharing. Best for Zora's mobile-first audience.",
-    icon: LuSmartphone,
+    icon: Smartphone,
     dimensions: "720×1280",
     recommended: true,
-    pros: [
-      "Perfect for mobile feeds",
-      "Higher engagement on Zora",
-      "Social media ready",
-    ],
-    cons: ["Less ideal for desktop viewing"],
+    accent: "text-green-500 bg-green-500/10",
   },
   {
     id: "square" as VideoFormat,
@@ -35,15 +30,10 @@ const FORMAT_OPTIONS = [
     subtitle: "1:1 • Universal",
     description:
       "Works well on both mobile and desktop. Good compromise for all platforms.",
-    icon: LuSquare,
+    icon: Square,
     dimensions: "720×720",
     recommended: false,
-    pros: [
-      "Universal compatibility",
-      "Good for all devices",
-      "Clean, modern look",
-    ],
-    cons: ["Not optimized for any specific platform"],
+    accent: "text-blue-500 bg-blue-500/10",
   },
   {
     id: "landscape" as VideoFormat,
@@ -51,11 +41,10 @@ const FORMAT_OPTIONS = [
     subtitle: "16:9 • Traditional",
     description:
       "Traditional video format. Better for desktop but less optimal for mobile.",
-    icon: LuMonitor,
+    icon: Monitor,
     dimensions: "1280×720",
     recommended: false,
-    pros: ["Familiar format", "Good for desktop", "Wide field of view"],
-    cons: ["Poor mobile experience", "Lower engagement on Zora"],
+    accent: "text-orange-500 bg-orange-500/10",
   },
 ];
 
@@ -65,114 +54,88 @@ export function FormatStep({ data, updateData }: FormatStepProps) {
   };
 
   const selectedFormat = data.videoFormat;
-  const canProceed = !!selectedFormat;
 
   return (
-    <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold">Choose Video Format</h2>
-        <p className="text-muted-foreground">
-          Select the optimal format for your content. We recommend Portrait for
-          the best Zora experience.
-        </p>
-      </div>
-
+    <div className="space-y-8 animate-fade-in">
       <div className="grid gap-4">
         {FORMAT_OPTIONS.map((option) => {
           const Icon = option.icon;
           const isSelected = selectedFormat === option.id;
 
           return (
-            <Card
+            <div
               key={option.id}
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                isSelected ? "ring-2 ring-primary border-primary" : ""
-              }`}
+              className={cn(
+                "relative cursor-pointer transition-all duration-300 rounded-[2rem] p-6 border-2 group",
+                isSelected 
+                  ? "bg-primary/5 border-primary shadow-lg shadow-primary/5" 
+                  : "bg-card border-border/50 hover:border-primary/30 hover:bg-primary/5"
+              )}
               onClick={() => handleFormatSelect(option.id)}
             >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-lg ${
-                        isSelected
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
-                      }`}
-                    >
-                      <Icon size={20} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-lg">
-                          {option.title}
-                        </CardTitle>
-                        {option.recommended && (
-                          <Badge variant="default" className="text-xs">
-                            Recommended
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {option.subtitle}
-                      </p>
-                    </div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-5">
+                  <div
+                    className={cn(
+                      "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300",
+                      isSelected
+                        ? "bg-primary text-white scale-110 shadow-lg shadow-primary/20"
+                        : "bg-muted text-muted-foreground group-hover:text-primary group-hover:bg-primary/10"
+                    )}
+                  >
+                    <Icon className="w-7 h-7" />
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-mono text-muted-foreground">
-                      {option.dimensions}
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-xl font-bold tracking-tight">
+                        {option.title}
+                      </h3>
+                      {option.recommended && (
+                        <Badge className="bg-primary/10 text-primary border-none text-[10px] uppercase font-bold tracking-widest">
+                          Recommended
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {option.subtitle}
                     </p>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-sm text-muted-foreground mb-3">
+                
+                {isSelected && (
+                  <div className="bg-primary text-white rounded-full p-1.5 shadow-lg animate-scale-in">
+                    <Check className="w-4 h-4" strokeWidth={3} />
+                  </div>
+                )}
+                
+                {!isSelected && (
+                  <div className="text-right hidden sm:block">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
+                      {option.dimensions}
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="mt-4 pl-1 inline-block">
+                <p className="text-sm text-muted-foreground max-w-xl leading-relaxed">
                   {option.description}
                 </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <p className="font-medium text-green-600 mb-1">Pros:</p>
-                    <ul className="space-y-1">
-                      {option.pros.map((pro, index) => (
-                        <li key={index} className="text-muted-foreground">
-                          • {pro}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="font-medium text-orange-600 mb-1">Cons:</p>
-                    <ul className="space-y-1">
-                      {option.cons.map((con, index) => (
-                        <li key={index} className="text-muted-foreground">
-                          • {con}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           );
         })}
       </div>
 
-      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 text-blue-600">
-            <LuSmartphone size={20} />
-          </div>
-          <div>
-            <h4 className="font-medium text-blue-900 dark:text-blue-100">
-              Why Portrait?
-            </h4>
-            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-              Zora is primarily used on mobile devices. Portrait videos get 2-3x
-              more engagement and are optimized for the mobile feed experience
-              that users expect.
-            </p>
-          </div>
+      <div className="glass rounded-3xl p-6 border-primary/20 bg-primary/5 flex items-start gap-4">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <Smartphone className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <h4 className="font-bold text-foreground">Why Portrait?</h4>
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+            Zora is a mobile-first protocol. Portrait videos generate significantly higher engagement and collectors, as they fit the natural scrolling behavior of mobile users.
+          </p>
         </div>
       </div>
     </div>

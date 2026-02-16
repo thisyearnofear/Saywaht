@@ -22,7 +22,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { ZoomIn, ZoomOut } from "@/lib/icons";
+import { 
+  ZoomIn, 
+  ZoomOut, 
+  Play, 
+  Pause, 
+  Download, 
+  Zap, 
+  Video, 
+  MoreHorizontal, 
+  ChevronLeft,
+  Share2,
+  Settings,
+  Trash2,
+  ExternalLink,
+  HardDrive
+} from "@/lib/icons";
 import {
   Tooltip,
   TooltipContent,
@@ -47,7 +62,6 @@ export function EditorHeader() {
   const { isFarcasterMiniApp } = useFarcasterContext();
   const { shareToFarcaster, isSharing } = useFarcasterShare();
 
-  // Use imported useState hook from hooks-provider
   const [isExporting, setIsExporting] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [backendAvailable, setBackendAvailable] = useState(false);
@@ -55,7 +69,6 @@ export function EditorHeader() {
   const { mediaItems } = useMediaStore();
   const { textElements } = useTextStore();
 
-  // Check backend availability on mount
   useEffect(() => {
     isBackendExportAvailable().then(setBackendAvailable);
   }, []);
@@ -66,24 +79,9 @@ export function EditorHeader() {
       return;
     }
 
-    // CLEAN: Simplified method messages
-    const methodMessages = {
-      auto: "✨ Smart Export - choosing the best method for you!",
-      backend: "⚡ Server Export - maximum quality and speed!",
-      offline: "🎯 Offline Export - works on any device!",
-    };
-
-    if (method !== "auto") {
-      toast.success(methodMessages[method] || "Starting export...");
-    }
-
     setIsExporting(true);
     try {
-      // Calculate total duration from timeline using proper timeline calculation
-      const totalDuration = Math.max(getTotalDuration(), 5); // Minimum 5 seconds
-      console.log(`📏 Export duration: ${totalDuration}s`);
-
-      // ENHANCEMENT: Use consolidated export function
+      const totalDuration = Math.max(getTotalDuration(), 5);
       const { exportVideo } = await import("@/lib/canvas-export-utils");
 
       const blob = await exportVideo(
@@ -104,7 +102,6 @@ export function EditorHeader() {
         }
       );
 
-      // Create download link
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -123,15 +120,10 @@ export function EditorHeader() {
         }))
         .sort((a, b) => a.startTime - b.startTime);
 
-      // Filecoin-first archive for large exports and captioned videos.
-      const shouldArchiveToFilecoin =
-        blob.size > 8 * 1024 * 1024 || captions.length > 0;
+      const shouldArchiveToFilecoin = blob.size > 8 * 1024 * 1024 || captions.length > 0;
 
       if (shouldArchiveToFilecoin) {
-        toast.loading("Archiving exported video + captions to Filecoin...", {
-          id: "filecoin-archive",
-        });
-
+        toast.loading("Archiving to Filecoin...", { id: "filecoin-archive" });
         try {
           const archiveResult = await storageManager.archiveExportToFilecoin({
             projectName: activeProject.name,
@@ -153,179 +145,114 @@ export function EditorHeader() {
           });
 
           toast.dismiss("filecoin-archive");
-          toast.success("Archived on Filecoin. Retrieval manifest is ready.");
-          console.log("Filecoin archive retrieval:", archiveResult.retrieval);
+          toast.success("Archived on Filecoin");
         } catch (archiveError) {
           toast.dismiss("filecoin-archive");
-          console.warn("Filecoin archive failed:", archiveError);
-          toast.error("Export saved locally, but Filecoin archive failed.");
+          toast.error("Filecoin archive failed");
         }
       }
 
       toast.dismiss("export-progress");
-      toast.success("Video exported successfully!");
+      toast.success("Export successful!");
     } catch (error) {
-      console.error("Export failed:", error);
       toast.dismiss("export-progress");
-
-      // Use centralized error handler
-      const errorMessage = getExportErrorMessage(error);
-
-      toast.error(errorMessage, {
-        duration: 6000,
-        action: {
-          label: "View Diagnostics",
-          onClick: () => {
-            // CONSOLIDATION: Use new diagnostics from monitoring
-            console.log("=== Export Diagnostics ===");
-            const { getExportDiagnostics } = require("@/lib/monitoring");
-            console.log(getExportDiagnostics());
-          },
-        },
-      });
+      toast.error(getExportErrorMessage(error));
     } finally {
       setIsExporting(false);
     }
   };
 
   const handleDeploy = async () => {
-    if (!activeProject) {
-      toast.error("No project to deploy");
-      return;
-    }
-
-    if (tracks.length === 0) {
-      toast.error("Add content to your project before deploying");
-      return;
-    }
-
+    if (!activeProject || tracks.length === 0) return;
     setIsDeploying(true);
-
     try {
-      toast.loading("Preparing project for deployment...", { id: "deploy-progress" });
-
-      // Export project data using consolidated storage manager method
-      const projectData = {
-        project: activeProject,
-        tracks: tracks,
-        mediaItems: mediaItems,
-      };
-
-      toast.loading("Uploading project data to IPFS...", { id: "deploy-progress" });
-
-      // Add timeout and better error handling for storage upload
-      const uploadPromise = storageManager.exportProjectData(projectData, {
-        onProgress: (progress) => {
-          toast.loading(`Uploading to IPFS... ${Math.round(progress)}%`, { id: "deploy-progress" });
-        }
-      });
-
-      // Add 60 second timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Upload timeout after 60 seconds')), 60000);
-      });
-
-      const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
-
+      toast.loading("Preparing for launch...", { id: "deploy-progress" });
+      const projectData = { project: activeProject, tracks, mediaItems };
+      const uploadPromise = storageManager.exportProjectData(projectData);
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 60000));
+      await Promise.race([uploadPromise, timeoutPromise]);
       toast.dismiss("deploy-progress");
-      toast.success("🚀 Project ready for deployment!");
-
-      // Open mint page without dataUrl - users will manually configure coin details
-      // This avoids Grove propagation issues
-      const mintUrl = `/mint/${activeProject.id}`;
-      window.open(mintUrl, "_blank");
-
+      window.location.href = `/mint/${activeProject.id}`;
     } catch (error) {
-      console.error("Deploy preparation failed:", error);
       toast.dismiss("deploy-progress");
-
-      // Provide more helpful error messages
-      let errorMessage = "Failed to prepare project for deployment";
-
-      if (error instanceof Error) {
-        if (error.message.includes('timeout')) {
-          errorMessage = "Upload timed out. Please try again with a smaller project or check your internet connection.";
-        } else if (error.message.includes('Grove')) {
-          errorMessage = "Storage service temporarily unavailable. Please try again in a few moments.";
-        } else if (error.message.includes('network')) {
-          errorMessage = "Network error. Please check your internet connection and try again.";
-        } else if (error.message.includes('size') || error.message.includes('limit')) {
-          errorMessage = "Project is too large for deployment. Please reduce the number of media files.";
-        } else {
-          errorMessage = `Deployment failed: ${error.message}`;
-        }
-      }
-
-      toast.error(errorMessage, {
-        duration: 8000,
-        action: {
-          label: "Try Again",
-          onClick: () => handleDeploy(),
-        },
-      });
+      toast.error("Preparation failed. Try again.");
     } finally {
       setIsDeploying(false);
     }
   };
 
   return (
-    <header className="h-14 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-4">
+    <header className="h-16 border-b border-border/40 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-4 sticky top-0 z-50">
       {/* Left Section */}
-      <div className="flex items-center gap-4">
-        <Link
-          href="/"
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-        >
-          <span className="text-sm">←</span>
-          <Image
-            src="/logo.png"
-            alt="saywaht"
-            width={24}
-            height={24}
-            className="rounded-sm"
-          />
-          <span className="font-semibold text-sm">saywaht</span>
+      <div className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-all p-1.5 rounded-xl hover:bg-muted/50">
+          <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+          <Image src="/logo.png" alt="saywaht" width={24} height={24} className="rounded-lg shadow-sm" />
         </Link>
 
-        <div className="w-px h-6 bg-border" />
-
-        <div className="flex items-center gap-2">
-          <h1 className="font-medium text-sm truncate max-w-[200px]">
-            {activeProject?.name || "Untitled Project"}
+        <div className="hidden sm:flex flex-col">
+          <h1 className="font-black text-xs uppercase tracking-tighter truncate max-w-[120px] leading-tight">
+            {activeProject?.name || "Untitled"}
           </h1>
-          <div
-            className={cn(badgeVariants({ variant: "secondary" }), "text-xs")}
-          >
-            Draft
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Draft</span>
           </div>
         </div>
       </div>
 
-      {/* Center Section - Canvas Format, Zoom Controls & Playback */}
-      <div className="flex items-center gap-3">
-        {/* Canvas Format Dropdown */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Canvas:</span>
+      {/* Center Section: Main Controls */}
+      <div className="flex items-center bg-muted/30 p-1 rounded-2xl border border-border/40">
+        <TooltipProvider>
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={() => setPreviewZoom(previewZoom - 0.25)} disabled={previewZoom <= 0.25} className="h-8 w-8 rounded-xl">
+                  <ZoomOut className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Zoom Out</TooltipContent>
+            </Tooltip>
+
+            <Button variant="ghost" size="sm" onClick={resetPreviewZoom} className="h-8 px-2 text-[10px] font-black tracking-widest rounded-xl">
+              {Math.round(previewZoom * 100)}%
+            </Button>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={() => setPreviewZoom(previewZoom + 0.25)} disabled={previewZoom >= 3} className="h-8 w-8 rounded-xl">
+                  <ZoomIn className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Zoom In</TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
+
+        <div className="w-px h-4 bg-border/50 mx-1" />
+
+        <Button variant="ghost" size="icon" onClick={toggle} className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all">
+          {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current" />}
+        </Button>
+      </div>
+
+      {/* Right Section: Actions */}
+      <div className="flex items-center gap-2">
+        {/* Desktop-only Canvas Settings */}
+        <div className="hidden lg:flex items-center gap-2 mr-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="text-xs h-7">
-                {canvasPresets.find(p =>
-                  p.size.width === canvasSize.width && p.size.height === canvasSize.height
-                )?.name || "Custom"}
+              <Button variant="outline" size="sm" className="h-9 rounded-xl border-border/50 text-[10px] font-black uppercase tracking-widest px-3">
+                <Video className="h-3 w-3 mr-2 text-primary" />
+                {canvasPresets.find(p => p.size.width === canvasSize.width && p.size.height === canvasSize.height)?.name || "Custom"}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" className="w-48">
+            <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2">
               {canvasPresets.map((preset) => (
-                <DropdownMenuItem
-                  key={preset.name}
-                  onClick={() => setCanvasPreset(preset)}
-                  className="text-xs"
-                >
+                <DropdownMenuItem key={preset.name} onClick={() => setCanvasPreset(preset)} className="rounded-xl p-3">
                   <div className="flex flex-col">
-                    <span className="font-medium">{preset.name}</span>
-                    <span className="text-muted-foreground">
-                      {preset.size.width} × {preset.size.height}px
-                    </span>
+                    <span className="font-bold text-sm">{preset.name}</span>
+                    <span className="text-[10px] text-muted-foreground font-mono">{preset.size.width} × {preset.size.height}px</span>
                   </div>
                 </DropdownMenuItem>
               ))}
@@ -333,226 +260,67 @@ export function EditorHeader() {
           </DropdownMenu>
         </div>
 
-        <div className="w-px h-4 bg-border" />
-
-        {/* Zoom Controls */}
-        <div className="flex items-center gap-1">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPreviewZoom(previewZoom - 0.25)}
-                  disabled={previewZoom <= 0.25}
-                  className="h-7 w-7 p-0"
-                >
-                  <ZoomOut className="h-3 w-3" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Zoom Out</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={resetPreviewZoom}
-                  className="h-7 px-2 text-xs"
-                >
-                  {Math.round(previewZoom * 100)}%
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Reset Zoom (100%)</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPreviewZoom(previewZoom + 0.25)}
-                  disabled={previewZoom >= 3}
-                  className="h-7 w-7 p-0"
-                >
-                  <ZoomIn className="h-3 w-3" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Zoom In</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
-        <div className="w-px h-4 bg-border" />
-
-        {/* Playback Controls */}
-        <Button
-          variant="text"
-          size="sm"
-          onClick={toggle}
-          className="h-8 w-8 p-0"
-        >
-          {isPlaying ? (
-            <span className="text-sm">⏸</span>
-          ) : (
-            <span className="text-sm">▶</span>
-          )}
-        </Button>
-      </div>
-
-      {/* Right Section */}
-      <div className="flex items-center gap-2">
-        <div className="flex items-center">
-          <Button
-            variant="text"
-            size="sm"
-            onClick={() => handleExport()}
-            disabled={isExporting || !activeProject || tracks.length === 0}
-            className="text-xs font-medium rounded-r-none border-r-0"
-          >
-            {isSharing ? (
-              <>
-                <span className="inline-block h-4 w-4 mr-1 animate-spin">
-                  ⟳
-                </span>
-                Exporting...
-              </>
-            ) : (
-              <>
-                <span className="inline-block h-4 w-4 mr-1">⬇️</span>
-                Export
-                {backendAvailable && (
-                  <span className="ml-1 text-xs bg-green-100 text-green-700 px-1 rounded">
-                    Pro
-                  </span>
-                )}
-              </>
-            )}
+        {/* Primary Action Button */}
+        {isFarcasterMiniApp ? (
+          <Button onClick={shareToFarcaster} disabled={isSharing || !activeProject} className="h-10 rounded-xl px-5 font-black text-xs uppercase tracking-widest shadow-lg shadow-purple-500/20 bg-purple-600 hover:bg-purple-700">
+            {isSharing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Share2 className="h-4 w-4 mr-2" />}
+            Share
           </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="text"
-                size="sm"
-                disabled={isExporting || !activeProject || tracks.length === 0}
-                className="text-xs font-medium rounded-l-none border-l-0 px-1 w-6"
-              >
-                <span className="text-xs">▼</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => handleExport("auto")}>
-                <span className="inline-block h-4 w-4 mr-2">✨</span>
-                <div className="flex flex-col">
-                  <span className="font-medium">Smart Export</span>
-                  <span className="text-xs text-muted-foreground">
-                    Recommended • Chooses best method for you
-                  </span>
-                </div>
-              </DropdownMenuItem>
-              {backendAvailable && (
-                <DropdownMenuItem onClick={() => handleExport("backend")}>
-                  <span className="inline-block h-4 w-4 mr-2">⚡</span>
-                  <div className="flex flex-col">
-                    <span className="font-medium">Server Export</span>
-                    <span className="text-xs text-muted-foreground">
-                      Premium • Fastest & highest quality
-                    </span>
-                  </div>
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={() => handleExport("offline")}>
-                <span className="inline-block h-4 w-4 mr-2">🎯</span>
-                <div className="flex flex-col">
-                  <span className="font-medium">Offline Export</span>
-                  <span className="text-xs text-muted-foreground">
-                    Reliable • Works on any device
-                  </span>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {address && !isFarcasterMiniApp && (
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleDeploy}
-            disabled={isDeploying || !activeProject || tracks.length === 0}
-            className="text-xs font-medium bg-primary hover:bg-primary/90"
-          >
-            {isDeploying ? (
-              <>
-                <span className="inline-block h-4 w-4 mr-1 animate-spin">⟳</span>
-                Deploying...
-              </>
-            ) : (
-              <>
-                <span className="inline-block h-4 w-4 mr-1">🪙</span>
-                Deploy
-              </>
-            )}
+        ) : (
+          <Button onClick={handleDeploy} disabled={isDeploying || !activeProject} className="h-10 rounded-xl px-5 font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20">
+            {isDeploying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2 fill-current" />}
+            Launch
           </Button>
         )}
 
-        {isFarcasterMiniApp && (
-          <Button
-            variant="default"
-            size="sm"
-            onClick={shareToFarcaster}
-            disabled={isSharing || !activeProject || tracks.length === 0}
-            className="text-xs font-medium bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            {isSharing ? (
-              <>
-                <span className="inline-block h-4 w-4 mr-1 animate-spin">⟳</span>
-                Sharing...
-              </>
-            ) : (
-              <>
-                <span className="inline-block h-4 w-4 mr-1">🚀</span>
-                Share
-              </>
-            )}
-          </Button>
-        )}
-
-        <Button
-          variant="text"
-          size="sm"
-          onClick={() => window.location.href = "/templates"}
-          className="text-xs font-medium"
-        >
-          <span className="inline-block h-4 w-4 mr-1">🎬</span>
-          Templates
-        </Button>
-        <FilecoinArchivesDialog />
-
+        {/* More Actions Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="text" size="sm" className="h-8 w-8 p-0">
-              <span className="text-sm">⋯</span>
+            <Button variant="secondary" size="icon" className="h-10 w-10 rounded-xl">
+              <MoreHorizontal className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem>
-              <span className="inline-block h-4 w-4 mr-2">↗️</span>
-              Share Project
+          <DropdownMenuContent align="end" className="w-64 rounded-2xl p-2">
+            <DropdownMenuItem onClick={() => handleExport("auto")} className="rounded-xl p-3">
+              <Download className="h-4 w-4 mr-3 text-primary" />
+              <div className="flex flex-col">
+                <span className="font-bold text-sm">Download MP4</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Optimized export</span>
+              </div>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <span className="inline-block h-4 w-4 mr-2">⚙️</span>
-              Project Settings
+            
+            <DropdownMenuItem onClick={() => window.location.href = "/templates"} className="rounded-xl p-3">
+              <Video className="h-4 w-4 mr-3 text-primary" />
+              <div className="flex flex-col">
+                <span className="font-bold text-sm">Templates</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Switch template</span>
+              </div>
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
-              Delete Project
+
+            <DropdownMenuSeparator className="my-2" />
+            
+            <div className="px-2 py-1.5 lg:hidden">
+               <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Canvas Format</span>
+               <div className="grid grid-cols-2 gap-1 mt-2">
+                  {canvasPresets.slice(0, 4).map(p => (
+                    <Button key={p.name} variant="outline" size="sm" onClick={() => setCanvasPreset(p)} 
+                      className={cn("h-8 text-[10px] rounded-lg", canvasSize.width === p.size.width && "border-primary text-primary bg-primary/5")}>
+                      {p.name}
+                    </Button>
+                  ))}
+               </div>
+            </div>
+
+            <DropdownMenuSeparator className="my-2 lg:hidden" />
+
+            <DropdownMenuItem className="rounded-xl p-3">
+              <Settings className="h-4 w-4 mr-3" />
+              <span className="font-bold text-sm">Settings</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem className="rounded-xl p-3 text-destructive focus:text-destructive">
+              <Trash2 className="h-4 w-4 mr-3" />
+              <span className="font-bold text-sm">Delete Project</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

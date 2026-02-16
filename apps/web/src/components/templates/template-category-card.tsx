@@ -64,7 +64,7 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
 
   return (
     <Card
-      className="overflow-hidden bg-white/5 border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
+      className="overflow-hidden bg-card/50 border-border/50 hover:border-primary/50 transition-all duration-300 cursor-pointer group shadow-sm hover:shadow-xl"
       onClick={handleSelect}
     >
       <div className="relative aspect-video overflow-hidden">
@@ -74,7 +74,7 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
             <HoverVideoPreview
               videoSrc={resolvedThumbnailUrl}
               alt={template.name}
-              className="w-full h-full"
+              className="w-full h-full transition-transform duration-500 group-hover:scale-110"
             />
           ) : (
             // Image thumbnail
@@ -82,13 +82,12 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
               src={resolvedThumbnailUrl}
               alt={template.name}
               fill
-              className="object-cover"
+              className="object-cover transition-transform duration-500 group-hover:scale-110"
             />
           )
         ) : (
-// ...
           // Fallback when no thumbnail is available
-          <div className="w-full h-full flex items-center justify-center bg-gray-800">
+          <div className="w-full h-full flex items-center justify-center bg-muted/30">
             <svg
               width="48"
               height="48"
@@ -98,7 +97,7 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-white/50"
+              className="text-muted-foreground/50"
             >
               <polygon points="5 3 19 12 5 21 5 3" />
             </svg>
@@ -106,12 +105,12 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
         )}
 
         {/* Badges */}
-        <div className="absolute top-2 right-2 flex flex-col gap-1">
+        <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
           {showRecentBadge && (
             <Badge
-              className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30 text-xs flex items-center gap-1"
+              className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30 text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 backdrop-blur-md"
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path>
                 <path d="M12 6v6l4 2"></path>
               </svg>
@@ -119,49 +118,47 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
             </Badge>
           )}
           <Badge
-            className={`${aspectRatioInfo.color} border-0 text-xs flex items-center gap-1`}
+            className={`${aspectRatioInfo.color} border-0 text-[10px] uppercase tracking-wider font-bold flex items-center gap-1 backdrop-blur-md`}
           >
-            <aspectRatioInfo.icon size={12} />
+            <aspectRatioInfo.icon size={10} strokeWidth={3} />
             {aspectRatioInfo.label}
           </Badge>
+        </div>
+
+        {/* Overlay on hover */}
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+           <Button variant="secondary" size="sm" onClick={handleUse} className="rounded-full shadow-lg scale-90 group-hover:scale-100 transition-transform">
+             Use Now
+           </Button>
         </div>
       </div>
 
       <CardContent className="p-4">
-        <h3 className="font-medium text-white">{template.name}</h3>
-        <p className="text-sm text-white/70 line-clamp-2 mt-1">
+        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{template.name}</h3>
+        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
           {template.description}
         </p>
       </CardContent>
 
-      <CardFooter className="p-4 pt-0 flex justify-between items-center">
-        <div className="text-xs text-white/50">
-          {template.hasAudio ? "Complete Example" : "No Audio"}
+      <CardFooter className="p-4 pt-0 flex justify-between items-center border-t border-border/50 mt-auto">
+        <div className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+          {template.hasAudio ? "High Fidelity" : "Visual Only"}
         </div>
 
         <div className="flex gap-2">
           <Button
-            variant="outline"
-            size="sm"
-            className="bg-white/5 border-white/10 hover:bg-white/20 text-white"
-            onClick={handleUse}
-          >
-            Use Template
-          </Button>
-
-          <Button
             variant="ghost"
             size="icon"
-            className="text-white/70 hover:text-white"
+            className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
             onClick={handleSelect}
           >
             <svg
-              width="16"
-              height="16"
+              width="14"
+              height="14"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             >

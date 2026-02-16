@@ -4,92 +4,86 @@ import React from "react";
 import { TemplateBrowser } from "@/components/templates/template-browser";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { Header } from "@/components/header";
+import { ArrowLeft, Layers, Sparkles, Zap } from "@/lib/icons";
 
 export default function TemplatesPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-800 to-blue-900 text-white overflow-y-auto scrollable">
-      {/* Background Visual Elements */}
-      <div className="absolute inset-0 overflow-hidden opacity-10 pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500 rounded-full blur-3xl"></div>
-        <div className="absolute top-60 -left-20 w-60 h-60 bg-purple-500 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-60 h-60 bg-indigo-500 rounded-full blur-3xl"></div>
-      </div>
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <Header />
+      
+      <main className="flex-1 flex flex-col relative">
+        {/* Background Visual Elements - Subtle and matching brand */}
+        <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute top-60 -left-20 w-80 h-80 bg-accent/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute bottom-20 right-20 w-80 h-80 bg-primary/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        </div>
 
-      {/* Main Content */}
-      <div className="relative">
-        {/* Header */}
-        <div className="container max-w-7xl mx-auto px-4 py-8">
-          <div className="flex items-center justify-between mb-8">
-            <Button
-              onClick={() => router.back()}
-              variant="ghost"
-              className="text-white hover:bg-white/10"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="mr-2"
+        {/* Main Content */}
+        <div className="relative container max-w-7xl mx-auto px-4 py-12 flex-1">
+          {/* Header Section */}
+          <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6">
+            <div className="flex flex-col items-center md:items-start text-center md:text-left">
+              <Button
+                onClick={() => router.back()}
+                variant="ghost"
+                size="sm"
+                className="mb-4 -ml-2 text-muted-foreground hover:text-foreground"
               >
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-              Back
-            </Button>
-          </div>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Dashboard
+              </Button>
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+                Choose a{" "}
+                <span className="gradient-text">
+                  Template
+                </span>
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-xl">
+                Jumpstart your creativity with professionally designed templates optimized for social engagement.
+              </p>
+            </div>
 
-          {/* Title Section */}
-          <div className="text-center mb-12">
-            <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">
-              Choose a{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                Template
-              </span>
-            </h1>
-            <p className="text-xl text-white/80 max-w-2xl mx-auto">
-              Start with a pexels video and make it your own
-            </p>
-          </div>
-
-          {/* Stats Bar */}
-          <div className="max-w-4xl mx-auto mb-12">
-            <div className="bg-white/10 backdrop-blur-md rounded-lg p-6">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-300">3</div>
-                  <div className="text-sm text-white/60 uppercase tracking-wider">
-                    Templates
-                  </div>
+            {/* Quick Stats/Features */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full md:w-auto">
+              <div className="glass rounded-xl p-4 flex flex-col items-center justify-center text-center">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                  <Layers className="h-4 w-4 text-primary" />
                 </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-300">1</div>
-                  <div className="text-sm text-white/60 uppercase tracking-wider">
-                    Category
-                  </div>
+                <div className="text-xl font-bold">12+</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Layouts</div>
+              </div>
+              <div className="glass rounded-xl p-4 flex flex-col items-center justify-center text-center">
+                <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center mb-2">
+                  <Sparkles className="h-4 w-4 text-accent" />
                 </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-pink-300">HD</div>
-                  <div className="text-sm text-white/60 uppercase tracking-wider">
-                    Quality
-                  </div>
+                <div className="text-xl font-bold">HD</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Quality</div>
+              </div>
+              <div className="glass rounded-xl p-4 flex flex-col items-center justify-center text-center col-span-2 md:col-span-1">
+                <div className="h-8 w-8 rounded-full bg-yellow-500/10 flex items-center justify-center mb-2">
+                  <Zap className="h-4 w-4 text-yellow-500" />
                 </div>
+                <div className="text-xl font-bold">1-Click</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Minting</div>
               </div>
             </div>
           </div>
 
-          {/* Template Browser */}
-          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8">
+          {/* Template Browser Container */}
+          <div className="bg-card/30 backdrop-blur-sm border border-border/50 rounded-2xl p-1 md:p-8 shadow-2xl">
             <TemplateBrowser />
           </div>
+
+          {/* Footer Note */}
+          <div className="mt-12 text-center text-sm text-muted-foreground">
+            <p>Don't see what you're looking for? Start from <Button variant="link" className="p-0 h-auto text-primary" onClick={() => router.push('/editor')}>scratch</Button>.</p>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

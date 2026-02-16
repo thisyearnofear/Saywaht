@@ -7,10 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  LuChevronLeft as ChevronLeft,
-  LuChevronRight as ChevronRight,
-  LuCheck as Check,
-} from "react-icons/lu";
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  Zap,
+  Sparkles,
+  Layers,
+  Coins,
+  Share2,
+  Video,
+  ArrowRight,
+  ExternalLink,
+} from "@/lib/icons";
 
 // Step components
 import { ThumbnailStep } from "./steps/thumbnail-step";
@@ -23,6 +31,7 @@ import { triggerCelebration } from "@/lib/confetti";
 import { useEffect } from "react";
 import type { VideoFormat } from "@/lib/video-utils";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export interface MintWizardData {
   // Thumbnail data
@@ -53,32 +62,38 @@ const STEPS = [
   {
     id: "format",
     title: "Video Format",
-    description: "Choose the optimal format for your content",
+    description: "Choose your video aspect ratio",
+    icon: Video,
   },
   {
     id: "thumbnail",
-    title: "Create Thumbnail",
-    description: "Generate an eye-catching thumbnail for your coin",
+    title: "Thumbnail",
+    description: "Create your coin's artwork",
+    icon: Sparkles,
   },
   {
     id: "details",
     title: "Coin Details",
-    description: "Set your coin name, symbol, and description",
+    description: "Name your new creation",
+    icon: Layers,
   },
   {
     id: "currency",
-    title: "Backing Currency",
-    description: "Choose what currency backs your coin",
+    title: "Currency",
+    description: "Choose backing asset",
+    icon: Coins,
   },
   {
     id: "preview",
-    title: "Preview & Review",
-    description: "Review everything before deployment",
+    title: "Review",
+    description: "Check your configuration",
+    icon: Zap,
   },
   {
     id: "deploy",
-    title: "Deploy Coin",
-    description: "Deploy your coin to the blockchain",
+    title: "Deploy",
+    description: "Launch to blockchain",
+    icon: Zap,
   },
 ];
 
@@ -108,30 +123,11 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   // Ensure we're on client side before doing anything
   useEffect(() => {
     setIsClient(true);
-
-    // Log any initialization errors
-    if (typeof window !== 'undefined') {
-      console.log('🪙 Mint wizard initialized');
-      console.log('Project ID:', projectId);
-      console.log('Data URL:', dataUrl ? 'provided' : 'not provided');
-    }
-  }, [projectId, dataUrl]);
+  }, []);
 
   const updateWizardData = useCallback((updates: Partial<MintWizardData>) => {
     setWizardData((prev: MintWizardData) => ({ ...prev, ...updates }));
   }, []);
-
-  // Skip automatic data loading to avoid serverless function issues
-  // Users can manually set up their coin details
-  useEffect(() => {
-    if (isClient && dataUrl) {
-      console.log("Project data URL available:", dataUrl);
-      console.log(
-        "Note: Automatic data loading disabled to avoid serverless function issues"
-      );
-      console.log("Users can manually configure their coin details");
-    }
-  }, [dataUrl, isClient]);
 
   // Add error boundary for any runtime errors
   useEffect(() => {
@@ -156,12 +152,12 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
     }
   }, []);
 
-  // Trigger confetti when deployment is complete
+  // Trigger celebration when deployment is complete
   useEffect(() => {
     if (wizardData.deployedCoin) {
       const timer = setTimeout(() => {
         triggerCelebration();
-      }, 500); // Delay to let the animation settle
+      }, 500);
 
       return () => clearTimeout(timer);
     }
@@ -181,8 +177,6 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
       case 3: // Currency selection step
         return wizardData.currency !== undefined;
       case 4: // Preview step
-        // Allow proceeding if metadata is ready, regardless of video upload status
-        // This allows users to deploy with thumbnail only if video upload fails
         return wizardData.metadataUri !== null;
       case 5: // Deploy step
         return wizardData.deployedCoin !== null;
@@ -229,13 +223,12 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
     }
   };
 
-  // Show loading state while fetching project data or during SSR
   if (isLoadingData || !isClient) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-4">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-muted-foreground">
-          {isClient ? "Loading project data from IPFS..." : "Initializing..."}
+      <div className="flex flex-col items-center justify-center py-24 space-y-4">
+        <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+        <p className="text-muted-foreground animate-pulse">
+          Initializing launchpad...
         </p>
       </div>
     );
@@ -245,60 +238,62 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   if (wizardData.deployedCoin) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center space-y-6"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="max-w-md mx-auto text-center space-y-8 py-12 px-6 glass rounded-[2.5rem] border-primary/20 shadow-2xl shadow-primary/10"
       >
-        <div className="flex justify-center">
-          <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center">
-            <div className="w-8 h-8 text-green-500">
-              <Check />
-            </div>
+        <div className="flex justify-center relative">
+          <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse"></div>
+          <div className="relative w-24 h-24 bg-primary rounded-full flex items-center justify-center shadow-2xl shadow-primary/40">
+            <Check className="w-12 h-12 text-white" strokeWidth={3} />
           </div>
         </div>
 
-        <div>
-          <h2 className="text-2xl font-bold mb-2">Coin Deployed! 🎉</h2>
-          <p className="text-muted-foreground mb-3">
-            Your video &quot;{wizardData.deployedCoin.name}&quot; (
-            {wizardData.deployedCoin.symbol}) is now a tradeable Zora Coin.
+        <div className="space-y-3">
+          <h2 className="text-3xl font-bold tracking-tight">Coin Deployed! 🎉</h2>
+          <p className="text-muted-foreground leading-relaxed">
+            Your video <span className="text-foreground font-bold font-mono">"{wizardData.deployedCoin.name}"</span> ({wizardData.deployedCoin.symbol}) is now a live tradeable Zora Coin.
           </p>
+          
           {wizardData.deployedCoin.address && (
-            <div className="bg-muted/50 rounded-lg p-3 text-sm">
-              <div className="text-muted-foreground mb-1">
-                Contract Address:
+            <div className="bg-muted/30 rounded-2xl p-4 border border-border/50 group mt-6">
+              <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1 tracking-widest">
+                Contract Address
               </div>
-              <div className="font-mono text-xs break-all">
+              <div className="font-mono text-[10px] break-all opacity-70 group-hover:opacity-100 transition-opacity">
                 {wizardData.deployedCoin.address}
               </div>
-              <button
-                onClick={() =>
-                  navigator.clipboard.writeText(
-                    wizardData.deployedCoin?.address || ""
-                  )
-                }
-                className="text-primary hover:underline text-xs mt-1"
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(wizardData.deployedCoin?.address || "");
+                  toast.success("Address copied!");
+                }}
+                className="text-primary text-[10px] h-auto p-0 mt-2 font-bold uppercase tracking-widest"
               >
                 Copy Address
-              </button>
+              </Button>
             </div>
           )}
         </div>
 
-        <div className="flex flex-col gap-3 max-w-sm mx-auto">
-          <Button asChild className="w-full">
+        <div className="flex flex-col gap-3 pt-4">
+          <Button asChild size="lg" className="w-full rounded-2xl h-14 font-bold shadow-lg shadow-primary/20 btn-hover">
             <a
               href={wizardData.deployedCoin?.address ? `https://zora.co/coin/base:${wizardData.deployedCoin.address}` : "/trade"}
-              target={wizardData.deployedCoin?.address ? "_blank" : undefined}
-              rel={wizardData.deployedCoin?.address ? "noopener noreferrer" : undefined}
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              🪙 View Your Coin
+              <ExternalLink className="mr-2 h-5 w-5" />
+              View on Zora
             </a>
           </Button>
-          <Button asChild variant="outline" className="w-full">
+          
+          <Button asChild variant="secondary" size="lg" className="w-full rounded-2xl h-14 font-bold">
             <a
               href={`https://warpcast.com/~/compose?text=${encodeURIComponent(
-                `Check out my new commentary coin "${wizardData.deployedCoin?.name || ""}" on SayWaht! 🎬🪙`
+                `I just launched my new commentary coin "${wizardData.deployedCoin?.name || ""}" on SayWaht! 🎬🪙`
               )}&embeds[]=${encodeURIComponent(
                 wizardData.deployedCoin?.address
                   ? `https://zora.co/coin/base:${wizardData.deployedCoin.address}`
@@ -307,174 +302,153 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Share to Farcaster
+              <Share2 className="mr-2 h-5 w-5" />
+              Share on Farcaster
             </a>
           </Button>
-          <Button asChild variant="outline" className="w-full">
-            <a href="/templates">🎨 Create Another</a>
-          </Button>
-          <Button asChild variant="ghost" className="w-full">
-            <a href="/">Browse Gallery</a>
-          </Button>
+          
+          <div className="flex gap-3 mt-2">
+            <Button asChild variant="ghost" className="flex-1 rounded-xl">
+              <a href="/templates">Create Another</a>
+            </Button>
+            <Button asChild variant="ghost" className="flex-1 rounded-xl">
+              <a href="/">Browse Feed</a>
+            </Button>
+          </div>
         </div>
       </motion.div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-28 md:pb-0">
+    <div className="max-w-4xl mx-auto space-y-8 pb-32 md:pb-8">
       {/* Progress Header */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between mb-4">
+      <div className="glass rounded-[2rem] p-6 border-border/40 shadow-xl overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-full h-1 bg-muted">
+           <motion.div 
+             className="h-full bg-primary shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
+             initial={{ width: 0 }}
+             animate={{ width: `${progress}%` }}
+             transition={{ duration: 0.5, ease: "easeOut" }}
+           />
+        </div>
+        
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+              {(() => {
+                const Icon = STEPS[currentStep].icon;
+                return <Icon className="w-6 h-6 text-primary" />;
+              })()}
+            </div>
             <div>
-              <CardTitle className="text-lg">
+              <h2 className="text-xl font-bold tracking-tight">
                 {STEPS[currentStep].title}
-              </CardTitle>
+              </h2>
               <p className="text-sm text-muted-foreground">
                 {STEPS[currentStep].description}
               </p>
             </div>
-            <Badge variant="secondary">
-              Step {currentStep + 1} of {STEPS.length}
-            </Badge>
           </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Progress</span>
-              <span>{Math.round(progress)}%</span>
-            </div>
-            <Progress value={progress} className="h-2" />
-          </div>
-
-          {/* Step indicators */}
-          <div className="flex items-center justify-between mt-4">
-            {STEPS.map((step, index) => (
-              <div
-                key={step.id}
-                className={`flex items-center ${index < STEPS.length - 1 ? "flex-1" : ""
-                  }`}
-              >
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${index < currentStep
-                    ? "bg-primary text-primary-foreground"
-                    : index === currentStep
-                      ? "bg-primary/20 text-primary border-2 border-primary"
-                      : "bg-muted text-muted-foreground"
-                    }`}
-                >
-                  {index < currentStep ? (
-                    <div className="w-4 h-4">
-                      <Check />
-                    </div>
-                  ) : (
-                    index + 1
-                  )}
-                </div>
-                {index < STEPS.length - 1 && (
-                  <div
-                    className={`flex-1 h-0.5 mx-2 ${index < currentStep ? "bg-primary" : "bg-muted"
-                      }`}
-                  />
+          
+          <div className="flex items-center gap-2">
+            {STEPS.map((_, index) => (
+              <div 
+                key={index}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-300",
+                  index === currentStep ? "w-8 bg-primary" : 
+                  index < currentStep ? "w-2 bg-primary/40" : "w-2 bg-muted"
                 )}
-              </div>
+              />
             ))}
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">
+              {currentStep + 1} / {STEPS.length}
+            </span>
           </div>
-        </CardHeader>
-      </Card>
+        </div>
+      </div>
 
       {/* Step Content */}
       <AnimatePresence mode="wait">
         <motion.div
           key={currentStep}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.3 }}
+          className="min-h-[400px]"
         >
           {renderStep()}
         </motion.div>
       </AnimatePresence>
 
-      {/* Navigation */}
-      <Card className="hidden md:block">
-        <CardContent className="pt-6">
-          <div className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={prevStep}
-              disabled={currentStep === 0}
-            >
-              <div className="w-4 h-4 mr-2">
-                <ChevronLeft />
-              </div>
-              Previous
-            </Button>
+      {/* Navigation - Desktop */}
+      <div className="hidden md:flex justify-between items-center glass p-4 rounded-2xl border-border/40">
+        <Button
+          variant="ghost"
+          onClick={prevStep}
+          disabled={currentStep === 0}
+          className="rounded-xl px-6"
+        >
+          <ChevronLeft className="mr-2 h-4 w-4" />
+          Previous
+        </Button>
 
-            <Button
-              onClick={nextStep}
-              disabled={!canProceedToNext() || wizardData.isDeploying}
-            >
-              {isLastStep ? (
-                wizardData.isDeploying ? (
-                  "Deploying..."
-                ) : (
-                  "Deploy Coin"
-                )
-              ) : (
-                <>
-                  Next
-                  <div className="w-4 h-4 ml-2">
-                    <ChevronRight />
-                  </div>
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            className="rounded-xl px-6"
+            onClick={() => window.location.href = "/editor"}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={nextStep}
+            disabled={!canProceedToNext() || wizardData.isDeploying}
+            className="rounded-xl px-8 font-bold shadow-lg shadow-primary/10"
+          >
+            {isLastStep ? (
+              wizardData.isDeploying ? "Launching..." : "Deploy Coin"
+            ) : (
+              <>
+                Next Step
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
 
       {/* Mobile Sticky Navigation */}
       <div
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
-        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+        className="md:hidden fixed bottom-0 inset-x-0 z-50 p-4 bg-background/80 backdrop-blur-xl border-t border-border/50"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}
       >
-        <div className="max-w-4xl mx-auto px-4 pt-3">
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              onClick={prevStep}
-              disabled={currentStep === 0}
-              className="h-11"
-            >
-              <div className="w-4 h-4 mr-2">
-                <ChevronLeft />
-              </div>
-              Previous
-            </Button>
+        <div className="flex gap-3">
+          <Button
+            variant="secondary"
+            onClick={prevStep}
+            disabled={currentStep === 0}
+            className="h-14 w-14 rounded-2xl p-0 flex-shrink-0"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </Button>
 
-            <Button
-              onClick={nextStep}
-              disabled={!canProceedToNext() || wizardData.isDeploying}
-              className="h-11"
-            >
-              {isLastStep ? (
-                wizardData.isDeploying ? (
-                  "Deploying..."
-                ) : (
-                  "Deploy Coin"
-                )
-              ) : (
-                <>
-                  Next
-                  <div className="w-4 h-4 ml-2">
-                    <ChevronRight />
-                  </div>
-                </>
-              )}
-            </Button>
-          </div>
+          <Button
+            onClick={nextStep}
+            disabled={!canProceedToNext() || wizardData.isDeploying}
+            className="h-14 flex-1 rounded-2xl font-bold text-lg shadow-xl shadow-primary/20"
+          >
+            {isLastStep ? (
+              wizardData.isDeploying ? "Launching..." : "Deploy Coin"
+            ) : (
+              <>
+                Continue
+                <ChevronRight className="ml-2 h-5 w-5" />
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </div>

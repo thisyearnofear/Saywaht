@@ -14,6 +14,7 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import { useUserPreferencesStore } from "@/stores/user-preferences-store";
+import { Info, Layers, Tag } from "@/lib/icons";
 
 interface CoinDetailsStepProps {
   data: MintWizardData;
@@ -22,6 +23,7 @@ interface CoinDetailsStepProps {
 
 export function CoinDetailsStep({ data, updateData }: CoinDetailsStepProps) {
   const { preferences } = useUserPreferencesStore();
+  
   const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
     updateData({ coinName: e.target.value });
   };
@@ -35,90 +37,61 @@ export function CoinDetailsStep({ data, updateData }: CoinDetailsStepProps) {
   };
 
   const suggestedTags = useMemo(
-    () => ["#commentary", "#meme", "#ai", "#base", "#zora"],
+    () => ["#commentary", "#meme", "#ai", "#base", "#zora", "#viral", "#insight"],
     []
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Coin Details</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Set up the basic information for your video coin
-        </p>
-        {preferences.hasCreatorCoin !== undefined && (
-          <div className="mt-2 flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              Backing Currency:
-            </span>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge
-                    variant={
-                      preferences.hasCreatorCoin ? "default" : "secondary"
-                    }
-                    className="text-xs cursor-help"
-                  >
-                    {preferences.hasCreatorCoin
-                      ? "Creator Coin (preferred)"
-                      : "ZORA"}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {preferences.hasCreatorCoin
-                    ? "Uses your Creator Coin for markets. Aligns rewards and reduces slippage risk."
-                    : "Uses ZORA for markets. Connect or set up a Creator Coin to prefer creator-backed markets."}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+    <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
+      <div className="space-y-6">
+        {/* Name & Symbol Group */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 space-y-2">
+            <Label htmlFor="coinName" className="text-[10px] uppercase tracking-widest font-black text-muted-foreground ml-1">
+              Coin Name *
+            </Label>
+            <Input
+              id="coinName"
+              value={data.coinName}
+              onChange={handleNameChange}
+              placeholder="e.g. My Epic Commentary"
+              className="h-14 rounded-2xl text-lg font-bold bg-card border-border/50 focus:border-primary/50 shadow-sm"
+            />
           </div>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="coinName">Coin Name *</Label>
-          <Input
-            id="coinName"
-            value={data.coinName}
-            onChange={handleNameChange}
-            placeholder="My Awesome Commentary"
-            className="text-lg"
-          />
-          <p className="text-xs text-muted-foreground">
-            Choose a memorable name that represents your video content
-          </p>
+          
+          <div className="space-y-2">
+            <Label htmlFor="coinSymbol" className="text-[10px] uppercase tracking-widest font-black text-muted-foreground ml-1">
+              Symbol *
+            </Label>
+            <Input
+              id="coinSymbol"
+              value={data.coinSymbol}
+              onChange={handleSymbolChange}
+              placeholder="TICKER"
+              maxLength={6}
+              className="h-14 rounded-2xl text-lg font-black font-mono bg-card border-border/50 focus:border-primary/50 text-center shadow-sm"
+            />
+          </div>
         </div>
 
+        {/* Description */}
         <div className="space-y-2">
-          <Label htmlFor="coinSymbol">Coin Symbol *</Label>
-          <Input
-            id="coinSymbol"
-            value={data.coinSymbol}
-            onChange={handleSymbolChange}
-            placeholder="MAC"
-            maxLength={6}
-            className="text-lg font-mono"
-          />
-          <p className="text-xs text-muted-foreground">
-            3-6 characters, will be converted to uppercase (e.g., BTC, ETH,
-            DOGE)
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="coinDescription">Description (Optional)</Label>
+          <Label htmlFor="coinDescription" className="text-[10px] uppercase tracking-widest font-black text-muted-foreground ml-1">
+            Description
+          </Label>
           <Textarea
             id="coinDescription"
             value={data.coinDescription}
             onChange={handleDescriptionChange}
-            placeholder="A brief description of your video coin..."
-            className="min-h-[100px]"
+            placeholder="Tell the world about your video coin..."
+            className="min-h-[120px] rounded-[2rem] bg-card border-border/50 focus:border-primary/50 p-6 resize-none shadow-sm"
           />
-          <p className="text-xs text-muted-foreground">
-            Describe what makes your video coin special or unique
-          </p>
-          <div className="flex flex-wrap gap-2 pt-2">
+          
+          <div className="flex flex-wrap gap-2 pt-3 px-1">
+            <div className="flex items-center gap-1.5 mr-2 text-[10px] font-black uppercase text-muted-foreground/50">
+              <Tag className="h-3 w-3" />
+              Quick Tags:
+            </div>
             {suggestedTags.map((tag) => (
               <button
                 key={tag}
@@ -128,7 +101,7 @@ export function CoinDetailsStep({ data, updateData }: CoinDetailsStepProps) {
                   const appended = next ? `${next} ${tag}` : tag;
                   updateData({ coinDescription: appended });
                 }}
-                className="text-xs px-2 py-1 rounded-full bg-muted hover:bg-muted/70"
+                className="text-[10px] px-3 py-1.5 rounded-full bg-muted/50 hover:bg-primary/10 hover:text-primary transition-all font-bold uppercase tracking-wider"
               >
                 {tag}
               </button>
@@ -136,19 +109,30 @@ export function CoinDetailsStep({ data, updateData }: CoinDetailsStepProps) {
           </div>
         </div>
 
-        {/* Validation Messages */}
-        {data.coinName.trim() === "" && (
-          <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded">
-            💡 Coin name is required to proceed to the next step
+        {/* Info Card */}
+        <div className="glass rounded-3xl p-6 border-border/40 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Info className="h-4 w-4 text-primary" />
+            </div>
+            <h4 className="font-bold text-sm">Deployment Tips</h4>
           </div>
-        )}
-
-        {data.coinSymbol.trim() === "" && (
-          <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded">
-            💡 Coin symbol is required to proceed to the next step
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          <ul className="space-y-3 text-xs text-muted-foreground">
+            <li className="flex items-start gap-2">
+              <span className="text-primary font-bold">•</span>
+              Use a ticker symbol that's easy to remember (3-6 chars)
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary font-bold">•</span>
+              Add relevant hashtags to help people discover your coin
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-primary font-bold">•</span>
+              Your metadata will be stored permanently on IPFS via Grove
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
   );
 }

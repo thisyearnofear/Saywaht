@@ -6,9 +6,23 @@ import Image from "next/image";
 import { useTemplateStore } from "@/stores/template-store";
 import { Button } from "@/components/ui/button";
 import { VideoPreview } from "./video-preview";
-import { VideoThumbnailSimple } from "./video-thumbnail-simple";
 import { useState, useEffect } from "react";
-import { resolveIpfsUrl } from "@/lib/utils";
+import { resolveIpfsUrl, cn } from "@/lib/utils";
+import { 
+  ArrowLeft, 
+  Play, 
+  Clock, 
+  Layers, 
+  Sparkles, 
+  Smartphone, 
+  Monitor, 
+  Square,
+  Mic,
+  Video,
+  Music,
+  ChevronRight
+} from "@/lib/icons";
+import { Badge } from "@/components/ui/badge";
 
 interface TemplateDetailsProps {
   templateId: string;
@@ -16,7 +30,6 @@ interface TemplateDetailsProps {
 
 export function TemplateDetails({ templateId }: TemplateDetailsProps) {
   const router = useRouter();
-  const [isPlaying, setIsPlaying] = useState(false);
   const {
     selectedTemplate,
     isLoading,
@@ -37,8 +50,9 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 animate-spin text-white">Loading...</div>
+      <div className="flex flex-col items-center justify-center h-96 gap-4">
+        <div className="w-12 h-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin"></div>
+        <p className="text-muted-foreground animate-pulse">Loading template details...</p>
       </div>
     );
   }
@@ -46,13 +60,13 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
   // Error state
   if (error) {
     return (
-      <div className="p-4 bg-red-500/20 text-red-100 rounded-lg">
-        <h3 className="font-semibold mb-2">Error loading template</h3>
-        <p>{error}</p>
+      <div className="p-8 bg-destructive/10 border border-destructive/20 text-destructive rounded-2xl text-center max-w-md mx-auto">
+        <h3 className="font-bold text-lg mb-2">Error loading template</h3>
+        <p className="text-sm opacity-80 mb-6">{error}</p>
         <Button
           onClick={() => selectTemplate(templateId)}
           variant="outline"
-          className="mt-4 bg-white/10 text-white hover:bg-white/20"
+          className="border-destructive/30 hover:bg-destructive/10"
         >
           Try Again
         </Button>
@@ -63,13 +77,13 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
   // Template not found
   if (!selectedTemplate) {
     return (
-      <div className="p-8 text-center text-white/80">
-        <h3 className="text-xl font-medium mb-2">Template Not Found</h3>
-        <p>The requested template could not be found.</p>
+      <div className="p-12 text-center glass rounded-2xl max-w-md mx-auto">
+        <h3 className="text-xl font-bold mb-2">Template Not Found</h3>
+        <p className="text-muted-foreground mb-6">The requested template could not be found.</p>
         <Button
           onClick={() => router.push("/templates")}
-          variant="outline"
-          className="mt-4 bg-white/10 text-white hover:bg-white/20"
+          variant="secondary"
+          className="rounded-full"
         >
           Back to Templates
         </Button>
@@ -82,59 +96,100 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
     router.push("/editor");
   };
 
-  const togglePlayback = () => {
-    setIsPlaying(!isPlaying);
-    // In a real implementation, this would control video playback
+  // Get aspect ratio info for display
+  const getAspectRatioInfo = () => {
+    const aspectRatio = selectedTemplate.aspectRatio || "landscape";
+    switch (aspectRatio) {
+      case "portrait":
+        return {
+          icon: Smartphone,
+          label: "Portrait (9:16)",
+          description: "Perfect for TikTok, Reels & Zora Mobile",
+          color: "text-green-500 bg-green-500/10",
+        };
+      case "square":
+        return {
+          icon: Square,
+          label: "Square (1:1)",
+          description: "Universal format for all social feeds",
+          color: "text-blue-500 bg-blue-500/10",
+        };
+      case "landscape":
+      default:
+        return {
+          icon: Monitor,
+          label: "Landscape (16:9)",
+          description: "Traditional widescreen format",
+          color: "text-orange-500 bg-orange-500/10",
+        };
+    }
   };
 
+  const ratio = getAspectRatioInfo();
+
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-2">
+    <div className="space-y-10 animate-fade-in">
+      {/* Breadcrumbs & Header */}
+      <div className="flex flex-col gap-4">
         <Button
           variant="ghost"
-          size="icon"
-          className="text-white/70 hover:text-white"
+          size="sm"
+          className="w-fit -ml-2 text-muted-foreground hover:text-foreground"
           onClick={() => router.push("/templates")}
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path d="m12 19-7-7 7-7" />
-            <path d="M19 12H5" />
-          </svg>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Browse
         </Button>
-        <h1 className="text-2xl font-semibold text-white">
-          {selectedTemplate.name}
-        </h1>
+        
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+              {selectedTemplate.name}
+            </h1>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary" className="rounded-full bg-primary/10 text-primary border-none text-[10px] uppercase tracking-wider font-bold">
+                {selectedTemplate.category}
+              </Badge>
+              {selectedTemplate.tags?.map(tag => (
+                <Badge key={tag} variant="outline" className="rounded-full text-[10px] uppercase tracking-wider font-semibold opacity-70">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          </div>
+          
+          <Button
+            onClick={handleApplyTemplate}
+            size="lg"
+            className="rounded-full px-8 shadow-lg hover:shadow-primary/20 transition-all btn-hover hidden md:flex"
+          >
+            Use Template
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Preview section - adaptive aspect ratio */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        {/* Left Column: Preview */}
+        <div className="lg:col-span-7 space-y-8">
           <div
-            className={`relative overflow-hidden rounded-lg bg-black ${
+            className={cn(
+              "relative overflow-hidden rounded-3xl bg-black shadow-2xl border border-border/50 ring-1 ring-white/10",
               selectedTemplate.aspectRatio === "portrait"
-                ? "aspect-[9/16] max-w-md mx-auto"
+                ? "aspect-[9/16] max-w-sm mx-auto"
                 : selectedTemplate.aspectRatio === "square"
                   ? "aspect-square max-w-md mx-auto"
                   : "aspect-video"
-            }`}
+            )}
           >
             {resolvedVideoUrl ||
             (resolvedThumbnailUrl &&
               resolvedThumbnailUrl.endsWith(".mp4")) ? (
-              // Use VideoPreview for playback when video is available
               <VideoPreview
                 src={resolvedVideoUrl || resolvedThumbnailUrl!}
                 title={selectedTemplate.name}
               />
             ) : resolvedThumbnailUrl ? (
-              // Regular image thumbnail
               <Image
                 src={resolvedThumbnailUrl}
                 alt={selectedTemplate.name}
@@ -142,103 +197,52 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
                 className="object-cover"
               />
             ) : (
-              // Fallback when no media is available
-              <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                <svg
-                  width="64"
-                  height="64"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="text-white/50"
-                >
-                  <polygon points="5 3 19 12 5 21 5 3" />
-                </svg>
+              <div className="w-full h-full flex flex-col items-center justify-center bg-muted/20 gap-4">
+                <Play className="h-12 w-12 text-muted-foreground/50" />
+                <span className="text-sm text-muted-foreground font-medium">No preview available</span>
               </div>
             )}
           </div>
 
-          {/* Mobile-first: Quick context */}
-          <div className="lg:hidden p-4 bg-white/5 rounded-lg">
-            <p className="text-white/80 text-sm mb-3">
-              {selectedTemplate.description}
-            </p>
-
-            {/* Simple next step hint */}
-            <div className="flex items-center gap-2 text-xs text-blue-300">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 6v6l4 2" />
-              </svg>
-              <span>Record your voice, sync to video, export & share</span>
-            </div>
-          </div>
-
-          {/* Mobile-first: Quick action button */}
-          <div className="lg:hidden">
-            <Button
-              onClick={handleApplyTemplate}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 text-lg font-semibold"
-            >
-              Start Creating with This Template
-            </Button>
-          </div>
-
-          {/* Timeline preview */}
+          {/* Timeline Visualizer */}
           {selectedTemplate.timelineTracks && (
-            <div className="p-4 bg-white/5 rounded-lg">
-              <h3 className="text-md font-medium text-white mb-4">
-                Timeline Preview
+            <div className="glass rounded-3xl p-6 border-border/40">
+              <h3 className="text-sm uppercase tracking-widest font-bold text-foreground mb-6 flex items-center gap-2">
+                <Layers className="h-4 w-4 text-primary" />
+                Project Structure
               </h3>
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {selectedTemplate.timelineTracks.map((track) => (
-                  <div key={track.id} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-white/80">
-                        {track.name ||
-                          `${track.type.charAt(0).toUpperCase() + track.type.slice(1)} Track`}
+                  <div key={track.id} className="space-y-2">
+                    <div className="flex items-center justify-between text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+                      <span className="flex items-center gap-1.5">
+                        {track.type === 'video' ? <Video className="h-3 w-3" /> : track.type === 'audio' ? <Music className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+                        {track.name || track.type}
                       </span>
-                      {track.muted && (
-                        <span className="text-xs bg-yellow-600/30 text-yellow-200 px-1.5 py-0.5 rounded">
-                          Muted
-                        </span>
-                      )}
+                      {track.clips.length} Clips
                     </div>
 
-                    <div className="relative h-8 bg-white/5 rounded-sm overflow-hidden">
+                    <div className="relative h-10 bg-muted/30 rounded-xl overflow-hidden border border-border/30">
                       {track.clips.map((clip) => {
-                        // Calculate clip position and width based on timeline (100% = 60 seconds)
                         const startPercent = (clip.startTime / 60) * 100;
                         const widthPercent = (clip.duration / 60) * 100;
-
-                        // Different background colors for different track types
-                        const bgColor =
-                          track.type === "video"
-                            ? "bg-blue-500/50"
-                            : track.type === "audio"
-                              ? "bg-green-500/50"
-                              : "bg-purple-500/50"; // effects
+                        const colors = {
+                          video: "bg-primary/30 border-primary/40",
+                          audio: "bg-green-500/30 border-green-500/40",
+                          effects: "bg-accent/30 border-accent/40"
+                        };
+                        const colorClass = colors[track.type as keyof typeof colors] || colors.effects;
 
                         return (
                           <div
                             key={clip.id}
-                            className={`absolute top-0 h-full ${bgColor} border border-white/20 rounded-sm`}
+                            className={cn("absolute top-1 bottom-1 border rounded-lg transition-all hover:brightness-110 flex items-center px-2", colorClass)}
                             style={{
                               left: `${startPercent}%`,
                               width: `${widthPercent}%`,
                             }}
                           >
-                            <div className="px-2 truncate text-xs text-white/90 leading-8">
-                              {clip.name}
-                            </div>
+                            <span className="text-[10px] font-bold text-foreground truncate">{clip.name}</span>
                           </div>
                         );
                       })}
@@ -246,215 +250,101 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
                   </div>
                 ))}
               </div>
+              <div className="mt-4 flex justify-between text-[10px] font-bold text-muted-foreground/60 px-1">
+                <span>0s</span>
+                <span>30s</span>
+                <span>60s</span>
+              </div>
             </div>
           )}
         </div>
 
-        <div className="space-y-6">
-          {/* Quick guide - desktop version */}
-          <div className="hidden lg:block p-4 bg-white/5 rounded-lg">
-            <h3 className="text-md font-medium text-white mb-2 flex items-center gap-2">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="text-blue-400"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 6v6l4 2" />
-              </svg>
-              Quick Start
-            </h3>
-            <p className="text-white/70 text-sm">
-              Record your voice, sync to video, export & share
-            </p>
-          </div>
-
-          {/* Template info */}
-          <div className="p-4 bg-white/5 rounded-lg">
-            <h3 className="text-md font-medium text-white mb-2">
-              About this template
-            </h3>
-            <p className="text-white/80">{selectedTemplate.description}</p>
-
-            <div className="mt-4 pt-4 border-t border-white/10">
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="text-white/60">Has Audio</div>
-                <div className="text-white">
-                  {selectedTemplate.hasAudio ? "Yes" : "No"}
-                </div>
-
-                <div className="text-white/60">Category</div>
-                <div className="text-white">{selectedTemplate.category}</div>
-
-                <div className="text-white/60">Tags</div>
-                <div className="text-white">
-                  {selectedTemplate.tags && selectedTemplate.tags.length > 0
-                    ? selectedTemplate.tags.join(", ")
-                    : "None"}
-                </div>
-
-                {selectedTemplate.source && (
-                  <>
-                    <div className="text-white/60">Source</div>
-                    <div className="text-white">
-                      {selectedTemplate.source.url ? (
-                        <a
-                          href={selectedTemplate.source.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:underline"
-                        >
-                          {selectedTemplate.source.name}
-                          {selectedTemplate.source.author &&
-                            ` (${selectedTemplate.source.author})`}
-                        </a>
-                      ) : (
-                        <span>
-                          {selectedTemplate.source.name}
-                          {selectedTemplate.source.author &&
-                            ` (${selectedTemplate.source.author})`}
-                        </span>
-                      )}
-                    </div>
-                  </>
-                )}
+        {/* Right Column: Details & Actions */}
+        <div className="lg:col-span-5 space-y-6">
+          {/* Quick Stats Card */}
+          <div className="glass rounded-3xl p-6 border-border/40 space-y-6">
+            <div className="flex items-center gap-4">
+              <div className={cn("p-3 rounded-2xl", ratio.color)}>
+                <ratio.icon className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg">{ratio.label}</h3>
+                <p className="text-xs text-muted-foreground">{ratio.description}</p>
               </div>
             </div>
-          </div>
 
-          {/* Media items */}
-          {selectedTemplate.mediaItems &&
-            selectedTemplate.mediaItems.length > 0 && (
-              <div className="p-4 bg-white/5 rounded-lg">
-                <h3 className="text-md font-medium text-white mb-4">
-                  Included Media
-                </h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {selectedTemplate.mediaItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="bg-white/5 border border-white/10 rounded-md p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        {/* Media type icon */}
-                        <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded bg-white/10">
-                          {item.type === "video" && (
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              className="text-blue-400"
-                            >
-                              <rect
-                                x="2"
-                                y="2"
-                                width="20"
-                                height="20"
-                                rx="2.18"
-                                ry="2.18"
-                              />
-                              <line x1="7" y1="2" x2="7" y2="22" />
-                              <line x1="17" y1="2" x2="17" y2="22" />
-                              <line x1="2" y1="12" x2="22" y2="12" />
-                            </svg>
-                          )}
-                          {item.type === "image" && (
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              className="text-green-400"
-                            >
-                              <rect
-                                x="3"
-                                y="3"
-                                width="18"
-                                height="18"
-                                rx="2"
-                                ry="2"
-                              />
-                              <circle cx="8.5" cy="8.5" r="1.5" />
-                              <polyline points="21 15 16 10 5 21" />
-                            </svg>
-                          )}
-                          {item.type === "audio" && (
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              className="text-purple-400"
-                            >
-                              <path d="M9 18V5l12-2v13" />
-                              <circle cx="6" cy="18" r="3" />
-                              <circle cx="18" cy="16" r="3" />
-                            </svg>
-                          )}
-                        </div>
-
-                        {/* Media info */}
-                        <div className="flex-grow min-w-0">
-                          <div className="text-sm font-medium text-white truncate">
-                            {item.name}
-                          </div>
-                          <div className="text-xs text-white/60">
-                            {item.duration
-                              ? `${Math.round(item.duration)}s`
-                              : ""}
-                            {item.duration && item.aspectRatio ? " • " : ""}
-                            {item.aspectRatio ? `${item.aspectRatio}:1` : ""}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-muted/30 rounded-2xl p-4 flex flex-col items-center text-center">
+                <Clock className="h-4 w-4 text-muted-foreground mb-1" />
+                <span className="text-lg font-bold">~60s</span>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Duration</span>
               </div>
-            )}
+              <div className="bg-muted/30 rounded-2xl p-4 flex flex-col items-center text-center">
+                <Sparkles className="h-4 w-4 text-muted-foreground mb-1" />
+                <span className="text-lg font-bold">HD</span>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Quality</span>
+              </div>
+            </div>
 
-          {/* Actions */}
-          <div className="flex flex-col gap-2">
+            <div className="space-y-3">
+              <h4 className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">How it works</h4>
+              <ul className="space-y-3">
+                {[
+                  { icon: Mic, text: "Record your commentary or reaction" },
+                  { icon: Layers, text: "Sync automatically with the template" },
+                  { icon: Zap, text: "Mint your video coin in seconds" }
+                ].map((item, i) => (
+                  <li key={i} className="flex items-center gap-3 text-sm font-medium">
+                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                      <item.icon className="h-3 w-3 text-primary" />
+                    </div>
+                    {item.text}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             <Button
               onClick={handleApplyTemplate}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white hidden lg:flex"
+              className="w-full rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20 transition-all btn-hover"
+            >
+              Start Creating
+              <ChevronRight className="ml-2 h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Description Card */}
+          <div className="glass rounded-3xl p-6 border-border/40">
+            <h3 className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-3">About this template</h3>
+            <p className="text-foreground/90 leading-relaxed text-sm">
+              {selectedTemplate.description}
+            </p>
+            
+            {selectedTemplate.source && (
+              <div className="mt-4 pt-4 border-t border-border/40 flex items-center justify-between">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground">Source</span>
+                <a 
+                  href={selectedTemplate.source.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                >
+                  {selectedTemplate.source.name}
+                  <ChevronRight className="h-3 w-3" />
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Apply Button (Sticky-ish) */}
+          <div className="md:hidden fixed bottom-6 left-6 right-6 z-40">
+            <Button
+              onClick={handleApplyTemplate}
+              className="w-full h-14 rounded-full text-lg font-bold shadow-2xl shadow-primary/40 border-2 border-white/20 animate-slide-up"
             >
               Use This Template
             </Button>
-
-            <Button
-              variant="outline"
-              className="w-full bg-white/5 border-white/10 hover:bg-white/10 text-white"
-              onClick={() => router.push("/templates")}
-            >
-              Back to Browse
-            </Button>
           </div>
-
-          {/* Inspiration Section */}
-          {templateId && (
-            <div className="mt-6">
-              <button
-                onClick={() =>
-                  router.push(`/templates/${templateId}/inspiration`)
-                }
-                className="text-sm text-blue-400 hover:underline"
-              >
-                View Similar Examples
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>

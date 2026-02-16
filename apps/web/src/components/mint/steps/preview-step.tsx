@@ -4,7 +4,17 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, CheckCircle } from "@/lib/icons";
+import { 
+  Loader2, 
+  AlertCircle, 
+  CheckCircle, 
+  Video, 
+  Layers, 
+  Sparkles, 
+  Zap,
+  ChevronRight,
+  Info
+} from "@/lib/icons";
 import Image from "next/image";
 import { MintVideoPreview } from "../video-preview";
 import { useProjectStore } from "@/stores/project-store";
@@ -22,6 +32,7 @@ import {
 import { storageManager, StorageErrorType } from "@/lib/storage-manager";
 import { Progress } from "@/components/ui/progress";
 import { useTextStore } from "@/stores/text-store";
+import { cn } from "@/lib/utils";
 
 interface PreviewStepProps {
   data: MintWizardData;
@@ -78,11 +89,12 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
   const { tracks, getTotalDuration } = useTimelineStore();
   const { mediaItems } = useMediaStore();
   const { textElements } = useTextStore();
+  
   const thumbnailSourceLabel = data.thumbnailSource
     ? {
-        ai: "AI",
+        ai: "AI Generated",
         video_frame: "Video Frame",
-        timeline_media: "Timeline Media",
+        timeline_media: "Media Asset",
         upload: "Uploaded",
       }[data.thumbnailSource]
     : null;
@@ -114,7 +126,6 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
     };
   }, []);
 
-  // Generate metadata when component mounts or data changes
   useEffect(() => {
     if (
       !data.coinName ||
@@ -131,11 +142,8 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
       setVideoUploadError(null);
 
       try {
-        // Step 1: Check export feasibility and estimate file size
-        const totalDuration = Math.max(getTotalDuration(), 5); // Minimum 5 seconds
-        console.log(`📏 Calculated timeline duration: ${totalDuration}s`);
+        const totalDuration = Math.max(getTotalDuration(), 5);
 
-        // Check if export is feasible within size limits
         const feasibility = await checkExportFeasibility(
           tracks,
           mediaItems,
@@ -147,7 +155,6 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
         setEstimatedSize(feasibility.estimatedSize);
 
         if (!feasibility.feasible) {
-          // Show warning but continue with adjusted settings
           setShowSizeWarning(true);
           setAdjustedSettings(
             feasibility.recommendedSettings
@@ -159,22 +166,15 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               : null
           );
 
-          console.warn(`⚠️ ${feasibility.message}`);
-
-          // If size is way too large for current configured storage, skip export.
           if (feasibility.estimatedSize > filecoinMaxSizeMB * 1.25) {
-            // Even adjusted settings are unlikely to fit the active storage target.
             setVideoUploadStatus("warning");
             setVideoUploadError(feasibility.message);
-            // Still generate metadata without video
             await generateMetadataOnly();
             return;
           }
         }
 
-        // Step 2: Export timeline content as video
         setVideoUploadStatus("exporting");
-        console.log("🎬 Exporting timeline content...");
 
         try {
           const videoBlob = await unifiedExport(
@@ -191,16 +191,11 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               outputFormat: "mp4",
               frameRate: feasibility.recommendedSettings?.frameRate || 30,
               videoBitrate: feasibility.recommendedSettings?.videoBitrate,
-              maxFileSizeMB:
-                filecoinMaxSizeMB > 8 ? 220 : 7.5,
-              onSizeEstimate: async (estimatedSize, maxSize) => {
-                // Always continue, but with adjusted settings
-                return true;
-              },
+              maxFileSizeMB: filecoinMaxSizeMB > 8 ? 220 : 7.5,
+              onSizeEstimate: async () => true,
             }
           );
 
-          // Step 3: Archive video + captions + manifest to Filecoin-first storage
           setVideoUploadStatus("uploading");
 
           const captions = textElements
@@ -228,7 +223,6 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           setArchiveCaptionsUrl(archive.retrieval.transcriptUrl || null);
           setVideoUploadStatus("success");
 
-          // Step 4: Generate metadata with the uploaded video
           await generateMetadataWithVideo(
             archive.retrieval.videoUrl,
             archive.retrieval.manifestUrl,
@@ -237,7 +231,6 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
         } catch (error) {
           console.error("Failed to export/upload video:", error);
 
-          // Handle storage-specific errors
           if (error && typeof error === "object" && "type" in error) {
             const storageError = error as {
               type: StorageErrorType;
@@ -247,23 +240,19 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
             if (storageError.type === StorageErrorType.SIZE_EXCEEDED) {
               setVideoUploadStatus("warning");
               setVideoUploadError(
-                `Video file exceeds storage limit. Please trim your video or use lower quality settings.`
+                `Video file exceeds storage limit. Please trim your video.`
               );
             } else {
               setVideoUploadStatus("failed");
               setVideoUploadError(
-                storageManager.getErrorMessage(error as any) ||
-                  `Failed to upload video: ${error instanceof Error ? error.message : "Unknown error"}`
+                storageManager.getErrorMessage(error as any) || "Upload failed"
               );
             }
           } else {
             setVideoUploadStatus("failed");
-            setVideoUploadError(
-              `Export failed: ${error instanceof Error ? error.message : "Unknown error"}`
-            );
+            setVideoUploadError("Export failed");
           }
 
-          // Still generate metadata without video
           await generateMetadataOnly();
         }
       } catch (error) {
@@ -272,14 +261,12 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
       }
     };
 
-    // Generate metadata with video URL
     async function generateMetadataWithVideo(
       videoUrl: string,
       manifestUrl?: string,
       captionsUrl?: string
     ) {
       try {
-        // Prepare thumbnail for metadata
         let finalThumbnailUrl = data.thumbnail;
         if (data.thumbnail && data.thumbnail.startsWith("data:")) {
           try {
@@ -288,14 +275,11 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
               { preferredProvider: "grove" }
             );
             finalThumbnailUrl = result.ipfsUrl || result.url;
-            console.log("📸 Thumbnail uploaded:", finalThumbnailUrl);
           } catch (error) {
             console.error("Failed to upload thumbnail:", error);
-            // Continue with data URL if upload fails
           }
         }
 
-        // Create modified mediaItems with exported video
         const modifiedMediaItems = [...mediaItems];
         const exportedVideoItem = {
           id: crypto.randomUUID(),
@@ -322,7 +306,6 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           captionsUrl,
         });
 
-        // Add custom description if provided
         if (data.coinDescription) {
           metadata.description = data.coinDescription;
         }
@@ -336,10 +319,8 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
       }
     }
 
-    // Generate metadata without video (fallback)
     async function generateMetadataOnly() {
       try {
-        // Prepare thumbnail for metadata
         let finalThumbnailUrl = data.thumbnail;
         if (data.thumbnail && data.thumbnail.startsWith("data:")) {
           try {
@@ -350,7 +331,6 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
             finalThumbnailUrl = result.ipfsUrl || result.url;
           } catch (error) {
             console.error("Failed to upload thumbnail:", error);
-            // Continue with data URL if upload fails
           }
         }
 
@@ -366,7 +346,6 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           captionsUrl: archiveCaptionsUrl || undefined,
         });
 
-        // Add custom description if provided
         if (data.coinDescription) {
           metadata.description = data.coinDescription;
         }
@@ -380,7 +359,6 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
       }
     }
 
-    // Convert data URL to File object
     function dataURLtoFile(dataurl: string, filename: string): File {
       const arr = dataurl.split(",");
       const mime = arr[0].match(/:(.*?);/)?.[1] || "image/png";
@@ -415,349 +393,135 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
     archiveCaptionsUrl,
   ]);
 
-  // Render progress indicator
-  function renderProgressIndicator() {
-    if (!exportProgress) return null;
-
-    return (
-      <div className="space-y-2 mt-2">
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{exportProgress.message}</span>
-          <span>{Math.round(exportProgress.percentage)}%</span>
-        </div>
-        <Progress value={exportProgress.percentage} className="h-1" />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Coin Preview Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Coin Preview</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Review how your coin will appear to traders and collectors
-          </p>
-          {preferences.hasCreatorCoin !== undefined && (
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Backing Currency:</span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge
-                      variant={preferences.hasCreatorCoin ? "default" : "secondary"}
-                      className="text-xs cursor-help"
-                    >
-                      {preferences.hasCreatorCoin ? "Creator Coin (preferred)" : "ZORA"}
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {preferences.hasCreatorCoin
-                      ? "Uses your Creator Coin for markets. Aligns rewards and reduces slippage risk."
-                      : "Uses ZORA for markets. Connect or set up a Creator Coin to prefer creator-backed markets."}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Thumbnail */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <h4 className="font-medium">Thumbnail</h4>
-                {thumbnailSourceLabel && (
-                  <Badge variant="secondary" className="text-xs">
-                    {thumbnailSourceLabel}
-                  </Badge>
-                )}
-              </div>
-              {data.thumbnail ? (
-                <div className={`relative ${getAspectRatioClass()} rounded-lg overflow-hidden border`}>
-                  <Image
-                    src={
-                      data.thumbnail.startsWith("ipfs://")
-                        ? `https://ipfs.io/ipfs/${data.thumbnail.slice(7)}`
-                        : data.thumbnail.startsWith("lens://")
-                          ? `https://api.grove.storage/${data.thumbnail.slice(7)}`
-                          : data.thumbnail
-                    }
-                    alt="Coin thumbnail"
-                    fill
-                    className="object-cover"
-                    unoptimized={true}
-                  />
-                </div>
-              ) : (
-                <div className={`${getAspectRatioClass()} bg-muted rounded-lg flex items-center justify-center border-2 border-dashed`}>
-                  <p className="text-sm text-muted-foreground">No thumbnail</p>
-                </div>
-              )}
-            </div>
-
-            {/* Coin Details */}
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Coin Information</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Name:</span>
-                    <span className="text-sm font-medium">
-                      {data.coinName || "Not set"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Symbol:
-                    </span>
-                    <Badge variant="secondary">
-                      {data.coinSymbol || "Not set"}
-                    </Badge>
-                  </div>
-                  {data.coinDescription && (
-                    <div className="pt-2">
-                      <span className="text-sm text-muted-foreground">
-                        Description:
-                      </span>
-                      <p className="text-sm mt-1">{data.coinDescription}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-2">Export Status</h4>
-
-                {/* Video Export Status */}
-                <div className="flex items-center gap-2 mb-2">
-                  {videoUploadStatus === "idle" ? (
-                    <>
-                      <div className="w-2 h-2 bg-gray-300 rounded-full" />
-                      <span className="text-sm text-muted-foreground">
-                        Waiting to start...
-                      </span>
-                    </>
-                  ) : videoUploadStatus === "preparing" ? (
-                    <>
-                      <div className="w-4 h-4 animate-spin text-primary">
-                        <Loader2 />
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        Preparing export...
-                      </span>
-                    </>
-                  ) : videoUploadStatus === "exporting" ? (
-                    <>
-                      <div className="w-4 h-4 animate-spin text-primary">
-                        <Loader2 />
-                      </div>
-                      {renderProgressIndicator()}
-                    </>
-                  ) : videoUploadStatus === "uploading" ? (
-                    <>
-                      <div className="w-4 h-4 animate-spin text-primary">
-                        <Loader2 />
-                      </div>
-                      {renderProgressIndicator()}
-                    </>
-                  ) : videoUploadStatus === "success" ? (
-                    <>
-                      <div className="w-4 h-4 text-green-500">
-                        <CheckCircle />
-                      </div>
-                      <span className="text-sm text-green-600">
-                        Video uploaded to {storageProvider}
-                      </span>
-                    </>
-                  ) : videoUploadStatus === "warning" ? (
-                    <>
-                      <div className="w-4 h-4 text-orange-500">
-                        <AlertCircle />
-                      </div>
-                      <span className="text-sm text-orange-600">
-                        Video processing issue
-                      </span>
-                    </>
-                  ) : videoUploadStatus === "failed" ? (
-                    <>
-                      <div className="w-4 h-4 text-red-500">
-                        <AlertCircle />
-                      </div>
-                      <span className="text-sm text-red-600">
-                        Video export failed
-                      </span>
-                    </>
-                  ) : null}
-                </div>
-
-                {/* Metadata Status */}
-                <div className="flex items-center gap-2">
-                  {isGeneratingMetadata ? (
-                    <>
-                      <div className="w-4 h-4 animate-spin text-primary">
-                        <Loader2 />
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        Generating metadata...
-                      </span>
-                    </>
-                  ) : data.metadataUri ? (
-                    <>
-                      <div className="w-4 h-4 text-green-500">
-                        <CheckCircle />
-                      </div>
-                      <span className="text-sm text-green-600">
-                        Metadata ready
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-4 h-4 text-yellow-500">
-                        <AlertCircle />
-                      </div>
-                      <span className="text-sm text-yellow-600">
-                        Preparing metadata...
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
+    <div className="space-y-8 animate-fade-in">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Visual Preview */}
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <Label className="text-[10px] uppercase tracking-widest font-black text-muted-foreground ml-2">Video Composition</Label>
+            <div className={cn("bg-black rounded-[2rem] overflow-hidden shadow-2xl border border-border/50 ring-1 ring-white/10", getAspectRatioClass())}>
+              <MintVideoPreview />
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-            <Card>
+          <div className="glass rounded-3xl p-6 border-border/40 space-y-4">
+             <div className="flex items-center justify-between">
+                <h3 className="font-bold text-lg">Asset Summary</h3>
+                <Badge variant="secondary" className="rounded-full bg-primary/10 text-primary border-none text-[10px] uppercase font-bold tracking-widest">
+                  {data.videoFormat}
+                </Badge>
+             </div>
+             
+             <div className="space-y-3">
+               <div className="flex items-center justify-between text-sm">
+                 <span className="text-muted-foreground flex items-center gap-2">
+                   <Video className="h-4 w-4" /> Export Status
+                 </span>
+                 <span className={cn(
+                   "font-bold text-[10px] uppercase tracking-wider",
+                   videoUploadStatus === 'success' ? "text-green-500" : "text-primary"
+                 )}>
+                   {videoUploadStatus}
+                 </span>
+               </div>
+               
+               {exportProgress && (
+                 <div className="space-y-1.5">
+                   <div className="flex justify-between text-[10px] uppercase font-bold text-muted-foreground/60">
+                     <span>{exportProgress.message}</span>
+                     <span>{Math.round(exportProgress.percentage)}%</span>
+                   </div>
+                   <Progress value={exportProgress.percentage} className="h-1 bg-muted/30" />
+                 </div>
+               )}
 
-              <CardHeader>
+               <div className="flex items-center justify-between text-sm">
+                 <span className="text-muted-foreground flex items-center gap-2">
+                   <Zap className="h-4 w-4" /> Metadata Status
+                 </span>
+                 <span className={cn(
+                   "font-bold text-[10px] uppercase tracking-wider",
+                   data.metadataUri ? "text-green-500" : "text-yellow-500"
+                 )}>
+                   {data.metadataUri ? "Ready" : "Preparing..."}
+                 </span>
+               </div>
+             </div>
+          </div>
+        </div>
 
-                <CardTitle>Video Preview</CardTitle>
-
-                <p className="text-sm text-muted-foreground">
-
-                  The video content that will be associated with your coin
-
-                </p>
-
-              </CardHeader>
-
-              <CardContent className="flex justify-center">
-
-                <div className={`bg-muted ${getAspectRatioClass()} rounded-lg overflow-hidden w-full max-w-full max-h-[500px]`}>
-
-                  <MintVideoPreview />
-
-                </div>
-
-              </CardContent>
-
-            </Card>
-
-      
-
-      {/* Size Warning */}
-      {showSizeWarning && estimatedSize && (
-        <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <div className="w-5 h-5 text-blue-600 mt-0.5">
-                <AlertCircle />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                  Video Size Optimization
-                </p>
-                <p className="text-xs text-blue-700 dark:text-blue-300">
-                  Your video has an estimated size of {estimatedSize.toFixed(2)}
-                  MB, which exceeds the 8MB limit for Grove storage. We&apos;ve
-                  automatically adjusted the export settings for optimal quality
-                  within size constraints.
-                </p>
-                {adjustedSettings && (
-                  <div className="text-xs text-blue-700 dark:text-blue-300">
-                    <p className="font-medium">Adjusted settings:</p>
-                    <ul className="list-disc list-inside space-y-1 ml-2">
-                      <li>Quality: {adjustedSettings.quality}</li>
-                      <li>Frame rate: {adjustedSettings.frameRate} fps</li>
-                      {adjustedSettings.videoBitrate && (
-                        <li>
-                          Bitrate:{" "}
-                          {Math.round(adjustedSettings.videoBitrate / 1000)}{" "}
-                          Kbps
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Video Upload Warning */}
-      {videoUploadError && (
-        <Card className="bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <div className="w-5 h-5 text-orange-600 mt-0.5">
-                <AlertCircle />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-orange-900 dark:text-orange-100">
-                  Video Processing Issue
-                </p>
-                <p className="text-xs text-orange-700 dark:text-orange-300">
-                  {videoUploadError}
-                </p>
-                {videoUploadStatus === "warning" && (
-                  <div className="text-xs text-orange-700 dark:text-orange-300 space-y-1">
-                    <p className="font-medium">Suggested solutions:</p>
-                    <ul className="list-disc list-inside space-y-1 ml-2">
-                      <li>Trim your video to reduce file size</li>
-                      <li>Use a lower quality export setting</li>
-                      <li>Split your content into multiple shorter videos</li>
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Summary */}
-      <Card
-        className={
-          videoUploadError
-            ? "bg-orange-50/50 dark:bg-orange-950/10"
-            : "bg-muted/50"
-        }
-      >
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-3">
-            <div
-              className={`w-5 h-5 mt-0.5 ${videoUploadError ? "text-orange-600" : "text-primary"}`}
-            >
-              <AlertCircle />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium">
-                {videoUploadError
-                  ? "Deploy with Thumbnail Only?"
-                  : "Ready to Deploy?"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {videoUploadError
-                  ? "Your coin will deploy with the thumbnail only. You can add video content later or try a different storage solution."
-                  : "You'll earn from trading activity and can share it across social platforms."}
-              </p>
+        {/* Coin Preview */}
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <Label className="text-[10px] uppercase tracking-widest font-black text-muted-foreground ml-2">Collector View</Label>
+            <div className="glass rounded-[2rem] p-6 border-primary/20 bg-primary/5 shadow-xl relative overflow-hidden group">
+               <div className="absolute top-0 right-0 p-4">
+                 <Badge className="bg-primary/20 text-primary border-none font-black tracking-tighter">
+                   ${data.coinSymbol}
+                 </Badge>
+               </div>
+               
+               <div className="flex items-start gap-6">
+                 <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-border/50 shadow-lg shrink-0">
+                    {data.thumbnail ? (
+                      <Image src={data.thumbnail} alt="Thumbnail" fill className="object-cover" unoptimized={true} />
+                    ) : (
+                      <div className="w-full h-full bg-muted flex items-center justify-center">
+                        <Sparkles className="h-8 w-8 text-muted-foreground/20" />
+                      </div>
+                    )}
+                 </div>
+                 
+                 <div className="space-y-1 pt-1">
+                   <h3 className="text-2xl font-black tracking-tight">{data.coinName || "Untitled Coin"}</h3>
+                   <p className="text-sm text-muted-foreground line-clamp-3">
+                     {data.coinDescription || "No description provided."}
+                   </p>
+                 </div>
+               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <div className="space-y-4">
+             <div className="glass rounded-3xl p-6 border-border/40">
+               <h3 className="text-[10px] uppercase tracking-widest font-black text-muted-foreground mb-4">Launch Details</h3>
+               <div className="space-y-3">
+                 <div className="flex items-center justify-between text-sm">
+                   <span className="text-muted-foreground">Currency</span>
+                   <span className="font-bold">{data.currency}</span>
+                 </div>
+                 <div className="flex items-center justify-between text-sm">
+                   <span className="text-muted-foreground">Protocol</span>
+                   <span className="font-bold">Zora Protocol</span>
+                 </div>
+                 <div className="flex items-center justify-between text-sm">
+                   <span className="text-muted-foreground">Network</span>
+                   <span className="font-bold text-blue-500">Base</span>
+                 </div>
+               </div>
+             </div>
+
+             {showSizeWarning && (
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 flex items-start gap-3">
+                  <Info className="h-4 w-4 text-blue-500 mt-0.5" />
+                  <p className="text-[11px] text-blue-500/80 leading-relaxed font-medium">
+                    Smart optimization applied: Video quality adjusted to fit storage constraints while maintaining clarity.
+                  </p>
+                </div>
+             )}
+
+             {videoUploadError && (
+                <div className="bg-orange-500/10 border border-orange-500/20 rounded-2xl p-4 flex items-start gap-3">
+                  <AlertCircle className="h-4 w-4 text-orange-500 mt-0.5" />
+                  <p className="text-[11px] text-orange-500/80 leading-relaxed font-medium">
+                    {videoUploadError}. You can still deploy with a thumbnail only.
+                  </p>
+                </div>
+             )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

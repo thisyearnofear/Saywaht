@@ -6,8 +6,9 @@ import { Button } from "./ui/button";
 import { ArrowRight, Star, Menu, X } from "@/lib/icons";
 import { HeaderBase } from "./header-base";
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
-import { useWalletAuth } from "@saywaht/auth";
+import { useWalletAuth, formatWalletAddress } from "@saywaht/auth";
 import { useAccount } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { MobileWalletButton } from "./mobile-wallet-connect";
@@ -20,18 +21,28 @@ function WalletComponents({
   mobile?: boolean;
   onClose?: () => void;
 }) {
-  const { isAuthenticated } = useWalletAuth();
-  const { isConnected } = useAccount();
+  const { user, isAuthenticated } = useWalletAuth();
+  const { isConnected, address } = useAccount();
   const isMobileDevice = useIsMobile();
 
-  if (mobile) {
-    return isConnected ? (
-      <Link href="/editor" onClick={onClose}>
-        <Button className="w-full text-sm font-medium">
+  const connectedDisplay = (
+    <div className={cn("flex items-center gap-3", mobile && "flex-col w-full")}>
+      <div className="flex flex-col items-end px-2 py-1 rounded-md bg-primary/10 border border-primary/20">
+        <span className="text-[10px] uppercase font-bold text-primary tracking-wider leading-none">Connected</span>
+        <span className="text-xs font-mono font-medium">{formatWalletAddress(address || user?.address || "")}</span>
+      </div>
+      <Link href="/editor" onClick={onClose} className={mobile ? "w-full" : ""}>
+        <Button size={mobile ? "default" : "sm"} className={cn("font-medium", mobile && "w-full")}>
           Launch Editor
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </Link>
+    </div>
+  );
+
+  if (mobile) {
+    return isConnected ? (
+      connectedDisplay
     ) : (
       <div className="flex justify-center">
         {/* ENHANCEMENT: Use mobile-optimized wallet button */}
@@ -41,12 +52,7 @@ function WalletComponents({
   }
 
   return isConnected ? (
-    <Link href="/editor">
-      <Button size="sm" className="text-sm font-medium">
-        Launch Editor
-        <ArrowRight className="ml-2 h-4 w-4" />
-      </Button>
-    </Link>
+    connectedDisplay
   ) : (
     /* ENHANCEMENT: Use mobile-optimized wallet button on mobile devices */
     isMobileDevice ? <MobileWalletButton /> : <ConnectButton />
@@ -146,7 +152,7 @@ export function Header() {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="absolute top-full left-0 right-0 bg-background border-b border-border md:hidden">
+        <div className="absolute top-full left-0 right-0 bg-background/95 backdrop-blur-md border-b border-border md:hidden z-50 shadow-xl">
           <nav className="flex flex-col p-4 gap-2">
             <Link
               href="https://hey.xyz/u/papajams"
@@ -199,5 +205,5 @@ export function Header() {
     </>
   );
 
-  return <HeaderBase leftContent={leftContent} rightContent={rightContent} />;
+  return <HeaderBase leftContent={leftContent} rightContent={rightContent} className="border-b border-border/40" />;
 }
