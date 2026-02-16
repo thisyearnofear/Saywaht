@@ -67,30 +67,15 @@ export class StorachaStorageService {
 
     try {
       // Dynamically import to avoid SSR issues
-      const { create } = await import('@web3-storage/w3up-client');
+      const { create } = await import('@storacha/client');
       this.client = await create();
       
-      // Login with private key if provided
-      if (this.config.privateKey) {
-        const account = await this.client.login(this.config.privateKey as `did:mailto:${string}`);
-        console.log('✅ Storacha: Logged in as', account.did());
-      }
-      
-      // Set current space if delegation provided
+      // Note: Delegation handling requires additional setup with the new @storacha/client API
+      // For now, we'll use the default client which connects to the Storacha network
       if (this.config.delegation) {
-        // SDK versions differ in delegation helpers; guard dynamically.
-        const w3up = (await import('@web3-storage/w3up-client')) as any;
-        const parseDelegation = w3up.parseDelegation;
-        if (typeof parseDelegation === "function") {
-          const delegation = await parseDelegation(this.config.delegation);
-          const space = await this.client.addSpace(delegation);
-          await this.client.setCurrentSpace(space.did());
-          console.log("✅ Storacha: Space configured");
-        } else {
-          console.warn(
-            "Storacha delegation parser is unavailable in this SDK version; skipping delegation setup."
-          );
-        }
+        console.warn(
+          "Storacha delegation is not yet supported with the new @storacha/client API"
+        );
       }
 
       this.isInitialized = true;
