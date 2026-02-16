@@ -89,10 +89,18 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* ENHANCEMENT: Improved viewport for mobile wallet compatibility */}
+        {/* Removed user-scalable=no to prevent issues with wallet browsers */}
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+          content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover"
         />
+        {/* ENHANCEMENT: Mobile wallet specific meta tags */}
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        {/* ENHANCEMENT: Prevent text size adjustment on orientation change */}
+        <meta name="format-detection" content="telephone=no" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <Web3Provider>

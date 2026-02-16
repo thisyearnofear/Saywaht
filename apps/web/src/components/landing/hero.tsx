@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import { ArrowRight, Sparkles, Video, Coins, Zap } from "@/lib/icons";
 import Link from "next/link";
 import { useAccount } from "wagmi";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { MobileWalletConnect } from "@/components/mobile-wallet-connect";
 
 export function Hero() {
   const { isConnected } = useAccount();
@@ -147,7 +147,7 @@ export function Hero() {
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3">
-              <ConnectButton />
+              <MobileWalletConnect variant="hero" />
               <p className="text-xs text-muted-foreground">
                 Connect wallet to get started
               </p>

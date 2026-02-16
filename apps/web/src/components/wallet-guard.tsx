@@ -1,7 +1,7 @@
 "use client";
 
 import { useWalletAuth } from "@saywaht/auth";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { MobileWalletConnect } from "./mobile-wallet-connect";
 import {
   Card,
   CardContent,
@@ -65,7 +65,7 @@ export function WalletGuard({
           </div>
 
           <div className="flex justify-center">
-            <ConnectButton />
+            <MobileWalletConnect />
           </div>
 
           <p className="text-xs text-muted-foreground text-center">

@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
 import { useWalletAuth } from "@saywaht/auth";
 import { useAccount } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { MobileWalletButton } from "./mobile-wallet-connect";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 function WalletComponents({
   mobile,
@@ -20,6 +22,7 @@ function WalletComponents({
 }) {
   const { isAuthenticated } = useWalletAuth();
   const { isConnected } = useAccount();
+  const isMobileDevice = useIsMobile();
 
   if (mobile) {
     return isConnected ? (
@@ -31,7 +34,8 @@ function WalletComponents({
       </Link>
     ) : (
       <div className="flex justify-center">
-        <ConnectButton />
+        {/* ENHANCEMENT: Use mobile-optimized wallet button */}
+        {isMobileDevice ? <MobileWalletButton /> : <ConnectButton />}
       </div>
     );
   }
@@ -44,7 +48,8 @@ function WalletComponents({
       </Button>
     </Link>
   ) : (
-    <ConnectButton />
+    /* ENHANCEMENT: Use mobile-optimized wallet button on mobile devices */
+    isMobileDevice ? <MobileWalletButton /> : <ConnectButton />
   );
 }
 
