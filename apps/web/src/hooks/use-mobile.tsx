@@ -1,10 +1,11 @@
 // Use hooks-provider instead of direct React imports
 import { useState, useEffect } from "react";
 
-const MOBILE_BREAKPOINT = 1024; // Increased to better detect actual mobile devices
+// Use 768px to match Tailwind's md: breakpoint
+const MOBILE_BREAKPOINT = 768;
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = useState<boolean | undefined>(undefined);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
 
   useEffect(() => {
     // ENHANCEMENT: Prevent memory leaks with proper cleanup
@@ -27,28 +28,38 @@ export function useIsMobile() {
           navigator.userAgent
         );
 
-      // Consider it mobile if it's a small screen AND (has touch OR mobile user agent)
-      // This prevents large desktop screens from being detected as mobile
-      const isMobileDevice =
-        isSmallScreen && (hasTouchScreen || mobileUserAgent);
+      // Consider it mobile if it's a small screen OR has touch capability OR mobile user agent
+      const isMobileDevice = isSmallScreen || hasTouchScreen || mobileUserAgent;
 
       if (mounted) {
         setIsMobile(isMobileDevice);
       }
     };
 
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    mql.addEventListener("change", checkIsMobile);
+    // Check immediately
     checkIsMobile();
+
+    // Listen for changes
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    if (mql.addEventListener) {
+      mql.addEventListener("change", checkIsMobile);
+    } else {
+      // Fallback for older browsers
+      mql.addListener(checkIsMobile);
+    }
 
     // ENHANCEMENT: Proper cleanup to prevent memory leaks
     return () => {
       mounted = false;
-      mql.removeEventListener("change", checkIsMobile);
+      if (mql.removeEventListener) {
+        mql.removeEventListener("change", checkIsMobile);
+      } else {
+        mql.removeListener(checkIsMobile);
+      }
     };
   }, []);
 
-  return !!isMobile;
+  return isMobile;
 }
 
 /**
