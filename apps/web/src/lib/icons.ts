@@ -30,6 +30,8 @@ import {
   Mic,
   Volume2,
   VolumeX,
+  SkipBack,
+  SkipForward,
 
   // Actions
   Upload,
@@ -95,6 +97,11 @@ import {
   Type,
   Palette,
   Snowflake,
+
+  // Text Alignment
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
   
   // Authentication
   LogOut,
@@ -112,14 +119,14 @@ import {
 export {
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowRight, ArrowLeft, ArrowLeftRight,
   ArrowLeftToLine, ArrowRightToLine, Home, Menu, X, Search, Play, Pause, Square,
-  Video, Music, Mic, Volume2, VolumeX, Upload, Download, Save, Copy, Edit2,
+  Video, Music, Mic, Volume2, VolumeX, SkipBack, SkipForward, Upload, Download, Save, Copy, Edit2,
   Share2, Trash2, Scissors, RotateCcw, RefreshCw, Maximize2, Minimize2,
   ZoomIn, ZoomOut, Monitor, Smartphone, GripVertical, MoreHorizontal,
   MoreVertical, SplitSquareHorizontal, Image, Sparkles, Plus, Check, Star,
   Cloud, Zap, Globe, Wifi, WifiOff, ExternalLink, Coins, Wallet, TrendingUp,
   TrendingDown, DollarSign, BarChart3, Loader2, AlertCircle, CheckCircle, Shield, AlertTriangle, Users, User, Clock,
   Layers, LayoutGrid, HardDrive, Type, Palette, Snowflake, Heart, MessageCircle, Eye, Github, LogOut,
-  Settings, Tag, Info,
+  Settings, Tag, Info, AlignLeft, AlignCenter, AlignRight,
 };
 
 // Enhanced icon registry for better DX and type safety
