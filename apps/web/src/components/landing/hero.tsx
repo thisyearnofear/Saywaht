@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { Button } from "../ui/button";
-import { ArrowRight, Sparkles, Video, Coins, Zap } from "@/lib/icons";
+import { ArrowRight, Sparkles, Video, Coins, Zap, LayoutTemplate } from "@/lib/icons";
 import Link from "next/link";
 import { useAccount } from "wagmi";
 import { MobileWalletConnect } from "@/components/mobile-wallet-connect";
@@ -131,6 +131,16 @@ export function Hero() {
                 >
                   <Video className="mr-2 h-5 w-5" />
                   Create Video
+                </Button>
+              </Link>
+              <Link href="/templates" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto px-6 sm:px-8 h-14 sm:h-12 text-base font-medium border-2 hover:bg-accent/50 transition-all duration-200 touch-manipulation"
+                >
+                  <LayoutTemplate className="mr-2 h-5 w-5" />
+                  Start from Template
                 </Button>
               </Link>
               <Link href="/trade" className="w-full sm:w-auto">

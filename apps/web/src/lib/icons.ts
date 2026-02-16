@@ -56,6 +56,7 @@ import {
   MoreHorizontal,
   MoreVertical,
   SplitSquareHorizontal,
+  LayoutTemplate,
 
   // Content & Media
   Image,
@@ -122,7 +123,7 @@ export {
   Video, Music, Mic, Volume2, VolumeX, SkipBack, SkipForward, Upload, Download, Save, Copy, Edit2,
   Share2, Trash2, Scissors, RotateCcw, RefreshCw, Maximize2, Minimize2,
   ZoomIn, ZoomOut, Monitor, Smartphone, GripVertical, MoreHorizontal,
-  MoreVertical, SplitSquareHorizontal, Image, Sparkles, Plus, Check, Star,
+  MoreVertical, SplitSquareHorizontal, LayoutTemplate, Image, Sparkles, Plus, Check, Star,
   Cloud, Zap, Globe, Wifi, WifiOff, ExternalLink, Coins, Wallet, TrendingUp,
   TrendingDown, DollarSign, BarChart3, Loader2, AlertCircle, CheckCircle, Shield, AlertTriangle, Users, User, Clock,
   Layers, LayoutGrid, HardDrive, Type, Palette, Snowflake, Heart, MessageCircle, Eye, Github, LogOut,
@@ -182,6 +183,7 @@ export const ICONS = {
   moreHorizontal: MoreHorizontal,
   moreVertical: MoreVertical,
   split: SplitSquareHorizontal,
+  layoutTemplate: LayoutTemplate,
 
   // Content & Media
   image: Image,
