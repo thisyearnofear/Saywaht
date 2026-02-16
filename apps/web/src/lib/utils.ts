@@ -94,6 +94,13 @@ export function formatDuration(seconds: number): string {
   return `${minutes}:${secs.toString().padStart(2, '0')}`;
 }
 
+/**
+ * Alias for formatDuration - formats time in seconds to MM:SS
+ */
+export function formatTime(seconds: number): string {
+  return formatDuration(seconds);
+}
+
 // ============================================================================
 // BLOCKCHAIN UTILITIES
 // ============================================================================
