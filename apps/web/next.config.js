@@ -11,6 +11,8 @@ const nextConfig = {
     "@base-org/account",
     "@coinbase/cdp-sdk",
     "bs58",
+    "multiformats",
+    "@web3-storage/w3up-client",
   ],
 
   images: {
