@@ -34,11 +34,11 @@ export function MobileTextPanel({ className }: MobileTextPanelProps) {
     addHapticFeedback("medium");
     addTextElement({
       content: newText,
-      x: 50,
-      y: 50,
+      x: 0.5,
+      y: 0.5,
       fontSize: 24,
+      fontFamily: "Inter",
       color: "#ffffff",
-      backgroundColor: "transparent",
       textAlign: "center",
       startTime: 0,
       endTime: 5,

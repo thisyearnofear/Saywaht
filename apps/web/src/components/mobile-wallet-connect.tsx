@@ -242,7 +242,7 @@ export function MobileWalletConnect({ variant = "default" }: MobileWalletConnect
               onClick={() => {
                 setShowMobileOptions(false);
                 // Use RainbowKit's programmatic API
-                openConnectModal();
+                openConnectModal?.();
               }}
             >
               <div className="flex items-center gap-3">
@@ -338,7 +338,7 @@ export function MobileWalletButton() {
               onClick={() => { 
                 setShowOptions(false); 
                 // Use RainbowKit's programmatic API
-                openConnectModal();
+                openConnectModal?.();
               }} 
               variant="ghost"
             >
