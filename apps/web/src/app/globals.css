@@ -146,24 +146,45 @@
 }
 
 @layer components {
-  /* Mobile-first button improvements */
+  /* Mobile-first improvements - increased touch targets for better accessibility */
   @media (max-width: 768px) {
+    /* Larger touch targets for all interactive elements */
     button, [role="button"] {
-      min-height: 44px;
-      min-width: 44px;
+      min-height: 48px;
+      min-width: 48px;
       touch-action: manipulation;
       -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
     }
     
-    /* Improve dropdown and menu interactions */
-    [role="menuitem"], [role="option"], [role="tab"] {
-      min-height: 44px;
-      touch-action: manipulation;
+    /* Smaller inline buttons can override */
+    button.inline-btn, [data-inline] {
+      min-height: auto;
+      min-width: auto;
     }
     
-    /* Prevent zoom on input focus */
+    /* Improve dropdown and menu interactions */
+    [role="menuitem"], [role="option"], [role="tab"] {
+      min-height: 48px;
+      touch-action: manipulation;
+      padding-top: 12px;
+      padding-bottom: 12px;
+    }
+    
+    /* Prevent zoom on input focus - iOS requirement */
     input, textarea, select {
       font-size: 16px;
+    }
+    
+    /* Better tap feedback */
+    button:active, [role="button"]:active {
+      transform: scale(0.98);
+      transition: transform 0.1s ease;
+    }
+    
+    /* Link touch targets */
+    a {
+      padding: 4px;
+      margin: -4px;
     }
   }
 

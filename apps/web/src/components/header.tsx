@@ -138,7 +138,7 @@ function WalletComponents({
   );
 }
 
-// Mobile menu navigation item
+// Mobile menu navigation item - improved touch targets
 function MobileNavItem({
   item,
   isActive,
@@ -151,26 +151,27 @@ function MobileNavItem({
   const Icon = item.icon;
   
   return (
-    <Link href={item.path} onClick={onClick}>
-      <Button
-        variant={isActive ? "secondary" : "ghost"}
+    <Link href={item.path} onClick={onClick} className="block">
+      <div
         className={cn(
-          "w-full justify-start h-14 px-4",
-          isActive && "bg-primary/10 text-primary border border-primary/20"
+          "w-full flex items-center justify-start h-16 px-4 rounded-xl touch-manipulation transition-all",
+          isActive 
+            ? "bg-primary/10 text-primary border border-primary/20" 
+            : "hover:bg-muted/50 active:bg-muted active:scale-[0.98]"
         )}
       >
         <div className={cn(
-          "h-10 w-10 rounded-lg flex items-center justify-center mr-3",
+          "h-12 w-12 rounded-xl flex items-center justify-center mr-4",
           isActive ? "bg-primary/20" : "bg-muted"
         )}>
-          <Icon className={cn("h-5 w-5", isActive ? "text-primary" : "text-muted-foreground")} />
+          <Icon className={cn("h-6 w-6", isActive ? "text-primary" : "text-muted-foreground")} />
         </div>
         <div className="flex-1 text-left">
-          <div className={cn("font-medium", isActive && "text-primary")}>{item.label}</div>
-          <div className="text-xs text-muted-foreground">{item.description}</div>
+          <div className={cn("font-medium text-base", isActive && "text-primary")}>{item.label}</div>
+          <div className="text-sm text-muted-foreground">{item.description}</div>
         </div>
-        {isActive && <div className="w-2 h-2 rounded-full bg-primary" />}
-      </Button>
+        {isActive && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+      </div>
     </Link>
   );
 }
@@ -408,24 +409,22 @@ export function Header() {
                     href={link.href}
                     target="_blank"
                     onClick={handleCloseMenu}
+                    className="block"
                   >
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start h-12 px-4"
-                    >
+                    <div className="w-full flex items-center justify-start h-14 px-4 rounded-xl hover:bg-muted/50 active:bg-muted active:scale-[0.98] touch-manipulation transition-all">
                       {link.icon && (
-                        <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center mr-3">
+                        <div className="h-11 w-11 rounded-xl bg-muted flex items-center justify-center mr-4">
                           <link.icon className="h-5 w-5 text-muted-foreground" />
                         </div>
                       )}
-                      <span className="flex-1 text-left">{link.label}</span>
+                      <span className="flex-1 text-left font-medium">{link.label}</span>
                       {link.showStars && star && (
                         <span className="text-xs bg-muted px-2 py-1 rounded-full mr-2">
                           {star}
                         </span>
                       )}
                       <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                    </Button>
+                    </div>
                   </Link>
                 ))}
               </div>
@@ -433,17 +432,16 @@ export function Header() {
               {/* Disconnect Button (if connected) */}
               {isConnected && (
                 <>
-                  <div className="border-t border-border my-2" />
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start h-12 px-4 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  <div className="border-t border-border my-3" />
+                  <button
+                    className="w-full flex items-center justify-start h-14 px-4 rounded-xl text-destructive hover:bg-destructive/10 active:bg-destructive/20 active:scale-[0.98] touch-manipulation transition-all"
                     onClick={handleDisconnect}
                   >
-                    <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center mr-3">
+                    <div className="h-11 w-11 rounded-xl bg-destructive/10 flex items-center justify-center mr-4">
                       <LogOut className="h-5 w-5" />
                     </div>
-                    <span>Disconnect Wallet</span>
-                  </Button>
+                    <span className="font-medium">Disconnect Wallet</span>
+                  </button>
                 </>
               )}
             </nav>

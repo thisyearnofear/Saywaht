@@ -76,13 +76,13 @@ export function DiscoveryFeed() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-2 mb-6">
-          <Coins className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">Latest Commentary Coins</h1>
+      <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
+        <div className="flex items-center gap-3 mb-6">
+          <Coins className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
+          <h1 className="text-2xl sm:text-3xl font-bold">Latest Commentary Coins</h1>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardHeader>
@@ -104,22 +104,22 @@ export function DiscoveryFeed() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center gap-2 mb-6">
-        <Coins className="h-8 w-8 text-primary" />
-        <h1 className="text-3xl font-bold">Latest Commentary Coins</h1>
+    <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
+      <div className="flex items-center gap-3 mb-6">
+        <Coins className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
+        <h1 className="text-2xl sm:text-3xl font-bold">Latest Commentary Coins</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {coins.map((coin: VideoCoin) => (
           <a
             key={coin.address}
             href={`https://zora.co/coin/base:${coin.address}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="block"
+            className="block touch-manipulation"
           >
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer active:scale-[0.98]">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="truncate">{coin.name}</CardTitle>

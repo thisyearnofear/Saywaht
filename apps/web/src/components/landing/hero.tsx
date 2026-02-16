@@ -11,7 +11,7 @@ export function Hero() {
   const { isConnected } = useAccount();
 
   return (
-    <div className="min-h-[calc(100dvh-4rem)] flex flex-col justify-between items-center text-center px-4 relative overflow-y-auto scrollable">
+    <div className="min-h-[calc(100dvh-4rem)] flex flex-col justify-between items-center text-center px-4 sm:px-6 relative overflow-y-auto scrollable pb-20 md:pb-4">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -65,7 +65,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.6 }}
-          className="inline-flex items-center gap-2 mx-auto mb-8 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-sm font-medium"
+          className="inline-flex items-center gap-2 mx-auto mb-6 sm:mb-8 px-3 sm:px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-xs sm:text-sm font-medium"
         >
           <Sparkles className="w-4 h-4 text-primary" />
           Create • Edit • Deploy • Trade
@@ -77,23 +77,22 @@ export function Hero() {
           transition={{ delay: 0.2, duration: 0.8 }}
           className="inline-block"
         >
-          <h1 className="text-5xl sm:text-7xl font-bold tracking-tighter bg-gradient-to-r from-foreground via-foreground to-foreground/80 bg-clip-text">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tighter bg-gradient-to-r from-foreground via-foreground to-foreground/80 bg-clip-text">
             saywaht
           </h1>
-          <h1 className="text-5xl sm:text-7xl font-bold tracking-tighter mt-2 bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tighter mt-2 bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent">
             Coin Your Commentary
           </h1>
         </motion.div>
 
         <motion.p
-          className="mt-8 text-lg sm:text-xl text-muted-foreground font-light tracking-wide max-w-2xl mx-auto leading-relaxed"
+          className="mt-6 sm:mt-8 text-base sm:text-lg md:text-xl text-muted-foreground font-light tracking-wide max-w-2xl mx-auto leading-relaxed px-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.8 }}
         >
           Transform your thoughts into viral content. Create compelling videos,
-          add your unique voice, and deploy them as tradeable Zora Coins. Where
-          creativity meets crypto.
+          add your unique voice, and deploy them as tradeable Zora Coins.
         </motion.p>
 
         {/* Feature highlights */}
@@ -118,35 +117,35 @@ export function Hero() {
         </motion.div>
 
         <motion.div
-          className="mt-12 flex flex-col sm:flex-row gap-4 justify-center items-center"
+          className="mt-8 sm:mt-12 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center w-full px-4 sm:px-0"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.8 }}
         >
           {isConnected ? (
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link href="/editor">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <Link href="/editor" className="w-full sm:w-auto">
                 <Button
                   size="lg"
-                  className="px-8 h-12 text-base font-medium bg-primary hover:bg-primary/90 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="w-full sm:w-auto px-6 sm:px-8 h-14 sm:h-12 text-base font-medium bg-primary hover:bg-primary/90 transition-all duration-200 shadow-lg hover:shadow-xl touch-manipulation"
                 >
-                  <Video className="mr-2 h-4 w-4" />
+                  <Video className="mr-2 h-5 w-5" />
                   Create Video
                 </Button>
               </Link>
-              <Link href="/trade">
+              <Link href="/trade" className="w-full sm:w-auto">
                 <Button
                   variant="outline"
                   size="lg"
-                  className="px-8 h-12 text-base font-medium border-2 hover:bg-accent/50 transition-all duration-200"
+                  className="w-full sm:w-auto px-6 sm:px-8 h-14 sm:h-12 text-base font-medium border-2 hover:bg-accent/50 transition-all duration-200 touch-manipulation"
                 >
-                  <Coins className="mr-2 h-4 w-4" />
+                  <Coins className="mr-2 h-5 w-5" />
                   Trade Coins
                 </Button>
               </Link>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-col items-center gap-3 w-full sm:w-auto">
               <MobileWalletConnect variant="hero" />
               <p className="text-xs text-muted-foreground">
                 Connect wallet to get started
@@ -154,11 +153,11 @@ export function Hero() {
             </div>
           )}
 
-          <Link href="https://paragraph.xyz/@papajams.eth" target="_blank">
+          <Link href="https://paragraph.xyz/@papajams.eth" target="_blank" className="w-full sm:w-auto">
             <Button
               variant="outline"
               size="lg"
-              className="px-8 h-12 text-base font-medium border-2 hover:bg-accent/50 transition-all duration-200"
+              className="w-full sm:w-auto px-6 sm:px-8 h-14 sm:h-12 text-base font-medium border-2 hover:bg-accent/50 transition-all duration-200 touch-manipulation"
             >
               Learn More
             </Button>

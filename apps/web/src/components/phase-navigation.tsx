@@ -18,6 +18,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAccount } from "wagmi";
 import { useUserPreferencesStore } from "@/stores/user-preferences-store";
 import { getProfile } from "@zoralabs/coins-sdk";
+import { addHapticFeedback } from "@/lib/mobile-utils";
 
 interface PhaseNavigationProps {
   className?: string;
@@ -292,32 +293,13 @@ export function PhaseNavigation({ className = "" }: PhaseNavigationProps) {
 
 /**
  * Mobile-optimized bottom navigation for smaller screens
+ * Redesigned for better touch targets and clarity
  */
 export function MobilePhaseNavigation() {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated } = useWalletAuth();
   const isMounted = useMounted();
-
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  // Load saved preferences
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedCollapsed = localStorage.getItem("mobile-nav-collapsed");
-
-      if (savedCollapsed) {
-        setIsCollapsed(savedCollapsed === "true");
-      }
-    }
-  }, []);
-
-  // Save preferences
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("mobile-nav-collapsed", isCollapsed.toString());
-    }
-  }, [isCollapsed]);
 
   if (!isMounted || !isAuthenticated || pathname === "/") {
     return null;
@@ -329,21 +311,18 @@ export function MobilePhaseNavigation() {
       label: "Home",
       icon: Home,
       path: "/",
-      priority: 1,
     },
     {
       id: "create",
       label: "Create",
       icon: Video,
       path: "/editor",
-      priority: 2,
     },
     {
       id: "trade",
       label: "Trade",
       icon: TrendingUp,
       path: "/trade",
-      priority: 3,
     },
   ];
 
@@ -352,68 +331,50 @@ export function MobilePhaseNavigation() {
       (phase) => pathname.startsWith(phase.path) && phase.path !== "/"
     ) || phases[0];
 
-  const toggleCollapsed = () => {
-    setIsCollapsed(!isCollapsed);
-  };
-
-  // Enhanced mobile positioning - Fixed bottom nav on mobile, no drag
-  const getMobileBasePosition = () => {
-    if (pathname === "/editor") {
-      // In editor: use side navigation to avoid timeline conflicts
-      return "fixed right-4 top-1/2 transform -translate-y-1/2 z-50 md:hidden";
-    }
-    // Default: fixed bottom navigation with safe area padding
-    return "fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 md:hidden safe-area-bottom";
-  };
+  // Fixed bottom navigation - consistent across all pages
+  // Hidden in editor (editor has its own nav)
+  if (pathname === "/editor") {
+    return null;
+  }
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={getMobileBasePosition()}
+      className="fixed bottom-0 left-0 right-0 z-50 md:hidden safe-area-bottom"
     >
-      <div className="bg-background/95 backdrop-blur-sm border border-border rounded-full px-2 py-2 shadow-lg">
-        <div
-          className={`flex items-center gap-1 ${pathname === "/editor" ? "flex-col" : ""} ${isCollapsed ? "justify-center" : ""}`}
-        >
-          {/* Collapse/Expand Toggle for Mobile */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleCollapsed}
-            className="h-11 w-11 p-0 rounded-full hover:bg-accent/50 transition-colors touch-manipulation"
-            title={isCollapsed ? "Expand navigation" : "Collapse navigation"}
-          >
-            {isCollapsed ? (
-              <Maximize2 className="h-4 w-4" />
-            ) : (
-              <Minimize2 className="h-4 w-4" />
-            )}
-          </Button>
+      <div className="bg-background/95 backdrop-blur-md border-t border-border px-2 py-2 shadow-lg">
+        <div className="flex items-center justify-around max-w-md mx-auto">
+          {phases.map((phase) => {
+            const isActive = currentPhase.id === phase.id;
+            const Icon = phase.icon;
 
-          {/* Phase Navigation Buttons */}
-          {!isCollapsed &&
-            phases.map((phase) => {
-              const isActive = currentPhase.id === phase.id;
-              const Icon = phase.icon;
-
-              return (
-                <Button
-                  key={phase.id}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push(phase.path)}
-                  className={`h-11 w-11 p-0 rounded-full transition-all duration-200 touch-manipulation ${
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-sm scale-110"
-                      : "hover:bg-accent/50 active:scale-95"
-                  }`}
-                  title={`${phase.label}${phase.priority ? ` (${phase.priority})` : ""}`}
-                >
-                  <Icon className="h-5 w-5" />
-                </Button>
-              );
-            })}
+            return (
+              <button
+                key={phase.id}
+                onClick={() => {
+                  addHapticFeedback("light");
+                  router.push(phase.path);
+                }}
+                className={`flex flex-col items-center justify-center min-w-[72px] h-14 px-3 rounded-xl transition-all duration-200 touch-manipulation ${
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-accent/50 active:scale-95"
+                }`}
+              >
+                <Icon className={`h-6 w-6 mb-1 ${isActive ? "text-primary" : ""}`} />
+                <span className={`text-xs font-medium ${isActive ? "text-primary" : ""}`}>
+                  {phase.label}
+                </span>
+                {isActive && (
+                  <motion.div
+                    layoutId="mobile-nav-indicator"
+                    className="absolute bottom-1 w-8 h-1 bg-primary rounded-full"
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </motion.div>
