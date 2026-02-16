@@ -87,12 +87,17 @@ import {
 
   // Organization
   Users,
+  User,
   Clock,
   Layers,
+  LayoutGrid,
   HardDrive,
   Type,
   Palette,
   Snowflake,
+  
+  // Authentication
+  LogOut,
 
   // Social & Engagement
   Heart,
@@ -112,8 +117,8 @@ export {
   ZoomIn, ZoomOut, Monitor, Smartphone, GripVertical, MoreHorizontal,
   MoreVertical, SplitSquareHorizontal, Image, Sparkles, Plus, Check, Star,
   Cloud, Zap, Globe, Wifi, WifiOff, ExternalLink, Coins, Wallet, TrendingUp,
-  TrendingDown, DollarSign, BarChart3, Loader2, AlertCircle, CheckCircle, Shield, AlertTriangle, Users, Clock,
-  Layers, HardDrive, Type, Palette, Snowflake, Heart, MessageCircle, Eye, Github,
+  TrendingDown, DollarSign, BarChart3, Loader2, AlertCircle, CheckCircle, Shield, AlertTriangle, Users, User, Clock,
+  Layers, LayoutGrid, HardDrive, Type, Palette, Snowflake, Heart, MessageCircle, Eye, Github, LogOut,
   Settings, Tag, Info,
 };
 
