@@ -20,7 +20,8 @@ import {
   Mic,
   Video,
   Music,
-  ChevronRight
+  ChevronRight,
+  Zap
 } from "@/lib/icons";
 import { Badge } from "@/components/ui/badge";
 

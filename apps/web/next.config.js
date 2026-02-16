@@ -13,6 +13,13 @@ const nextConfig = {
     "bs58",
     "multiformats",
     "@web3-storage/w3up-client",
+    "@ucanto/core",
+    "@ucanto/client",
+    "@ucanto/transport",
+    "@ucanto/interface",
+    "@ucanto/principal",
+    "@ucanto/validator",
+    "uint8arrays",
   ],
 
   images: {

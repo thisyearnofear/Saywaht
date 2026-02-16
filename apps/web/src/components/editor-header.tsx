@@ -36,7 +36,8 @@ import {
   Settings,
   Trash2,
   ExternalLink,
-  HardDrive
+  HardDrive,
+  Loader2
 } from "@/lib/icons";
 import {
   Tooltip,

@@ -6,6 +6,7 @@ import {
   // Navigation & UI
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   ArrowRight,
   ArrowLeft,
@@ -16,6 +17,9 @@ import {
   Menu,
   X,
   Search,
+  Settings,
+  Tag,
+  Info,
 
   // Media & Editor
   Play,
@@ -101,7 +105,7 @@ import {
 
 // Re-export all icons for direct import
 export {
-  ChevronUp, ChevronDown, ChevronRight, ArrowRight, ArrowLeft, ArrowLeftRight,
+  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowRight, ArrowLeft, ArrowLeftRight,
   ArrowLeftToLine, ArrowRightToLine, Home, Menu, X, Search, Play, Pause, Square,
   Video, Music, Mic, Volume2, VolumeX, Upload, Download, Save, Copy, Edit2,
   Share2, Trash2, Scissors, RotateCcw, RefreshCw, Maximize2, Minimize2,
@@ -110,6 +114,7 @@ export {
   Cloud, Zap, Globe, Wifi, WifiOff, ExternalLink, Coins, Wallet, TrendingUp,
   TrendingDown, DollarSign, BarChart3, Loader2, AlertCircle, CheckCircle, Shield, AlertTriangle, Users, Clock,
   Layers, HardDrive, Type, Palette, Snowflake, Heart, MessageCircle, Eye, Github,
+  Settings, Tag, Info,
 };
 
 // Enhanced icon registry for better DX and type safety
@@ -117,6 +122,7 @@ export const ICONS = {
   // Navigation & UI
   chevronUp: ChevronUp,
   chevronDown: ChevronDown,
+  chevronLeft: ChevronLeft,
   chevronRight: ChevronRight,
   arrowRight: ArrowRight,
   arrowLeft: ArrowLeft,
@@ -127,6 +133,9 @@ export const ICONS = {
   menu: Menu,
   close: X,
   search: Search,
+  settings: Settings,
+  tag: Tag,
+  info: Info,
 
   // Media & Editor
   play: Play,
