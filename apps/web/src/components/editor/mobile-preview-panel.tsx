@@ -75,7 +75,7 @@ export function MobilePreviewPanel({ className }: MobilePreviewPanelProps) {
         <Button
           variant="secondary"
           size="icon"
-          className="h-8 w-8 bg-background/80 backdrop-blur-sm transition-all duration-200 active:scale-90"
+          className="h-11 w-11 min-h-[44px] min-w-[44px] bg-background/80 backdrop-blur-sm transition-all duration-200 active:scale-90"
           onClick={handleToggleFit}
         >
           {videoObjectFit === "contain" ? (
@@ -87,7 +87,7 @@ export function MobilePreviewPanel({ className }: MobilePreviewPanelProps) {
         <Button
           variant="secondary"
           size="icon"
-          className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+          className="h-11 w-11 min-h-[44px] min-w-[44px] bg-background/80 backdrop-blur-sm"
           onClick={handleZoomOut}
           disabled={scale <= 0.5}
         >
@@ -96,7 +96,7 @@ export function MobilePreviewPanel({ className }: MobilePreviewPanelProps) {
         <Button
           variant="secondary"
           size="icon"
-          className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+          className="h-11 w-11 min-h-[44px] min-w-[44px] bg-background/80 backdrop-blur-sm"
           onClick={handleResetZoom}
         >
           <span className="text-xs font-mono">{Math.round(scale * 100)}%</span>
@@ -104,7 +104,7 @@ export function MobilePreviewPanel({ className }: MobilePreviewPanelProps) {
         <Button
           variant="secondary"
           size="icon"
-          className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+          className="h-11 w-11 min-h-[44px] min-w-[44px] bg-background/80 backdrop-blur-sm"
           onClick={handleZoomIn}
           disabled={scale >= 3}
         >
@@ -113,7 +113,7 @@ export function MobilePreviewPanel({ className }: MobilePreviewPanelProps) {
         <Button
           variant="secondary"
           size="icon"
-          className="h-8 w-8 bg-background/80 backdrop-blur-sm transition-all duration-200 active:scale-90"
+          className="h-11 w-11 min-h-[44px] min-w-[44px] bg-background/80 backdrop-blur-sm transition-all duration-200 active:scale-90"
           onClick={toggleFullscreen}
         >
           {isFullscreen ? (

@@ -83,6 +83,17 @@ export function Header() {
     fetchStars();
   }, []);
 
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
+
   const leftContent = (
     <Link
       href="/"
@@ -152,8 +163,14 @@ export function Header() {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="absolute top-full left-0 right-0 bg-background/95 backdrop-blur-md border-b border-border md:hidden z-50 shadow-xl">
-          <nav className="flex flex-col p-4 gap-2">
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/20 z-40 md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="absolute top-full left-0 right-0 bg-background/95 backdrop-blur-md border-b border-border md:hidden z-50 shadow-xl">
+            <nav className="flex flex-col p-4 gap-2">
             <Link
               href="https://hey.xyz/u/papajams"
               target="_blank"
@@ -199,8 +216,9 @@ export function Header() {
                 onClose={() => setMobileMenuOpen(false)}
               />
             )}
-          </nav>
-        </div>
+            </nav>
+          </div>
+        </>
       )}
     </>
   );

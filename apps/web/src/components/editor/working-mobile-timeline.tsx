@@ -114,7 +114,7 @@ export function WorkingMobileTimeline({
               variant="ghost"
               size="sm"
               onClick={handleZoomOut}
-              className="h-8 w-8 p-0"
+              className="h-11 w-11 p-0"
             >
               −
             </Button>
@@ -125,7 +125,7 @@ export function WorkingMobileTimeline({
               variant="ghost"
               size="sm"
               onClick={handleZoomIn}
-              className="h-8 w-8 p-0"
+              className="h-11 w-11 p-0"
             >
               +
             </Button>

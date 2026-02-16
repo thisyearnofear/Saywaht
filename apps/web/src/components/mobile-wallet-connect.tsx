@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { ConnectButton, useConnectModal } from "@rainbow-me/rainbowkit";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -26,6 +26,7 @@ export function MobileWalletConnect({ variant = "default" }: MobileWalletConnect
   const isMobile = useIsMobile();
   const { isConnecting, connectionError, retryConnection } = useMobileWallet();
   const { openMetaMask, openCoinbaseWallet, openTrustWallet } = useWalletDeeplink();
+  const { openConnectModal } = useConnectModal();
   const [showMobileOptions, setShowMobileOptions] = useState(false);
   const [isInWalletBrowser, setIsInWalletBrowser] = useState(false);
 
@@ -240,11 +241,8 @@ export function MobileWalletConnect({ variant = "default" }: MobileWalletConnect
               className="justify-between h-auto py-4 px-4"
               onClick={() => {
                 setShowMobileOptions(false);
-                // Let RainbowKit handle this
-                setTimeout(() => {
-                  const connectBtn = document.querySelector("[data-testid='rk-connect-button']") as HTMLButtonElement;
-                  connectBtn?.click();
-                }, 100);
+                // Use RainbowKit's programmatic API
+                openConnectModal();
               }}
             >
               <div className="flex items-center gap-3">
@@ -285,6 +283,7 @@ export function MobileWalletButton() {
   const isMobile = useIsMobile();
   const [showOptions, setShowOptions] = useState(false);
   const { openMetaMask, openCoinbaseWallet } = useWalletDeeplink();
+  const { openConnectModal } = useConnectModal();
 
   if (!isMobile) {
     return <ConnectButton />;
@@ -338,10 +337,8 @@ export function MobileWalletButton() {
             <Button 
               onClick={() => { 
                 setShowOptions(false); 
-                setTimeout(() => {
-                  const btn = document.querySelector("[data-testid='rk-connect-button']") as HTMLButtonElement;
-                  btn?.click();
-                }, 100);
+                // Use RainbowKit's programmatic API
+                openConnectModal();
               }} 
               variant="ghost"
             >

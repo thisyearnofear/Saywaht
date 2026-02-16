@@ -245,10 +245,16 @@
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
 }
 
-/* Better tab styling */
+/* Better tab styling - uses theme token for dark mode compatibility */
 .mobile-editor [data-state="active"] {
-  background: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: hsl(var(--background));
+  box-shadow: 0 1px 3px hsl(var(--foreground) / 0.1);
+}
+
+/* Dark mode tab styling */
+.dark .mobile-editor [data-state="active"] {
+  background: hsl(var(--muted));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* Optimize for landscape orientation on mobile */

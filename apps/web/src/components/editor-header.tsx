@@ -205,7 +205,7 @@ export function EditorHeader() {
       {/* Center Section: Main Controls */}
       <div className="flex items-center bg-muted/30 p-1 rounded-2xl border border-border/40">
         <TooltipProvider>
-          <div className="flex items-center gap-1">
+          <div className="hidden sm:flex items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" onClick={() => setPreviewZoom(previewZoom - 0.25)} disabled={previewZoom <= 0.25} className="h-8 w-8 rounded-xl">
@@ -230,7 +230,7 @@ export function EditorHeader() {
           </div>
         </TooltipProvider>
 
-        <div className="w-px h-4 bg-border/50 mx-1" />
+        <div className="hidden sm:block w-px h-4 bg-border/50 mx-1" />
 
         <Button variant="ghost" size="icon" onClick={toggle} className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all">
           {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current" />}
@@ -299,6 +299,34 @@ export function EditorHeader() {
             </DropdownMenuItem>
 
             <DropdownMenuSeparator className="my-2" />
+            
+            {/* Zoom controls for small screens */}
+            <div className="px-2 py-1.5 sm:hidden">
+               <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Zoom</span>
+               <div className="flex items-center gap-2 mt-2">
+                 <Button 
+                   variant="outline" 
+                   size="sm" 
+                   onClick={() => setPreviewZoom(previewZoom - 0.25)} 
+                   disabled={previewZoom <= 0.25}
+                   className="h-8 w-8 p-0 rounded-lg"
+                 >
+                   <ZoomOut className="h-3.5 w-3.5" />
+                 </Button>
+                 <span className="text-xs font-mono min-w-[3rem] text-center">{Math.round(previewZoom * 100)}%</span>
+                 <Button 
+                   variant="outline" 
+                   size="sm" 
+                   onClick={() => setPreviewZoom(previewZoom + 0.25)} 
+                   disabled={previewZoom >= 3}
+                   className="h-8 w-8 p-0 rounded-lg"
+                 >
+                   <ZoomIn className="h-3.5 w-3.5" />
+                 </Button>
+               </div>
+            </div>
+
+            <DropdownMenuSeparator className="my-2 sm:hidden" />
             
             <div className="px-2 py-1.5 lg:hidden">
                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Canvas Format</span>

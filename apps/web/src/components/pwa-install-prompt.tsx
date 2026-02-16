@@ -88,7 +88,7 @@ export function PWAInstallPrompt({ className }: PWAInstallPromptProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6"
+            className="h-11 w-11"
             onClick={handleDismiss}
           >
             <X className="h-4 w-4" />
@@ -130,7 +130,7 @@ export function PWAInstallPrompt({ className }: PWAInstallPromptProps) {
           <Button
             onClick={handleInstall}
             disabled={isInstalling}
-            className="flex-1 h-8 text-xs"
+            className="flex-1 h-11 text-xs"
           >
             {isInstalling ? (
               <>
@@ -147,7 +147,7 @@ export function PWAInstallPrompt({ className }: PWAInstallPromptProps) {
           <Button
             variant="outline"
             onClick={handleDismiss}
-            className="h-8 text-xs"
+            className="h-11 text-xs"
           >
             Not Now
           </Button>
