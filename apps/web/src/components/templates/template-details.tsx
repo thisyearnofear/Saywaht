@@ -129,9 +129,9 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
   const ratio = getAspectRatioInfo();
 
   return (
-    <div className="space-y-10 animate-fade-in">
-      {/* Breadcrumbs & Header */}
-      <div className="flex flex-col gap-4">
+    <div className="space-y-6 md:space-y-10 animate-fade-in">
+      {/* Breadcrumbs & Header - Compact */}
+      <div className="flex flex-col gap-2">
         <Button
           variant="ghost"
           size="sm"
