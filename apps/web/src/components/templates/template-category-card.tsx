@@ -64,7 +64,7 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
 
   return (
     <Card
-      className="overflow-hidden bg-card/50 border-border/50 hover:border-primary/50 transition-all duration-300 cursor-pointer group shadow-sm hover:shadow-xl"
+      className="overflow-hidden bg-card/50 border-border/50 md:hover:border-primary/50 transition-all duration-300 cursor-pointer group shadow-sm md:hover:shadow-xl touch-manipulation"
       onClick={handleSelect}
     >
       <div className="relative aspect-video overflow-hidden">

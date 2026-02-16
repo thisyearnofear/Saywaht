@@ -97,9 +97,9 @@ export function TemplateBrowser() {
 
   // Render categories with aspect ratio organization
   return (
-    <div className="space-y-12">
-      {/* Search Bar */}
-      <div className="sticky top-0 z-20 pb-4 bg-background/50 backdrop-blur-sm -mx-2 px-2 pt-2">
+    <div className="space-y-8 md:space-y-12">
+      {/* Search Bar - More mobile friendly */}
+      <div className="sticky top-0 z-20 py-3 md:pb-4 bg-background/80 md:bg-background/50 backdrop-blur-sm -mx-2 px-2 md:pt-2 -mt-3 md:mt-0">
         <div className="relative group">
           <Input
             type="text"
