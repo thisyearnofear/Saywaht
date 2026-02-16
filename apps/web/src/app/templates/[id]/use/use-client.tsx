@@ -6,6 +6,8 @@ import Image from "next/image";
 import { useTemplateStore } from "@/stores/template-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Header } from "@/components/header";
+import { ArrowLeft, Layers, Sparkles, Mic } from "@/lib/icons";
 
 interface TemplateUseClientProps {
   id: string;
@@ -28,70 +30,54 @@ export default function TemplateUseClient({ id }: TemplateUseClientProps) {
     }
   }, [id, selectTemplate]);
 
-  // Set default project name when template loads
   useEffect(() => {
     if (selectedTemplate) {
       setProjectName(selectedTemplate.name);
     }
   }, [selectedTemplate]);
 
-  // Loading state
   if (isLoading) {
     return (
-      <div className="container max-w-6xl mx-auto py-8 px-4">
-        <div className="flex items-center justify-center h-64">
-          <svg
-            className="w-8 h-8 animate-spin text-white"
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-          </svg>
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <div className="flex-1 container max-w-6xl mx-auto py-8 px-4 overflow-y-auto">
+          <div className="flex items-center justify-center h-64">
+            <div className="w-8 h-8 rounded-full border-2 border-primary/20 border-t-primary animate-spin"></div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="container max-w-6xl mx-auto py-8 px-4">
-        <div className="p-4 bg-red-500/20 text-red-100 rounded-lg">
-          <h3 className="font-semibold mb-2">Error loading template</h3>
-          <p>{error}</p>
-          <Button
-            onClick={() => selectTemplate(id)}
-            variant="outline"
-            className="mt-4 bg-white/10 text-white hover:bg-white/20"
-          >
-            Try Again
-          </Button>
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <div className="flex-1 container max-w-6xl mx-auto py-8 px-4 overflow-y-auto">
+          <div className="p-4 bg-destructive/10 text-destructive rounded-lg">
+            <h3 className="font-semibold mb-2">Error loading template</h3>
+            <p>{error}</p>
+            <Button onClick={() => selectTemplate(id)} variant="outline" className="mt-4">
+              Try Again
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Template not found
   if (!selectedTemplate) {
     return (
-      <div className="container max-w-6xl mx-auto py-8 px-4">
-        <div className="p-8 text-center text-white/80">
-          <h3 className="text-xl font-medium mb-2">Template Not Found</h3>
-          <p>The requested template could not be found.</p>
-          <Button
-            onClick={() => router.push("/templates")}
-            variant="outline"
-            className="mt-4 bg-white/10 text-white hover:bg-white/20"
-          >
-            Back to Templates
-          </Button>
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <div className="flex-1 container max-w-6xl mx-auto py-8 px-4 overflow-y-auto">
+          <div className="p-8 text-center glass rounded-2xl">
+            <h3 className="text-xl font-bold mb-2">Template Not Found</h3>
+            <p className="text-muted-foreground">The requested template could not be found.</p>
+            <Button onClick={() => router.push("/templates")} variant="secondary" className="mt-4 rounded-full">
+              Back to Templates
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -103,172 +89,114 @@ export default function TemplateUseClient({ id }: TemplateUseClientProps) {
   };
 
   return (
-    <div className="container max-w-6xl mx-auto py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Use Template</h1>
-            <p className="text-white/70 mt-1">
-              Configure your project settings
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            className="text-white/70 hover:text-white"
-            onClick={() => router.push(`/templates/${selectedTemplate.id}`)}
-          >
-            Back to Details
-          </Button>
-        </div>
-
-        <div className="bg-white/5 border border-white/10 rounded-lg p-6 mb-8">
-          <div className="flex gap-4 items-start">
-            <div className="w-32 h-20 relative flex-shrink-0 overflow-hidden rounded-md bg-gray-900">
-              {selectedTemplate.thumbnailUrl ? (
-                <Image
-                  src={selectedTemplate.thumbnailUrl}
-                  alt={selectedTemplate.name}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <svg
-                    width="32"
-                    height="32"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-white/50"
-                  >
-                    <polygon points="5 3 19 12 5 21 5 3" />
-                  </svg>
-                </div>
-              )}
-            </div>
-
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header />
+      <div className="flex-1 container max-w-6xl mx-auto py-4 md:py-8 px-4 overflow-y-auto">
+        <div className="max-w-2xl mx-auto space-y-8">
+          {/* Header */}
+          <div className="flex flex-col gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-fit -ml-2 text-muted-foreground hover:text-foreground"
+              onClick={() => router.push(`/templates/${selectedTemplate.id}`)}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Details
+            </Button>
             <div>
-              <h2 className="text-xl font-semibold text-white">
-                {selectedTemplate.name}
-              </h2>
-              <p className="text-white/70 text-sm mt-1">
-                {selectedTemplate.description}
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                Use Template
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Configure your project settings
               </p>
+            </div>
+          </div>
 
-              <div className="flex gap-2 mt-2">
-                {selectedTemplate.tags &&
-                  selectedTemplate.tags.map((tag) => (
+          {/* Template Preview Card */}
+          <div className="glass rounded-3xl p-6 border-border/40">
+            <div className="flex gap-4 items-start">
+              <div className="w-32 h-20 relative flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+                {selectedTemplate.thumbnailUrl ? (
+                  <Image
+                    src={selectedTemplate.thumbnailUrl}
+                    alt={selectedTemplate.name}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Layers className="h-8 w-8 text-muted-foreground/50" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-semibold">{selectedTemplate.name}</h2>
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                  {selectedTemplate.description}
+                </p>
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {selectedTemplate.tags?.map((tag) => (
                     <span
                       key={tag}
-                      className="px-2 py-0.5 bg-white/10 text-white/80 rounded text-xs"
+                      className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs"
                     >
                       {tag}
                     </span>
                   ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="space-y-6">
-          <div>
-            <label
-              htmlFor="project-name"
-              className="block text-sm font-medium text-white mb-2"
-            >
+          {/* Project Name Input */}
+          <div className="space-y-4">
+            <label htmlFor="project-name" className="text-sm font-medium">
               Project Name
             </label>
             <Input
               id="project-name"
               value={projectName}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setProjectName(e.target.value)
-              }
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setProjectName(e.target.value)}
               placeholder="Enter a name for your project"
-              className="bg-white/5 border-white/10 text-white"
             />
           </div>
 
-          <div className="pt-4 border-t border-white/10">
-            <h3 className="text-white font-medium mb-2">Template Contents</h3>
-            <ul className="space-y-2 text-sm text-white/70">
-              <li className="flex items-center gap-2">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="text-green-400"
-                >
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>
-                  {selectedTemplate.mediaItems?.length || 0} media items
-                </span>
+          {/* Template Contents */}
+          <div className="glass rounded-3xl p-6 border-border/40">
+            <h3 className="text-sm uppercase tracking-widest font-bold mb-4 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Template Contents
+            </h3>
+            <ul className="space-y-3">
+              <li className="flex items-center gap-3 text-sm">
+                <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Layers className="h-3 w-3 text-primary" />
+                </div>
+                <span>{selectedTemplate.mediaItems?.length || 0} media items</span>
               </li>
-              <li className="flex items-center gap-2">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="text-green-400"
-                >
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>
-                  {selectedTemplate.timelineTracks?.length || 0} timeline tracks
-                </span>
+              <li className="flex items-center gap-3 text-sm">
+                <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="h-3 w-3 text-primary" />
+                </div>
+                <span>{selectedTemplate.timelineTracks?.length || 0} timeline tracks</span>
               </li>
-              <li className="flex items-center gap-2">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className={
-                    selectedTemplate.hasAudio
-                      ? "text-green-400"
-                      : "text-yellow-400"
-                  }
-                >
-                  {selectedTemplate.hasAudio ? (
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  ) : (
-                    <circle cx="12" cy="12" r="10"></circle>
-                  )}
-                </svg>
-                <span>
-                  {selectedTemplate.hasAudio
-                    ? "Includes audio"
-                    : "No audio (add your own voiceover)"}
-                </span>
+              <li className="flex items-center gap-3 text-sm">
+                <div className={`h-6 w-6 rounded-full flex items-center justify-center ${selectedTemplate.hasAudio ? 'bg-green-500/10' : 'bg-yellow-500/10'}`}>
+                  <Mic className={`h-3 w-3 ${selectedTemplate.hasAudio ? 'text-green-500' : 'text-yellow-500'}`} />
+                </div>
+                <span>{selectedTemplate.hasAudio ? 'Includes audio' : 'Add your own voiceover'}</span>
               </li>
             </ul>
           </div>
 
-          <div className="flex gap-4 pt-6">
-            <Button
-              onClick={handleApplyTemplate}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-            >
+          {/* Actions */}
+          <div className="flex gap-4">
+            <Button onClick={handleApplyTemplate} className="flex-1 rounded-full h-12 text-lg font-bold">
               Create Project
             </Button>
-
-            <Button
-              variant="outline"
-              className="bg-white/5 border-white/10 hover:bg-white/10 text-white"
-              onClick={() => router.push("/templates")}
-            >
+            <Button variant="outline" onClick={() => router.push("/templates")} className="rounded-full">
               Cancel
             </Button>
           </div>
