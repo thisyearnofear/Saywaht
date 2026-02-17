@@ -1,7 +1,7 @@
 /* eslint-disable react/no-unescaped-entities */
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,7 @@ export function CreatorDashboard() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchAnalytics = async () => {
+    const fetchAnalytics = useCallback(async () => {
         if (!user?.address) return;
 
         setIsLoading(true);
@@ -62,13 +62,13 @@ export function CreatorDashboard() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [user?.address]);
 
     useEffect(() => {
         if (isAuthenticated && user?.address) {
             fetchAnalytics();
         }
-    }, [isAuthenticated, user?.address]);
+    }, [isAuthenticated, user?.address, fetchAnalytics]);
 
     if (!isAuthenticated) {
         return (

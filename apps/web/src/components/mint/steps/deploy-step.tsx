@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -96,7 +96,9 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
     data.deployedCoin,
     data.coinName,
     data.coinSymbol,
+    data.currency,
     contractCallParams,
+    updateData,
   ]);
 
   useEffect(() => {
@@ -197,6 +199,9 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
     data.deployedCoin,
     data.coinName,
     data.coinSymbol,
+    data.metadataUri,
+    data.thumbnail,
+    address,
     updateData,
   ]);
 

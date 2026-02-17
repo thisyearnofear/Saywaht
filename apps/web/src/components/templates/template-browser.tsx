@@ -82,7 +82,7 @@ export function TemplateBrowser() {
       <div className="p-12 text-center glass rounded-2xl">
         <h3 className="text-xl font-bold mb-2">No Templates Found</h3>
         <p className="text-muted-foreground mb-6">
-          Your search "{searchQuery}" didn't match any templates.
+          Your search &quot;{searchQuery}&quot; didn&apos;t match any templates.
         </p>
         <Button
           onClick={() => setSearchQuery("")}

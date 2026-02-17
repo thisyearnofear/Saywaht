@@ -67,7 +67,7 @@ export default function TemplatesPage() {
 
           {/* Footer Note */}
           <div className="mt-12 text-center text-sm text-muted-foreground">
-            <p>Don't see what you're looking for? Start from <Button variant="link" className="p-0 h-auto text-primary" onClick={() => router.push('/editor')}>scratch</Button>.</p>
+            <p>Don&apos;t see what you&apos;re looking for? Start from <Button variant="link" className="p-0 h-auto text-primary" onClick={() => router.push('/editor')}>scratch</Button>.</p>
           </div>
         </div>
       </main>

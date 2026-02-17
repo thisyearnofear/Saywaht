@@ -120,7 +120,7 @@ export function CoinDetailsStep({ data, updateData }: CoinDetailsStepProps) {
           <ul className="space-y-3 text-xs text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="text-primary font-bold">•</span>
-              Use a ticker symbol that's easy to remember (3-6 chars)
+              Use a ticker symbol that&apos;s easy to remember (3-6 chars)
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary font-bold">•</span>

@@ -483,7 +483,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
           <div className="glass rounded-2xl p-4 flex items-start gap-3 border-border/40">
             <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              We'll use frames from your video to guide the AI, ensuring your thumbnail matches your content perfectly.
+              We&apos;ll use frames from your video to guide the AI, ensuring your thumbnail matches your content perfectly.
             </p>
           </div>
         </div>

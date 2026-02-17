@@ -252,7 +252,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
         <div className="space-y-3">
           <h2 className="text-3xl font-bold tracking-tight">Coin Deployed! 🎉</h2>
           <p className="text-muted-foreground leading-relaxed">
-            Your video <span className="text-foreground font-bold font-mono">"{wizardData.deployedCoin.name}"</span> ({wizardData.deployedCoin.symbol}) is now a live tradeable Zora Coin.
+            Your video <span className="text-foreground font-bold font-mono">&quot;{wizardData.deployedCoin.name}&quot;</span> ({wizardData.deployedCoin.symbol}) is now a live tradeable Zora Coin.
           </p>
           
           {wizardData.deployedCoin.address && (

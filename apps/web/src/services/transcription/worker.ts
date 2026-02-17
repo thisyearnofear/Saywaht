@@ -56,7 +56,7 @@ async function handleInit({ modelId }: InitMessage) {
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line no-restricted-syntax
     transcriber = (await (pipeline as any)(
       "automatic-speech-recognition",
       model.huggingFaceId,
