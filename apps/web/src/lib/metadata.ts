@@ -33,7 +33,8 @@ export interface GenerateMetadataParams {
 }
 
 /**
- * Generate metadata for a coin based on project content
+ * Generate standardized metadata for Zora Content Coins.
+ * This is the single source of truth for all coin metadata on Saywaht.
  */
 export async function generateCoinMetadata(params: GenerateMetadataParams): Promise<CoinMetadata> {
   const {
@@ -49,145 +50,74 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
     captionsUrl
   } = params;
 
-  // Find the primary video/media content (first FilCDN item or first video)
-  const primaryMedia = mediaItems.find(item => item.isFilCDN && item.type === 'video') ||
-                      mediaItems.find(item => item.type === 'video') ||
-                      mediaItems.find(item => item.isFilCDN) ||
-                      mediaItems[0];
+  // Calculate total project duration from tracks
+  const totalDuration = tracks.length > 0 
+    ? Math.max(...tracks.flatMap(t => t.clips.map(c => c.startTime + c.duration)), 0)
+    : 0;
 
-  // Count FilCDN vs Grove vs local content
-  const filcdnItems = mediaItems.filter(item => item.isFilCDN);
-  const groveItems = mediaItems.filter(item => item.isGrove);
-  const localItems = mediaItems.filter(item => !item.isFilCDN && !item.isGrove);
+  // Identify primary media and storage providers
+  const hasFilCDN = mediaItems.some(item => item.isFilCDN);
+  const hasCaptions = !!captionsUrl;
 
-  // Calculate total project duration
-  const totalDuration = Math.max(
-    ...tracks.flatMap(track =>
-      track.clips.map(clip => clip.startTime + clip.duration)
-    ),
-    0
-  );
-
-  // Build attributes based on project content
+  // Standard Zora Attributes for discovery
   const attributes = [
-    {
-      trait_type: "Creator",
-      value: `${creatorAddress.slice(0, 6)}...${creatorAddress.slice(-4)}`
-    },
-    {
-      trait_type: "Symbol",
-      value: coinSymbol
-    },
-    {
-      trait_type: "Platform",
-      value: "OpenCut"
-    },
-    {
-      trait_type: "Storage Type",
-      value: filcdnItems.length > 0
-        ? "FilCDN + IPFS"
-        : groveItems.length > 0
-          ? "IPFS"
-          : "Local"
-    },
-    {
-      trait_type: "Content Type",
-      value: "Video Commentary"
-    }
+    { trait_type: "Creator", value: creatorAddress },
+    { trait_type: "Symbol", value: coinSymbol },
+    { trait_type: "Format", value: "Commentary Video" },
+    { trait_type: "Platform", value: "SayWaht" },
+    { trait_type: "Engine", value: "FFmpeg/Web" },
+    { trait_type: "Storage", value: hasFilCDN ? "Filecoin + IPFS" : "IPFS" }
   ];
 
-  // Add FilCDN specific attributes if present
-  if (filcdnItems.length > 0) {
-    attributes.push({
-      trait_type: "FilCDN Items",
-      value: filcdnItems.length.toString()
-    });
-
-    attributes.push({
-      trait_type: "Decentralized Storage",
-      value: "Filecoin PDP"
-    });
-  }
-
-  if (captionsUrl) {
-    attributes.push({
-      trait_type: "Captions",
-      value: "On-chain storage index"
-    });
-  }
-
-  // Add duration if available
   if (totalDuration > 0) {
-    attributes.push({
-      trait_type: "Duration",
-      value: `${Math.round(totalDuration)}s`
-    });
+    attributes.push({ trait_type: "Duration", value: `${Math.round(totalDuration)}s` });
   }
 
-  // Add media count
-  attributes.push({
-    trait_type: "Media Assets",
-    value: mediaItems.length.toString()
-  });
-
-  // Use provided thumbnail URL or find the best image source
-  let imageSource = thumbnailUrl || "";
-
-  if (!imageSource && primaryMedia) {
-    if (primaryMedia.thumbnailUrl) {
-      imageSource = primaryMedia.thumbnailUrl;
-    } else if (primaryMedia.type === 'image') {
-      imageSource = primaryMedia.url;
-    }
-  }
-
-  // Process the thumbnail to ensure we have a valid HTTPS URL
+  // Final Image URL processing
+  let imageSource = thumbnailUrl || "https://saywaht.app/opengraph-image.jpg";
   const imageUrl = await processThumbnailForMetadata(imageSource);
 
-  // Build the metadata object
-  const metadata: CoinMetadata = {
+  // Final Video URL priority: Exported > Primary Media
+  const videoUrl = exportedVideoUrl || 
+                  mediaItems.find(m => m.type === 'video' && (m.isFilCDN || m.isGrove))?.url;
+
+  // Build compliant metadata object
+  const metadata: any = {
     name: coinName,
-    description: `A memetic commentary coin created with SayWaht. ${filcdnItems.length > 0 ? 'Powered by FilCDN for lightning-fast delivery.' : ''} Deploy, trade, and collect unique commentary coins.`,
-    image: imageUrl, // Always set the image
-    external_url: archiveManifestUrl || `https://saywaht.app/project/${projectId}`,
-    attributes
+    description: `A unique commentary coin created on SayWaht. Join the attention economy where every insight has value.`,
+    image: imageUrl,
+    external_url: `https://saywaht.app/project/${projectId}`,
+    attributes,
+    properties: {
+      category: "video",
+      creator: creatorAddress,
+      symbol: coinSymbol,
+      platform: "saywaht",
+      content_type: "video-commentary",
+      manifest_url: archiveManifestUrl,
+      captions_url: captionsUrl
+    }
   };
 
-  if (archiveManifestUrl) {
-    attributes.push({
-      trait_type: "Archive Manifest",
-      value: archiveManifestUrl
-    });
+  // Add video content if available
+  if (videoUrl) {
+    metadata.animation_url = videoUrl;
+    metadata.content = {
+      mime: videoUrl.toLowerCase().endsWith('.mp4') ? "video/mp4" : "video/webm",
+      uri: videoUrl
+    };
   }
 
-  if (captionsUrl) {
-    attributes.push({
-      trait_type: "Captions URL",
-      value: captionsUrl
-    });
-  }
-
-  // Add animation URL for videos - prioritize exported video, then FilCDN/Grove content
-  if (exportedVideoUrl) {
-    // Use the exported video from canvas export (highest priority)
-    metadata.animation_url = exportedVideoUrl;
-    // Add Zora's content field for proper video display
-    metadata.content = {
-      mime: "video/webm",
-      uri: exportedVideoUrl
-    };
-  } else if (primaryMedia && primaryMedia.type === 'video' && (primaryMedia.isFilCDN || primaryMedia.isGrove)) {
-    // Fallback to original media content
-    metadata.animation_url = primaryMedia.url;
-    // Add Zora's content field for proper video display
-    metadata.content = {
-      mime: primaryMedia.url.endsWith('.mp4') ? "video/mp4" : "video/webm",
-      uri: primaryMedia.url
-    };
+  // Validate before returning to catch issues early
+  try {
+    validateMetadataJSON(metadata);
+  } catch (e) {
+    console.error("Zora Metadata Validation Error:", e);
   }
 
   return metadata;
 }
+
 
 /**
  * Upload metadata to IPFS using Grove storage
@@ -245,122 +175,3 @@ export async function uploadMetadataToIPFS(metadata: CoinMetadata): Promise<stri
   }
 }
 
-/**
- * Generate metadata specifically highlighting FilCDN integration
- */
-export function getFilCDNHighlights(mediaItems: MediaItem[]): string[] {
-  // Handle undefined or empty mediaItems
-  if (!mediaItems || mediaItems.length === 0) {
-    return [];
-  }
-
-  const filcdnItems = mediaItems.filter(item => item.isFilCDN);
-  const highlights: string[] = [];
-
-  if (filcdnItems.length > 0) {
-    highlights.push(`🚀 ${filcdnItems.length} files stored on FilCDN`);
-    highlights.push('⚡ Lightning-fast retrieval via CDN');
-    highlights.push('🔗 Filecoin PDP storage deals');
-
-    const totalSize = filcdnItems.reduce((sum, item) => sum + (item.size || 0), 0);
-    if (totalSize > 0) {
-      highlights.push(`💾 ${(totalSize / 1024 / 1024).toFixed(1)}MB decentralized storage`);
-    }
-  }
-
-  return highlights;
-}
-
-/**
- * Generate simplified metadata for a video coin without requiring full project data
- */
-export interface SimpleCoinMetadataParams {
-  name: string;
-  symbol: string;
-  description?: string;
-  videoUri: string;
-  creatorAddress: string;
-  projectId?: string;
-  thumbnailUrl?: string;
-}
-
-export function generateCoinMetadataFromVideo(params: SimpleCoinMetadataParams): CoinMetadata {
-  const {
-    name,
-    symbol,
-    videoUri,
-    creatorAddress,
-    projectId,
-    thumbnailUrl: providedThumbnailUrl,
-    description = `A video coin created with saywaht`,
-  } = params;
-
-  // We need to properly handle IPFS URIs
-  let ipfsHash = '';
-  if (videoUri.startsWith('ipfs://')) {
-    ipfsHash = videoUri.substring(7);
-  } else if (videoUri.startsWith('lens://')) {
-    ipfsHash = videoUri.substring(7);
-  }
-
-  // Create a public gateway URL for the video
-  const publicGatewayUrl = ipfsHash ? `https://ipfs.io/ipfs/${ipfsHash}` : videoUri;
-
-  // Use provided thumbnail if available, otherwise use a default
-  // Ensure we always have a valid HTTPS URL for Zora validation
-  let thumbnailUrl = providedThumbnailUrl;
-
-  if (!thumbnailUrl) {
-    // Use saywaht's default image as fallback
-    thumbnailUrl = "https://saywaht.app/opengraph-image.jpg";
-  }
-
-  // Ensure the URL is absolute
-  if (thumbnailUrl.startsWith('/')) {
-    thumbnailUrl = `https://saywaht.app${thumbnailUrl}`;
-  }
-
-    // Build the metadata object following Zora's exact format
-    const metadata: any = {
-      name,
-      description,
-      // Use a dynamic thumbnail URL generated from the video
-      image: thumbnailUrl,
-      // For video content
-      animation_url: videoUri,
-      // Zora's extended format for better indexing
-      content: {
-        mime: "video/webm",
-        uri: videoUri
-      },
-      // Improvement 4: Automatic Farcaster Frame Generation & Enhanced Properties
-      properties: {
-        category: "video",
-        creator: creatorAddress,
-        symbol: symbol,
-        platform: "saywaht",
-        // Zora-specific properties for Mint Frames
-        "zora-mint-frame": "https://zora.co/coin/base:" + creatorAddress, // Placeholder, will be updated with actual coin address if known
-        "content-type": "video-commentary",
-        "app-name": "saywaht"
-      }
-    };
-
-  // Add external URL if project ID is available
-  if (projectId) {
-    metadata.external_url = `https://saywaht.app/project/${projectId}`;
-  }
-
-  console.log("📄 Generated metadata for Zora validation:", metadata);
-
-  // Validate metadata before returning
-  try {
-    validateMetadataJSON(metadata);
-    console.log("✅ Metadata validation passed");
-  } catch (error) {
-    console.error("❌ Metadata validation failed:", error);
-    throw new Error(`Invalid metadata format: ${error}`);
-  }
-
-  return metadata;
-}

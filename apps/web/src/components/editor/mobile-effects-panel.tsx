@@ -14,6 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMobileContext } from "@/contexts/mobile-context";
 import { cn } from "@/lib/utils";
+import { Sparkles } from "@/lib/icons";
+import { addHapticFeedback } from "@/lib/mobile-utils";
+import { motion, AnimatePresence } from "motion/react";
 
 interface MobileEffectsPanelProps {
   className?: string;
@@ -24,72 +27,80 @@ export function MobileEffectsPanel({ className }: MobileEffectsPanelProps) {
   const [activeCategory, setActiveCategory] = useState<string>("video");
 
   const videoEffects = [
-    { id: "fade", name: "Fade", category: "transition" },
-    { id: "blur", name: "Blur", category: "filter" },
-    { id: "brightness", name: "Brightness", category: "color" },
-    { id: "contrast", name: "Contrast", category: "color" },
-    { id: "vibrance", name: "Vibrance", category: "color" },
-    { id: "crop", name: "Crop", category: "transform" },
-    { id: "rotate", name: "Rotate", category: "transform" },
-    { id: "move", name: "Position", category: "transform" },
+    { id: "fade", name: "Fade", category: "transition", icon: "✨" },
+    { id: "blur", name: "Blur", category: "filter", icon: "🔍" },
+    { id: "brightness", name: "Bright", category: "color", icon: "☀️" },
+    { id: "contrast", name: "Contrast", category: "color", icon: "🌓" },
+    { id: "vibrance", name: "Vibrance", category: "color", icon: "🌈" },
+    { id: "crop", name: "Crop", category: "transform", icon: "✂️" },
+    { id: "rotate", name: "Rotate", category: "transform", icon: "🔄" },
+    { id: "move", name: "Position", category: "transform", icon: "🎯" },
   ];
 
   const audioEffects = [
-    { id: "volume", name: "Volume", category: "basic" },
-    { id: "fade-in", name: "Fade In", category: "transition" },
-    { id: "fade-out", name: "Fade Out", category: "transition" },
-    { id: "echo", name: "Echo", category: "effect" },
-    { id: "reverb", name: "Reverb", category: "effect" },
+    { id: "volume", name: "Volume", category: "basic", icon: "🔊" },
+    { id: "fade-in", name: "Fade In", category: "transition", icon: "📈" },
+    { id: "fade-out", name: "Fade Out", category: "transition", icon: "📉" },
+    { id: "echo", name: "Echo", category: "effect", icon: "🗣️" },
+    { id: "reverb", name: "Reverb", category: "effect", icon: "🏛️" },
   ];
 
   const handleEffectApply = (effectId: string) => {
+    addHapticFeedback("medium");
     console.log("Apply effect:", effectId);
-    // Handle effect application logic
   };
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
+    <div className={cn("flex flex-col h-full bg-background", className)}>
       {/* Header */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-5 w-5 text-primary">✨</div>
-            <h2 className="text-lg font-semibold">Effects</h2>
+      <div className="p-4 border-b border-border/50 bg-muted/5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Sparkles className="h-4 w-4 text-primary" />
           </div>
-          <div className="bg-secondary text-secondary-foreground rounded-md px-2 py-1 text-xs">
-            {activeCategory === "video"
-              ? videoEffects.length
-              : audioEffects.length}{" "}
-            effects
-          </div>
+          <h2 className="text-sm font-bold uppercase tracking-wider">Effects & FX</h2>
+          <span className="ml-auto text-[10px] font-bold bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+            {activeCategory === "video" ? videoEffects.length : audioEffects.length} FX
+          </span>
         </div>
+
+        <Tabs
+          value={activeCategory}
+          onValueChange={setActiveCategory}
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-2 rounded-xl bg-muted/30 h-11 p-1">
+            <TabsTrigger value="video" className="rounded-lg text-xs font-bold data-[state=active]:bg-background transition-all">Video FX</TabsTrigger>
+            <TabsTrigger value="audio" className="rounded-lg text-xs font-bold data-[state=active]:bg-background transition-all">Audio FX</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
-      {/* Category Tabs */}
-      <Tabs
-        value={activeCategory}
-        onValueChange={setActiveCategory}
-        className="flex-1 flex flex-col"
-      >
-        <TabsList className="grid w-full grid-cols-2 mx-4 mt-4">
-          <TabsTrigger value="video">Video</TabsTrigger>
-          <TabsTrigger value="audio">Audio</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="video" className="flex-1 mt-0">
-          <VideoEffectsContent
-            effects={videoEffects}
-            onApply={handleEffectApply}
-          />
-        </TabsContent>
-
-        <TabsContent value="audio" className="flex-1 mt-0">
-          <AudioEffectsContent
-            effects={audioEffects}
-            onApply={handleEffectApply}
-          />
-        </TabsContent>
-      </Tabs>
+      <div className="flex-1 min-h-0">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeCategory}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="h-full"
+          >
+            {activeCategory === "video" ? (
+              <VideoEffectsContent effects={videoEffects} onApply={handleEffectApply} />
+            ) : (
+              <AudioEffectsContent effects={audioEffects} onApply={handleEffectApply} />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+      
+      {/* Footer Instructions */}
+      <div className="p-3 bg-muted/10 text-center border-t border-border/50">
+        <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+          Tap an effect to apply
+        </p>
+      </div>
     </div>
   );
 }
@@ -99,6 +110,7 @@ interface EffectsContentProps {
     id: string;
     name: string;
     category: string;
+    icon: string;
   }>;
   onApply: (effectId: string) => void;
 }
@@ -112,15 +124,15 @@ function VideoEffectsContent({ effects, onApply }: EffectsContentProps) {
   };
 
   return (
-    <ScrollArea className="flex-1">
-      <div className="p-4 space-y-6">
+    <ScrollArea className="h-full">
+      <div className="p-4 space-y-8 pb-10">
         {Object.entries(categories).map(([categoryName, categoryEffects]) => (
-          <div key={categoryName}>
-            <h3 className="text-sm font-medium mb-3 capitalize flex items-center gap-2">
-              {getCategoryIcon(categoryName)}
+          <div key={categoryName} className="space-y-3">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
+              <div className="h-1 w-1 rounded-full bg-primary/40" />
               {categoryName}
             </h3>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-3">
               {categoryEffects.map((effect) => (
                 <EffectCard key={effect.id} effect={effect} onApply={onApply} />
               ))}
@@ -140,15 +152,15 @@ function AudioEffectsContent({ effects, onApply }: EffectsContentProps) {
   };
 
   return (
-    <ScrollArea className="flex-1">
-      <div className="p-4 space-y-6">
+    <ScrollArea className="h-full">
+      <div className="p-4 space-y-8 pb-10">
         {Object.entries(categories).map(([categoryName, categoryEffects]) => (
-          <div key={categoryName}>
-            <h3 className="text-sm font-medium mb-3 capitalize flex items-center gap-2">
-              {getCategoryIcon(categoryName)}
+          <div key={categoryName} className="space-y-3">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
+              <div className="h-1 w-1 rounded-full bg-primary/40" />
               {categoryName}
             </h3>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-3">
               {categoryEffects.map((effect) => (
                 <EffectCard key={effect.id} effect={effect} onApply={onApply} />
               ))}
@@ -165,38 +177,23 @@ interface EffectCardProps {
     id: string;
     name: string;
     category: string;
+    icon: string;
   };
   onApply: (effectId: string) => void;
 }
 
 function EffectCard({ effect, onApply }: EffectCardProps) {
   return (
-    <Card className="overflow-hidden cursor-pointer transition-all hover:shadow-md active:scale-95 touch-manipulation">
-      <CardContent className="p-3">
-        <Button
-          variant="ghost"
-          className="w-full h-auto p-0 flex flex-col gap-2 touch-manipulation"
-          onClick={() => onApply(effect.id)}
-        >
-          <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-primary text-lg">✨</span>
-          </div>
-          <span className="text-xs font-medium text-center">{effect.name}</span>
-        </Button>
-      </CardContent>
-    </Card>
+    <button
+      onClick={() => onApply(effect.id)}
+      className="flex flex-col items-center gap-2 group touch-manipulation"
+    >
+      <div className="w-full aspect-square rounded-2xl bg-card border border-border/50 flex items-center justify-center text-2xl shadow-sm group-active:scale-95 group-active:bg-muted transition-all">
+        {effect.icon}
+      </div>
+      <span className="text-[10px] font-bold text-muted-foreground group-active:text-primary transition-colors uppercase tracking-tight">
+        {effect.name}
+      </span>
+    </button>
   );
-}
-
-function getCategoryIcon(category: string) {
-  const icons: Record<string, any> = {
-    transition: <span className="h-4 w-4">👁️</span>,
-    filter: <span className="h-4 w-4">🔍</span>,
-    color: <span className="h-4 w-4">🎨</span>,
-    transform: <span className="h-4 w-4">📏</span>,
-    basic: <span className="h-4 w-4">🔊</span>,
-    effect: <span className="h-4 w-4">✨</span>,
-  };
-
-  return icons[category] || <span className="h-4 w-4">⚡</span>;
 }

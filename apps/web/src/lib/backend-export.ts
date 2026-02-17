@@ -4,49 +4,33 @@ import { ExportOptions } from "./canvas-export-utils";
 import { FORMAT_DIMENSIONS } from "./video-utils";
 
 // Backend export service configuration
-// Try multiple possible backend URLs
 const BACKEND_URLS = [
   process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL,
-  'http://157.180.36.156:3001', // FFmpeg service on port 3001
-  'http://157.180.36.156:3100', // Legacy port
-  'http://localhost:3001', // Local development
-  'http://localhost:3100'  // Local development legacy
+  'http://157.180.36.156:3001', // Production FFmpeg backend
+  'http://localhost:3001'       // Local development default
 ].filter(Boolean) as string[];
 
 let cachedBackendUrl: string | null = null;
 
 /**
- * Get the working backend URL with automatic fallback detection
+ * Get the working backend URL with fallback detection
  */
-async function getBackendUrl(): Promise<string> {
-  // Return cached URL if we've already found a working one
-  if (cachedBackendUrl) {
-    return cachedBackendUrl;
-  }
+export async function getBackendUrl(): Promise<string> {
+  if (cachedBackendUrl) return cachedBackendUrl;
 
-  // Try each URL until we find one that responds
   for (const url of BACKEND_URLS) {
     try {
-      const response = await fetch(`${url}/api/health`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(2000) // 2 second timeout per URL
-      });
-      
+      const response = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(2000) });
       if (response.ok) {
         cachedBackendUrl = url;
-        console.log(`✅ Backend service found at: ${url}`);
         return url;
       }
-    } catch (err) {
-      // This URL didn't work, try the next one
-      continue;
-    }
+    } catch { continue; }
   }
 
-  // No working URL found, default to first configured URL
-  console.warn('⚠️ Could not detect working backend URL, using default');
   return BACKEND_URLS[0] || 'http://157.180.36.156:3001';
 }
+
 
 export interface BackendExportOptions extends ExportOptions {
   maxFileSizeMB?: number;

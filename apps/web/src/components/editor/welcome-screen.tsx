@@ -16,6 +16,7 @@ import { Template } from "@/lib/types";
 import { HoverVideoPreview } from "@/components/templates/hover-video-preview";
 import Image from "next/image";
 import { useEffect, useMemo } from "react";
+import { Sparkles, Loader2, Video, Plus } from "@/lib/icons";
 
 // Interface for templates with category name
 interface FeaturedTemplate extends Template {
@@ -95,89 +96,20 @@ export function WelcomeScreen() {
           {/* Main Card */}
           <Card className="border-0 bg-white/10 backdrop-blur-md shadow-xl overflow-hidden">
             <div className="px-8 py-10">
-              <div className="flex flex-col lg:flex-row gap-10">
-                {/* Left Column - Project Creation */}
+              <div className="flex flex-col lg:flex-row-reverse gap-10">
+                {/* Right Column - Templates (NOW PRIMARY) */}
                 <div className="flex-1 space-y-6">
                   <div className="space-y-4 text-center lg:text-left">
-                    <h2 className="text-2xl font-bold">Ready to Create?</h2>
-                    <p className="text-white/80">
-                      Start from scratch and bring your vision to life.
-                    </p>
-                  </div>
-
-                  <Button
-                    onClick={() => createNewProject("My Awesome Project")}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg py-6 rounded-lg shadow-lg border-0 transition-all duration-300 transform hover:scale-[1.02]"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="mr-2 h-6 w-6"
-                    >
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="8" x2="12" y2="16"></line>
-                      <line x1="8" y1="12" x2="16" y2="12"></line>
-                    </svg>
-                    Create New Project
-                  </Button>
-
-                  {/* Stats Bar */}
-                  <div className="grid grid-cols-3 gap-4 mt-6">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-blue-300">
-                        {isLoading ? "..." : featuredTemplates.length}
-                      </div>
-                      <div className="text-xs text-white/60 uppercase tracking-wider">
-                        Templates
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-purple-300">
-                        3
-                      </div>
-                      <div className="text-xs text-white/60 uppercase tracking-wider">
-                        Categories
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-pink-300">4K</div>
-                      <div className="text-xs text-white/60 uppercase tracking-wider">
-                        Quality
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Column - Templates */}
-                <div className="flex-1 space-y-6">
-                  <div className="space-y-4 text-center lg:text-left">
-                    <h2 className="text-2xl font-bold">Need Inspiration?</h2>
-                    <p className="text-white/80">Start with a template.</p>
+                    <h2 className="text-2xl font-bold flex items-center justify-center lg:justify-start gap-2">
+                      <Sparkles className="h-6 w-6 text-yellow-400" />
+                      Need Inspiration?
+                    </h2>
+                    <p className="text-white/80">Start with a professionally crafted template.</p>
                   </div>
 
                   {isLoading ? (
                     <div className="flex justify-center py-12">
-                      <svg
-                        className="w-8 h-8 animate-spin text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                      </svg>
+                      <Loader2 className="w-8 h-8 animate-spin text-white" />
                     </div>
                   ) : featuredTemplates.length > 0 ? (
                     <div className="grid grid-cols-2 gap-4">
@@ -186,7 +118,7 @@ export function WelcomeScreen() {
                         .map((template: FeaturedTemplate) => (
                           <Card
                             key={template.id}
-                            className="overflow-hidden bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-300 transform hover:scale-[1.03] cursor-pointer"
+                            className="overflow-hidden bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-300 transform hover:scale-[1.03] cursor-pointer group"
                             onClick={() =>
                               router.push(`/templates/${template.id}`)
                             }
@@ -194,14 +126,12 @@ export function WelcomeScreen() {
                             <div className="aspect-video relative overflow-hidden">
                               {template.thumbnailUrl ? (
                                 template.thumbnailUrl.endsWith(".mp4") ? (
-                                  // Use hover-to-play video for MP4 files
                                   <HoverVideoPreview
                                     videoSrc={template.thumbnailUrl}
                                     alt={template.name}
                                     className="w-full h-full"
                                   />
                                 ) : (
-                                  // Static image for other thumbnails
                                   <Image
                                     src={template.thumbnailUrl}
                                     alt={template.name}
@@ -210,33 +140,15 @@ export function WelcomeScreen() {
                                   />
                                 )
                               ) : (
-                                // Fallback when no thumbnail is available
                                 <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                                  <svg
-                                    width="48"
-                                    height="48"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-white/50"
-                                  >
-                                    <polygon points="5 3 19 12 5 21 5 3" />
-                                  </svg>
+                                  <Video className="h-8 w-8 text-white/20" />
                                 </div>
                               )}
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
-                              <div className="absolute bottom-2 left-2 text-white z-20 text-sm font-medium">
+                              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors z-10"></div>
+                              <div className="absolute bottom-2 left-2 text-white z-20 text-[10px] font-black uppercase tracking-widest">
                                 {template.name}
                               </div>
                             </div>
-                            <CardContent className="p-3">
-                              <p className="text-xs text-white/70 truncate">
-                                {template.categoryName}
-                              </p>
-                            </CardContent>
                           </Card>
                         ))}
                     </div>
@@ -249,14 +161,55 @@ export function WelcomeScreen() {
                   <div className="flex justify-center lg:justify-start">
                     <Button
                       onClick={() => router.push("/templates")}
-                      className="bg-white/10 hover:bg-white/20 text-white transition-all duration-300"
+                      className="w-full h-14 bg-white text-blue-900 hover:bg-white/90 font-black uppercase tracking-widest rounded-2xl shadow-xl transition-all active:scale-95"
                     >
-                      {isLoading
-                        ? "Loading..."
-                        : featuredTemplates.length > 0
-                          ? `Browse All ${featuredTemplates.length} Templates`
-                          : "Browse Templates"}
+                      Browse All Templates
                     </Button>
+                  </div>
+                </div>
+
+                {/* Left Column - Project Creation (NOW SECONDARY) */}
+                <div className="flex-1 space-y-6">
+                  <div className="space-y-4 text-center lg:text-left">
+                    <h2 className="text-2xl font-bold opacity-80">Starting Fresh?</h2>
+                    <p className="text-white/60">
+                      Create a project from scratch and import your own media.
+                    </p>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => createNewProject("My Awesome Project")}
+                    className="w-full bg-white/5 border-white/20 hover:bg-white/10 text-white text-sm py-6 rounded-2xl transition-all"
+                  >
+                    <Plus className="mr-2 h-5 w-5" />
+                    New Empty Project
+                  </Button>
+
+                  {/* Stats Bar */}
+                  <div className="grid grid-cols-3 gap-4 mt-6 opacity-60">
+                    <div className="text-center border-r border-white/10">
+                      <div className="text-2xl font-bold text-blue-300">
+                        {isLoading ? "..." : featuredTemplates.length}
+                      </div>
+                      <div className="text-[8px] text-white/60 uppercase tracking-widest">
+                        Templates
+                      </div>
+                    </div>
+                    <div className="text-center border-r border-white/10">
+                      <div className="text-2xl font-bold text-purple-300">
+                        3
+                      </div>
+                      <div className="text-[8px] text-white/60 uppercase tracking-widest">
+                        Categories
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-pink-300">HD</div>
+                      <div className="text-[8px] text-white/60 uppercase tracking-widest">
+                        Quality
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

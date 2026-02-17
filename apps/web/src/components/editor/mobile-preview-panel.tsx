@@ -13,9 +13,10 @@ import { useEditorStore } from "@/stores/editor-store";
 
 interface MobilePreviewPanelProps {
   className?: string;
+  showResolution?: boolean;
 }
 
-export function MobilePreviewPanel({ className }: MobilePreviewPanelProps) {
+export function MobilePreviewPanel({ className, showResolution = false }: MobilePreviewPanelProps) {
   const { orientation } = useMobileContext();
   const previewRef = useRef<HTMLDivElement>(null);
   const { canvasSize } = useCanvasStore();
@@ -59,17 +60,19 @@ export function MobilePreviewPanel({ className }: MobilePreviewPanelProps) {
 
   return (
     <div className={cn("relative h-full w-full", className)}>
-      {/* Canvas Size Indicator - only show in tools mode (parent controls visibility) */}
-      <div className="absolute top-2 left-2 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded border border-white/20 backdrop-blur-sm">
-        {canvasSize.width} × {canvasSize.height}px
-      </div>
+      {/* Canvas Size Indicator - only show if explicitly requested */}
+      {showResolution && (
+        <div className="absolute top-2 left-2 z-10 bg-black/70 text-white text-[10px] px-2 py-1 rounded-full border border-white/20 backdrop-blur-sm font-bold">
+          {canvasSize.width} × {canvasSize.height}
+        </div>
+      )}
 
-      {/* Zoom controls - minimal, top right */}
-      <div className="absolute top-2 right-2 z-10 flex gap-1">
+      {/* Zoom controls - moved further down to avoid header overlap */}
+      <div className="absolute top-24 right-3 z-20 flex flex-col gap-2">
         <Button
           variant="secondary"
           size="icon"
-          className="h-9 w-9 bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
+          className="h-10 w-10 bg-black/40 text-white hover:bg-black/60 backdrop-blur-md border border-white/10 rounded-full shadow-lg"
           onClick={handleToggleFit}
         >
           {videoObjectFit === "contain" ? (
@@ -78,32 +81,32 @@ export function MobilePreviewPanel({ className }: MobilePreviewPanelProps) {
             <Minimize2 className="h-4 w-4" />
           )}
         </Button>
-        <Button
-          variant="secondary"
-          size="icon"
-          className="h-9 w-9 bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
-          onClick={handleZoomOut}
-          disabled={scale <= 0.5}
-        >
-          <ZoomOut className="h-3 w-3" />
-        </Button>
-        <Button
-          variant="secondary"
-          size="icon"
-          className="h-9 w-9 bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
-          onClick={handleResetZoom}
-        >
-          <span className="text-[10px] font-mono">{Math.round(scale * 100)}%</span>
-        </Button>
-        <Button
-          variant="secondary"
-          size="icon"
-          className="h-9 w-9 bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
-          onClick={handleZoomIn}
-          disabled={scale >= 3}
-        >
-          <ZoomIn className="h-3 w-3" />
-        </Button>
+        <div className="flex flex-col bg-black/40 backdrop-blur-md border border-white/10 rounded-full p-1 shadow-lg">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 text-white rounded-full"
+            onClick={handleZoomIn}
+            disabled={scale >= 3}
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <button 
+            className="h-8 flex items-center justify-center text-[10px] font-black text-white/80"
+            onClick={handleResetZoom}
+          >
+            {Math.round(scale * 100)}%
+          </button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 text-white rounded-full"
+            onClick={handleZoomOut}
+            disabled={scale <= 0.5}
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div

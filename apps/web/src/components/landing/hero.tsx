@@ -124,23 +124,13 @@ export function Hero() {
         >
           {isConnected ? (
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <Link href="/editor" className="w-full sm:w-auto">
+              <Link href="/templates" className="w-full sm:w-auto">
                 <Button
                   size="lg"
                   className="w-full sm:w-auto px-6 sm:px-8 h-14 sm:h-12 text-base font-medium bg-primary hover:bg-primary/90 transition-all duration-200 shadow-lg hover:shadow-xl touch-manipulation"
                 >
                   <Video className="mr-2 h-5 w-5" />
                   Create Video
-                </Button>
-              </Link>
-              <Link href="/templates" className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto px-6 sm:px-8 h-14 sm:h-12 text-base font-medium border-2 hover:bg-accent/50 transition-all duration-200 touch-manipulation"
-                >
-                  <LayoutTemplate className="mr-2 h-5 w-5" />
-                  Start from Template
                 </Button>
               </Link>
               <Link href="/trade" className="w-full sm:w-auto">

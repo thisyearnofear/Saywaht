@@ -43,21 +43,29 @@ import {
 import { cn } from "@/lib/utils";
 import { useAccount } from "wagmi";
 
-// MediaPanel lets users add, view, and drag media (images, videos, audio) into the project.
-// You can upload files or drag them from your computer. Dragging from here to the timeline adds them to your video project.
+import { pexelsService, PexelsVideo, PexelsImage } from "@/services/pexels-service";
+import { Input } from "../ui/input";
+import { ScrollArea } from "../ui/scroll-area";
+import { Loader2 } from "@/lib/icons";
 
+// MediaPanel lets users add, view, and drag media (images, videos, audio) into the project.
 export function MediaPanel() {
   const { mediaItems, addMediaItem, removeMediaItem } = useMediaStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isAudioOpen, setIsAudioOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"upload" | "audio" | "text">("upload");
+  const [activeTab, setActiveTab] = useState<"upload" | "library" | "audio" | "text">("upload");
   const [filStatus, setFilStatus] = useState<{
     configured: boolean;
     allowanceSufficient: boolean;
     walletAddress?: string;
   } | null>(null);
   const { isConnected } = useAccount();
+
+  // Pexels state
+  const [pexelsQuery, setPexelsQuery] = useState("");
+  const [pexelsType, setPexelsType] = useState<'video' | 'image'>('video');
+  const [pexelsResults, setPexelsResults] = useState<any[]>([]);
+  const [isPexelsLoading, setIsPexelsLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -69,6 +77,44 @@ export function MediaPanel() {
       mounted = false;
     };
   }, []);
+
+  const handlePexelsSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!pexelsQuery.trim()) return;
+
+    setIsPexelsLoading(true);
+    try {
+      const data = await pexelsService.search(pexelsQuery, pexelsType);
+      setPexelsResults(pexelsType === 'video' ? (data.videos || []) : (data.photos || []));
+    } catch (error) {
+      toast.error("Failed to fetch templates");
+    } finally {
+      setIsPexelsLoading(false);
+    }
+  };
+
+  const handleAddPexelsVideo = (video: PexelsVideo) => {
+    const bestFile = video.video_files.find(f => f.quality === 'hd') || video.video_files[0];
+    addMediaItem({
+      name: `Pexels: ${video.user.name}`,
+      type: "video",
+      url: bestFile.link,
+      thumbnailUrl: video.image,
+      duration: video.duration,
+      aspectRatio: video.width / video.height,
+    });
+    toast.success("Added template to project");
+  };
+
+  const handleAddPexelsImage = (image: PexelsImage) => {
+    addMediaItem({
+      name: `Pexels: ${image.photographer}`,
+      type: "image",
+      url: image.src.large,
+      aspectRatio: image.width / image.height,
+    });
+    toast.success("Added template to project");
+  };
 
   const processFiles = async (files: FileList | File[]) => {
     // If no files, do nothing
@@ -307,15 +353,24 @@ export function MediaPanel() {
         <DragOverlay isVisible={isDragOver} />
 
         {/* Header with toggle buttons */}
-        <div className="flex border-b">
+        <div className="flex border-b overflow-x-auto no-scrollbar">
           <Button
             variant={activeTab === "upload" ? "secondary" : "ghost"}
             size="sm"
-            className="flex-1 rounded-none"
+            className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
             onClick={() => setActiveTab("upload")}
           >
             <Upload className="h-4 w-4 mr-2" />
             Upload
+          </Button>
+          <Button
+            variant={activeTab === "library" ? "secondary" : "ghost"}
+            size="sm"
+            className="flex-1 rounded-none"
+            onClick={() => setActiveTab("library")}
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            Library
           </Button>
           <Button
             variant={activeTab === "text" ? "secondary" : "ghost"}
@@ -339,6 +394,71 @@ export function MediaPanel() {
 
         {/* Content sections */}
         <div className="flex-1 flex flex-col overflow-hidden">
+          {activeTab === "library" && (
+            <div className="flex-1 flex flex-col min-h-0 bg-muted/5">
+              <div className="p-3 border-b space-y-2 bg-background">
+                <form onSubmit={handlePexelsSearch} className="flex gap-2">
+                  <Input 
+                    value={pexelsQuery}
+                    onChange={(e) => setPexelsQuery(e.target.value)}
+                    placeholder="Search stock templates..."
+                    className="h-9 text-xs"
+                  />
+                  <Button type="submit" size="sm" disabled={isPexelsLoading}>
+                    {isPexelsLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Search"}
+                  </Button>
+                </form>
+                <div className="flex gap-1">
+                  <Button
+                    variant={pexelsType === 'video' ? 'secondary' : 'outline'}
+                    className="flex-1 text-[10px] h-7"
+                    onClick={() => setPexelsType('video')}
+                  >
+                    Videos
+                  </Button>
+                  <Button
+                    variant={pexelsType === 'image' ? 'secondary' : 'outline'}
+                    className="flex-1 text-[10px] h-7"
+                    onClick={() => setPexelsType('image')}
+                  >
+                    Images
+                  </Button>
+                </div>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-3 grid grid-cols-2 gap-2">
+                  {pexelsResults.length > 0 ? (
+                    pexelsResults.map((item) => (
+                      <div 
+                        key={item.id} 
+                        className="group relative aspect-video rounded-md overflow-hidden bg-muted cursor-pointer border border-border/50 hover:border-primary/50 transition-colors"
+                        onClick={() => pexelsType === 'video' ? handleAddPexelsVideo(item) : handleAddPexelsImage(item)}
+                      >
+                        <img 
+                          src={pexelsType === 'video' ? item.image : item.src.medium} 
+                          alt={pexelsType === 'video' ? item.user.name : item.photographer} 
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Plus className="h-5 w-5 text-white" />
+                        </div>
+                        {pexelsType === 'video' && (
+                          <div className="absolute bottom-1 right-1 px-1 rounded bg-black/60 text-[8px] text-white">
+                            {Math.round(item.duration)}s
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-2 py-12 text-center">
+                      <Sparkles className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground">Search for stock media</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
           {activeTab === "upload" && (
             <>
               {/* Upload section */}

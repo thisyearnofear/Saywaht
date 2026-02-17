@@ -11,15 +11,16 @@ import { cn } from "@/lib/utils";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useMediaStore } from "@/stores/media-store";
-import { 
-  ZoomIn, 
-  ZoomOut, 
-  Play, 
-  Pause, 
-  SkipBack, 
+import {
+  ZoomIn,
+  ZoomOut,
+  Play,
+  Pause,
+  SkipBack,
   SkipForward,
   Trash2,
-  GripVertical
+  GripVertical,
+  Sparkles
 } from "@/lib/icons";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { formatTime } from "@/lib/utils";
@@ -373,8 +374,14 @@ export function WorkingMobileTimeline({
                 </div>
               ))
             ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground/20">
-                <span className="text-[10px] font-black uppercase tracking-widest">No Active Tracks</span>
+              <div className="h-full flex flex-col items-center justify-center text-muted-foreground/20 px-8 text-center space-y-3">
+                <Sparkles className="h-8 w-8 opacity-20" />
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest block opacity-40">Timeline Empty</span>
+                  <p className="text-[9px] font-bold leading-relaxed opacity-30">
+                    Add a template from the library or record your voice to start coining commentary.
+                  </p>
+                </div>
               </div>
             )}
           </div>
