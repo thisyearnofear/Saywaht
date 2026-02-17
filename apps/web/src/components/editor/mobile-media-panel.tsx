@@ -88,36 +88,37 @@ export function MobileMediaPanel({ className }: MobileMediaPanelProps) {
         className="flex-1 flex flex-col min-h-0"
       >
         <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/20">
-          <TabsList className="grid grid-cols-3 flex-1 h-11">
+          <TabsList className="grid grid-cols-3 flex-1 h-11 p-1">
             <TabsTrigger
               value="record"
-              className="flex items-center gap-1.5 text-sm data-[state=active]:bg-background"
+              className="flex items-center justify-center gap-1.5 text-sm data-[state=active]:bg-background h-9 px-2"
             >
-              <Mic className="h-4 w-4" />
-              <span>Record</span>
+              <Mic className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Record</span>
+              <span className="sm:hidden">Rec</span>
               {audioCount > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">
+                <Badge variant="secondary" className="ml-0.5 h-5 min-w-[18px] px-1 text-[10px] shrink-0">
                   {audioCount}
                 </Badge>
               )}
             </TabsTrigger>
             <TabsTrigger
               value="media"
-              className="flex items-center gap-1.5 text-sm data-[state=active]:bg-background"
+              className="flex items-center justify-center gap-1.5 text-sm data-[state=active]:bg-background h-9 px-2"
             >
-              <Video className="h-4 w-4" />
+              <Video className="h-4 w-4 shrink-0" />
               <span>Media</span>
               {(videoCount + imageCount) > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1 text-xs">
+                <Badge variant="secondary" className="ml-0.5 h-5 min-w-[18px] px-1 text-[10px] shrink-0">
                   {videoCount + imageCount}
                 </Badge>
               )}
             </TabsTrigger>
             <TabsTrigger
               value="upload"
-              className="flex items-center gap-1.5 text-sm data-[state=active]:bg-background"
+              className="flex items-center justify-center gap-1.5 text-sm data-[state=active]:bg-background h-9 px-2"
             >
-              <Upload className="h-4 w-4" />
+              <Upload className="h-4 w-4 shrink-0" />
               <span>Upload</span>
             </TabsTrigger>
           </TabsList>
@@ -162,67 +163,86 @@ interface UploadTabProps {
 
 function UploadTab({ onFileSelect, isProcessing, mediaCounts }: UploadTabProps) {
   return (
-    <ScrollArea className="flex-1">
-      <div className="p-4 space-y-4">
-        {/* Main upload button */}
-        <Button
+    <ScrollArea className="flex-1 bg-muted/5">
+      <div className="p-6 space-y-6">
+        {/* Main upload area - more modern look */}
+        <button
           onClick={onFileSelect}
           disabled={isProcessing}
-          className="w-full h-20 text-lg"
+          className={cn(
+            "w-full aspect-video rounded-3xl border-2 border-dashed flex flex-col items-center justify-center transition-all active:scale-[0.98]",
+            isProcessing 
+              ? "bg-muted border-muted-foreground/20 cursor-not-allowed" 
+              : "bg-primary/5 border-primary/20 hover:bg-primary/10 hover:border-primary/40"
+          )}
         >
           {isProcessing ? (
             <>
-              <div className="h-5 w-5 mr-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              Processing...
+              <div className="h-10 w-10 mb-4 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="font-bold text-muted-foreground">Processing Files...</p>
             </>
           ) : (
             <>
-              <Plus className="h-6 w-6 mr-3" />
-              Add Media Files
+              <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
+                <Upload className="h-7 w-7" />
+              </div>
+              <p className="font-bold text-lg">Add Media</p>
+              <p className="text-xs text-muted-foreground mt-1 px-10 text-center">
+                Upload videos, photos, or audio from your device
+              </p>
             </>
           )}
-        </Button>
+        </button>
 
-        {/* Supported formats */}
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground">
-            Supports: MP4, MOV, WebM, MP3, WAV, JPG, PNG
-          </p>
-        </div>
-
-        {/* Current media summary */}
-        <div className="border rounded-lg p-4 space-y-3">
-          <h3 className="text-sm font-medium">Current Project</h3>
+        {/* Current media summary - cleaner grid */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Project Assets</h3>
+            <Badge variant="outline" className="text-[10px] font-bold border-muted-foreground/20">
+              {mediaCounts.video + mediaCounts.audio + mediaCounts.image} TOTAL
+            </Badge>
+          </div>
           
-          <div className="grid grid-cols-3 gap-2">
-            <div className="text-center p-3 bg-muted/30 rounded-lg">
-              <Video className="h-5 w-5 mx-auto mb-1 text-blue-500" />
-              <div className="text-lg font-semibold">{mediaCounts.video}</div>
-              <div className="text-xs text-muted-foreground">Videos</div>
-            </div>
-            <div className="text-center p-3 bg-muted/30 rounded-lg">
-              <Music className="h-5 w-5 mx-auto mb-1 text-green-500" />
-              <div className="text-lg font-semibold">{mediaCounts.audio}</div>
-              <div className="text-xs text-muted-foreground">Audio</div>
-            </div>
-            <div className="text-center p-3 bg-muted/30 rounded-lg">
-              <ImageIcon className="h-5 w-5 mx-auto mb-1 text-purple-500" />
-              <div className="text-lg font-semibold">{mediaCounts.image}</div>
-              <div className="text-xs text-muted-foreground">Images</div>
-            </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Videos", count: mediaCounts.video, icon: Video, color: "text-blue-500", bg: "bg-blue-500/10" },
+              { label: "Audio", count: mediaCounts.audio, icon: Music, color: "text-green-500", bg: "bg-green-500/10" },
+              { label: "Images", count: mediaCounts.image, icon: ImageIcon, color: "text-purple-500", bg: "bg-purple-500/10" },
+            ].map((item) => (
+              <div key={item.label} className="bg-card border border-border/50 p-4 rounded-2xl flex flex-col items-center text-center shadow-sm">
+                <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center mb-2", item.bg)}>
+                  <item.icon className={cn("h-5 w-5", item.color)} />
+                </div>
+                <div className="text-lg font-black tabular-nums">{item.count}</div>
+                <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{item.label}</div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Tips */}
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
-            💡 Pro Tips
-          </h4>
-          <ul className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
-            <li>• Start with a video template or upload your own</li>
-            <li>• Record voiceover while watching the video</li>
-            <li>• Add text overlays for captions</li>
-            <li>• Keep videos under 60 seconds for best results</li>
+        {/* Tips - minimal and helpful */}
+        <div className="bg-primary/5 rounded-2xl p-5 border border-primary/10">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/80">
+              Quick Tips
+            </h4>
+          </div>
+          <ul className="space-y-3">
+            {[
+              "Keep videos under 60 seconds for best social results",
+              "Record voiceover while watching your preview",
+              "Add text overlays for better accessibility"
+            ].map((tip, i) => (
+              <li key={i} className="flex items-start gap-3">
+                <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-[10px] font-black text-primary">
+                  {i + 1}
+                </div>
+                <p className="text-[11px] font-medium leading-relaxed text-muted-foreground">
+                  {tip}
+                </p>
+              </li>
+            ))}
           </ul>
         </div>
       </div>

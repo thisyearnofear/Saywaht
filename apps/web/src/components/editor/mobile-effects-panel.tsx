@@ -171,17 +171,17 @@ interface EffectCardProps {
 
 function EffectCard({ effect, onApply }: EffectCardProps) {
   return (
-    <Card className="overflow-hidden cursor-pointer transition-all hover:shadow-md active:scale-95">
+    <Card className="overflow-hidden cursor-pointer transition-all hover:shadow-md active:scale-95 touch-manipulation">
       <CardContent className="p-3">
         <Button
           variant="ghost"
-          className="w-full h-auto p-0 flex flex-col gap-2"
+          className="w-full h-auto p-0 flex flex-col gap-2 touch-manipulation"
           onClick={() => onApply(effect.id)}
         >
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+          <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center">
             <span className="text-primary text-lg">✨</span>
           </div>
-          <span className="text-xs font-medium">{effect.name}</span>
+          <span className="text-xs font-medium text-center">{effect.name}</span>
         </Button>
       </CardContent>
     </Card>

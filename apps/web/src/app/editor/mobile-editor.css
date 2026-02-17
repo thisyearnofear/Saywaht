@@ -1,12 +1,19 @@
 /* Mobile-specific editor styles */
 
-/* Prevent overscroll behavior on mobile */
+/* Pull to refresh prevention - add to root editor element */
+.mobile-editor.prevent-refresh,
 .mobile-editor {
   overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
   touch-action: pan-x pan-y;
-  /* Ensure proper scrolling in all contexts */
   overflow: hidden;
   position: relative;
+  /* Use dynamic viewport units for better mobile compatibility */
+  min-height: 100dvh;
+  max-height: 100dvh;
+  width: 100dvw;
+  max-width: 100dvw;
 }
 
 /* Farcaster Mini App specific styles */
@@ -89,11 +96,40 @@
   touch-action: manipulation;
 }
 
+/* Comprehensive touch delay elimination - applies to ALL interactive elements */
+.mobile-editor button,
+.mobile-editor a,
+.mobile-editor [role="button"],
+.mobile-editor input,
+.mobile-editor textarea,
+.mobile-editor select,
+.mobile-editor [role="tab"],
+.mobile-editor [role="menuitem"],
+.mobile-editor [role="option"],
+.mobile-editor .clickable,
+.mobile-editor label {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  /* Remove 300ms tap delay on older browsers */
+  touch-action: manipulation;
+}
+
+/* Re-enable text selection for inputs */
+.mobile-editor input,
+.mobile-editor textarea,
+.mobile-editor input:focus,
+.mobile-editor textarea:focus {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* Optimize touch targets for mobile */
 .mobile-editor button,
 .mobile-editor .clickable {
-  min-height: 44px;
-  min-width: 44px;
+  min-height: var(--touch-target, 44px);
+  min-width: var(--touch-target, 44px);
   touch-action: manipulation;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
   -webkit-touch-callout: none;
@@ -260,10 +296,20 @@
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
 }
 
+/* Tab bar improvements - unified styling */
+.mobile-editor .tab-bar {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  /* Unified height */
+  height: 56px;
+}
+
 /* Better tab styling - uses theme token for dark mode compatibility */
 .mobile-editor [data-state="active"] {
   background: hsl(var(--background));
   box-shadow: 0 1px 3px hsl(var(--foreground) / 0.1);
+  /* Unified border radius */
+  border-radius: calc(var(--radius) * 0.75);
 }
 
 /* Dark mode tab styling */

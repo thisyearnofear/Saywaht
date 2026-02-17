@@ -4,95 +4,64 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%; /* Slightly off-white for a softer feel */
-    --foreground: 0 0% 10%; /* Darker for better contrast */
-
-    --brand-purple: 270 80% 50%; /* Vibrant purple */
-    --brand-blue: 210 80% 50%; /* Vibrant blue */
-
+    /* Brand colors - unified */
+    --brand-primary: 210 80% 40%;
+    --brand-secondary: 270 80% 50%;
+    
+    /* Semantic colors */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 3.9%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
-
-    --primary: 210 80% 40%; /* A more vibrant blue for primary actions */
+    --primary: 210 80% 40%;
     --primary-foreground: 0 0% 98%;
-
-    --secondary: 210 20% 90%; /* Lighter, less saturated blue for secondary elements */
+    --secondary: 210 20% 90%;
     --secondary-foreground: 0 0% 9%;
-
     --muted: 0 0% 96.1%;
     --muted-foreground: 0 0% 45.1%;
-
-    --accent: 270 80% 60%; /* Brighter purple for accent elements */
+    --accent: 270 80% 60%;
     --accent-foreground: 0 0% 9%;
-
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 1rem;
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 3.9%;
-    --sidebar-primary: 0 0% 9%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 0 0% 96.1%;
-    --sidebar-accent-foreground: 0 0% 9%;
-    --sidebar-border: 0 0% 89.8%;
-    --sidebar-ring: 0 0% 3.9%;
+    --ring: 210 80% 40%;
+    --radius: 0.75rem;
+    
+    /* Spacing scale - unified */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    
+    /* Touch target size */
+    --touch-target: 44px;
   }
+  
   .dark {
-    --background: 240 10% 3.9%; /* Darker background */
+    --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
-
-    --brand-purple: 270 80% 60%; /* Vibrant purple for dark mode */
-    --brand-blue: 210 80% 60%; /* Vibrant blue for dark mode */
-
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
-
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
-
-    --primary: 210 80% 50%; /* A more vibrant blue for primary actions in dark mode */
+    --primary: 210 80% 50%;
     --primary-foreground: 0 0% 9%;
-
-    --secondary: 210 20% 20%; /* Darker, less saturated blue for secondary elements */
+    --secondary: 210 20% 20%;
     --secondary-foreground: 0 0% 98%;
-
     --muted: 240 10% 14.9%;
     --muted-foreground: 0 0% 63.9%;
-
-    --accent: 270 80% 70%; /* Brighter purple for accent elements in dark mode */
+    --accent: 270 80% 70%;
     --accent-foreground: 0 0% 98%;
-
     --destructive: 0 100% 60%;
     --destructive-foreground: 0 0% 98%;
-
     --border: 240 10% 14.9%;
     --input: 240 10% 14.9%;
-    --ring: 240 10% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 0 0% 3.9%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 0 0% 9%;
-    --sidebar-accent: 0 0% 14.9%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 14.9%;
-    --sidebar-ring: 0 0% 83.1%;
+    --ring: 210 80% 50%;
   }
 }
 
@@ -159,38 +128,39 @@
     /* Smaller inline buttons can override */
     button.inline-btn, [data-inline] {
       min-height: auto;
-      min-width: auto;
     }
     
     /* Improve dropdown and menu interactions */
     [role="menuitem"], [role="option"], [role="tab"] {
-      min-height: 48px;
+      min-height: var(--touch-target);
       touch-action: manipulation;
-      padding-top: 12px;
-      padding-bottom: 12px;
     }
     
-    /* Prevent zoom on input focus - iOS requirement */
+    /* Prevent zoom on input focus */
     input, textarea, select {
       font-size: 16px;
     }
     
-    /* Better tap feedback */
-    button:active, [role="button"]:active {
-      transform: scale(0.98);
-      transition: transform 0.1s ease;
-    }
-    
-    /* Link touch targets */
-    a {
-      padding: 4px;
-      margin: -4px;
+    /* Unified touch manipulation class */
+    .touch-manipulation {
+      touch-action: manipulation;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
   }
 
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
+
+  /* Unified border radius scale */
+  .rounded-sm { border-radius: calc(var(--radius) * 0.5); }
+  .rounded-md { border-radius: calc(var(--radius) * 0.75); }
+  .rounded-lg { border-radius: var(--radius); }
+  .rounded-xl { border-radius: calc(var(--radius) * 1.5); }
+  .rounded-2xl { border-radius: calc(var(--radius) * 2); }
+  .rounded-full { border-radius: 9999px; }
 
   /* Custom animations */
   .animate-fade-in {
@@ -205,12 +175,12 @@
     animation: scaleIn 0.2s ease-out;
   }
   
-  /* Glass morphism effect */
+  /* Glass morphism effect - unified */
   .glass {
     @apply bg-background/80 backdrop-blur-md border border-border/50;
   }
   
-  /* Gradient text */
+  /* Gradient text - unified */
   .gradient-text {
     @apply bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent;
   }
@@ -218,6 +188,12 @@
   /* Better button hover states */
   .btn-hover {
     @apply transition-all duration-200 hover:scale-105 hover:shadow-lg;
+  }
+
+  /* Pull to refresh prevention */
+  .prevent-refresh {
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
   }
 }
 

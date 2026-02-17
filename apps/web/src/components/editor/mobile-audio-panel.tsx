@@ -25,6 +25,7 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { useMobileContext } from "@/contexts/mobile-context";
 import { MobileRecordingInterface } from "./mobile-recording-interface";
 import { cn } from "@/lib/utils";
+import { addHapticFeedback } from "@/lib/mobile-utils";
 
 interface MobileAudioPanelProps {
   className?: string;
@@ -50,6 +51,7 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
   };
 
   const handleVoiceoverRecord = () => {
+    addHapticFeedback("medium");
     setShowMobileRecording(true);
   };
 
@@ -86,84 +88,70 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
   };
 
   const handleMusicLibrary = () => {
+    addHapticFeedback("light");
     // Handle music library access
     console.log("Open music library");
   };
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
-      {/* Header */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Volume2 className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Audio</h2>
+    <div className={cn("flex flex-col h-full bg-background", className)}>
+      {/* Header - Consistent with other panels */}
+      <div className="p-4 border-b border-border/50 bg-muted/5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Volume2 className="h-4 w-4 text-primary" />
           </div>
-          <div className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-md">
-            {audioFiles.length} files
-          </div>
+          <h2 className="text-sm font-bold uppercase tracking-wider">Audio Tracks</h2>
+          <span className="ml-auto text-[10px] font-bold bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+            {audioFiles.length} TOTAL
+          </span>
         </div>
-      </div>
 
-      {/* Quick Actions */}
-      <div className="p-4 border-b border-border">
-        {/* Primary Record Button */}
+        {/* Primary Record Action - Standout UI */}
         <Button
-          className="h-16 w-full bg-red-500 hover:bg-red-600 text-white font-semibold text-lg mb-4"
+          className="h-16 w-full bg-red-500 hover:bg-red-600 text-white font-bold text-base rounded-2xl shadow-lg shadow-red-500/20 border-none transition-all active:scale-[0.98] touch-manipulation mb-4"
           onClick={handleVoiceoverRecord}
         >
-          <Mic className="h-6 w-6 mr-3" />
-          🎤 Record Your Voice
+          <div className="relative mr-3">
+            <div className="absolute inset-0 bg-white rounded-full animate-ping opacity-20" />
+            <Mic className="h-6 w-6 relative z-10" />
+          </div>
+          Record Voiceover
         </Button>
 
-        {/* Secondary Actions */}
-        <div className="grid grid-cols-2 gap-2">
+        {/* Secondary Actions - More compact and touch-friendly */}
+        <div className="grid grid-cols-2 gap-3">
           <Button
-            variant="outline"
-            className="h-12 flex flex-col gap-1"
+            variant="secondary"
+            className="h-12 rounded-xl bg-muted/50 border-none font-bold text-xs flex items-center justify-center gap-2 touch-manipulation"
             onClick={handleMusicLibrary}
           >
-            <Music className="h-4 w-4" />
-            <span className="text-xs">Music</span>
+            <Music className="h-4 w-4 text-primary" />
+            Stock Music
           </Button>
           <Button
-            variant="outline"
-            className="h-12 flex flex-col gap-1"
+            variant="secondary"
+            className="h-12 rounded-xl bg-muted/50 border-none font-bold text-xs flex items-center justify-center gap-2 touch-manipulation"
             onClick={() => document.getElementById("audio-upload")?.click()}
           >
-            <Upload className="h-4 w-4" />
-            <span className="text-xs">Upload</span>
+            <Upload className="h-4 w-4 text-primary" />
+            Import Audio
           </Button>
-        </div>
-
-        {/* Helpful hint for recording */}
-        <div className="px-4 pb-2 space-y-2">
-          <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded text-center">
-            💡 Tap the red button above to start recording your voiceover!
-          </div>
-          <div className="text-xs text-muted-foreground bg-blue-500/10 p-2 rounded text-center border border-blue-500/20">
-            ⏱️ You have 10 seconds to record your commentary
-          </div>
         </div>
       </div>
 
-      {/* Audio Files List */}
+      {/* Audio Files List - Improved visual hierarchy */}
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-3">
           {audioFiles.length === 0 ? (
-            <div className="text-center py-8">
-              <Volume2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground mb-4">
-                No audio files uploaded
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
+                <Volume2 className="h-8 w-8 text-muted-foreground/40" />
+              </div>
+              <p className="text-sm font-semibold text-muted-foreground">No audio tracks yet</p>
+              <p className="text-xs text-muted-foreground/60 mt-1 px-8">
+                Record your voice or import background music to bring your story to life.
               </p>
-              <Button
-                variant="outline"
-                onClick={() => document.getElementById("audio-upload")?.click()}
-                className="text-sm"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Audio
-              </Button>
             </div>
           ) : (
             audioFiles.map((audio, index) => (
@@ -189,6 +177,13 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
         onClose={() => setShowMobileRecording(false)}
         onComplete={handleRecordingComplete}
       />
+      
+      {/* Footer Instructions */}
+      <div className="p-3 bg-muted/10 text-center">
+        <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+          Tap record to start voiceover
+        </p>
+      </div>
     </div>
   );
 }
@@ -202,7 +197,9 @@ function AudioFileCard({ audio }: AudioFileCardProps) {
   const [duration, setDuration] = useState<string>("00:00");
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const handlePlayPause = () => {
+  const handlePlayPause = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    addHapticFeedback("light");
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
@@ -224,55 +221,52 @@ function AudioFileCard({ audio }: AudioFileCardProps) {
   };
 
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-3">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 rounded-full bg-primary/10 hover:bg-primary/20"
-            onClick={handlePlayPause}
-          >
-            {isPlaying ? (
-              <Pause className="h-4 w-4" />
-            ) : (
-              <Play className="h-4 w-4" />
-            )}
-          </Button>
+    <div className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card border border-border/50 shadow-sm active:bg-muted/50 transition-all">
+      <Button
+        variant="secondary"
+        size="icon"
+        className="h-12 w-12 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 shrink-0 border-none"
+        onClick={handlePlayPause}
+      >
+        {isPlaying ? (
+          <Pause className="h-5 w-5 fill-primary" />
+        ) : (
+          <Play className="h-5 w-5 fill-primary ml-0.5" />
+        )}
+      </Button>
 
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-sm truncate">
-              {audio.name || "Untitled Audio"}
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              {duration} •{" "}
-              {audio.size ? `${Math.round(audio.size / 1024)}KB` : ""}
-            </p>
-          </div>
+      <div className="flex-1 min-w-0">
+        <h3 className="font-bold text-sm truncate">
+          {audio.name || "Untitled Audio"}
+        </h3>
+        <p className="text-[10px] font-medium text-muted-foreground mt-0.5">
+          {duration} •{" "}
+          {audio.size ? `${Math.round(audio.size / 1024)}KB` : "0KB"}
+        </p>
+      </div>
 
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => {
-                // Handle download
-                console.log("Download audio:", audio);
-              }}
-            >
-              <Download className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 rounded-full text-muted-foreground/40 hover:text-primary"
+          onClick={(e) => {
+            e.stopPropagation();
+            addHapticFeedback("light");
+            console.log("Download audio:", audio);
+          }}
+        >
+          <Download className="h-4 w-4" />
+        </Button>
+      </div>
 
-        <audio
-          ref={audioRef}
-          src={audio.url}
-          onLoadedMetadata={handleLoadedMetadata}
-          onEnded={() => setIsPlaying(false)}
-          className="hidden"
-        />
-      </CardContent>
-    </Card>
+      <audio
+        ref={audioRef}
+        src={audio.url}
+        onLoadedMetadata={handleLoadedMetadata}
+        onEnded={() => setIsPlaying(false)}
+        className="hidden"
+      />
+    </div>
   );
 }
