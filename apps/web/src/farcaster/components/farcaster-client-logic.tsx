@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
-import { sdk } from "@farcaster/miniapp-sdk";
+import { getFarcasterSdk } from "@/lib/farcaster-sdk";
 
 /**
  * Farcaster Client Logic
@@ -40,6 +40,9 @@ export function FarcasterClientLogic() {
       if (!isFarcasterMiniApp) {
         let inMiniApp = false;
         try {
+          const sdk = await getFarcasterSdk();
+          if (!sdk) return;
+          
           const detector = (sdk as any).isInMiniApp;
           if (typeof detector === "function") {
             inMiniApp = await Promise.race([

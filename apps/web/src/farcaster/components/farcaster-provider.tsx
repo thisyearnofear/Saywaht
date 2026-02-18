@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { FarcasterUser, FarcasterFrameState } from "@/farcaster/types";
 import { useMobileContext } from "@/contexts/mobile-context";
-import { sdk } from "@farcaster/miniapp-sdk";
+import { getFarcasterSdk } from "@/lib/farcaster-sdk";
 
 type FarcasterContextType = {
   farcasterUser: FarcasterUser | null;
@@ -68,6 +68,18 @@ export function FarcasterProvider({
           setIsReady(true);
           setIsInitializing(false);
         }, 3000);
+
+        // Dynamically load SDK to avoid SSR/WebView issues
+        const sdk = await getFarcasterSdk();
+        
+        if (!sdk) {
+          console.log("SDK not available, skipping Farcaster initialization");
+          setIsFarcasterMiniApp(urlHasFarcasterParams);
+          setIsReady(true);
+          setIsInitializing(false);
+          clearTimeout(initTimeout);
+          return;
+        }
 
         // Detect Farcaster context via SDK - this is the ONLY reliable way
         let miniAppDetected = false;

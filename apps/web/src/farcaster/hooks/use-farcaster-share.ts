@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { storageManager } from "@/lib/storage-manager";
-import { sdk } from "@farcaster/miniapp-sdk";
+import { getFarcasterSdk } from "@/lib/farcaster-sdk";
 import { hapticSelection, hapticImpact, hapticNotify } from "@/farcaster/utils/frame-utils";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
@@ -71,10 +71,15 @@ export function useFarcasterShare() {
             const text = "Check out my reaction video! 🎥✨ created with @saywaht";
             const embeds = [uploadResult.url];
 
-            hapticSelection();
-            hapticImpact('light');
+            await hapticSelection();
+            await hapticImpact('light');
 
             try {
+                const sdk = await getFarcasterSdk();
+                if (!sdk) {
+                    throw new Error("Farcaster SDK not available");
+                }
+                
                 const composer = (sdk.actions as any).composeCast;
                 if (typeof composer === "function") {
                     const result = await composer({ text, embeds, channelKey: undefined });
@@ -86,11 +91,15 @@ export function useFarcasterShare() {
                         `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(embeds[0])}`
                     );
                 }
-                hapticNotify('success');
+                await hapticNotify('success');
             } catch {
-                await sdk.actions.openUrl(
-                    `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(embeds[0])}`
-                );
+                // Fallback: open in browser
+                if (typeof window !== 'undefined') {
+                    window.open(
+                        `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(embeds[0])}`,
+                        '_blank'
+                    );
+                }
             }
 
         } catch (error) {

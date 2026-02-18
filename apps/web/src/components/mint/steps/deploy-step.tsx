@@ -23,12 +23,7 @@ import { base } from "viem/chains";
 import { PLATFORM_ADDRESS } from "@/lib";
 import { triggerCoinCelebration } from "@/lib/confetti";
 import { getZoraCoins } from "@/lib/zora-coins";
-import { sdk } from "@farcaster/miniapp-sdk";
-import {
-  hapticSelection,
-  hapticImpact,
-  hapticNotify,
-} from "@/farcaster/utils/frame-utils";
+
 import {
   Tooltip,
   TooltipContent,

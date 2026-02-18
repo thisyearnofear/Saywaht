@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { sdk } from "@farcaster/miniapp-sdk";
+import { getFarcasterSdk } from "@/lib/farcaster-sdk";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -39,7 +39,10 @@ export function CastContextPanel({
         // Use internal API proxy to avoid CORS issues
         let response: Response;
         const path = `/api/farcaster/cast?hash=${castHash}`;
-        const fetcher = (sdk as any).fetch;
+        
+        // Try to use SDK fetch if available, otherwise fall back to regular fetch
+        const sdk = await getFarcasterSdk();
+        const fetcher = sdk ? (sdk as any).fetch : null;
         if (typeof fetcher === "function") {
           response = await fetcher(path);
         } else {

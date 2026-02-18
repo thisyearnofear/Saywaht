@@ -9,7 +9,7 @@ import { FarcasterSplashScreen } from "./farcaster-splash-screen";
 import { useMobileOnboarding } from "@/components/editor/mobile-onboarding-overlay";
 import { FarcasterClientLogic } from "@/farcaster/components/farcaster-client-logic";
 import { CastContextPanel } from "./cast-context-panel";
-import { sdk } from '@farcaster/miniapp-sdk';
+import { useFarcasterSdk } from "@/lib/farcaster-sdk";
 
 /**
  * Farcaster-enhanced mobile editor layout
@@ -27,9 +27,14 @@ export function FarcasterMobileEditorLayout({
     useMobileOnboarding();
   const [showFarcasterOnboarding, setShowFarcasterOnboarding] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
+  
+  // Load SDK safely (returns null during SSR)
+  const sdk = useFarcasterSdk();
 
-  // Debug mode toggle (for development)
+  // Debug mode toggle (for development) - only in browser
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === 'D' && e.shiftKey && e.ctrlKey) {
         setDebugMode(prev => !prev);

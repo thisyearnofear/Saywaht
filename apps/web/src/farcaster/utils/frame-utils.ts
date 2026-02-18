@@ -65,22 +65,25 @@ export function getMiniAppManifestUrl(): string {
   return `${baseUrl}/.well-known/farcaster.json`;
 }
 
-import { sdk } from '@farcaster/miniapp-sdk';
+import { getFarcasterSdk } from "@/lib/farcaster-sdk";
 
-export function hapticSelection() {
+export async function hapticSelection() {
   try {
-    sdk.haptics?.selectionChanged?.();
+    const sdk = await getFarcasterSdk();
+    sdk?.haptics?.selectionChanged?.();
   } catch {}
 }
 
-export function hapticImpact(type: 'light' | 'medium' | 'heavy' = 'light') {
+export async function hapticImpact(type: 'light' | 'medium' | 'heavy' = 'light') {
   try {
-    sdk.haptics?.impactOccurred?.(type);
+    const sdk = await getFarcasterSdk();
+    sdk?.haptics?.impactOccurred?.(type);
   } catch {}
 }
 
-export function hapticNotify(type: 'success' | 'warning' | 'error' = 'success') {
+export async function hapticNotify(type: 'success' | 'warning' | 'error' = 'success') {
   try {
-    sdk.haptics?.notificationOccurred?.(type);
+    const sdk = await getFarcasterSdk();
+    sdk?.haptics?.notificationOccurred?.(type);
   } catch {}
 }

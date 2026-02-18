@@ -29,18 +29,24 @@ export function useFarcasterFrame() {
             step: "recording",
             source: "miniapp"
           });
-          // Navigate to editor in Mini App context
-          window.location.hash = '#editor';
+          // Navigate to editor in Mini App context - check for window
+          if (typeof window !== 'undefined') {
+            window.location.hash = '#editor';
+          }
           break;
 
         case 'mint':
           setFrameState({ step: "minting" });
-          window.location.hash = '#mint';
+          if (typeof window !== 'undefined') {
+            window.location.hash = '#mint';
+          }
           break;
 
         case 'trade':
           setFrameState({ step: "complete" });
-          window.location.hash = '#trade';
+          if (typeof window !== 'undefined') {
+            window.location.hash = '#trade';
+          }
           break;
 
         default:
