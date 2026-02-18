@@ -37,6 +37,7 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
     error,
     selectTemplate,
     applySelectedTemplate,
+    clearSelectedTemplate,
   } = useTemplateStore();
 
   useEffect(() => {
@@ -92,9 +93,16 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
     );
   }
 
-  const handleApplyTemplate = () => {
-    applySelectedTemplate();
-    router.push("/editor");
+  const handleApplyTemplate = async () => {
+    if (!selectedTemplate) return;
+    // Fully await the async media-loading so the timeline is populated
+    // before we navigate.  Clear the template afterwards so EditorProvider
+    // doesn't attempt a second (duplicate) application.
+    const success = await applySelectedTemplate();
+    if (success) {
+      clearSelectedTemplate();
+      router.push("/editor");
+    }
   };
 
   // Get aspect ratio info for display
@@ -161,10 +169,11 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
           
           <Button
             onClick={handleApplyTemplate}
+            disabled={isLoading}
             size="lg"
             className="rounded-full px-8 shadow-lg hover:shadow-primary/20 transition-all btn-hover hidden md:flex"
           >
-            Use Template
+            {isLoading ? "Loading…" : "Use Template"}
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
@@ -307,10 +316,17 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
 
             <Button
               onClick={handleApplyTemplate}
+              disabled={isLoading}
               className="w-full rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20 transition-all btn-hover"
             >
-              Start Creating
-              <ChevronRight className="ml-2 h-5 w-5" />
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  Creating…
+                </span>
+              ) : (
+                <>Start Creating<ChevronRight className="ml-2 h-5 w-5" /></>
+              )}
             </Button>
           </div>
 
@@ -341,9 +357,17 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
           <div className="md:hidden fixed bottom-6 left-6 right-6 z-40">
             <Button
               onClick={handleApplyTemplate}
+              disabled={isLoading}
               className="w-full h-14 rounded-full text-lg font-bold shadow-2xl shadow-primary/40 border-2 border-white/20 animate-slide-up"
             >
-              Use This Template
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  Creating…
+                </span>
+              ) : (
+                "Use This Template"
+              )}
             </Button>
           </div>
         </div>

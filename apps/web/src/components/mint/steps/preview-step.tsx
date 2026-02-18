@@ -312,7 +312,10 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
         }
 
         const uri = await uploadMetadataToIPFS(metadata);
-        updateData({ metadataUri: uri });
+        updateData({ 
+          metadataUri: uri,
+          thumbnail: finalThumbnailUrl || data.thumbnail
+        });
         setIsGeneratingMetadata(false);
       } catch (error) {
         console.error("Failed to generate metadata with video:", error);
@@ -352,7 +355,10 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
         }
 
         const uri = await uploadMetadataToIPFS(metadata);
-        updateData({ metadataUri: uri });
+        updateData({ 
+          metadataUri: uri,
+          thumbnail: finalThumbnailUrl || data.thumbnail
+        });
       } catch (error) {
         console.error("Failed to generate metadata without video:", error);
       } finally {

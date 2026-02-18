@@ -1,8 +1,7 @@
-"use client";
-
 import React from 'react';
 import Image from "next/image";
 import { useState, useEffect, useRef } from 'react';
+import { Play } from '@/lib/icons'; // Import Play icon
 
 interface HoverVideoPreviewProps {
   videoSrc: string;
@@ -15,10 +14,10 @@ export function HoverVideoPreview({
   alt,
   className = "",
 }: HoverVideoPreviewProps) {
-  const [isHovering, setIsHovering] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isInView, setIsInView] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false); // New state to track actual play status
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -26,9 +25,10 @@ export function HoverVideoPreview({
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
+        setIsInView(entry.isIntersecting);
+        if (!entry.isIntersecting && videoRef.current) {
+          videoRef.current.pause();
+          setIsPlaying(false);
         }
       },
       { rootMargin: "200px" } // Load slightly before it comes into view
@@ -41,55 +41,69 @@ export function HoverVideoPreview({
     return () => observer.disconnect();
   }, []);
 
-  // Start/stop video on hover
+  // Autoplay muted when in view
   useEffect(() => {
     const video = videoRef.current;
     if (!video || hasError || !isInView) return;
 
-    if (isHovering) {
-      // Try to play the video when hovering
+    if (isInView) {
+      // Try to play the video when in view
       const playPromise = video.play();
 
-      // Handle autoplay policies
       if (playPromise !== undefined) {
-        playPromise.catch((error: Error) => {
-          console.error("Auto-play was prevented:", error);
-        });
+        playPromise
+          .then(() => setIsPlaying(true))
+          .catch((error: Error) => {
+            console.warn("Autoplay was prevented (likely not user interacted, or policy):", error);
+            setIsPlaying(false); // Failed to autoplay
+          });
       }
-    } else {
-      // Pause when not hovering
-      video.pause();
-      // Reset to beginning when not hovering to save resources
-      video.currentTime = 0;
     }
-  }, [isHovering, hasError, isInView]);
+  }, [isInView, hasError]);
+
+  const handlePlayClick = () => {
+    const video = videoRef.current;
+    if (video) {
+      if (video.paused) {
+        video.play().then(() => setIsPlaying(true)).catch(console.error);
+      } else {
+        video.pause();
+        setIsPlaying(false);
+      }
+    }
+  };
+
+  const handleVideoError = () => {
+    setHasError(true);
+    setIsLoading(false);
+    console.error("Error loading video:", videoSrc);
+  };
+
+  const handleVideoLoadedMetadata = () => {
+    setIsLoading(false);
+  };
 
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-full bg-gray-800 ${className}`}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
+      className={`relative w-full h-full bg-gray-800 rounded-lg overflow-hidden cursor-pointer ${className}`}
+      onClick={hasError ? undefined : handlePlayClick} // Allow click to play/pause
     >
       {!hasError && isInView && (
         <video
           ref={videoRef}
           className="w-full h-full object-cover"
           src={videoSrc}
-          muted
+          muted // Always muted by default for autoplay
           playsInline
           loop
           preload="metadata"
-          onLoadedMetadata={() => setIsLoading(false)}
-          onError={() => {
-            setHasError(true);
-            setIsLoading(false);
-            console.error("Error loading video:", videoSrc);
-          }}
+          onLoadedMetadata={handleVideoLoadedMetadata}
+          onError={handleVideoError}
         />
       )}
 
-      {/* Placeholder when not in view or loading */}
+      {/* Placeholder when not in view, loading, or has error */}
       {(!isInView || isLoading) && !hasError && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-800/50">
           <svg
@@ -109,44 +123,42 @@ export function HoverVideoPreview({
         </div>
       )}
 
-      {/* Error state */}
       {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800 text-white/50 p-4 text-center">
+          <Play className="w-12 h-12 mb-2" />
+          <p className="text-sm">Video not available</p>
+          <p className="text-xs text-white/30">Tap to retry (if applicable)</p>
+        </div>
+      )}
+
+      {/* Play/Pause Overlay for user interaction */}
+      {!isLoading && isInView && !hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-opacity duration-300 opacity-0 hover:opacity-100 focus-within:opacity-100">
+          {!isPlaying && (
+            <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center">
+              <Play className="h-6 w-6 fill-current" />
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Muted indicator */}
+      {!isLoading && isInView && !hasError && (
+        <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
           <svg
-            width="48"
-            height="48"
+            width="12"
+            height="12"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="text-white/50"
           >
-            <polygon points="5 3 19 12 5 21 5 3" />
+            <path d="M11 5L6 9H2v6h4l5 4V5z" />
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
           </svg>
-        </div>
-      )}
-
-      {/* Video indicator overlay */}
-      {!isLoading && !hasError && (
-        <div className="absolute inset-0 pointer-events-none transition-opacity duration-300">
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-          <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polygon points="5 3 19 12 5 21 5 3" />
-            </svg>
-            {isHovering ? "Playing" : "Hover to Play"}
-          </div>
+          Muted
         </div>
       )}
     </div>

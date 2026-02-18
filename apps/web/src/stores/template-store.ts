@@ -121,9 +121,15 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       const { createNewProject, activeProject } = useProjectStore.getState();
       const { setCurrentTime, pause } = usePlaybackStore.getState();
       
-      // Determine if we're creating a new project or working with existing one
-      const isNewProject = !activeProject || projectName;
-      if (isNewProject) {
+      // Create a new project when:
+      //  - there is no active project at all, OR
+      //  - an explicit projectName was given AND we are replacing (i.e. the
+      //    user intentionally started a fresh project from the template page).
+      // When EditorProvider calls applySelectedTemplate() as a safety-net it
+      // passes no projectName, so it will only create a project if there isn't
+      // one already.
+      const shouldCreateNew = !activeProject || (mergeStrategy === 'replace' && !!projectName);
+      if (shouldCreateNew) {
         const newProjectName = projectName || selectedTemplate.name;
         createNewProject(newProjectName);
       }

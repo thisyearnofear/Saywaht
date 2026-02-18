@@ -13,11 +13,19 @@ import {
   TrendingUp,
   AlertCircle,
   Search,
+  Play,
+  X,
 } from "@/lib/icons";
 import { getZoraCoins, type VideoCoin } from "@/lib/zora-coins";
 import { useWalletAuth } from "@saywaht/auth";
 import { useTrading } from "@/hooks/use-trading";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export function TradingFeed() {
   const router = useRouter();
@@ -29,6 +37,10 @@ export function TradingFeed() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Video playback state
+  const [selectedCoin, setSelectedCoin] = useState<VideoCoin | null>(null);
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
 
   // Sorting and filtering
   const [sortBy, setSortBy] = useState<'volume' | 'price' | 'change' | 'created'>('created');
@@ -55,6 +67,21 @@ export function TradingFeed() {
           try {
             // Try to get current price/volume data from Zora
             const coinData = await getZoraCoins().getCoinData(dbCoin.address);
+            
+            // If we have coinData from Zora, ensure videoUri is correct
+            // Sometimes Zora SDK returns metadata URI in videoUri field
+            if (coinData && (coinData.videoUri.includes('.json') || coinData.videoUri.includes('gateway.pinata.cloud/ipfs/'))) {
+               // Try to fetch metadata to find actual video
+               try {
+                 const metaRes = await fetch(coinData.videoUri);
+                 if (metaRes.ok) {
+                   const meta = await metaRes.json();
+                   if (meta.animation_url) coinData.videoUri = meta.animation_url;
+                   else if (meta.content?.uri) coinData.videoUri = meta.content.uri;
+                 }
+               } catch (e) {}
+            }
+
             return coinData || {
               address: dbCoin.address,
               name: dbCoin.name,
@@ -64,7 +91,7 @@ export function TradingFeed() {
               volume24h: "0",
               priceChange24h: 0,
               thumbnail: dbCoin.thumbnailUrl || "",
-              videoUri: dbCoin.metadataUri || "",
+              videoUri: "", 
               metadataUri: dbCoin.metadataUri || "",
               totalSupply: "0",
               createdAt: dbCoin.createdAt,
@@ -81,7 +108,7 @@ export function TradingFeed() {
               volume24h: "0",
               priceChange24h: 0,
               thumbnail: dbCoin.thumbnailUrl || "",
-              videoUri: dbCoin.metadataUri || "",
+              videoUri: "",
               metadataUri: dbCoin.metadataUri || "",
               totalSupply: "0",
               createdAt: dbCoin.createdAt,
@@ -91,8 +118,30 @@ export function TradingFeed() {
         })
       );
 
-      setCoins(enrichedCoins);
-      setFilteredCoins(enrichedCoins);
+      // Second pass: resolve video URIs for coins that don't have them
+      const fullyEnrichedCoins = await Promise.all(
+        enrichedCoins.map(async (coin) => {
+          if (!coin.videoUri && coin.metadataUri) {
+            try {
+              const metaRes = await fetch(coin.metadataUri);
+              if (metaRes.ok) {
+                const meta = await metaRes.json();
+                return {
+                  ...coin,
+                  videoUri: meta.animation_url || meta.content?.uri || "",
+                  thumbnail: coin.thumbnail || meta.image || ""
+                };
+              }
+            } catch (e) {
+              console.warn(`Failed to fetch metadata for ${coin.name}:`, e);
+            }
+          }
+          return coin;
+        })
+      );
+
+      setCoins(fullyEnrichedCoins);
+      setFilteredCoins(fullyEnrichedCoins);
 
       if (showRefreshIndicator) {
         toast.success("Feed refreshed!");
@@ -173,7 +222,12 @@ export function TradingFeed() {
   };
 
   const handlePlay = (coin: VideoCoin) => {
-    toast.info(`Playing: ${coin.name}`);
+    if (!coin.videoUri) {
+      toast.error("No video available for this coin");
+      return;
+    }
+    setSelectedCoin(coin);
+    setIsVideoOpen(true);
   };
 
   const handleRefresh = () => {
@@ -353,6 +407,39 @@ export function TradingFeed() {
           ))}
         </div>
       )}
+
+      {/* Video Playback Dialog */}
+      <Dialog open={isVideoOpen} onOpenChange={setIsVideoOpen}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black border-none rounded-3xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{selectedCoin?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="relative aspect-video w-full bg-black">
+            {selectedCoin?.videoUri && (
+              <video
+                src={selectedCoin.videoUri}
+                className="w-full h-full"
+                autoPlay
+                controls
+                playsInline
+              />
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full z-50"
+              onClick={() => setIsVideoOpen(false)}
+            >
+              <X className="h-6 w-6" />
+            </Button>
+            
+            <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
+              <h2 className="text-white text-xl font-bold">{selectedCoin?.name}</h2>
+              <p className="text-white/60 text-sm">@{selectedCoin?.symbol}</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Floating Create Button */}
       <Button

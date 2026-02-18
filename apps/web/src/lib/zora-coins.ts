@@ -15,7 +15,9 @@ export interface VideoCoin {
   name: string;
   symbol: string;
   creator: Address | string;
-  videoUri: string;
+  videoUri: string; // The primary video URL for direct playback
+  videoPlaybackUrl?: string; // Optional: A URL optimized for direct playback (e.g., CDN)
+  animationUrl?: string; // Optional: animation_url from metadata, might be same as videoUri
   metadataUri: string;
   totalSupply: string;
   price: string;
@@ -199,7 +201,9 @@ export class ZoraCoinsService {
       name: coinNode.name || "Untitled Commentary",
       symbol: coinNode.symbol || "COMM",
       creator: coinNode.creatorAddress || coinNode.creator?.address || "0x0000000000000000000000000000000000000000",
-      videoUri: coinNode.tokenURI || coinNode.contentURI || "",
+      videoUri: coinNode.contentURI || coinNode.tokenURI || "", // Prioritize contentURI for direct video
+      videoPlaybackUrl: coinNode.contentURI || "",
+      animationUrl: coinNode.animation_url || coinNode.contentURI || "",
       metadataUri: coinNode.tokenURI || coinNode.metadataURI || "",
       totalSupply: coinNode.totalSupply || "1000000",
       price: coinNode.price || "0.001",

@@ -352,44 +352,27 @@ export function MediaPanel() {
         {/* Show overlay when dragging files over the panel */}
         <DragOverlay isVisible={isDragOver} />
 
-        {/* Header with toggle buttons */}
+        {/* Header with toggle buttons — scrollable so tabs never cramp on small screens */}
         <div className="flex border-b overflow-x-auto no-scrollbar">
-          <Button
-            variant={activeTab === "upload" ? "secondary" : "ghost"}
-            size="sm"
-            className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
-            onClick={() => setActiveTab("upload")}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Upload
-          </Button>
-          <Button
-            variant={activeTab === "library" ? "secondary" : "ghost"}
-            size="sm"
-            className="flex-1 rounded-none"
-            onClick={() => setActiveTab("library")}
-          >
-            <Sparkles className="h-4 w-4 mr-2" />
-            Library
-          </Button>
-          <Button
-            variant={activeTab === "text" ? "secondary" : "ghost"}
-            size="sm"
-            className="flex-1 rounded-none"
-            onClick={() => setActiveTab("text")}
-          >
-            <Type className="h-4 w-4 mr-2" />
-            Text
-          </Button>
-          <Button
-            variant={activeTab === "audio" ? "secondary" : "ghost"}
-            size="sm"
-            className="flex-1 rounded-none"
-            onClick={() => setActiveTab("audio")}
-          >
-            <Mic className="h-4 w-4 mr-2" />
-            Audio
-          </Button>
+          {(
+            [
+              { id: "upload", icon: Upload, label: "Upload" },
+              { id: "library", icon: Sparkles, label: "Library" },
+              { id: "text", icon: Type, label: "Text" },
+              { id: "audio", icon: Mic, label: "Audio" },
+            ] as const
+          ).map(({ id, icon: Icon, label }) => (
+            <Button
+              key={id}
+              variant={activeTab === id ? "secondary" : "ghost"}
+              size="sm"
+              className="flex-none min-w-[4rem] rounded-none px-3"
+              onClick={() => setActiveTab(id)}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="ml-1.5 hidden sm:inline">{label}</span>
+            </Button>
+          ))}
         </div>
 
         {/* Content sections */}
@@ -464,16 +447,17 @@ export function MediaPanel() {
               {/* Upload section */}
               <div className="p-3 border-b bg-muted/5">
                 <Tabs defaultValue="local" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3 h-8">
+                  {/* On mobile show only Local tab — Grove/FilCDN are advanced and rarely used */}
+                  <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-8">
                     <TabsTrigger value="local" className="text-xs">
                       <Upload className="h-3 w-3 mr-1" />
-                      Local
+                      <span>Local</span>
                     </TabsTrigger>
-                    <TabsTrigger value="grove" className="text-xs">
+                    <TabsTrigger value="grove" className="text-xs hidden sm:flex">
                       <Globe className="h-3 w-3 mr-1" />
                       Grove
                     </TabsTrigger>
-                    <TabsTrigger value="filcdn" className="text-xs">
+                    <TabsTrigger value="filcdn" className="text-xs hidden sm:flex">
                       <Zap className="h-3 w-3 mr-1" />
                       FilCDN
                     </TabsTrigger>
@@ -501,6 +485,7 @@ export function MediaPanel() {
                     </Button>
                   </TabsContent>
 
+                  {/* Grove and FilCDN hidden on small screens — advanced upload options */}
                   <TabsContent value="grove" className="mt-3">
                     <GroveUpload onUploadComplete={handleGroveUpload} />
                   </TabsContent>

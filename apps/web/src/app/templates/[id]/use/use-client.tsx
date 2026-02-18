@@ -22,6 +22,7 @@ export default function TemplateUseClient({ id }: TemplateUseClientProps) {
     error,
     selectTemplate,
     applySelectedTemplate,
+    clearSelectedTemplate,
   } = useTemplateStore();
 
   useEffect(() => {
@@ -83,9 +84,17 @@ export default function TemplateUseClient({ id }: TemplateUseClientProps) {
     );
   }
 
-  const handleApplyTemplate = () => {
-    applySelectedTemplate(projectName || selectedTemplate.name);
-    router.push("/editor");
+  const handleApplyTemplate = async () => {
+    if (!selectedTemplate) return;
+    // Await the full async template load (media fetching + track creation)
+    // before navigating, so the editor doesn't race with the background task.
+    const success = await applySelectedTemplate(projectName || selectedTemplate.name);
+    if (success) {
+      // Clear the selected template BEFORE navigating so that EditorProvider
+      // does not attempt a second (duplicate) application of the same template.
+      clearSelectedTemplate();
+      router.push("/editor");
+    }
   };
 
   return (
@@ -193,8 +202,19 @@ export default function TemplateUseClient({ id }: TemplateUseClientProps) {
 
           {/* Actions */}
           <div className="flex gap-4">
-            <Button onClick={handleApplyTemplate} className="flex-1 rounded-full h-12 text-lg font-bold">
-              Create Project
+            <Button
+              onClick={handleApplyTemplate}
+              disabled={isLoading}
+              className="flex-1 rounded-full h-12 text-lg font-bold"
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  Creating…
+                </span>
+              ) : (
+                "Create Project"
+              )}
             </Button>
             <Button variant="outline" onClick={() => router.push("/templates")} className="rounded-full">
               Cancel

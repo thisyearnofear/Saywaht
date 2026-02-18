@@ -202,10 +202,10 @@ export function EditorHeader() {
         </div>
       </div>
 
-      {/* Center Section: Main Controls */}
-      <div className="flex items-center bg-muted/30 p-1 rounded-2xl border border-border/40">
+      {/* Center Section: Main Controls — hidden on mobile (preview has its own play button) */}
+      <div className="hidden sm:flex items-center bg-muted/30 p-1 rounded-2xl border border-border/40">
         <TooltipProvider>
-          <div className="hidden sm:flex items-center gap-1">
+          <div className="flex items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" onClick={() => setPreviewZoom(previewZoom - 0.25)} disabled={previewZoom <= 0.25} className="h-8 w-8 rounded-xl">
@@ -230,7 +230,7 @@ export function EditorHeader() {
           </div>
         </TooltipProvider>
 
-        <div className="hidden sm:block w-px h-4 bg-border/50 mx-1" />
+        <div className="w-px h-4 bg-border/50 mx-1" />
 
         <Button variant="ghost" size="icon" onClick={toggle} className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all">
           {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current" />}
@@ -261,14 +261,14 @@ export function EditorHeader() {
           </DropdownMenu>
         </div>
 
-        {/* Primary Action Button */}
+        {/* Primary Action Button — hidden on mobile (moved into dropdown) */}
         {isFarcasterMiniApp ? (
-          <Button onClick={shareToFarcaster} disabled={isSharing || !activeProject} className="h-10 rounded-xl px-5 font-black text-xs uppercase tracking-widest shadow-lg shadow-purple-500/20 bg-purple-600 hover:bg-purple-700">
+          <Button onClick={shareToFarcaster} disabled={isSharing || !activeProject} className="hidden sm:flex h-10 rounded-xl px-5 font-black text-xs uppercase tracking-widest shadow-lg shadow-purple-500/20 bg-purple-600 hover:bg-purple-700">
             {isSharing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Share2 className="h-4 w-4 mr-2" />}
             Share
           </Button>
         ) : (
-          <Button onClick={handleDeploy} disabled={isDeploying || !activeProject} className="h-10 rounded-xl px-5 font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20">
+          <Button onClick={handleDeploy} disabled={isDeploying || !activeProject} className="hidden sm:flex h-10 rounded-xl px-5 font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20">
             {isDeploying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2 fill-current" />}
             Launch
           </Button>
@@ -282,6 +282,26 @@ export function EditorHeader() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64 rounded-2xl p-2">
+            {/* Mobile-only: Deploy action (hidden on sm+) */}
+            {isFarcasterMiniApp ? (
+              <DropdownMenuItem onClick={shareToFarcaster} disabled={isSharing || !activeProject} className="sm:hidden rounded-xl p-3 mb-1">
+                <Share2 className="h-4 w-4 mr-3 text-purple-500" />
+                <div className="flex flex-col">
+                  <span className="font-bold text-sm">Share to Farcaster</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Post your video</span>
+                </div>
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={handleDeploy} disabled={isDeploying || !activeProject} className="sm:hidden rounded-xl p-3 mb-1">
+                <Zap className="h-4 w-4 mr-3 text-primary" />
+                <div className="flex flex-col">
+                  <span className="font-bold text-sm">Deploy</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Launch & mint your video</span>
+                </div>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator className="sm:hidden my-1" />
+
             <DropdownMenuItem onClick={() => handleExport("auto")} className="rounded-xl p-3">
               <Download className="h-4 w-4 mr-3 text-primary" />
               <div className="flex flex-col">

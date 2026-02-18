@@ -5,9 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { MediaPanel } from "@/components/editor/media-panel";
 import { Input } from "@/components/ui/input";
-import { useMediaStore } from "@/stores/media-store";
+import { useMediaStore, MediaItem } from "@/stores/media-store";
+import { useTimelineStore } from "@/stores/timeline-store";
 import { cn } from "@/lib/utils";
 import {
   Upload,
@@ -17,6 +17,7 @@ import {
   Plus,
   Sparkles,
   Loader2,
+  Trash2,
 } from "@/lib/icons";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { processMediaFiles } from "@/lib/media-processing";
@@ -155,14 +156,12 @@ export function MobileMediaPanel({ className }: MobileMediaPanelProps) {
           />
         </TabsContent>
 
-        {/* Project — existing media items */}
+        {/* Project — existing media items (lightweight mobile list, no desktop panel) */}
         <TabsContent
           value="project"
           className="flex-1 min-h-0 m-0 data-[state=active]:flex data-[state=active]:flex-col"
         >
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <MediaPanel />
-          </div>
+          <ProjectMediaList onFileSelect={handleFileSelect} isProcessing={isProcessing} />
         </TabsContent>
 
         {/* Upload — add new files */}
@@ -178,6 +177,191 @@ export function MobileMediaPanel({ className }: MobileMediaPanelProps) {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// ── Project Media List ─────────────────────────────────────────────────────
+// A lightweight, mobile-optimised view of the current project's media.
+// Replaces the full desktop <MediaPanel /> embed to avoid nested cramped tabs.
+
+interface ProjectMediaListProps {
+  onFileSelect: () => void;
+  isProcessing: boolean;
+}
+
+function ProjectMediaList({ onFileSelect, isProcessing }: ProjectMediaListProps) {
+  const { mediaItems, removeMediaItem } = useMediaStore();
+  const { addTrack, addClipToTrack, tracks } = useTimelineStore();
+
+  const videoItems = mediaItems.filter((m) => m.type === "video" || m.type === "image");
+  const audioItems = mediaItems.filter((m) => m.type === "audio");
+
+  const handleAddToTimeline = (item: MediaItem) => {
+    addHapticFeedback("medium");
+    // Find or create a track of the right type
+    const trackType = item.type === "audio" ? "audio" : "video";
+    let targetTrack = tracks.find((t) => t.type === trackType);
+    let trackId = targetTrack?.id;
+    if (!trackId) {
+      trackId = addTrack(trackType);
+    }
+    addClipToTrack(trackId, {
+      mediaId: item.id,
+      name: item.name,
+      duration: item.duration || 5,
+      startTime: 0,
+      trimStart: 0,
+      trimEnd: 0,
+    });
+    toast.success(`${item.name} added to timeline`);
+  };
+
+  const handleRemove = (id: string) => {
+    addHapticFeedback("medium");
+    removeMediaItem(id);
+  };
+
+  if (mediaItems.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4">
+        <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center">
+          <Video className="h-8 w-8 text-muted-foreground/40" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground">No media yet</p>
+          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest mt-1">
+            Upload files or search the library
+          </p>
+        </div>
+        <Button size="sm" onClick={onFileSelect} disabled={isProcessing} className="rounded-full mt-2">
+          {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+          Add Files
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <ScrollArea className="flex-1 bg-muted/5">
+      <div className="p-4 space-y-5 pb-10">
+        {/* Add More button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onFileSelect}
+          disabled={isProcessing}
+          className="w-full rounded-2xl h-11 border-dashed"
+        >
+          {isProcessing ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <Plus className="h-4 w-4 mr-2" />
+          )}
+          Add More Files
+        </Button>
+
+        {/* Video / image items */}
+        {videoItems.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">
+              Video & Images
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {videoItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="relative rounded-2xl overflow-hidden bg-muted border border-border/30 group"
+                >
+                  <div className="aspect-video">
+                    {item.thumbnailUrl ? (
+                      <img
+                        src={item.thumbnailUrl}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-muted/50">
+                        <Video className="h-6 w-6 text-muted-foreground/40" />
+                      </div>
+                    )}
+                  </div>
+                  {/* Overlay with actions */}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-active:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button
+                      className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shadow-lg"
+                      onClick={() => handleAddToTimeline(item)}
+                      aria-label="Add to timeline"
+                    >
+                      <Plus className="h-4 w-4 text-white" />
+                    </button>
+                    <button
+                      className="h-8 w-8 rounded-full bg-destructive flex items-center justify-center shadow-lg"
+                      onClick={() => handleRemove(item.id)}
+                      aria-label="Remove"
+                    >
+                      <Trash2 className="h-4 w-4 text-white" />
+                    </button>
+                  </div>
+                  <div className="px-2 py-1.5 bg-background/90">
+                    <p className="text-[10px] font-bold truncate">{item.name}</p>
+                    {item.duration ? (
+                      <p className="text-[9px] text-muted-foreground">
+                        {Math.floor(item.duration / 60)}:{String(Math.floor(item.duration % 60)).padStart(2, "0")}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Audio items */}
+        {audioItems.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">
+              Audio
+            </p>
+            <div className="space-y-2">
+              {audioItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 p-3 rounded-2xl bg-green-500/10 border border-green-500/20"
+                >
+                  <div className="h-10 w-10 rounded-xl bg-green-500/20 flex items-center justify-center shrink-0">
+                    <Music className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold truncate">{item.name}</p>
+                    {item.duration ? (
+                      <p className="text-[10px] text-muted-foreground">
+                        {Math.floor(item.duration / 60)}:{String(Math.floor(item.duration % 60)).padStart(2, "0")}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center"
+                      onClick={() => handleAddToTimeline(item)}
+                      aria-label="Add to timeline"
+                    >
+                      <Plus className="h-4 w-4 text-primary" />
+                    </button>
+                    <button
+                      className="h-8 w-8 rounded-full bg-destructive/10 flex items-center justify-center"
+                      onClick={() => handleRemove(item.id)}
+                      aria-label="Remove"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </ScrollArea>
   );
 }
 

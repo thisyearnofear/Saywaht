@@ -35,11 +35,16 @@ export function EditorProvider({ children }: EditorProviderProps) {
     }
   }, [activeProject, isPanelsReady, initializeScenes]);
 
-  // Apply selected template after editor is ready
+  // Safety-net: if a selectedTemplate is still set when the editor mounts
+  // (e.g. the user navigated directly to /editor with a stale store), apply
+  // it now.  Under the normal use-client → /editor flow this effect is a
+  // no-op because use-client already awaits the apply and clears the template
+  // before navigating.  We intentionally do NOT pass a projectName here so
+  // that a new project is only created when there isn't one already.
   useEffect(() => {
     if (isPanelsReady && selectedTemplate) {
-      console.log('Applying selected template:', selectedTemplate.name);
-      applySelectedTemplate(selectedTemplate.name).then((success) => {
+      console.log('[EditorProvider] Applying stale selected template:', selectedTemplate.name);
+      applySelectedTemplate().then((success) => {
         if (success) {
           clearSelectedTemplate();
         }

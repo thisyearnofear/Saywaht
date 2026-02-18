@@ -226,7 +226,12 @@ export function Header() {
   };
 
   // Filter navigation items based on auth status
-  const visibleNavItems = navigationItems.filter(item => 
+  const visibleNavItems = navigationItems.map(item => {
+    if (item.id === "profile" && isConnected && address) {
+      return { ...item, path: `/profile/${address}` };
+    }
+    return item;
+  }).filter(item => 
     !item.requiresAuth || (item.requiresAuth && isConnected)
   );
 
