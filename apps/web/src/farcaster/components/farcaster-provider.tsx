@@ -40,38 +40,43 @@ export function FarcasterProvider({
   const [isInitializing, setIsInitializing] = useState(true);
   const [isReady, setIsReady] = useState(false);
 
-  // Initialize Farcaster Mini App SDK with timeout and better error handling
+  // Initialize Farcaster Mini App SDK with optimized performance
   useEffect(() => {
     const initializeSDK = async () => {
-      // Compute the URL-based detection synchronously up front so the
-      // timeout / error fallbacks can also use it.
+      // Compute the URL-based detection synchronously up front
       const urlHasFarcasterParams = typeof window !== "undefined" && (
         window.location.search.includes("farcaster") ||
         window.location.search.includes("fid") ||
         window.location.pathname.includes("farcaster")
       );
 
+      // Fast path: if no Farcaster indicators in URL, skip SDK detection
+      if (!urlHasFarcasterParams) {
+        setIsFarcasterMiniApp(false);
+        setIsReady(true);
+        setIsInitializing(false);
+        return;
+      }
+
       try {
         setIsInitializing(true);
 
-        // Add timeout to prevent hanging
+        // Single timeout for entire initialization (3s max)
         const initTimeout = setTimeout(() => {
           console.warn("SDK initialization timeout, proceeding anyway");
-          // Do NOT fall back to isMobile – being on mobile doesn't mean we're
-          // inside a Farcaster host.
-          setIsFarcasterMiniApp(urlHasFarcasterParams);
+          setIsFarcasterMiniApp(true);
           setIsReady(true);
           setIsInitializing(false);
-        }, 5000); // 5 second timeout
+        }, 3000);
 
-        // Detect Farcaster context via SDK first (most reliable)
+        // Detect Farcaster context via SDK
         let miniAppDetected = false;
         try {
           const detector = (sdk as any).isInMiniApp;
           if (typeof detector === "function") {
             miniAppDetected = await Promise.race([
               detector(),
-              new Promise(resolve => setTimeout(() => resolve(false), 2000))
+              new Promise(resolve => setTimeout(() => resolve(false), 1500))
             ]) as boolean;
           }
         } catch (error) {
@@ -82,36 +87,34 @@ export function FarcasterProvider({
         setIsFarcasterMiniApp(isMiniApp);
 
         if (isMiniApp) {
-          // Try to get user context with timeout
-          try {
-            const contextPromise = sdk.context;
-            const context = await Promise.race([
-              contextPromise,
-              new Promise((_, reject) => setTimeout(() => reject(new Error("Context timeout")), 3000))
-            ]) as any;
+          // Run context fetch and ready() in parallel for speed
+          const contextPromise = (async () => {
+            try {
+              const context = await Promise.race([
+                sdk.context,
+                new Promise((_, reject) => setTimeout(() => reject(new Error("Context timeout")), 2000))
+              ]) as any;
 
-            if (context?.user) {
-              setFarcasterUser({
-                fid: context.user.fid,
-                username: context.user.username || "",
-                displayName: context.user.displayName || "",
-                pfpUrl: context.user.pfpUrl || "",
-                profile: {
-                  bio: {
-                    text: "",
-                    mentions: [],
+              if (context?.user) {
+                setFarcasterUser({
+                  fid: context.user.fid,
+                  username: context.user.username || "",
+                  displayName: context.user.displayName || "",
+                  pfpUrl: context.user.pfpUrl || "",
+                  profile: {
+                    bio: {
+                      text: "",
+                      mentions: [],
+                    },
                   },
-                },
-              });
+                });
+              }
+            } catch (error) {
+              console.log("User context not available:", error);
             }
-          } catch (error) {
-            console.log("User context not available:", error);
-          }
+          })();
 
-          // Only call ready() when the SDK has confirmed we are actually
-          // inside a Farcaster mini-app host. Calling it in a plain browser
-          // (even on mobile) causes "ready call, not ready" log spam.
-          if (miniAppDetected) {
+          const readyPromise = (async () => {
             try {
               await Promise.race([
                 sdk.actions.ready(),
@@ -120,9 +123,11 @@ export function FarcasterProvider({
               console.log("Farcaster SDK ready() called successfully");
             } catch (error) {
               console.log("SDK ready() failed or timed out:", error);
-              // Continue anyway – the app still works without it
             }
-          }
+          })();
+
+          // Wait for both to complete (in parallel)
+          await Promise.allSettled([contextPromise, readyPromise]);
         }
 
         clearTimeout(initTimeout);
@@ -130,18 +135,14 @@ export function FarcasterProvider({
         setIsInitializing(false);
       } catch (error) {
         console.error("SDK initialization error:", error);
-        // Always mark as ready to prevent infinite loading.
-        // Fall back to the URL-based check; never use isMobile alone.
-        setIsFarcasterMiniApp(urlHasFarcasterParams);
+        setIsFarcasterMiniApp(true);
         setIsReady(true);
         setIsInitializing(false);
       }
     };
 
-    // Add small delay to ensure DOM is ready.
-    // Run once on mount — the detection is based on the URL and SDK,
-    // neither of which changes after the component mounts.
-    const timer = setTimeout(initializeSDK, 100);
+    // Minimal delay for DOM readiness
+    const timer = setTimeout(initializeSDK, 50);
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

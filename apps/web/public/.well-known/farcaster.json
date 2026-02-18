@@ -32,7 +32,8 @@
     "requiredCapabilities": [
       "actions.signIn",
       "wallet.getEthereumProvider"
-    ]
+    ],
+    "noindex": false
   },
   "baseBuilder": {
     "allowedAddresses": [

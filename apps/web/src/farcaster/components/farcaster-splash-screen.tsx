@@ -32,12 +32,13 @@ export function FarcasterSplashScreen({
     const maxTimeout = setTimeout(() => {
       console.log("Splash screen max timeout reached, proceeding to app");
       onComplete();
-    }, 8000); // 8 second maximum
+    }, 4000); // 4 second maximum (reduced from 8s)
 
+    // Faster loading stages for better UX
     const stages = [
-      { stage: "initializing" as const, duration: 800, progress: 33 },
-      { stage: "connecting" as const, duration: 1000, progress: 66 },
-      { stage: "ready" as const, duration: 500, progress: 100 },
+      { stage: "initializing" as const, duration: 400, progress: 33 },
+      { stage: "connecting" as const, duration: 600, progress: 66 },
+      { stage: "ready" as const, duration: 300, progress: 100 },
     ];
 
     let currentStageIndex = 0;
