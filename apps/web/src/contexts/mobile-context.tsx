@@ -37,21 +37,23 @@ export function MobileProvider({ children }: { children: ReactNode }) {
 
   // Save user preference when they manually toggle
   const toggleEditorMobileMode = () => {
+    if (isMobile) return; // Prevent toggling on real mobile devices
+
     setIsEditorMobileMode((prev: boolean) => {
       const newValue = !prev;
-      if (!isMobile) {
-        // Only save preference on desktop
-        localStorage.setItem("editor-mobile-mode", newValue.toString());
-      }
+      // Only save preference on desktop
+      localStorage.setItem("editor-mobile-mode", newValue.toString());
       return newValue;
     });
   };
 
   const enableEditorMobileMode = () => {
+    if (isMobile) return;
     setIsEditorMobileMode(true);
   };
 
   const disableEditorMobileMode = () => {
+    if (isMobile) return; // Never disable on mobile devices
     setIsEditorMobileMode(false);
   };
 

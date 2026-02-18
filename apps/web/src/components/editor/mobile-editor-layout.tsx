@@ -14,12 +14,22 @@ import {
   Type,
   Layers,
   Video,
+  Share2,
+  Zap,
+  Loader2,
+  Undo2,
+  Redo2,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useMediaStore } from "@/stores/media-store";
-import { WorkingMobileTimeline } from "@/components/editor/working-mobile-timeline";
+import { useProjectStore } from "@/stores/project-store";
+import { useTimelineStore } from "@/stores/timeline-store";
+import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
+import { useFarcasterShare } from "@/farcaster/hooks/use-farcaster-share";
+import { useEditorHistory } from "@/hooks/use-editor-history";
+import { MobileTimeline } from "@/components/editor/mobile-timeline";
 import { MobileMediaPanel } from "@/components/editor/mobile-media-panel";
 import { MobileAudioPanel } from "@/components/editor/mobile-audio-panel";
 import { MobilePreviewPanel } from "@/components/editor/mobile-preview-panel";
@@ -31,6 +41,7 @@ import {
 } from "@/components/editor/mobile-onboarding-overlay";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
 
 import dynamic from "next/dynamic";
 
@@ -53,12 +64,20 @@ export function MobileEditorLayout({
   className,
   hideOnboarding = false
 }: MobileEditorLayoutProps) {
-  const { isEditorMobileMode, toggleEditorMobileMode } = useMobileContext();
+  const { isEditorMobileMode, toggleEditorMobileMode, orientation } = useMobileContext();
   const { isPlaying, toggle } = usePlaybackStore();
   const { mediaItems } = useMediaStore();
+  const { activeProject } = useProjectStore();
+  const { tracks } = useTimelineStore();
+  const { isFarcasterMiniApp } = useFarcasterContext();
+  const { shareToFarcaster, isSharing } = useFarcasterShare();
+  const { undo, redo, canUndo, canRedo } = useEditorHistory();
 
   // View mode: 'fullscreen' (default) or 'tools'
   const [viewMode, setViewMode] = useState<"fullscreen" | "tools">("fullscreen");
+  
+  // Cinematic mode: auto-hide tools/timeline in landscape
+  const isCinematicMode = orientation === "landscape";
 
   // Active tool tabs:
   //   record  → MobileAudioPanel  (primary: voiceover recording)
@@ -83,6 +102,23 @@ export function MobileEditorLayout({
 
   // Set up playback controls
   usePlaybackControls();
+
+  // Handle Finish / Share
+  const handleFinish = useCallback(async () => {
+    addHapticFeedback("heavy");
+    if (!activeProject || tracks.length === 0) {
+      toast.error("Add some content first!");
+      return;
+    }
+
+    if (isFarcasterMiniApp) {
+      await shareToFarcaster();
+    } else {
+      // Redirect to minting page or handle deployment
+      toast.info("Preparing to launch...");
+      window.location.href = `/mint/${activeProject.id}`;
+    }
+  }, [activeProject, tracks.length, isFarcasterMiniApp, shareToFarcaster]);
 
   // Handle timeline expand/collapse
   const toggleTimeline = useCallback(() => {
@@ -114,10 +150,11 @@ export function MobileEditorLayout({
       transition={{ duration: 0.5 }}
       className={cn(
         "h-full w-full flex flex-col bg-background overflow-hidden mobile-editor",
+        isCinematicMode && "cinematic-mode",
         className
       )}
     >
-      {viewMode === "fullscreen" ? (
+      {viewMode === "fullscreen" || isCinematicMode ? (
         /* ── Fullscreen mode: video fills the screen with a floating toolbar ── */
         <div className="flex-1 relative bg-black">
           {/* Compact branding header */}
@@ -130,20 +167,39 @@ export function MobileEditorLayout({
               </div>
               saywaht
             </div>
+            
             <div className="flex items-center gap-2 pb-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-12 w-12 text-white/90 hover:text-white hover:bg-white/10 rounded-full backdrop-blur-md border border-white/10 shadow-xl"
-                onClick={toggleEditorMobileMode}
-                aria-label="Switch to desktop"
-              >
-                <Monitor className="h-6 w-6" />
-              </Button>
+              {!isCinematicMode && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-10 rounded-full bg-primary text-white font-black text-[10px] uppercase tracking-widest px-6 shadow-xl active:scale-95 transition-all"
+                  onClick={handleFinish}
+                  disabled={isSharing}
+                >
+                  {isSharing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isFarcasterMiniApp ? (
+                    <>
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Share
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4 mr-2 fill-white" />
+                      Finish
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
 
-          <MobilePreviewPanel showResolution={false} showControls={false} />
+          <MobilePreviewPanel 
+            showResolution={false} 
+            showControls={!isCinematicMode} 
+            controlsVariant="overlay"
+          />
 
           {/* Full-screen play/pause tap target */}
           <button
@@ -165,76 +221,78 @@ export function MobileEditorLayout({
             )}
           </button>
 
-          {/* Floating action bar — safe-area aware, no double padding */}
-          <motion.div
-            drag="y"
-            dragConstraints={{ top: 0, bottom: 250 }}
-            dragElastic={0.1}
-            onDragEnd={(_, info) => {
-              if (info.offset.y > 80) {
-                setIsFullscreenControlsHidden(true);
-                addHapticFeedback("medium");
-              }
-            }}
-            animate={{
-              y: isFullscreenControlsHidden ? 300 : 0,
-              opacity: isFullscreenControlsHidden ? 0 : 1
-            }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="absolute bottom-0 left-0 right-0 z-30 px-6 pt-4 bg-gradient-to-t from-black/95 via-black/40 to-transparent safe-area-bottom"
-            style={{ paddingBottom: "max(2.5rem, calc(env(safe-area-inset-bottom) + 1rem))" }}
-          >
-            {/* Drag Handle */}
-            <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6 touch-none" />
-
-            {/* Primary actions */}
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <Button
-                variant="secondary"
-                size="lg"
-                className="h-14 px-6 rounded-2xl bg-white text-black hover:bg-white/90 shadow-xl touch-manipulation border-none font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
-                onClick={() => openTool("record")}
-              >
-                <Mic className="h-5 w-5 mr-2 text-destructive animate-pulse" />
-                Record
-              </Button>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="h-14 w-14 rounded-full bg-white/10 text-white hover:bg-white/20 backdrop-blur-2xl touch-manipulation border border-white/20 active:scale-95 transition-all shadow-xl"
-                  onClick={() => openTool("text")}
-                  aria-label="Add Text"
-                >
-                  <Type className="h-6 w-6" />
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="h-14 w-14 rounded-full bg-white/10 text-white hover:bg-white/20 backdrop-blur-2xl touch-manipulation border border-white/20 active:scale-95 transition-all shadow-xl"
-                  onClick={() => openTool("effects")}
-                  aria-label="Add Effects"
-                >
-                  <Layers className="h-6 w-6" />
-                </Button>
-              </div>
-            </div>
-
-            {/* "Open Tools" chevron button */}
-            <button
-              className="w-full flex flex-col items-center gap-1.5 text-white/40 hover:text-white transition-colors touch-manipulation group pb-2"
-              onClick={toggleViewMode}
+          {/* Floating action bar — hidden in cinematic mode */}
+          {!isCinematicMode && (
+            <motion.div
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 250 }}
+              dragElastic={0.1}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 80) {
+                  setIsFullscreenControlsHidden(true);
+                  addHapticFeedback("medium");
+                }
+              }}
+              animate={{
+                y: isFullscreenControlsHidden ? 300 : 0,
+                opacity: isFullscreenControlsHidden ? 0 : 1
+              }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="absolute bottom-0 left-0 right-0 z-30 px-6 pt-4 bg-gradient-to-t from-black/95 via-black/40 to-transparent safe-area-bottom"
+              style={{ paddingBottom: "max(2.5rem, calc(env(safe-area-inset-bottom) + 1rem))" }}
             >
-              <ChevronUp className="h-5 w-5 animate-bounce group-hover:text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-[0.4em]">
-                Open Tools
-              </span>
-            </button>
-          </motion.div>
+              {/* Drag Handle */}
+              <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6 touch-none" />
+
+              {/* Primary actions */}
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="h-14 px-6 rounded-2xl bg-white text-black hover:bg-white/90 shadow-xl touch-manipulation border-none font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
+                  onClick={() => openTool("record")}
+                >
+                  <Mic className="h-5 w-5 mr-2 text-destructive animate-pulse" />
+                  Record
+                </Button>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-14 w-14 rounded-full bg-white/10 text-white hover:bg-white/20 backdrop-blur-2xl touch-manipulation border border-white/20 active:scale-95 transition-all shadow-xl"
+                    onClick={() => openTool("text")}
+                    aria-label="Add Text"
+                  >
+                    <Type className="h-6 w-6" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-14 w-14 rounded-full bg-white/10 text-white hover:bg-white/20 backdrop-blur-2xl touch-manipulation border border-white/20 active:scale-95 transition-all shadow-xl"
+                    onClick={() => openTool("effects")}
+                    aria-label="Add Effects"
+                  >
+                    <Layers className="h-6 w-6" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* "Open Tools" chevron button */}
+              <button
+                className="w-full flex flex-col items-center gap-1.5 text-white/40 hover:text-white transition-colors touch-manipulation group pb-2"
+                onClick={toggleViewMode}
+              >
+                <ChevronUp className="h-5 w-5 animate-bounce group-hover:text-primary" />
+                <span className="text-[10px] font-black uppercase tracking-[0.4em]">
+                  Open Tools
+                </span>
+              </button>
+            </motion.div>
+          )}
 
           {/* Restore Controls Button - visible when hidden */}
           <AnimatePresence>
-            {isFullscreenControlsHidden && (
+            {isFullscreenControlsHidden && !isCinematicMode && (
               <motion.button
                 initial={{ y: 100, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -267,6 +325,37 @@ export function MobileEditorLayout({
               </div>
               saywaht
             </div>
+
+            {/* History Controls */}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full"
+                onClick={() => {
+                  addHapticFeedback("light");
+                  undo();
+                }}
+                disabled={!canUndo()}
+                aria-label="Undo"
+              >
+                <Undo2 className={cn("h-4 w-4", !canUndo() && "opacity-20")} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full"
+                onClick={() => {
+                  addHapticFeedback("light");
+                  redo();
+                }}
+                disabled={!canRedo()}
+                aria-label="Redo"
+              >
+                <Redo2 className={cn("h-4 w-4", !canRedo() && "opacity-20")} />
+              </Button>
+            </div>
+
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
@@ -274,16 +363,28 @@ export function MobileEditorLayout({
                 className="text-[10px] font-black uppercase tracking-widest h-9 px-4 bg-primary/10 text-primary hover:bg-primary/20 rounded-full border border-primary/10"
                 onClick={toggleViewMode}
               >
-                Full Preview
+                Preview
               </Button>
               <Button
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 rounded-full border-border/50 bg-muted/30"
-                onClick={toggleEditorMobileMode}
-                aria-label="Switch to desktop mode"
+                variant="default"
+                size="sm"
+                className="h-9 rounded-full bg-primary text-white font-black text-[9px] uppercase tracking-widest px-4 shadow-lg active:scale-95 transition-all"
+                onClick={handleFinish}
+                disabled={isSharing}
               >
-                <Monitor className="h-4 w-4" />
+                {isSharing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : isFarcasterMiniApp ? (
+                  <>
+                    <Share2 className="h-3 w-3 mr-1.5" />
+                    Share
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-3 w-3 mr-1.5 fill-white" />
+                    Finish
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -453,7 +554,7 @@ export function MobileEditorLayout({
                 </Button>
               </div>
               <div className="h-[calc(100%-40px)]">
-                <WorkingMobileTimeline
+                <MobileTimeline
                   expanded={timelineExpanded}
                   onToggleExpand={toggleTimeline}
                 />

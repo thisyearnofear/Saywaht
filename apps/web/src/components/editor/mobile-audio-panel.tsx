@@ -22,10 +22,16 @@ import {
 } from "@/lib/icons";
 import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
+import { useTextStore } from "@/stores/text-store";
 import { useMobileContext } from "@/contexts/mobile-context";
 import { MobileRecordingInterface } from "./mobile-recording-interface";
 import { cn } from "@/lib/utils";
 import { addHapticFeedback } from "@/lib/mobile-utils";
+import { processMediaFiles } from "@/lib/media-processing";
+import { toast } from "sonner";
+import { transcriptionService } from "@/services/transcription/service";
+import { buildCaptionChunks } from "@/lib/transcription/caption";
+import { decodeAudioToFloat32 } from "@/lib/media/audio";
 
 interface MobileAudioPanelProps {
   className?: string;
@@ -35,24 +41,89 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
   const { orientation } = useMobileContext();
   const { mediaItems, addMediaItem } = useMediaStore();
   const { tracks, addTrack, addClipToTrack } = useTimelineStore();
+  const { addTextElement } = useTextStore();
   const [showMobileRecording, setShowMobileRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   // Filter for audio files only
   const audioFiles = mediaItems.filter(
     (item) => item.type === "audio" || item.file?.type?.startsWith("audio/")
   );
 
-  const handleAudioUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAudioUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (files) {
-      // Handle audio upload logic
-      console.log("Audio files uploaded:", files);
+    if (!files?.length) return;
+
+    setIsProcessing(true);
+    addHapticFeedback("medium");
+    try {
+      const items = await processMediaFiles(files);
+      items.forEach((item) => addMediaItem(item));
+      toast.success(`Added ${items.length} audio file(s)`);
+    } catch (error) {
+      console.error("Audio processing failed:", error);
+      toast.error("Failed to process audio files");
+    } finally {
+      setIsProcessing(false);
+      event.target.value = "";
     }
   };
 
   const handleVoiceoverRecord = () => {
     addHapticFeedback("medium");
     setShowMobileRecording(true);
+  };
+
+  const generateCaptions = async (blob: Blob) => {
+    setIsTranscribing(true);
+    
+    const transcriptionPromise = (async () => {
+      // 1. Decode
+      const { samples } = await decodeAudioToFloat32(blob);
+      
+      // 2. Transcribe
+      const result = await transcriptionService.transcribe({
+        audioData: samples,
+        language: "en",
+      });
+      
+      // 3. Build Chunks
+      const chunks = buildCaptionChunks(result.segments);
+      
+      if (chunks.length === 0) throw new Error("No speech detected");
+
+      // 4. Add to Text Store
+      for (const chunk of chunks) {
+        addTextElement({
+          content: chunk.text,
+          fontSize: 28,
+          fontWeight: "bold",
+          color: "#FFFFFF",
+          textAlign: "center",
+          x: 0.5,
+          y: 0.85, // Standard bottom position
+          opacity: 1,
+          fontFamily: "Inter",
+          startTime: chunk.startTime,
+          endTime: chunk.startTime + chunk.duration,
+        });
+      }
+      
+      return chunks.length;
+    })();
+
+    toast.promise(transcriptionPromise, {
+      loading: 'AI is transcribing your voiceover...',
+      success: (count) => `Generated ${count} captions!`,
+      error: (err) => `Captions failed: ${err.message}`,
+    });
+
+    try {
+      await transcriptionPromise;
+    } finally {
+      setIsTranscribing(false);
+    }
   };
 
   const handleRecordingComplete = (audioBlob: Blob) => {
@@ -76,10 +147,7 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
     // Add to media store
     addMediaItem(audioItem);
 
-    // Add to the timeline — find an existing audio track or create a new one.
-    // We never hardcode the track ID because template tracks are assigned random
-    // UUIDs at apply-time; "voiceover-track" from the template JSON no longer
-    // exists as a literal ID in the store.
+    // Add to the timeline
     const existingAudioTrack = tracks.find((t) => t.type === "audio");
     const trackId = existingAudioTrack?.id ?? addTrack("audio");
 
@@ -91,12 +159,17 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
       trimStart: 0,
       trimEnd: 0,
     });
+    
+    toast.success("Voiceover added to timeline");
+
+    // Automatically trigger AI captions
+    generateCaptions(audioBlob);
   };
 
   const handleMusicLibrary = () => {
     addHapticFeedback("light");
-    // Handle music library access
-    console.log("Open music library");
+    toast.info("Opening Stock Library...");
+    window.location.href = "/templates";
   };
 
   return (

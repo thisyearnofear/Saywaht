@@ -45,13 +45,24 @@ interface TextStore {
   
   // Utilities
   clearAllText: () => void;
+
+  // State management
+  setTextElements: (elements: TextElement[]) => void;
+  pushHistory: () => void;
 }
 
 export const useTextStore = create<TextStore>((set, get) => ({
   textElements: [],
   selectedTextId: null,
 
+  pushHistory: () => {
+    // Coordinate with history-store
+  },
+
+  setTextElements: (elements) => set({ textElements: elements }),
+
   addTextElement: (element) => {
+    get().pushHistory();
     const newElement: TextElement = {
       ...element,
       id: crypto.randomUUID(),
@@ -66,6 +77,7 @@ export const useTextStore = create<TextStore>((set, get) => ({
   },
 
   updateTextElement: (id, updates) => {
+    get().pushHistory();
     set((state) => ({
       textElements: state.textElements.map((el) =>
         el.id === id ? { ...el, ...updates } : el
@@ -74,6 +86,7 @@ export const useTextStore = create<TextStore>((set, get) => ({
   },
 
   deleteTextElement: (id) => {
+    get().pushHistory();
     set((state) => ({
       textElements: state.textElements.filter((el) => el.id !== id),
       selectedTextId: state.selectedTextId === id ? null : state.selectedTextId,
@@ -89,6 +102,7 @@ export const useTextStore = create<TextStore>((set, get) => ({
   },
 
   clearAllText: () => {
+    get().pushHistory();
     set({
       textElements: [],
       selectedTextId: null,

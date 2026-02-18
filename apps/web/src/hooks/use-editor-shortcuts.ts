@@ -5,6 +5,7 @@ import { usePlaybackStore } from "@/stores/playback-store";
 import { useEditorStore } from "@/stores/editor-store";
 import { usePanelStore } from "@/stores/panel-store";
 import { toast } from "@/hooks/use-toast";
+import { useEditorHistory } from "./use-editor-history";
 
 /**
  * Keyboard shortcuts for the video editor
@@ -23,11 +24,14 @@ import { toast } from "@/hooks/use-toast";
  * - Shift + Right Arrow: Seek forward 5s
  * - Home: Go to start
  * - End: Go to end
+ * - Cmd/Ctrl + Z: Undo
+ * - Shift + Cmd/Ctrl + Z: Redo
  */
 export function useEditorShortcuts() {
   const { isPlaying, toggle, toggleMute, seek, currentTime, duration, muted } = usePlaybackStore();
   const { videoObjectFit, toggleVideoObjectFit, previewZoom, setPreviewZoom, resetPreviewZoom } = useEditorStore();
   const { toggleTimelineCollapse, isTimelineCollapsed } = usePanelStore();
+  const { undo, redo } = useEditorHistory();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -38,6 +42,20 @@ export function useEditorShortcuts() {
         target.tagName === "TEXTAREA" ||
         target.isContentEditable
       ) {
+        return;
+      }
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const modKey = isMac ? e.metaKey : e.ctrlKey;
+
+      // Handle Undo/Redo
+      if (modKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
         return;
       }
 
@@ -57,7 +75,7 @@ export function useEditorShortcuts() {
         "End",
       ].includes(e.key.toLowerCase());
 
-      if (shouldPreventDefault) {
+      if (shouldPreventDefault && !modKey) {
         e.preventDefault();
       }
 
@@ -179,5 +197,7 @@ export function useEditorShortcuts() {
     resetPreviewZoom,
     toggleTimelineCollapse,
     isTimelineCollapsed,
+    undo,
+    redo,
   ]);
 }

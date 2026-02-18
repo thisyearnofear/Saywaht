@@ -44,6 +44,8 @@ import {
   Scissors,
   RotateCcw,
   RefreshCw,
+  Undo2,
+  Redo2,
 
   // Display & Layout
   Maximize2,
@@ -121,7 +123,7 @@ export {
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowRight, ArrowLeft, ArrowLeftRight,
   ArrowLeftToLine, ArrowRightToLine, Home, Menu, X, Search, Play, Pause, Square,
   Video, Music, Mic, Volume2, VolumeX, SkipBack, SkipForward, Upload, Download, Save, Copy, Edit2,
-  Share2, Trash2, Scissors, RotateCcw, RefreshCw, Maximize2, Minimize2,
+  Share2, Trash2, Scissors, RotateCcw, RefreshCw, Undo2, Redo2, Maximize2, Minimize2,
   ZoomIn, ZoomOut, Monitor, Smartphone, GripVertical, MoreHorizontal,
   MoreVertical, SplitSquareHorizontal, LayoutTemplate, Image, Sparkles, Plus, Check, Star,
   Cloud, Zap, Globe, Wifi, WifiOff, ExternalLink, Coins, Wallet, TrendingUp,

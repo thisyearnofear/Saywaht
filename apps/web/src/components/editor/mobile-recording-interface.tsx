@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -13,6 +13,7 @@ import {
   X,
 } from "@/lib/icons";
 import { useMediaStore } from "@/stores/media-store";
+import type { MediaItem } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,12 @@ import {
   requestMicrophoneAccess,
   RecordingCountdown,
 } from "@/lib/audio-recording";
+
+// Helper to get primary video from media store
+const getPrimaryVideo = (mediaItems: MediaItem[]): MediaItem | null => {
+  const video = mediaItems.find((item) => item.type === "video");
+  return video || null;
+};
 
 interface MobileRecordingInterfaceProps {
   isOpen: boolean;
@@ -33,8 +40,26 @@ export function MobileRecordingInterface({
   onComplete,
 }: MobileRecordingInterfaceProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Get playback controls and state
+  const {
+    isPlaying,
+    currentTime,
+    duration,
+    play,
+    pause,
+    seek,
+  } = usePlaybackStore();
+
+  // Get media items to access primary video
+  const { mediaItems } = useMediaStore();
+  const primaryVideo = getPrimaryVideo(mediaItems);
 
   const [recordingState, setRecordingState] = useState<
     "idle" | "recording" | "completed"
@@ -44,138 +69,131 @@ export function MobileRecordingInterface({
   const [currentHint, setCurrentHint] = useState<string>("");
   const [audioLevel, setAudioLevel] = useState(0);
 
-  // 10-second recording limit (configurable)
+  // Cleanup animation on unmount
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  // Constants
   const MAX_RECORDING_DURATION = 10;
-  const [countdownState, setCountdownState] = useState(() =>
-    RecordingCountdown.getCountdownState(0, MAX_RECORDING_DURATION)
-  );
 
-  const { mediaItems } = useMediaStore();
-  const { currentTime, duration, isPlaying, play, pause, seek } =
-    usePlaybackStore();
-
-  // Get the primary video for recording
-  const primaryVideo = mediaItems.find((item) => item.type === "video");
-
-  // Enhanced recording hints based on video progress and content
-  const getRecordingHint = useCallback(
-    (progress: number) => {
-      // Get hints based on video name/type for more specific guidance
-      const videoName = primaryVideo?.name?.toLowerCase() || "";
-
-      if (progress < 0.1) {
-        if (videoName.includes("tiger"))
-          return "Introduce the tiger's personality!";
-        if (videoName.includes("penguin"))
-          return "What are these penguins thinking?";
-        if (videoName.includes("cat"))
-          return "Catch this sneaky cat in action!";
-        if (videoName.includes("dog"))
-          return "What's going through this dog's mind?";
-        return "Perfect time to start your commentary!";
-      }
-
-      if (progress < 0.3) {
-        if (videoName.includes("tiger"))
-          return "The tiger is pacing - what's it thinking?";
-        if (videoName.includes("penguin"))
-          return "Look at that waddle! Add some personality";
-        return "Keep going, you're doing great!";
-      }
-
-      if (progress < 0.7) {
-        if (videoName.includes("tiger"))
-          return "Perfect moment for dramatic commentary";
-        if (videoName.includes("penguin"))
-          return "These penguins are up to something...";
-        return "Add your personality to this moment";
-      }
-
-      if (progress < 0.9) {
-        return "Almost there, finish strong!";
-      }
-
-      return "Great job! Wrap up your thoughts";
-    },
-    [primaryVideo?.name]
-  );
-
-  // Visual scene markers for better timing
-  const getSceneMarkers = () => {
-    const videoName = primaryVideo?.name?.toLowerCase() || "";
-    const markers = [];
-
-    if (videoName.includes("tiger")) {
-      markers.push(
-        { time: 0.2, label: "Tiger starts pacing", color: "bg-yellow-400" },
-        { time: 0.5, label: "Turn around", color: "bg-blue-400" },
-        { time: 0.8, label: "Intense stare", color: "bg-red-400" }
-      );
-    } else if (videoName.includes("penguin")) {
-      markers.push(
-        { time: 0.15, label: "Waddle begins", color: "bg-blue-400" },
-        { time: 0.4, label: "Group movement", color: "bg-green-400" },
-        { time: 0.7, label: "Cute moment", color: "bg-pink-400" }
-      );
-    } else {
-      // Generic markers
-      markers.push(
-        { time: 0.25, label: "Key moment", color: "bg-blue-400" },
-        { time: 0.5, label: "Mid-point", color: "bg-green-400" },
-        { time: 0.75, label: "Climax", color: "bg-red-400" }
-      );
-    }
-
-    return markers;
+  // Compute countdown state based on recording time
+  const countdownState = {
+    remaining: Math.max(0, MAX_RECORDING_DURATION - recordingTime),
+    isWarning: recordingTime >= MAX_RECORDING_DURATION * 0.7 && recordingTime < MAX_RECORDING_DURATION * 0.9,
+    isCritical: recordingTime >= MAX_RECORDING_DURATION * 0.9,
   };
 
-  const sceneMarkers = getSceneMarkers();
-
-  // Update hint based on video progress
-  useEffect(() => {
-    if (duration > 0) {
-      const progress = currentTime / duration;
-      setCurrentHint(getRecordingHint(progress));
+  // Compute scene markers based on video duration
+  const sceneMarkers = useMemo(() => {
+    if (!duration) return [];
+    const markers = [];
+    const markerCount = Math.min(5, Math.floor(duration / 10));
+    for (let i = 0; i <= markerCount; i++) {
+      const time = (i / markerCount) * 100;
+      const colors = ["bg-red-500", "bg-blue-500", "bg-green-500", "bg-yellow-500", "bg-purple-500"];
+      markers.push({
+        time: time / 100,
+        color: colors[i % colors.length],
+        label: `Scene ${i + 1}`,
+      });
     }
-  }, [currentTime, duration, getRecordingHint]);
+    return markers;
+  }, [duration]);
+
+  // Update current hint as recording progresses
+  useEffect(() => {
+    if (recordingState === "recording") {
+      if (recordingTime < 2) setCurrentHint("Start speaking clearly...");
+      else if (recordingTime < 5) setCurrentHint("Great! Keep going...");
+      else if (recordingTime < 8) setCurrentHint("Almost there...");
+      else setCurrentHint("Finish up!");
+    }
+  }, [recordingTime, recordingState]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && recordingState === "recording") {
       mediaRecorderRef.current.stop();
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       pause();
     }
   }, [recordingState, pause]);
 
-  // Recording timer with countdown
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (recordingState === "recording") {
-      interval = setInterval(() => {
-        setRecordingTime((prev: number) => {
-          const newTime = prev + 0.1;
+  const visualizeAudio = useCallback((stream: MediaStream) => {
+    const audioContext = new AudioContext();
+    const source = audioContext.createMediaStreamSource(stream);
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    analyserRef.current = analyser;
 
-          // Update countdown state
-          const newCountdownState = RecordingCountdown.getCountdownState(
-            newTime,
-            MAX_RECORDING_DURATION
-          );
-          setCountdownState(newCountdownState);
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
 
-          // Auto-stop when time limit reached
-          if (newCountdownState.isFinished) {
-            stopRecording();
-          }
+    const draw = () => {
+      if (!canvasRef.current) return;
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-          return newTime;
-        });
-      }, 100);
-    }
-    return () => clearInterval(interval);
-  }, [recordingState, stopRecording]);
+      animationFrameRef.current = requestAnimationFrame(draw);
+      analyser.getByteFrequencyData(dataArray);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const barWidth = (canvas.width / bufferLength) * 2.5;
+      let barHeight;
+      let x = 0;
+
+      for (let i = 0; i < bufferLength; i++) {
+        barHeight = dataArray[i] / 2;
+        
+        // Dynamic gradient
+        const gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
+        gradient.addColorStop(0, "#3b82f6"); // Blue
+        gradient.addColorStop(1, "#ef4444"); // Red
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+        x += barWidth + 1;
+      }
+      
+      // Update audio level state for simpler visualizer
+      const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+      setAudioLevel(average / 255);
+    };
+
+    draw();
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      audioContext.close();
+    };
+  }, []);
 
   const startRecording = async () => {
     try {
       const stream = await requestMicrophoneAccess();
+
+      // Start visualization
+      visualizeAudio(stream);
+
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: "audio/webm",
         audioBitsPerSecond: 128000,
@@ -203,6 +221,21 @@ export function MobileRecordingInterface({
       setRecordingState("recording");
       setRecordingTime(0);
 
+      // Start timer to track recording time
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      timerRef.current = setInterval(() => {
+        setRecordingTime((prev) => {
+          const newTime = prev + 1;
+          if (newTime >= MAX_RECORDING_DURATION) {
+            // Auto-stop when time limit reached
+            stopRecording();
+          }
+          return newTime;
+        });
+      }, 1000);
+
       // Start video playback
       if (!isPlaying) {
         play();
@@ -213,6 +246,10 @@ export function MobileRecordingInterface({
   };
 
   const retakeRecording = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     setRecordingState("idle");
     setRecordingTime(0);
     setAudioBlob(null);
@@ -378,19 +415,15 @@ export function MobileRecordingInterface({
         {/* Audio Level Visualization */}
         {recordingState === "recording" && (
           <div className="absolute bottom-32 left-4 right-4">
-            <div className="bg-black/50 rounded-lg p-3 backdrop-blur-sm">
-              <div className="flex items-center justify-center space-x-1">
-                {Array.from({ length: 20 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-1 bg-green-400 rounded-full transition-all duration-100 ${
-                      audioLevel * 20 > i ? "h-6" : "h-1"
-                    }`}
-                  />
-                ))}
-              </div>
-              <div className="text-center text-white text-xs mt-2">
-                Audio Level: {Math.round(audioLevel * 100)}%
+            <div className="bg-black/50 rounded-xl p-4 backdrop-blur-md border border-white/10">
+              <canvas 
+                ref={canvasRef} 
+                width={300} 
+                height={60} 
+                className="w-full h-16"
+              />
+              <div className="text-center text-white/60 text-[10px] font-black uppercase tracking-widest mt-2">
+                Live Waveform
               </div>
             </div>
           </div>

@@ -26,8 +26,6 @@ export interface TimelineTrack {
 
 interface TimelineStore {
   tracks: TimelineTrack[];
-  history: TimelineTrack[][];
-  redoStack: TimelineTrack[][];
 
   // Multi-selection
   selectedClips: { trackId: string; clipId: string }[];
@@ -80,9 +78,8 @@ interface TimelineStore {
   nudgeSelectedClips: (amount: number) => void;
   getGapsInTrack: (trackId: string) => { startTime: number; endTime: number; duration: number }[];
 
-  // New actions
-  undo: () => void;
-  redo: () => void;
+  // State management
+  setTracks: (tracks: TimelineTrack[]) => void;
   pushHistory: () => void;
 }
 
@@ -90,30 +87,15 @@ export const useTimelineStore = create<TimelineStore>()(
   persist(
     (set, get) => ({
       tracks: [],
-      history: [],
-      redoStack: [],
       selectedClips: [],
       clipboardClip: null,
 
       pushHistory: () => {
-        const { tracks, history, redoStack } = get();
-        // Deep copy tracks
-        set({ 
-          history: [...history, JSON.parse(JSON.stringify(tracks))],
-          redoStack: [] // Clear redo stack when new action is performed
-        });
+        // This is a placeholder for coordination with history-store
+        // The actual pushing will be handled by a global listener or manual calls
       },
 
-      undo: () => {
-        const { history, redoStack, tracks } = get();
-        if (history.length === 0) return;
-        const prev = history[history.length - 1];
-        set({ 
-          tracks: prev, 
-          history: history.slice(0, -1),
-          redoStack: [...redoStack, JSON.parse(JSON.stringify(tracks))] // Add current state to redo stack
-        });
-      },
+      setTracks: (tracks) => set({ tracks }),
 
       selectClip: (trackId: string, clipId: string, multi: boolean = false) => {
         set((state: TimelineStore) => {
@@ -330,13 +312,6 @@ export const useTimelineStore = create<TimelineStore>()(
         return Math.max(...trackEndTimes, 0);
       },
 
-      redo: () => {
-        const { redoStack } = get();
-        if (redoStack.length === 0) return;
-        const next = redoStack[redoStack.length - 1];
-        set({ tracks: next, redoStack: redoStack.slice(0, -1) });
-      },
-
       // Get all gaps in a track
       getGapsInTrack: (trackId: string) => {
         const { tracks } = get();
@@ -414,7 +389,7 @@ export const useTimelineStore = create<TimelineStore>()(
 
       // Nudge selected clips by a time amount (positive or negative)
       nudgeSelectedClips: (amount: number) => {
-        const { selectedClips, tracks } = get();
+        const { selectedClips } = get();
         if (selectedClips.length === 0) return;
         
         get().pushHistory();
@@ -497,7 +472,6 @@ export const useTimelineStore = create<TimelineStore>()(
     {
       name: "timeline-storage",
       storage: createSSRSafeStorage(),
-      // You might need to customize serialization/deserialization if your clips contain non-serializable data
     }
   )
 );

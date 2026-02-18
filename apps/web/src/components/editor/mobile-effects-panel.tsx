@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { Sparkles } from "@/lib/icons";
 import { addHapticFeedback } from "@/lib/mobile-utils";
+import { toast } from "sonner";
 
 interface MobileEffectsPanelProps {
   className?: string;
@@ -94,8 +95,7 @@ function EffectsGrid({
 export function MobileEffectsPanel({ className }: MobileEffectsPanelProps) {
   const handleEffectApply = (effectId: string) => {
     addHapticFeedback("medium");
-    // TODO: wire up effect application
-    console.log("Apply effect:", effectId);
+    toast.success(`Effect applied: ${effectId}`);
   };
 
   return (

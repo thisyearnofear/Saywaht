@@ -63,8 +63,6 @@ export function Timeline() {
     updateClipTrim,
     updateClipSpeed,
     toggleClipReversed,
-    undo,
-    redo,
   } = useTimelineStore();
   const { currentScene, scenes } = useSceneStore();
   const { mediaItems, addMediaItem } = useMediaStore();
@@ -336,32 +334,7 @@ export function Timeline() {
     handleToggleReversedSelected,
   ]);
 
-  // Keyboard event for undo (Cmd+Z)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo]);
-
-  // Keyboard event for redo (Cmd+Shift+Z or Cmd+Y)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "z" && e.shiftKey) {
-        e.preventDefault();
-        redo();
-      } else if ((e.metaKey || e.ctrlKey) && e.key === "y") {
-        e.preventDefault();
-        redo();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [redo]);
+  // Note: Undo/Redo keyboard shortcuts to be implemented with history-store integration
 
   // Mouse down on timeline background to start selection
   const handleTimelineMouseDown = (e: React.MouseEvent) => {

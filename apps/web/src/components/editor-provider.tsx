@@ -8,6 +8,7 @@ import { useProjectStore } from "@/stores/project-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { toast } from "sonner";
+import { HistorySync } from "./editor/history-sync";
 
 interface EditorProviderProps {
   children: ReactNode;
@@ -119,5 +120,10 @@ export function EditorProvider({ children }: EditorProviderProps) {
   }
 
   // App is ready, render children
-  return <>{children}</>;
+  return (
+    <>
+      <HistorySync />
+      {children}
+    </>
+  );
 }
