@@ -33,7 +33,11 @@
       "actions.signIn",
       "wallet.getEthereumProvider"
     ],
-    "noindex": false
+    "noindex": false,
+    "webhookUrl": "https://saywaht.netlify.app/api/webhook",
+    "screenshotUrls": [
+      "https://saywaht.netlify.app/opengraph-image.jpg"
+    ]
   },
   "baseBuilder": {
     "allowedAddresses": [

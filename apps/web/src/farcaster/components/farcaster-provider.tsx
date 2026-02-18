@@ -64,29 +64,35 @@ export function FarcasterProvider({
         // Single timeout for entire initialization (3s max)
         const initTimeout = setTimeout(() => {
           console.warn("SDK initialization timeout, proceeding anyway");
-          setIsFarcasterMiniApp(true);
+          setIsFarcasterMiniApp(urlHasFarcasterParams);
           setIsReady(true);
           setIsInitializing(false);
         }, 3000);
 
-        // Detect Farcaster context via SDK
+        // Detect Farcaster context via SDK - this is the ONLY reliable way
         let miniAppDetected = false;
         try {
           const detector = (sdk as any).isInMiniApp;
           if (typeof detector === "function") {
             miniAppDetected = await Promise.race([
-              detector(),
-              new Promise(resolve => setTimeout(() => resolve(false), 1500))
+              detector(2000), // 2s timeout for detection
+              new Promise(resolve => setTimeout(() => resolve(false), 2000))
             ]) as boolean;
           }
         } catch (error) {
           console.log("Mini app detection failed:", error);
         }
 
-        const isMiniApp = miniAppDetected || urlHasFarcasterParams;
-        setIsFarcasterMiniApp(isMiniApp);
+        // Only consider it a Farcaster Mini App if SDK confirms it
+        // URL params alone are not sufficient - they could be from a regular browser
+        const isMiniApp = miniAppDetected;
+        setIsFarcasterMiniApp(isMiniApp || urlHasFarcasterParams);
 
-        if (isMiniApp) {
+        // CRITICAL: Only call ready() if SDK confirms we're in a Mini App
+        // Calling ready() outside a Mini App context causes "Ready call, Not Ready" error
+        if (miniAppDetected) {
+          console.log("Mini App detected by SDK, calling ready()...");
+          
           // Run context fetch and ready() in parallel for speed
           const contextPromise = (async () => {
             try {
@@ -128,6 +134,8 @@ export function FarcasterProvider({
 
           // Wait for both to complete (in parallel)
           await Promise.allSettled([contextPromise, readyPromise]);
+        } else {
+          console.log("Not in Farcaster Mini App context (SDK detection returned false), skipping ready()");
         }
 
         clearTimeout(initTimeout);
@@ -135,7 +143,7 @@ export function FarcasterProvider({
         setIsInitializing(false);
       } catch (error) {
         console.error("SDK initialization error:", error);
-        setIsFarcasterMiniApp(true);
+        setIsFarcasterMiniApp(urlHasFarcasterParams);
         setIsReady(true);
         setIsInitializing(false);
       }
