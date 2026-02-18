@@ -105,12 +105,12 @@ export function MobileOnboardingOverlay({
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-sm w-full p-6 text-center relative">
+      <div className="bg-background border border-border rounded-2xl max-w-sm w-full p-6 text-center relative shadow-2xl">
         {/* Close button */}
         <Button
           variant="ghost"
           size="sm"
-          className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+          className="absolute top-2 right-2 text-muted-foreground hover:text-foreground h-9 w-9 rounded-full"
           onClick={handleSkip}
         >
           <X className="w-4 h-4" />
@@ -122,8 +122,12 @@ export function MobileOnboardingOverlay({
             <div
               key={index}
               className={cn(
-                "w-2 h-2 rounded-full transition-all",
-                index <= currentStep ? "bg-red-500" : "bg-gray-300"
+                "h-2 rounded-full transition-all duration-300",
+                index === currentStep
+                  ? "w-6 bg-primary"
+                  : index < currentStep
+                  ? "w-2 bg-primary/40"
+                  : "w-2 bg-border"
               )}
             />
           ))}
@@ -133,11 +137,11 @@ export function MobileOnboardingOverlay({
         <div className="space-y-4">
           <div className="text-4xl mb-2">{currentStepData.icon}</div>
 
-          <h2 className="text-xl font-bold text-gray-900">
+          <h2 className="text-xl font-bold text-foreground">
             {currentStepData.title}
           </h2>
 
-          <p className="text-gray-600 leading-relaxed">
+          <p className="text-muted-foreground leading-relaxed">
             {currentStepData.description}
           </p>
         </div>
@@ -145,7 +149,7 @@ export function MobileOnboardingOverlay({
         {/* Actions */}
         <div className="mt-8 space-y-3">
           <Button
-            className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3"
+            className="w-full h-12 font-semibold"
             onClick={handleNext}
           >
             {currentStep === steps.length - 1 ? (
@@ -164,7 +168,7 @@ export function MobileOnboardingOverlay({
           {currentStep < steps.length - 1 && (
             <Button
               variant="ghost"
-              className="w-full text-gray-500"
+              className="w-full text-muted-foreground"
               onClick={handleSkip}
             >
               Skip Tutorial

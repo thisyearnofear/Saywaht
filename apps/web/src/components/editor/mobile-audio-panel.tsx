@@ -109,7 +109,8 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
 
         {/* Primary Record Action - Standout UI */}
         <Button
-          className="h-16 w-full bg-red-500 hover:bg-red-600 text-white font-bold text-base rounded-2xl shadow-lg shadow-red-500/20 border-none transition-all active:scale-[0.98] touch-manipulation mb-4"
+          variant="destructive"
+          className="h-16 w-full font-bold text-base rounded-2xl shadow-lg shadow-destructive/20 border-none transition-all active:scale-[0.98] touch-manipulation mb-4"
           onClick={handleVoiceoverRecord}
         >
           <div className="relative mr-3">

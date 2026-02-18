@@ -14,9 +14,11 @@ import { useEditorStore } from "@/stores/editor-store";
 interface MobilePreviewPanelProps {
   className?: string;
   showResolution?: boolean;
+  /** Hide the zoom/fit controls — useful in fullscreen cinematic mode */
+  showControls?: boolean;
 }
 
-export function MobilePreviewPanel({ className, showResolution = false }: MobilePreviewPanelProps) {
+export function MobilePreviewPanel({ className, showResolution = false, showControls = true }: MobilePreviewPanelProps) {
   const { orientation } = useMobileContext();
   const previewRef = useRef<HTMLDivElement>(null);
   const { canvasSize } = useCanvasStore();
@@ -67,47 +69,51 @@ export function MobilePreviewPanel({ className, showResolution = false }: Mobile
         </div>
       )}
 
-      {/* Zoom controls - moved further down to avoid header overlap */}
-      <div className="absolute top-24 right-3 z-20 flex flex-col gap-2">
-        <Button
-          variant="secondary"
-          size="icon"
-          className="h-10 w-10 bg-black/40 text-white hover:bg-black/60 backdrop-blur-md border border-white/10 rounded-full shadow-lg"
-          onClick={handleToggleFit}
-        >
-          {videoObjectFit === "contain" ? (
-            <Maximize2 className="h-4 w-4" />
-          ) : (
-            <Minimize2 className="h-4 w-4" />
-          )}
-        </Button>
-        <div className="flex flex-col bg-black/40 backdrop-blur-md border border-white/10 rounded-full p-1 shadow-lg">
+      {/* Zoom / fit controls — only visible in editing (tools) mode */}
+      {showControls && (
+        <div className="absolute top-3 right-3 z-20 flex flex-col gap-2">
           <Button
-            variant="ghost"
+            variant="secondary"
             size="icon"
-            className="h-9 w-9 text-white rounded-full"
-            onClick={handleZoomIn}
-            disabled={scale >= 3}
+            className="h-9 w-9 bg-black/40 text-white hover:bg-black/60 backdrop-blur-md border border-white/10 rounded-full shadow-lg"
+            onClick={handleToggleFit}
+            aria-label={videoObjectFit === "contain" ? "Fill frame" : "Fit frame"}
           >
-            <ZoomIn className="h-4 w-4" />
+            {videoObjectFit === "contain" ? (
+              <Maximize2 className="h-3.5 w-3.5" />
+            ) : (
+              <Minimize2 className="h-3.5 w-3.5" />
+            )}
           </Button>
-          <button 
-            className="h-8 flex items-center justify-center text-[10px] font-black text-white/80"
-            onClick={handleResetZoom}
-          >
-            {Math.round(scale * 100)}%
-          </button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 text-white rounded-full"
-            onClick={handleZoomOut}
-            disabled={scale <= 0.5}
-          >
-            <ZoomOut className="h-4 w-4" />
-          </Button>
+          <div className="flex flex-col bg-black/40 backdrop-blur-md border border-white/10 rounded-full p-1 shadow-lg">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-white rounded-full"
+              onClick={handleZoomIn}
+              disabled={scale >= 3}
+            >
+              <ZoomIn className="h-3.5 w-3.5" />
+            </Button>
+            <button
+              className="h-7 flex items-center justify-center text-[9px] font-black text-white/80"
+              onClick={handleResetZoom}
+              aria-label="Reset zoom"
+            >
+              {Math.round(scale * 100)}%
+            </button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-white rounded-full"
+              onClick={handleZoomOut}
+              disabled={scale <= 0.5}
+            >
+              <ZoomOut className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div
         className="h-full w-full overflow-hidden"

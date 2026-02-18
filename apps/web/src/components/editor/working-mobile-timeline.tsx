@@ -398,10 +398,14 @@ export function WorkingMobileTimeline({
             <div className="absolute inset-0 w-full bg-primary/20 blur-[1px]" />
           </div>
 
-          {/* Scrubbing feedback tooltip */}
+          {/* Scrubbing feedback tooltip — follows playhead position */}
           {showTimeTooltip && (
-            <div 
-              className="absolute -top-10 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-black px-3 py-1.5 rounded-full shadow-xl animate-in fade-in slide-in-from-bottom-2 tabular-nums"
+            <div
+              className="absolute top-0 bg-primary text-primary-foreground text-[10px] font-black px-3 py-1.5 rounded-full shadow-xl animate-in fade-in-0 zoom-in-95 tabular-nums z-40 pointer-events-none -translate-x-1/2"
+              style={{
+                left: `clamp(1.5rem, ${tooltipPosition}%, calc(100% - 1.5rem))`,
+                top: "-2.25rem",
+              }}
             >
               {formatTime(tooltipTime)}
             </div>
