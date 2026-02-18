@@ -104,6 +104,9 @@ export function MobileEditorLayout({
     setViewMode((prev) => (prev === "fullscreen" ? "tools" : "fullscreen"));
   }, []);
 
+  // Controls visibility in fullscreen mode
+  const [isFullscreenControlsHidden, setIsFullscreenControlsHidden] = useState(false);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -163,54 +166,89 @@ export function MobileEditorLayout({
           </button>
 
           {/* Floating action bar — safe-area aware, no double padding */}
-          <div
-            className="absolute bottom-0 left-0 right-0 z-30 px-6 pt-8 bg-gradient-to-t from-black/95 via-black/40 to-transparent safe-area-bottom"
-            style={{ paddingBottom: "max(3rem, calc(env(safe-area-inset-bottom) + 1.5rem))" }}
+          <motion.div
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 250 }}
+            dragElastic={0.1}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 80) {
+                setIsFullscreenControlsHidden(true);
+                addHapticFeedback("medium");
+              }
+            }}
+            animate={{
+              y: isFullscreenControlsHidden ? 300 : 0,
+              opacity: isFullscreenControlsHidden ? 0 : 1
+            }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="absolute bottom-0 left-0 right-0 z-30 px-6 pt-4 bg-gradient-to-t from-black/95 via-black/40 to-transparent safe-area-bottom"
+            style={{ paddingBottom: "max(2.5rem, calc(env(safe-area-inset-bottom) + 1rem))" }}
           >
+            {/* Drag Handle */}
+            <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6 touch-none" />
+
             {/* Primary actions */}
-            <div className="flex items-center justify-center gap-4 mb-8">
+            <div className="flex items-center justify-center gap-3 mb-6">
               <Button
                 variant="secondary"
                 size="lg"
-                className="h-16 px-8 rounded-[2rem] bg-white text-black hover:bg-white/90 shadow-2xl touch-manipulation border-none font-black text-base uppercase tracking-widest active:scale-95 transition-all"
+                className="h-14 px-6 rounded-2xl bg-white text-black hover:bg-white/90 shadow-xl touch-manipulation border-none font-black text-sm uppercase tracking-widest active:scale-95 transition-all"
                 onClick={() => openTool("record")}
               >
-                <Mic className="h-6 w-6 mr-3 text-destructive animate-pulse" />
+                <Mic className="h-5 w-5 mr-2 text-destructive animate-pulse" />
                 Record
               </Button>
               <div className="flex items-center gap-3">
                 <Button
                   variant="secondary"
                   size="icon"
-                  className="h-16 w-16 rounded-full bg-white/10 text-white hover:bg-white/20 backdrop-blur-2xl touch-manipulation border border-white/20 active:scale-95 transition-all shadow-xl"
+                  className="h-14 w-14 rounded-full bg-white/10 text-white hover:bg-white/20 backdrop-blur-2xl touch-manipulation border border-white/20 active:scale-95 transition-all shadow-xl"
                   onClick={() => openTool("text")}
                   aria-label="Add Text"
                 >
-                  <Type className="h-7 w-7" />
+                  <Type className="h-6 w-6" />
                 </Button>
                 <Button
                   variant="secondary"
                   size="icon"
-                  className="h-16 w-16 rounded-full bg-white/10 text-white hover:bg-white/20 backdrop-blur-2xl touch-manipulation border border-white/20 active:scale-95 transition-all shadow-xl"
+                  className="h-14 w-14 rounded-full bg-white/10 text-white hover:bg-white/20 backdrop-blur-2xl touch-manipulation border border-white/20 active:scale-95 transition-all shadow-xl"
                   onClick={() => openTool("effects")}
                   aria-label="Add Effects"
                 >
-                  <Layers className="h-7 w-7" />
+                  <Layers className="h-6 w-6" />
                 </Button>
               </div>
             </div>
 
             {/* "Open Tools" chevron button */}
             <button
-              className="w-full flex flex-col items-center gap-1.5 text-white/40 hover:text-white transition-colors touch-manipulation group"
+              className="w-full flex flex-col items-center gap-1.5 text-white/40 hover:text-white transition-colors touch-manipulation group pb-2"
               onClick={toggleViewMode}
             >
-              <ChevronUp className="h-6 w-6 animate-bounce group-hover:text-primary" />
+              <ChevronUp className="h-5 w-5 animate-bounce group-hover:text-primary" />
               <span className="text-[10px] font-black uppercase tracking-[0.4em]">
                 Open Tools
               </span>
             </button>
-          </div>
+          </motion.div>
+
+          {/* Restore Controls Button - visible when hidden */}
+          <AnimatePresence>
+            {isFullscreenControlsHidden && (
+              <motion.button
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
+                className="absolute bottom-10 left-1/2 -translate-x-1/2 z-40 h-12 w-12 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white shadow-2xl active:scale-90 transition-transform"
+                onClick={() => {
+                  setIsFullscreenControlsHidden(false);
+                  addHapticFeedback("light");
+                }}
+              >
+                <ChevronUp className="h-6 w-6" />
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
       ) : (
         /* ── Tools mode: compact preview + tabbed editor panels ── */
