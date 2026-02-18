@@ -13,7 +13,7 @@ export function PerformanceTracker() {
   useEffect(() => {
     // PERFORMANT: Track component mount time
     const mountStart = performance.now();
-    
+
     // Track when React hydration completes
     const trackHydration = () => {
       const hydrationTime = performance.now() - mountStart;
@@ -59,7 +59,7 @@ export function PerformanceTracker() {
       const slowResources = resources.filter(r => r.duration > 1000);
       if (slowResources.length > 0) {
         recordCustomMetric('slow-resources-count', slowResources.length, 'count', {
-          slowestResource: slowResources.reduce((prev, current) => 
+          slowestResource: slowResources.reduce((prev, current) =>
             prev.duration > current.duration ? prev : current
           ).name,
           averageSlowTime: slowResources.reduce((sum, r) => sum + r.duration, 0) / slowResources.length
@@ -91,10 +91,13 @@ export function PerformanceTracker() {
       };
 
       const handleScroll = () => {
-        const scrolled = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
-        if (scrolled > scrollDepth) {
-          scrollDepth = scrolled;
-          recordCustomMetric('scroll-depth', scrollDepth, 'percentage');
+        const scrollHeight = document.body.scrollHeight - window.innerHeight;
+        if (scrollHeight > 0) {
+          const scrolled = Math.round((window.scrollY / scrollHeight) * 100);
+          if (scrolled > scrollDepth) {
+            scrollDepth = scrolled;
+            recordCustomMetric('scroll-depth', scrollDepth, 'percentage');
+          }
         }
       };
 
@@ -119,7 +122,7 @@ export function PerformanceTracker() {
 
     // Execute tracking functions
     trackHydration();
-    
+
     // Delay bundle metrics to ensure all resources are loaded
     setTimeout(() => {
       trackBundleMetrics();
@@ -138,7 +141,7 @@ export function PerformanceTracker() {
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       const routeChangeStart = performance.now();
-      
+
       return () => {
         const routeChangeTime = performance.now() - routeChangeStart;
         recordCustomMetric('route-change-time', routeChangeTime, 'ms', {
@@ -158,7 +161,7 @@ export function PerformanceTracker() {
 export function useComponentPerformance(componentName: string) {
   useEffect(() => {
     const startTime = performance.now();
-    
+
     return () => {
       const renderTime = performance.now() - startTime;
       recordCustomMetric('component-render-time', renderTime, 'ms', {
@@ -178,26 +181,26 @@ export function useAsyncOperationTracking() {
     context?: Record<string, any>
   ): Promise<any> => {
     const startTime = performance.now();
-    
+
     try {
       const result = await operation();
       const duration = performance.now() - startTime;
-      
+
       recordCustomMetric('async-operation-success', duration, 'ms', {
         operation: operationName,
         ...context
       });
-      
+
       return result;
     } catch (error) {
       const duration = performance.now() - startTime;
-      
+
       recordCustomMetric('async-operation-error', duration, 'ms', {
         operation: operationName,
         error: error instanceof Error ? error.message : 'Unknown error',
         ...context
       });
-      
+
       throw error;
     }
   };

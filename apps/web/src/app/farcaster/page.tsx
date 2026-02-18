@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { FarcasterMobileEditorLayout } from "@/farcaster/components/farcaster-mobile-editor";
 
 /**
@@ -11,7 +12,9 @@ import { FarcasterMobileEditorLayout } from "@/farcaster/components/farcaster-mo
 
 export default function FarcasterPage() {
   return (
-    <FarcasterMobileEditorLayout />
+    <Suspense fallback={<div className="h-screen w-screen bg-black" />}>
+      <FarcasterMobileEditorLayout />
+    </Suspense>
   );
 }
 

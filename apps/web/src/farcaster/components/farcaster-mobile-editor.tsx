@@ -10,6 +10,8 @@ import { useMobileOnboarding } from "@/components/editor/mobile-onboarding-overl
 import { FarcasterClientLogic } from "@/farcaster/components/farcaster-client-logic";
 import { CastContextPanel } from "./cast-context-panel";
 import { useFarcasterSdk } from "@/lib/farcaster-sdk";
+import { Suspense } from "react";
+import { cn } from "@/lib/utils";
 
 /**
  * Farcaster-enhanced mobile editor layout
@@ -27,14 +29,20 @@ export function FarcasterMobileEditorLayout({
     useMobileOnboarding();
   const [showFarcasterOnboarding, setShowFarcasterOnboarding] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
-  
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Hydration guard - crucial for WebViews and Next.js
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Load SDK safely (returns null during SSR)
   const sdk = useFarcasterSdk();
 
   // Debug mode toggle (for development) - only in browser
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === 'D' && e.shiftKey && e.ctrlKey) {
         setDebugMode(prev => !prev);
@@ -92,6 +100,10 @@ export function FarcasterMobileEditorLayout({
     }
   };
 
+  if (!isMounted) {
+    return <div className="h-screen w-screen bg-background" />;
+  }
+
   return (
     <div className={`h-screen w-screen flex flex-col bg-background overflow-hidden mobile-editor safe-area ${isFarcasterMiniApp ? 'farcaster-miniapp' : ''
       }`}>
@@ -112,8 +124,10 @@ export function FarcasterMobileEditorLayout({
         </div>
       )}
 
-      {/* Farcaster client logic */}
-      <FarcasterClientLogic />
+      {/* Farcaster client logic wrapped in Suspense for Next.js compat */}
+      <Suspense fallback={null}>
+        <FarcasterClientLogic />
+      </Suspense>
 
       {/* Farcaster Mini App Splash Screen */}
       <FarcasterSplashScreen
@@ -123,16 +137,17 @@ export function FarcasterMobileEditorLayout({
         }}
       />
 
-      {/* Enhanced mobile editor layout with Farcaster features - show when ready OR after timeout */}
-      {(!isFarcasterMiniApp || isReady || (!isInitializing && !isReady)) && (
-        <div className="flex-1 min-h-0 overflow-y-auto scrollable flex flex-col">
-          {/* Show Cast Context if available */}
-          {frameState.castHash && (
-            <CastContextPanel castHash={frameState.castHash} />
-          )}
-          <MobileEditorLayout>{children}</MobileEditorLayout>
-        </div>
-      )}
+      {/* Enhanced mobile editor layout with Farcaster features */}
+      <div className={cn(
+        "flex-1 min-h-0 overflow-y-auto scrollable flex flex-col transition-opacity duration-300",
+        (isFarcasterMiniApp && isInitializing && !isReady) ? "opacity-0 invisible" : "opacity-100 visible"
+      )}>
+        {/* Show Cast Context if available */}
+        {isMounted && frameState.castHash && (
+          <CastContextPanel castHash={frameState.castHash} />
+        )}
+        <MobileEditorLayout>{children}</MobileEditorLayout>
+      </div>
 
       {/* Farcaster-specific onboarding */}
       {showFarcasterOnboarding && isFarcasterMiniApp && (isReady || !isInitializing) && (
@@ -150,3 +165,4 @@ export function FarcasterMobileEditorLayout({
     </div>
   );
 }
+
