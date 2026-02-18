@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MobileEditorLayout } from "@/components/editor/mobile-editor-layout";
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 import { useFarcasterFrame } from "@/farcaster/hooks/use-farcaster-frame";
@@ -132,9 +132,9 @@ export function FarcasterMobileEditorLayout({
       {/* Farcaster Mini App Splash Screen */}
       <FarcasterSplashScreen
         isVisible={isFarcasterMiniApp && isInitializing}
-        onComplete={() => {
+        onComplete={useCallback(() => {
           console.log("Farcaster splash screen completed");
-        }}
+        }, [])}
       />
 
       {/* Enhanced mobile editor layout with Farcaster features */}

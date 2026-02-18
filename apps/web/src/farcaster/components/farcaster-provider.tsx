@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import type { FarcasterUser, FarcasterFrameState } from "@/farcaster/types";
 import { useMobileContext } from "@/contexts/mobile-context";
 import { getFarcasterSdk } from "@/lib/farcaster-sdk";
@@ -168,19 +168,23 @@ export function FarcasterProvider({
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Memoize stable setters to prevent loops in consumers
+  const updateFrameState = useCallback((state: Partial<FarcasterFrameState>) => {
+    setFrameState((prev) => ({ ...prev, ...state }));
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    farcasterUser,
+    frameState,
+    isFarcasterMiniApp,
+    isInitializing,
+    isReady,
+    setFarcasterUser,
+    setFrameState: updateFrameState,
+  }), [farcasterUser, frameState, isFarcasterMiniApp, isInitializing, isReady, updateFrameState]);
+
   return (
-    <FarcasterContext.Provider
-      value={{
-        farcasterUser,
-        frameState,
-        isFarcasterMiniApp,
-        isInitializing,
-        isReady,
-        setFarcasterUser,
-        setFrameState: (state) =>
-          setFrameState((prev) => ({ ...prev, ...state })),
-      }}
-    >
+    <FarcasterContext.Provider value={contextValue}>
       {children}
     </FarcasterContext.Provider>
   );
