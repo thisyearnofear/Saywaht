@@ -16,9 +16,20 @@ interface MobilePreviewPanelProps {
   showResolution?: boolean;
   /** Hide the zoom/fit controls — useful in fullscreen cinematic mode */
   showControls?: boolean;
+  /**
+   * How playback controls are rendered inside PreviewPanel.
+   * Default is "overlay" (floating pill) so they don't consume vertical space
+   * in either fullscreen or tools mode on mobile.
+   */
+  controlsVariant?: "topbar" | "overlay";
 }
 
-export function MobilePreviewPanel({ className, showResolution = false, showControls = true }: MobilePreviewPanelProps) {
+export function MobilePreviewPanel({
+  className,
+  showResolution = false,
+  showControls = true,
+  controlsVariant = "overlay",
+}: MobilePreviewPanelProps) {
   const { orientation } = useMobileContext();
   const previewRef = useRef<HTMLDivElement>(null);
   const { canvasSize } = useCanvasStore();
@@ -127,7 +138,7 @@ export function MobilePreviewPanel({ className, showResolution = false, showCont
             transformOrigin: "center center",
           }}
         >
-          <PreviewPanel />
+          <PreviewPanel controlsVariant={controlsVariant} />
         </div>
       </div>
     </div>

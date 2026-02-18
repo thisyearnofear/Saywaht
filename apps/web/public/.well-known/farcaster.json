@@ -7,6 +7,7 @@
   "miniapp": {
     "version": "1",
     "name": "Saywaht",
+    "tagline": "Coin Your Commentary",
     "iconUrl": "https://saywaht.netlify.app/images/android-chrome-512x512.png",
     "homeUrl": "https://saywaht.netlify.app/farcaster",
     "splashImageUrl": "https://saywaht.netlify.app/images/android-chrome-192x192.png",

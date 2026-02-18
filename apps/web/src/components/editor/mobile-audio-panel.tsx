@@ -34,7 +34,7 @@ interface MobileAudioPanelProps {
 export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
   const { orientation } = useMobileContext();
   const { mediaItems, addMediaItem } = useMediaStore();
-  const { addClipToTrack } = useTimelineStore();
+  const { tracks, addTrack, addClipToTrack } = useTimelineStore();
   const [showMobileRecording, setShowMobileRecording] = useState(false);
 
   // Filter for audio files only
@@ -76,8 +76,14 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
     // Add to media store
     addMediaItem(audioItem);
 
-    // Add to timeline
-    addClipToTrack("voiceover-track", {
+    // Add to the timeline — find an existing audio track or create a new one.
+    // We never hardcode the track ID because template tracks are assigned random
+    // UUIDs at apply-time; "voiceover-track" from the template JSON no longer
+    // exists as a literal ID in the store.
+    const existingAudioTrack = tracks.find((t) => t.type === "audio");
+    const trackId = existingAudioTrack?.id ?? addTrack("audio");
+
+    addClipToTrack(trackId, {
       mediaId: audioItem.id,
       name: audioItem.name,
       startTime: 0,

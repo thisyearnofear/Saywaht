@@ -23,7 +23,9 @@ interface MediaStore {
   mediaItems: MediaItem[];
 
   // Actions
-  addMediaItem: (item: Omit<MediaItem, "id">) => void;
+  // `id` is optional – when provided (e.g. from a template) it is preserved
+  // so that timeline clips whose `mediaId` matches the template ID keep working.
+  addMediaItem: (item: Omit<MediaItem, "id"> & { id?: string }) => void;
   removeMediaItem: (id: string) => void;
   clearAllMedia: () => void;
 }
@@ -152,10 +154,12 @@ export const useMediaStore = create<MediaStore>()(
     (set, get) => ({
       mediaItems: [],
 
-      addMediaItem: (item: Omit<MediaItem, "id">) => {
+      addMediaItem: (item: Omit<MediaItem, "id"> & { id?: string }) => {
         const newItem: MediaItem = {
           ...item,
-          id: crypto.randomUUID(),
+          // Preserve a caller-supplied id (e.g. template media items whose id
+          // must match the mediaId stored in timeline clips), or generate one.
+          id: item.id || crypto.randomUUID(),
         };
         set((state: MediaStore) => ({
           mediaItems: [...state.mediaItems, newItem],
