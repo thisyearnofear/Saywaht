@@ -36,6 +36,11 @@ export function FarcasterMobileEditorLayout({
     setIsMounted(true);
   }, []);
 
+  // Stable callback for splash screen to prevent effect re-runs
+  const handleSplashComplete = useCallback(() => {
+    console.log("Farcaster splash screen completed");
+  }, []);
+
   // Load SDK safely (returns null during SSR)
   const sdk = useFarcasterSdk();
 
@@ -132,9 +137,7 @@ export function FarcasterMobileEditorLayout({
       {/* Farcaster Mini App Splash Screen */}
       <FarcasterSplashScreen
         isVisible={isFarcasterMiniApp && isInitializing}
-        onComplete={useCallback(() => {
-          console.log("Farcaster splash screen completed");
-        }, [])}
+        onComplete={handleSplashComplete}
       />
 
       {/* Enhanced mobile editor layout with Farcaster features */}
