@@ -24,32 +24,32 @@ export function MobileOnboardingOverlay({
 
   const steps = isFarcasterMode ? [
     {
-      title: "Create a Farcaster Video Reaction! 🎬",
+      title: "Say it like it is. ⚡️",
       description:
-        "Turn any video into your own commentary and share it directly to Farcaster",
-      icon: "💬",
-      action: "Get Started",
+        "Your meme, your moment. Turn any viral clip into your own tradeable commentary.",
+      icon: "📢",
+      action: "Let's Go",
     },
     {
-      title: "Step 1: Watch & React 👀",
+      title: "See it. Say it. Coin it. 👀",
       description:
-        "Watch the video and record your instant reaction. Perfect for Farcaster discussions!",
+        "Watch any moment and record your instant reaction. Authenticity is the only rule.",
       icon: "▶️",
       action: "Got it!",
     },
     {
-      title: "Step 2: Record Your Voice 🎙️",
+      title: "Coin Your Commentary 🎙️",
       description:
-        "Add your commentary while watching. Your reaction will be posted directly to Farcaster!",
-      icon: "🔴",
-      action: "Ready to Record!",
+        "Speak your truth. Your voice is minted directly on Zora as a permanent piece of the culture.",
+      icon: "🪙",
+      action: "Ready!",
     },
     {
-      title: "Step 3: Share to Farcaster 🚀",
+      title: "No Permissions. No Watermarks. 🚀",
       description:
-        "Post your reaction directly to Farcaster and optionally mint it as an NFT!",
+        "Export as MP4, share anywhere, or keep it on-chain. Decentralized, uncensored, and you earn your keep.",
       icon: "✨",
-      action: "Start Recording Now",
+      action: "SayWAHT! LFG",
     },
   ] : [
     {
@@ -60,25 +60,25 @@ export function MobileOnboardingOverlay({
       action: "Get Started",
     },
     {
-      title: "Step 1: Watch the Video 👀",
+      title: "See it. Say it. Coin it. 👀",
       description:
-        "First, watch the video to understand what's happening. You can see it playing in the background.",
+        "Watch any moment and record your instant reaction. Authenticity is the only rule.",
       icon: "▶️",
       action: "Got it!",
     },
     {
-      title: "Step 2: Record Your Voice 🎙️",
+      title: "Say it like it is 🎙️",
       description:
-        "Tap the big red 'Record Your Voice' button and add your commentary while watching the video. You have 10 seconds to share your thoughts!",
+        "Speak your truth. Your voice is minted directly on Zora as a permanent piece of the culture.",
       icon: "🔴",
       action: "Ready to Record!",
     },
     {
-      title: "Step 3: Create Your Coin 🪙",
+      title: "Earn Your Keep 🪙",
       description:
         "Once you're happy with your recording, you can mint it as a tradeable coin on Zora!",
       icon: "✨",
-      action: "Start Recording Now",
+      action: "SayWAHT! LFG",
     },
   ];
 
@@ -126,8 +126,8 @@ export function MobileOnboardingOverlay({
                 index === currentStep
                   ? "w-6 bg-primary"
                   : index < currentStep
-                  ? "w-2 bg-primary/40"
-                  : "w-2 bg-border"
+                    ? "w-2 bg-primary/40"
+                    : "w-2 bg-border"
               )}
             />
           ))}

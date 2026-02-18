@@ -11,6 +11,7 @@ import { FarcasterClientLogic } from "@/farcaster/components/farcaster-client-lo
 import { CastContextPanel } from "./cast-context-panel";
 import { useFarcasterSdk } from "@/lib/farcaster-sdk";
 import { Suspense } from "react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
@@ -60,27 +61,26 @@ export function FarcasterMobileEditorLayout({
 
   // Initialize Mini App SDK with proper error handling and context detection
   useEffect(() => {
-    const initializeMiniApp = async () => {
+    let timeoutId: NodeJS.Timeout;
+
+    const checkOnboarding = () => {
       // Add fallback timeout to prevent infinite loading
-      const fallbackTimeout = setTimeout(() => {
-        console.log("Farcaster initialization timeout, showing editor anyway");
+      timeoutId = setTimeout(() => {
+        console.log("Farcaster initialization timeout");
         if (isFarcasterMiniApp && isInitializing) {
-          // Force show the editor if initialization takes too long
           setShowFarcasterOnboarding(false);
         }
-      }, 10000); // 10 second fallback
+      }, 10000);
 
       // Show Mini App specific onboarding
       if (isFarcasterMiniApp && showOnboarding && isReady) {
         setShowFarcasterOnboarding(true);
       }
-
-      return () => clearTimeout(fallbackTimeout);
     };
 
-    const cleanup = initializeMiniApp();
+    checkOnboarding();
     return () => {
-      cleanup.then(fn => fn && fn());
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, [isFarcasterMiniApp, isReady, isInitializing, showOnboarding]);
 
@@ -145,11 +145,73 @@ export function FarcasterMobileEditorLayout({
         "flex-1 min-h-0 overflow-y-auto scrollable flex flex-col transition-opacity duration-300",
         (isFarcasterMiniApp && isInitializing && !isReady) ? "opacity-0 invisible" : "opacity-100 visible"
       )}>
-        {/* Show Cast Context if available */}
-        {isMounted && frameState.castHash && (
-          <CastContextPanel castHash={frameState.castHash} />
+        {/* LANDING PAGE: Show if we're in 'welcome' step and no cast is provided */}
+        {isFarcasterMiniApp && frameState.step === 'welcome' && !frameState.castHash ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-12 bg-background relative overflow-hidden">
+            {/* Edge decoration */}
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+
+            <div className="relative group">
+              <div className="absolute inset-0 bg-primary blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
+              <div className="w-24 h-24 rounded-[2rem] bg-primary flex items-center justify-center text-5xl font-black text-white shadow-2xl -rotate-3 transition-transform group-hover:rotate-0 duration-500">
+                W
+              </div>
+            </div>
+
+            <div className="space-y-3 relative">
+              <h1 className="text-6xl font-black tracking-tighter italic uppercase leading-none">
+                SayWAHT<span className="text-primary">!</span>
+              </h1>
+              <p className="text-xl font-bold text-muted-foreground uppercase tracking-tight">See it. Say it. Coin it.</p>
+            </div>
+
+            <div className="w-full max-w-xs space-y-4 pt-4 relative">
+              <Button
+                size="lg"
+                className="w-full h-20 text-xl font-black uppercase tracking-widest rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95 transition-all border-none"
+                onClick={() => handleMiniAppAction('start_recording')}
+              >
+                Coin Commentary
+              </Button>
+              <div className="grid grid-cols-2 gap-4">
+                <Button
+                  variant="outline"
+                  className="h-16 font-black uppercase tracking-wider border-2 rounded-2xl hover:bg-primary/5 transition-colors"
+                  onClick={() => handleMiniAppAction('browse_coins')}
+                >
+                  Browse
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-16 font-black uppercase tracking-wider border-2 rounded-2xl hover:bg-primary/5 transition-colors"
+                  onClick={() => handleMiniAppAction('create_coin')}
+                >
+                  Trending
+                </Button>
+              </div>
+            </div>
+
+            <div className="pt-8 space-y-2">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-[0.5em] font-black opacity-40">
+                No Permissions • No Watermarks
+              </p>
+              <p className="text-[10px] text-primary uppercase tracking-[0.3em] font-black">
+                Decentralized & Uncensored
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Show Cast Context if available */}
+            {isMounted && frameState.castHash && (
+              <CastContextPanel castHash={frameState.castHash} />
+            )}
+            <MobileEditorLayout hideOnboarding={isFarcasterMiniApp}>
+              {children}
+            </MobileEditorLayout>
+          </>
         )}
-        <MobileEditorLayout>{children}</MobileEditorLayout>
       </div>
 
       {/* Farcaster-specific onboarding */}

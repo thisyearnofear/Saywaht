@@ -45,9 +45,14 @@ const QuickActions = dynamic(
 interface MobileEditorLayoutProps {
   children?: React.ReactNode;
   className?: string;
+  hideOnboarding?: boolean;
 }
 
-export function MobileEditorLayout({ children, className }: MobileEditorLayoutProps) {
+export function MobileEditorLayout({
+  children,
+  className,
+  hideOnboarding = false
+}: MobileEditorLayoutProps) {
   const { isEditorMobileMode, toggleEditorMobileMode } = useMobileContext();
   const { isPlaying, toggle } = usePlaybackStore();
   const { mediaItems } = useMediaStore();
@@ -421,14 +426,16 @@ export function MobileEditorLayout({ children, className }: MobileEditorLayoutPr
       )}
 
       {/* Global Onboarding Overlay */}
-      <MobileOnboardingOverlay
-        isOpen={showOnboarding}
-        onClose={skipOnboarding}
-        onStartRecording={() => {
-          completeOnboarding();
-          openTool("record");
-        }}
-      />
+      {!hideOnboarding && (
+        <MobileOnboardingOverlay
+          isOpen={showOnboarding}
+          onClose={skipOnboarding}
+          onStartRecording={() => {
+            completeOnboarding();
+            openTool("record");
+          }}
+        />
+      )}
 
       {/* Quick Actions - desktop only */}
       <div className="hidden md:block">
