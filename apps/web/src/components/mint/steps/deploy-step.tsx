@@ -130,7 +130,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
 
         const hash = await walletClient.sendTransaction({
           to: calls[0].to,
-          data: calls[0].data,
+          data: `${calls[0].data}07626173656170700080218021802180218021802180218021` as `0x${string}`,
           value: calls[0].value ? BigInt(calls[0].value) : undefined,
           account: walletClient.account,
           chain: publicClient.chain,
