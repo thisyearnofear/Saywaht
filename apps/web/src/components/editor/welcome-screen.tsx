@@ -89,7 +89,7 @@ export function WelcomeScreen() {
               </span>
             </h1>
             <p className="text-xl text-white/80 max-w-2xl mx-auto">
-              coin your commentary
+              Coin Your Commentary
             </p>
           </div>
 

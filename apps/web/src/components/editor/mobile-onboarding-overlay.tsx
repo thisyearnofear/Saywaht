@@ -38,7 +38,7 @@ export function MobileOnboardingOverlay({
       action: "Got it!",
     },
     {
-      title: "Coin Your Commentary 🎙️",
+      title: "Coin Your Commentary",
       description:
         "Speak your truth. Your voice is minted directly on Zora as a permanent piece of the culture.",
       icon: "🪙",
