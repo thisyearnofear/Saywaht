@@ -227,7 +227,7 @@ export function MobileEditorLayout({
                 animate={{ scale: 1, opacity: 1 }}
                 className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-2xl border border-white/20 shadow-2xl"
               >
-                <Play className="h-12 w-12 text-white fill-white ml-1.5" />
+                <Play className="h-12 w-12 text-white fill-white ml-2" />
               </motion.div>
             )}
           </button>
@@ -432,6 +432,20 @@ export function MobileEditorLayout({
                   </div>
                 )}
               </button>
+
+              {/* Floating Record FAB in Tools View */}
+              {viewMode === "tools" && !isToolsMaximized && (
+                <motion.button
+                  initial={{ scale: 0, opacity: 0, y: 20 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="absolute bottom-4 right-4 z-40 h-14 w-14 rounded-full bg-red-500 text-white shadow-2xl flex items-center justify-center border-4 border-background"
+                  onClick={() => openTool("record")}
+                >
+                  <div className="absolute inset-0 bg-red-400 rounded-full animate-ping opacity-20" />
+                  <Mic className="h-6 w-6 relative z-10" />
+                </motion.button>
+              )}
             </div>
 
             {/* ── Tab Navigation ── */}

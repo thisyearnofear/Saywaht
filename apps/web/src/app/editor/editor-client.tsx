@@ -31,7 +31,20 @@ const MobileEditorLayout = nextDynamic(
     import("@/components/editor/mobile-editor-layout").then((mod) => ({
       default: mod.MobileEditorLayout,
     })),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-black overflow-hidden">
+        <div className="relative">
+          <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse scale-150" />
+          <Loader2 className="h-10 w-10 animate-spin text-primary relative z-10" />
+        </div>
+        <p className="mt-6 text-[10px] font-black uppercase tracking-[0.4em] text-white/50 animate-pulse">
+          Launching Studio
+        </p>
+      </div>
+    ),
+  }
 );
 
 export default function Editor() {

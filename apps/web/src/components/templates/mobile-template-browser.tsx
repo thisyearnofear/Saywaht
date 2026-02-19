@@ -25,6 +25,7 @@ import { useSceneStore } from "@/stores/scene-store";
 export function MobileTemplateBrowser() {
   const { categories, isLoading, selectTemplate, applySelectedTemplate } = useTemplateStore();
   const [mainTab, setMainTab] = useState<"packs" | "stock">("stock");
+  const STOCK_CATEGORIES = ["Aesthetic", "Nature", "Office", "Abstract", "Tech", "Textures", "Street", "Travel"];
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [isApplying, setIsApplying] = useState<string | null>(null);
 
@@ -70,15 +71,14 @@ export function MobileTemplateBrowser() {
     const timer = setTimeout(async () => {
       setIsPexelsLoading(true);
       try {
-        const query = searchQuery || "cinematic background";
-        const response = await pexelsService.search(query, 'video', 1, 10);
+        const response = await pexelsService.search(searchQuery, 'video', 1, 12);
         setPexelsResults(response.videos || []);
       } catch (err) {
         console.error("Pexels load failed:", err);
       } finally {
         setIsPexelsLoading(false);
       }
-    }, 500);
+    }, 400); // Slightly faster debounce for snappier feel
 
     return () => clearTimeout(timer);
   }, [searchQuery, mainTab]);
@@ -245,15 +245,38 @@ export function MobileTemplateBrowser() {
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -5 }}
-                className="relative"
+                className="space-y-3"
               >
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  className="bg-white/5 border-white/10 rounded-xl pl-10 h-10 text-xs placeholder:text-muted-foreground"
-                  placeholder="Search 10,000+ stock clips..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    className="bg-white/5 border-white/10 rounded-xl pl-10 h-10 text-xs placeholder:text-muted-foreground"
+                    placeholder="Search 10,000+ stock clips..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                {/* Discovery Chips */}
+                <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-4 px-4 pb-1">
+                  {STOCK_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        setSearchQuery(cat);
+                        addHapticFeedback("light");
+                      }}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap border",
+                        searchQuery.toLowerCase() === cat.toLowerCase()
+                          ? "bg-white text-black border-white shadow-lg"
+                          : "bg-white/5 border-white/5 text-muted-foreground hover:bg-white/10"
+                      )}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

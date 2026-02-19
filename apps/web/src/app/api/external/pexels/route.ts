@@ -15,15 +15,23 @@ export async function GET(request: Request) {
   const page = searchParams.get('page') || '1';
   const perPage = searchParams.get('per_page') || '15';
 
-  if (!query) {
-    return NextResponse.json({ error: 'Search query is required' }, { status: 400 });
+  const baseUrl = type === 'video' ? PEXELS_VIDEO_URL : PEXELS_BASE_URL;
+  let endpoint = '';
+  const params = new URLSearchParams({
+    page,
+    per_page: perPage,
+    orientation: 'portrait',
+  });
+
+  if (query) {
+    endpoint = '/search';
+    params.append('query', query);
+  } else {
+    endpoint = type === 'video' ? '/popular' : '/curated';
   }
 
   try {
-    const baseUrl = type === 'video' ? PEXELS_VIDEO_URL : PEXELS_BASE_URL;
-    const endpoint = type === 'video' ? '/search' : '/search';
-    
-    const response = await fetch(`${baseUrl}${endpoint}?query=${encodeURIComponent(query)}&page=${page}&per_page=${perPage}&safe_search=true`, {
+    const response = await fetch(`${baseUrl}${endpoint}?${params.toString()}&safe_search=true`, {
       headers: {
         'Authorization': PEXELS_API_KEY
       }

@@ -54,19 +54,24 @@ import { getBackendUrl } from "@/lib/backend-export";
  */
 export const pexelsService = {
   search: async (
-    query: string,
+    query: string = "",
     type: 'video' | 'image' = 'video',
     page: number = 1,
-    perPage: number = 15
+    perPage: number = 15,
+    orientation: 'portrait' | 'landscape' | 'square' = 'portrait'
   ): Promise<PexelsSearchResponse> => {
     try {
       const backendUrl = await getBackendUrl();
       const searchParams = new URLSearchParams({
-        query,
         type,
         page: page.toString(),
         per_page: perPage.toString(),
+        orientation,
       });
+
+      if (query) {
+        searchParams.append('query', query);
+      }
 
       // Try backend proxy first
       try {

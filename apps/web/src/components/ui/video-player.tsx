@@ -193,12 +193,43 @@ export function VideoPlayer({
     video.playbackRate = finalSpeed;
   }, [volume, speed, muted, muteAudio, finalSpeed]);
 
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // ... (previous effects)
+
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full bg-black">
       {/* Loading indicator when video is not ready */}
-      {!isVideoReady && (
+      {!isVideoReady && !hasError && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
-          <div className="text-white text-sm">Loading video...</div>
+          <div className="flex flex-col items-center gap-2">
+            <div className="h-6 w-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            <div className="text-white text-xs font-bold uppercase tracking-widest animate-pulse">Loading...</div>
+          </div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20 p-4 text-center">
+          <div className="flex flex-col items-center gap-2">
+            <div className="text-red-500 text-2xl">⚠️</div>
+            <div className="text-white text-xs font-bold uppercase tracking-widest">Playback Error</div>
+            {errorMessage && <div className="text-white/60 text-[10px] truncate max-w-[200px]">{errorMessage}</div>}
+            <button
+              onClick={() => {
+                setHasError(false);
+                setIsVideoReady(false);
+                if (videoRef.current) {
+                  videoRef.current.load();
+                }
+              }}
+              className="mt-2 px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold text-white hover:bg-white/20 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       )}
 
@@ -206,8 +237,9 @@ export function VideoPlayer({
         ref={videoRef}
         src={src}
         poster={poster}
-        className={`w-full h-full ${objectFit === "contain" ? "object-contain" : "object-cover"} ${className} ${!isVideoReady ? "opacity-50" : "opacity-100"} transition-opacity duration-300`}
+        className={`w-full h-full ${objectFit === "contain" ? "object-contain" : "object-cover"} ${className} ${!isVideoReady ? "opacity-0" : "opacity-100"} transition-opacity duration-500`}
         playsInline
+        muted // Always start muted to allow autoplay on mobile
         preload="auto"
         controls={false}
         disablePictureInPicture
@@ -215,20 +247,19 @@ export function VideoPlayer({
         style={{ pointerEvents: "none" }}
         onContextMenu={(e) => e.preventDefault()}
         onError={(e) => {
-          console.error("Video error:", e, "src:", src);
+          console.error("Video error event:", e, "src:", src);
+          setHasError(true);
+          const videoElement = e.currentTarget as HTMLVideoElement;
+          setErrorMessage(videoElement.error?.message || "Failed to load video");
           setIsVideoReady(false);
         }}
         onLoadStart={() => {
-          if (process.env.NODE_ENV === "development") {
-            console.log("Video loading started:", src);
-          }
           setIsVideoReady(false);
+          setHasError(false);
         }}
         onCanPlay={() => {
-          if (process.env.NODE_ENV === "development") {
-            console.log("Video can play:", src);
-          }
           setIsVideoReady(true);
+          setHasError(false);
         }}
       />
     </div>

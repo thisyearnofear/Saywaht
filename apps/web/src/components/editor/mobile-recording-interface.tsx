@@ -11,6 +11,7 @@ import {
   RotateCcw,
   Check,
   X,
+  Sparkles,
 } from "@/lib/icons";
 import { useMediaStore } from "@/stores/media-store";
 import type { MediaItem } from "@/stores/media-store";
@@ -82,7 +83,32 @@ export function MobileRecordingInterface({
   }, []);
 
   // Constants
-  const MAX_RECORDING_DURATION = 10;
+  const MAX_RECORDING_DURATION = 15; // Increased slightly for better experience
+
+  // Sync ref to current time and playback state
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isPlaying) {
+      video.play().catch(err => {
+        // Autoplay might be blocked, but since this is triggered by a button click, it should work.
+        console.warn("Autoplay blocked or video error:", err);
+      });
+    } else {
+      video.pause();
+    }
+  }, [isPlaying]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || isPlaying) return; // Only sync time manually when NOT playing to avoid jitter
+
+    // Check if time is significantly different to avoid constant seeking
+    if (Math.abs(video.currentTime - currentTime) > 0.1) {
+      video.currentTime = currentTime;
+    }
+  }, [currentTime, isPlaying]);
 
   // Compute countdown state based on recording time
   const countdownState = {
@@ -133,10 +159,10 @@ export function MobileRecordingInterface({
   }, [recordingState, pause]);
 
   const visualizeAudio = useCallback((stream: MediaStream) => {
-    const audioContext = new AudioContext();
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;
+    analyser.fftSize = 128; // Smaller for mobile performance
     source.connect(analyser);
     analyserRef.current = analyser;
 
@@ -153,14 +179,14 @@ export function MobileRecordingInterface({
       analyser.getByteFrequencyData(dataArray);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
+
       const barWidth = (canvas.width / bufferLength) * 2.5;
       let barHeight;
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
         barHeight = dataArray[i] / 2;
-        
+
         // Dynamic gradient
         const gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
         gradient.addColorStop(0, "#3b82f6"); // Blue
@@ -171,7 +197,7 @@ export function MobileRecordingInterface({
 
         x += barWidth + 1;
       }
-      
+
       // Update audio level state for simpler visualizer
       const average = dataArray.reduce((a, b) => a + b) / bufferLength;
       setAudioLevel(average / 255);
@@ -281,6 +307,11 @@ export function MobileRecordingInterface({
           src={primaryVideo.url}
           muted
           playsInline
+          onLoadedMetadata={() => {
+            if (videoRef.current) {
+              videoRef.current.currentTime = currentTime;
+            }
+          }}
         />
 
         {/* Top Overlay - Progress and Controls */}
@@ -335,8 +366,8 @@ export function MobileRecordingInterface({
                   countdownState.isCritical && "text-red-400 animate-pulse",
                   countdownState.isWarning && "text-orange-400",
                   !countdownState.isWarning &&
-                    !countdownState.isCritical &&
-                    "text-white"
+                  !countdownState.isCritical &&
+                  "text-white"
                 )}
               >
                 {RecordingCountdown.formatCountdownTime(
@@ -399,15 +430,21 @@ export function MobileRecordingInterface({
         </div>
 
         {/* Recording Hint */}
-        {recordingState === "recording" && currentHint && (
-          <div className="absolute top-24 left-4 right-4">
-            <div className="bg-black/70 rounded-lg p-3 backdrop-blur-sm">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-white text-sm font-medium">
-                  {currentHint}
-                </span>
+        {recordingState === "recording" && (
+          <div className="absolute top-24 left-4 right-4 flex flex-col gap-2">
+            {currentHint && (
+              <div className="bg-black/70 rounded-lg p-3 backdrop-blur-sm">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <span className="text-white text-sm font-medium">
+                    {currentHint}
+                  </span>
+                </div>
               </div>
+            )}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/20 backdrop-blur-md border border-primary/30 rounded-full w-fit">
+              <Sparkles className="h-3 w-3 text-primary animate-pulse" />
+              <span className="text-[9px] font-black text-primary uppercase tracking-widest">AI Captions Enabled</span>
             </div>
           </div>
         )}
@@ -416,10 +453,10 @@ export function MobileRecordingInterface({
         {recordingState === "recording" && (
           <div className="absolute bottom-32 left-4 right-4">
             <div className="bg-black/50 rounded-xl p-4 backdrop-blur-md border border-white/10">
-              <canvas 
-                ref={canvasRef} 
-                width={300} 
-                height={60} 
+              <canvas
+                ref={canvasRef}
+                width={300}
+                height={60}
                 className="w-full h-16"
               />
               <div className="text-center text-white/60 text-[10px] font-black uppercase tracking-widest mt-2">
@@ -453,7 +490,7 @@ export function MobileRecordingInterface({
               recordingState === "idle" && "bg-red-500 hover:bg-red-600",
               recordingState === "recording" && "bg-red-600 hover:bg-red-700",
               recordingState === "completed" &&
-                "bg-green-500 hover:bg-green-600"
+              "bg-green-500 hover:bg-green-600"
             )}
             onClick={
               recordingState === "idle"

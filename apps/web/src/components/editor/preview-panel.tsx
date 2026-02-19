@@ -369,12 +369,14 @@ export function PreviewPanel({ controlsVariant = "topbar" }: PreviewPanelProps) 
             className="relative overflow-hidden rounded-sm bg-black border border-gray-600"
             style={{
               aspectRatio: aspectRatio.toString(),
-              width: "100%",
-              maxWidth: "calc(100vw - 2rem)",
-              maxHeight: "calc(100vh - 200px)", // Leave room for controls
-              // Ensure minimum size for video visibility
-              minWidth: "200px",
-              minHeight: "200px",
+              width: "auto",
+              height: "auto",
+              maxWidth: "100%",
+              maxHeight: "100%",
+              // In topbar mode (tools mode), we want it to fit the 22-32vh container
+              // In overlay mode (fullscreen), we want it to fill as much as possible
+              minWidth: "150px", // Reduced min size for very small panels
+              minHeight: "150px",
             }}
           >
             {activeClips.length === 0 ? (

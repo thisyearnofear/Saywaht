@@ -149,12 +149,12 @@ export function MobilePreviewPanel({
       )}
 
       <div
-        className="h-full w-full overflow-hidden"
+        className="h-full w-full overflow-hidden flex items-center justify-center p-2"
         {...gestureHandlers}
       >
         <div
           ref={previewRef}
-          className="h-full w-full transition-transform duration-200 origin-center"
+          className="w-full h-full flex items-center justify-center transition-transform duration-200"
           style={{
             transform: `scale(${scale})`,
             transformOrigin: "center center",
