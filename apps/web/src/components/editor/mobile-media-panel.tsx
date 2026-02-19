@@ -385,7 +385,8 @@ function PexelsLibrary({
 
     setIsLoading(true);
     try {
-      const data = await pexelsService.search(query, type);
+      const searchQuery = query.trim() || "vertical aesthetic";
+      const data = await pexelsService.search(searchQuery, type, 1, 15, 'portrait');
       setResults(type === "video" ? data.videos || [] : data.photos || []);
       addHapticFeedback("medium");
     } catch (error) {

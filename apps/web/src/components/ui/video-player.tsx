@@ -261,6 +261,14 @@ export function VideoPlayer({
           setIsVideoReady(true);
           setHasError(false);
         }}
+        onCanPlayThrough={() => {
+          setIsVideoReady(true);
+          setHasError(false);
+        }}
+        onPlaying={() => {
+          setIsVideoReady(true);
+          setHasError(false);
+        }}
       />
     </div>
   );

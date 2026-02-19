@@ -20,14 +20,19 @@ export async function GET(request: Request) {
   const params = new URLSearchParams({
     page,
     per_page: perPage,
-    orientation: 'portrait',
   });
 
   if (query) {
     endpoint = '/search';
     params.append('query', query);
+    // Only search endpoints support orientation
+    params.append('orientation', 'portrait');
   } else {
     endpoint = type === 'video' ? '/popular' : '/curated';
+    // Photos curated DOES support orientation, videos popular does NOT
+    if (type === 'image') {
+      params.append('orientation', 'portrait');
+    }
   }
 
   try {

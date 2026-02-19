@@ -31,7 +31,7 @@ export function HoverVideoPreview({
           setIsPlaying(false);
         }
       },
-      { rootMargin: "200px" } // Load slightly before it comes into view
+      { rootMargin: "400px" } // Increased margin to keep videos alive during scroll
     );
 
     if (containerRef.current) {

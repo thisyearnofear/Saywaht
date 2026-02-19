@@ -401,7 +401,8 @@ export function PreviewPanel({ controlsVariant = "topbar" }: PreviewPanelProps) 
           </div>
         </div>
 
-        {controlsAreOverlay && (
+        {/* Floating controls — only show when in 'topbar' mode (editor tools) */}
+        {controlsVariant === "topbar" && (
           <div
             className={cn(
               "absolute bottom-4 left-1/2 -translate-x-1/2 z-20 transition-all duration-200",

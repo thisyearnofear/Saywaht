@@ -25,7 +25,8 @@ import { useSceneStore } from "@/stores/scene-store";
 export function MobileTemplateBrowser() {
   const { categories, isLoading, selectTemplate, applySelectedTemplate } = useTemplateStore();
   const [mainTab, setMainTab] = useState<"packs" | "stock">("stock");
-  const STOCK_CATEGORIES = ["Aesthetic", "Nature", "Office", "Abstract", "Tech", "Textures", "Street", "Travel"];
+  // Filtered for better mobile fit: short, punchy keywords
+  const STOCK_CATEGORIES = ["Aesthetic", "Nature", "Abstract", "Tech", "Street", "Mood"];
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [isApplying, setIsApplying] = useState<string | null>(null);
 
@@ -59,9 +60,12 @@ export function MobileTemplateBrowser() {
   useVideoPreloader(mainTab === 'packs' ? templateUrls : stockUrls);
 
   const filteredTemplates = useMemo(() => {
-    if (!activeCategoryId) return allTemplates;
-    const category = categories.find(c => c.id === activeCategoryId);
-    return category ? category.templates.map(t => ({ ...t, categoryName: category.name })) : [];
+    const templates = activeCategoryId
+      ? categories.find(c => c.id === activeCategoryId)?.templates.map(t => ({ ...t, categoryName: categories.find(c => c.id === activeCategoryId)?.name })) || []
+      : allTemplates;
+
+    // On mobile, only show portrait or square templates to avoid massive black spacing
+    return templates.filter(t => t.aspectRatio !== 'landscape');
   }, [activeCategoryId, allTemplates, categories]);
 
   // Handle Pexels search
@@ -71,14 +75,16 @@ export function MobileTemplateBrowser() {
     const timer = setTimeout(async () => {
       setIsPexelsLoading(true);
       try {
-        const response = await pexelsService.search(searchQuery, 'video', 1, 12);
+        // Default to 'vertical aesthetic' if empty to ensure portrait content and better results
+        const query = searchQuery || "vertical aesthetic";
+        const response = await pexelsService.search(query, 'video', 1, 12, 'portrait');
         setPexelsResults(response.videos || []);
       } catch (err) {
         console.error("Pexels load failed:", err);
       } finally {
         setIsPexelsLoading(false);
       }
-    }, 400); // Slightly faster debounce for snappier feel
+    }, 400);
 
     return () => clearTimeout(timer);
   }, [searchQuery, mainTab]);
@@ -257,8 +263,8 @@ export function MobileTemplateBrowser() {
                   />
                 </div>
 
-                {/* Discovery Chips */}
-                <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-4 px-4 pb-1">
+                {/* Discovery Chips - Refined for mobile */}
+                <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-4 px-4 pb-2 snap-x snap-mandatory">
                   {STOCK_CATEGORIES.map((cat) => (
                     <button
                       key={cat}
@@ -267,10 +273,10 @@ export function MobileTemplateBrowser() {
                         addHapticFeedback("light");
                       }}
                       className={cn(
-                        "px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap border",
+                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border snap-start",
                         searchQuery.toLowerCase() === cat.toLowerCase()
-                          ? "bg-white text-black border-white shadow-lg"
-                          : "bg-white/5 border-white/5 text-muted-foreground hover:bg-white/10"
+                          ? "bg-white text-black border-white shadow-[0_4px_12px_rgba(255,255,255,0.2)]"
+                          : "bg-white/5 border-white/5 text-white/50 hover:bg-white/10"
                       )}
                     >
                       {cat}
