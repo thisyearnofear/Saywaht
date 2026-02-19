@@ -11,10 +11,10 @@ export default function TemplatesPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden">
       <Header />
-      
-      <main className="flex-1 flex flex-col relative overflow-y-auto touch-manipulation">
+
+      <main className="flex-1 overflow-y-auto touch-manipulation md:pb-12 bg-muted/10">
         {/* Main Content - Compact for mobile */}
         <div className="relative container max-w-7xl mx-auto px-3 py-4 md:py-12 flex-1">
           {/* Header Section - Compact */}

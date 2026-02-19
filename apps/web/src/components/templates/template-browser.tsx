@@ -1,19 +1,84 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTemplateStore } from "@/stores/template-store";
 import { TemplateCategoryCard } from "./template-category-card";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
+import { pexelsService, PexelsVideo } from "@/services/pexels-service";
+import { Loader2, Search, ExternalLink, Image as ImageIcon, Video } from "@/lib/icons";
+import { toast } from "sonner";
+import { useMediaStore } from "@/stores/media-store";
+import { useProjectStore } from "@/stores/project-store";
 
 export function TemplateBrowser() {
   const { categories, isLoading, error, fetchCategories, recentTemplates } = useTemplateStore();
   const [searchQuery, setSearchQuery] = useState("");
+  const [pexelsResults, setPexelsResults] = useState<PexelsVideo[]>([]);
+  const [isPexelsLoading, setIsPexelsLoading] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
+
+  // Handle Pexels search
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchQuery.length >= 3) {
+        setIsPexelsLoading(true);
+        try {
+          const response = await pexelsService.search(searchQuery, 'video', 1, 6);
+          setPexelsResults(response.videos || []);
+        } catch (err) {
+          console.error("Pexels search failed:", err);
+        } finally {
+          setIsPexelsLoading(false);
+        }
+      } else if (searchQuery === "") {
+        // Fetch some trending videos as initial "templates"
+        setIsPexelsLoading(true);
+        try {
+          const response = await pexelsService.search("cinematic", 'video', 1, 6);
+          setPexelsResults(response.videos || []);
+        } catch (err) {
+          console.error("Pexels trending fetch failed:", err);
+        } finally {
+          setIsPexelsLoading(false);
+        }
+      } else {
+        setPexelsResults([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleUsePexelsVideo = (video: PexelsVideo) => {
+    const { addMediaItem, clearAllMedia } = useMediaStore.getState();
+    const { createNewProject } = useProjectStore.getState();
+
+    const bestFile = video.video_files.find(f => f.quality === 'hd') || video.video_files[0];
+
+    // Create new project
+    createNewProject(`Pexels: ${video.user.name}`);
+    clearAllMedia();
+
+    // Add the video
+    addMediaItem({
+      id: `pexels-${video.id}`,
+      name: `Stock: ${video.user.name}`,
+      type: "video",
+      url: bestFile.link,
+      thumbnailUrl: video.image,
+      duration: video.duration,
+      aspectRatio: video.width / video.height,
+    });
+
+    toast.success("Ready to edit!");
+    router.push("/editor");
+  };
 
   // Filter templates based on search query
   const filteredCategories = categories.map(category => {
@@ -129,10 +194,10 @@ export function TemplateBrowser() {
           )}
         </div>
         <div className="flex justify-between items-center mt-3 px-2">
-           <div className="flex gap-2">
-             {/* Simple filters could go here */}
-           </div>
-           <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">
+          <div className="flex gap-2">
+            {/* Simple filters could go here */}
+          </div>
+          <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">
             {filteredCategories.reduce((total, category) => total + category.templates.length, 0)} Results
           </p>
         </div>
@@ -164,6 +229,58 @@ export function TemplateBrowser() {
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Pexels Stock Section */}
+      {(pexelsResults.length > 0 || isPexelsLoading) && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-border/50 pb-2">
+            <h2 className="text-sm uppercase tracking-widest font-bold text-foreground flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+              Pexels Stock {searchQuery ? `"${searchQuery}"` : "Cinematic"}
+            </h2>
+            <div className="flex items-center gap-2">
+              {isPexelsLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Global Library</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {pexelsResults.map((video) => (
+              <div
+                key={video.id}
+                className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-muted cursor-pointer ring-1 ring-border/50 hover:ring-primary/50 transition-all hover:shadow-xl"
+                onClick={() => handleUsePexelsVideo(video)}
+              >
+                <img
+                  src={video.image}
+                  alt={video.user.name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
+
+                <div className="absolute bottom-2 left-2 right-2 text-[8px] text-white font-bold truncate uppercase tracking-tighter">
+                  {video.user.name}
+                </div>
+                <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[8px] text-white font-black">
+                  {Math.round(video.duration)}s
+                </div>
+
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100">
+                  <div className="bg-primary text-white p-2 rounded-full shadow-2xl">
+                    <Video className="h-4 w-4" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {pexelsResults.length === 0 && !isPexelsLoading && (
+            <div className="py-8 text-center text-muted-foreground text-xs glass rounded-xl">
+              No stock videos found. Try a different search.
+            </div>
+          )}
         </div>
       )}
 
