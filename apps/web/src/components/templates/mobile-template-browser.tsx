@@ -16,6 +16,7 @@ import { useMediaStore } from "@/stores/media-store";
 import { useProjectStore } from "@/stores/project-store";
 import { Input } from "@/components/ui/input";
 import { Search, Video as VideoIcon } from "lucide-react";
+import { useVideoPreloader } from "@/hooks/use-video-preloader";
 
 export function MobileTemplateBrowser() {
   const { categories, isLoading, selectTemplate, applySelectedTemplate } = useTemplateStore();
@@ -33,6 +34,17 @@ export function MobileTemplateBrowser() {
   const allTemplates = useMemo(() => {
     return categories.flatMap(c => c.templates.map(t => ({ ...t, categoryName: c.name })));
   }, [categories]);
+
+  // PREPERFORMANCE: Preload the first few template videos
+  const templateUrls = useMemo(() =>
+    allTemplates.map(t => resolveIpfsUrl(t.thumbnailUrl || "")),
+    [allTemplates]);
+
+  const stockUrls = useMemo(() =>
+    pexelsResults.map(v => v.video_files.find(f => f.quality === 'sd')?.link || v.video_files[0].link),
+    [pexelsResults]);
+
+  useVideoPreloader(mainTab === 'packs' ? templateUrls : stockUrls);
 
   const filteredTemplates = useMemo(() => {
     if (activeCategoryId === "all") return allTemplates;

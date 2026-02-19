@@ -13,14 +13,33 @@ import { useMediaStore } from "@/stores/media-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileTemplateBrowser } from "./mobile-template-browser";
+import { cn, resolveIpfsUrl } from "@/lib/utils";
+import { useVideoPreloader } from "@/hooks/use-video-preloader";
+import { useMemo } from "react";
 
 export function TemplateBrowser() {
   const { categories, isLoading, error, fetchCategories, recentTemplates } = useTemplateStore();
+  const [mainTab, setMainTab] = useState<"packs" | "stock">("packs");
   const [searchQuery, setSearchQuery] = useState("");
   const [pexelsResults, setPexelsResults] = useState<PexelsVideo[]>([]);
   const [isPexelsLoading, setIsPexelsLoading] = useState(false);
   const router = useRouter();
   const isMobile = useIsMobile();
+
+  // PREPERFORMANCE: Preload the first few template videos
+  const allTemplates = useMemo(() =>
+    categories.flatMap(c => c.templates),
+    [categories]);
+
+  const templateUrls = useMemo(() =>
+    allTemplates.map(t => resolveIpfsUrl(t.thumbnailUrl || "")),
+    [allTemplates]);
+
+  const stockUrls = useMemo(() =>
+    pexelsResults.map(v => v.video_files.find(f => f.quality === 'sd')?.link || v.video_files[0].link),
+    [pexelsResults]);
+
+  useVideoPreloader(mainTab === 'packs' ? templateUrls : stockUrls);
 
   useEffect(() => {
     fetchCategories();
@@ -32,7 +51,7 @@ export function TemplateBrowser() {
       if (searchQuery.length >= 3) {
         setIsPexelsLoading(true);
         try {
-          const response = await pexelsService.search(searchQuery, 'video', 1, 6);
+          const response = await pexelsService.search(searchQuery, 'video', 1, 12);
           setPexelsResults(response.videos || []);
         } catch (err) {
           console.error("Pexels search failed:", err);
@@ -43,7 +62,7 @@ export function TemplateBrowser() {
         // Fetch some trending videos as initial "templates"
         setIsPexelsLoading(true);
         try {
-          const response = await pexelsService.search("cinematic", 'video', 1, 6);
+          const response = await pexelsService.search("cinematic background", 'video', 1, 12);
           setPexelsResults(response.videos || []);
         } catch (err) {
           console.error("Pexels trending fetch failed:", err);
@@ -105,321 +124,153 @@ export function TemplateBrowser() {
   }).filter(category => category.templates.length > 0);
 
   // Show loading state
-  if (isLoading) {
+  if (isLoading && categories.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <div className="relative">
-          <div className="w-12 h-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-          </div>
-        </div>
-        <p className="text-sm font-medium text-muted-foreground animate-pulse">Curating templates...</p>
+      <div className="flex flex-col items-center justify-center h-[50vh] gap-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-sm font-black uppercase tracking-widest text-muted-foreground animate-pulse">Curating templates...</p>
       </div>
     );
   }
 
-  // Show error state
-  if (error) {
-    return (
-      <div className="p-8 bg-destructive/10 border border-destructive/20 text-destructive rounded-2xl text-center">
-        <h3 className="font-bold text-lg mb-2">Failed to load templates</h3>
-        <p className="text-sm opacity-80 max-w-md mx-auto">{error}</p>
-        <Button
-          onClick={() => fetchCategories()}
-          variant="outline"
-          className="mt-6 border-destructive/30 hover:bg-destructive/10"
-        >
-          Try Again
-        </Button>
-      </div>
-    );
-  }
-
-  // No categories found
-  if (categories.length === 0) {
-    return (
-      <div className="p-12 text-center glass rounded-2xl">
-        <h3 className="text-xl font-bold mb-2">No Templates Available</h3>
-        <p className="text-muted-foreground">
-          Check back later for new templates or create your own project from
-          scratch.
-        </p>
-      </div>
-    );
-  }
-
-  // No search results
-  if (filteredCategories.length === 0) {
-    return (
-      <div className="p-12 text-center glass rounded-2xl">
-        <h3 className="text-xl font-bold mb-2">No Templates Found</h3>
-        <p className="text-muted-foreground mb-6">
-          Your search &quot;{searchQuery}&quot; didn&apos;t match any templates.
-        </p>
-        <Button
-          onClick={() => setSearchQuery("")}
-          variant="secondary"
-          className="rounded-full"
-        >
-          Clear Search
-        </Button>
-      </div>
-    );
-  }
-
-  // Render categories with aspect ratio organization
+  // Render main layout
   return (
-    <div className="space-y-6 md:space-y-12">
-      {/* Search Bar - More mobile friendly */}
-      <div className="sticky top-0 z-20 py-2 md:pb-4 bg-background/90 md:bg-background/50 backdrop-blur-sm -mx-2 px-2 md:pt-2 -mt-2 md:mt-0">
-        <div className="relative group">
+    <div className="space-y-8">
+      {/* Main Tab Switcher and Search */}
+      <div className="sticky top-0 z-20 py-4 bg-background/80 backdrop-blur-md flex items-center justify-between gap-6 border-b border-border/50 px-2">
+        <div className="flex p-1 bg-muted/30 rounded-2xl border border-border/50">
+          <button
+            onClick={() => setMainTab("packs")}
+            className={cn(
+              "px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+              mainTab === "packs" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Template Packs
+          </button>
+          <button
+            onClick={() => setMainTab("stock")}
+            className={cn(
+              "px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+              mainTab === "stock" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Stock Library
+          </button>
+        </div>
+
+        <div className="relative flex-1 max-w-md group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <Input
             type="text"
-            placeholder="Search by name, style, or tag..."
+            placeholder={mainTab === 'packs' ? "Search packs..." : "Search 10,000+ stock clips..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-background/80 border-border/50 focus:border-primary/50 text-foreground placeholder-muted-foreground w-full h-12 pl-12 pr-12 rounded-2xl shadow-sm transition-all group-hover:shadow-md"
+            className="bg-background/80 border-border/50 focus:border-primary/50 h-11 pl-11 pr-11 rounded-xl"
           />
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.35-4.35"></path>
-            </svg>
-          </div>
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Clear search"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="10"></circle>
-                <path d="m15 9-6 6"></path>
-                <path d="m9 9 6 6"></path>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <path d="M18 6L6 18M6 6l12 12" />
               </svg>
             </button>
           )}
         </div>
-        <div className="flex justify-between items-center mt-3 px-2">
-          <div className="flex gap-2">
-            {/* Simple filters could go here */}
-          </div>
-          <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">
-            {filteredCategories.reduce((total, category) => total + category.templates.length, 0)} Results
-          </p>
-        </div>
       </div>
 
-      {/* Recent Templates Section */}
-      {recentTemplates.length > 0 && searchQuery === "" && (
-        <div className="space-y-6 animate-fade-in">
-          <div className="flex items-center justify-between border-b border-border/50 pb-2">
-            <h2 className="text-sm uppercase tracking-widest font-bold text-foreground flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
-              Recently Used
-            </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-[10px] uppercase tracking-widest font-bold text-muted-foreground hover:text-foreground"
-              onClick={() => useTemplateStore.getState().clearRecentTemplates()}
-            >
-              Clear History
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recentTemplates.map((template) => (
-              <TemplateCategoryCard
-                key={template.id}
-                template={template}
-                showRecentBadge={true}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Pexels Stock Section */}
-      {(pexelsResults.length > 0 || isPexelsLoading) && (
-        <div className="space-y-6 animate-fade-in">
-          <div className="flex items-center justify-between border-b border-border/50 pb-2">
-            <h2 className="text-sm uppercase tracking-widest font-bold text-foreground flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-              Pexels Stock {searchQuery ? `"${searchQuery}"` : "Cinematic"}
-            </h2>
-            <div className="flex items-center gap-2">
-              {isPexelsLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Global Library</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            {pexelsResults.map((video) => (
-              <div
-                key={video.id}
-                className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-muted cursor-pointer ring-1 ring-border/50 hover:ring-primary/50 transition-all hover:shadow-xl"
-                onClick={() => handleUsePexelsVideo(video)}
-              >
-                <img
-                  src={video.image}
-                  alt={video.user.name}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
-
-                <div className="absolute bottom-2 left-2 right-2 text-[8px] text-white font-bold truncate uppercase tracking-tighter">
-                  {video.user.name}
-                </div>
-                <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[8px] text-white font-black">
-                  {Math.round(video.duration)}s
-                </div>
-
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100">
-                  <div className="bg-primary text-white p-2 rounded-full shadow-2xl">
-                    <Video className="h-4 w-4" />
-                  </div>
-                </div>
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+        {mainTab === 'packs' ? (
+          <div className="space-y-12">
+            {error ? (
+              <div className="p-8 bg-destructive/5 border border-destructive/10 text-destructive rounded-2xl text-center">
+                <h3 className="font-bold text-lg mb-2">Failed to load templates</h3>
+                <p className="text-sm opacity-80">{error}</p>
+                <Button onClick={() => fetchCategories()} variant="outline" className="mt-4">Try Again</Button>
               </div>
-            ))}
-          </div>
-
-          {pexelsResults.length === 0 && !isPexelsLoading && (
-            <div className="py-8 text-center text-muted-foreground text-xs glass rounded-xl">
-              No stock videos found. Try a different search.
-            </div>
-          )}
-        </div>
-      )}
-
-      {filteredCategories.map((category) => {
-        // Group templates by aspect ratio
-        const portraitTemplates = category.templates.filter(
-          (t) => t.aspectRatio === "portrait"
-        );
-        const squareTemplates = category.templates.filter(
-          (t) => t.aspectRatio === "square"
-        );
-        const landscapeTemplates = category.templates.filter(
-          (t) => t.aspectRatio === "landscape" || !t.aspectRatio
-        );
-
-        return (
-          <div key={category.id} className="space-y-8 animate-fade-in">
-            <div className="border-l-4 border-primary pl-4 py-1">
-              <h2 className="text-2xl font-bold text-foreground">
-                {category.name}
-              </h2>
-              <p className="text-muted-foreground text-sm">{category.description}</p>
-            </div>
-
-            {/* Portrait Templates (Mobile-First) */}
-            {portraitTemplates.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="bg-primary/10 p-2 rounded-lg">
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      className="text-primary"
-                    >
-                      <rect x="7" y="2" width="10" height="20" rx="2" ry="2" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-sm uppercase tracking-widest font-bold text-foreground">
-                      Portrait
-                    </h3>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Optimized for Mobile & Zora</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {portraitTemplates.map((template) => (
-                    <TemplateCategoryCard
-                      key={template.id}
-                      template={template}
-                    />
-                  ))}
-                </div>
+            ) : filteredCategories.length === 0 ? (
+              <div className="p-20 text-center glass rounded-3xl">
+                <h3 className="text-xl font-bold mb-2">No Templates Found</h3>
+                <p className="text-muted-foreground">Adjust your search or browse the Stock Library.</p>
               </div>
+            ) : (
+              filteredCategories.map((category) => (
+                <div key={category.id} className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-black italic uppercase tracking-tighter">
+                        {category.name}
+                      </h2>
+                      <p className="text-sm text-muted-foreground">{category.description}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {category.templates.map((template) => (
+                      <TemplateCategoryCard key={template.id} template={template} />
+                    ))}
+                  </div>
+                </div>
+              ))
             )}
-
-            {/* Square Templates */}
-            {squareTemplates.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="bg-accent/10 p-2 rounded-lg">
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      className="text-accent"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-sm uppercase tracking-widest font-bold text-foreground">
-                      Square
-                    </h3>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Universal Compatibility</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {squareTemplates.map((template) => (
-                    <TemplateCategoryCard
-                      key={template.id}
-                      template={template}
-                    />
-                  ))}
-                </div>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black italic uppercase tracking-tighter">
+                  Global Stock Library
+                </h2>
+                <p className="text-sm text-muted-foreground">Powered by Pexels • Royalty Free for Creators</p>
               </div>
-            )}
+              {isPexelsLoading && <Loader2 className="h-6 w-6 animate-spin text-primary" />}
+            </div>
 
-            {/* Landscape Templates */}
-            {landscapeTemplates.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="bg-muted p-2 rounded-lg">
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      className="text-muted-foreground"
-                    >
-                      <rect x="2" y="7" width="20" height="10" rx="2" ry="2" />
-                    </svg>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              {pexelsResults.map((video) => (
+                <div
+                  key={video.id}
+                  className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-muted cursor-pointer ring-1 ring-border/50 hover:ring-primary transition-all hover:shadow-2xl"
+                  onClick={() => handleUsePexelsVideo(video)}
+                >
+                  <img
+                    src={video.image}
+                    alt={video.user.name}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-all" />
+
+                  <div className="absolute bottom-3 left-3 right-3">
+                    <div className="text-[10px] text-white/70 uppercase tracking-widest font-black truncate mb-1">
+                      {video.user.name}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="bg-primary/80 backdrop-blur-md px-2 py-0.5 rounded text-[8px] text-white font-black uppercase">
+                        {Math.round(video.duration)}s
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm uppercase tracking-widest font-bold text-foreground">
-                      Landscape
-                    </h3>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Traditional Display</p>
+
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
+                    <div className="bg-white text-black p-3 rounded-full shadow-2xl">
+                      <Video className="h-5 w-5 fill-current" />
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {landscapeTemplates.map((template) => (
-                    <TemplateCategoryCard
-                      key={template.id}
-                      template={template}
-                    />
-                  ))}
-                </div>
+              ))}
+            </div>
+
+            {pexelsResults.length === 0 && !isPexelsLoading && (
+              <div className="py-20 text-center glass rounded-3xl">
+                <Search className="h-10 w-10 text-muted-foreground/30 mx-auto mb-4" />
+                <h3 className="text-xl font-bold mb-2">No Stock Found</h3>
+                <p className="text-muted-foreground">Try searching for keywords like &quot;drone&quot;, &quot;fashion&quot;, or &quot;nature&quot;.</p>
               </div>
             )}
           </div>
-        );
-      })}
+        )}
+      </div>
     </div>
   );
 }

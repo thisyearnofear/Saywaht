@@ -121,29 +121,30 @@ export function isValidAddress(address: string): address is Address {
 }
 
 /**
- * Resolves IPFS or Lens URIs to public gateway URLs
+ * Resolves IPFS or Lens URIs to public gateway URLs with performance pooling
  */
 export function resolveIpfsUrl(uri: string): string {
   if (!uri) return uri;
-  
+
   // Already a HTTP(S) URL
   if (uri.startsWith('http://') || uri.startsWith('https://')) {
     return uri;
   }
-  
+
   // IPFS URI
   if (uri.startsWith('ipfs://')) {
     const hash = uri.replace('ipfs://', '');
-    // Prefer Grove gateway for better performance/reliability if configured
-    return `https://ipfs.io/ipfs/${hash}`;
+    // PERFORMANCE: Use cloudflare or dweb.link as primary for faster mobile delivery
+    // ipfs.io is often throttled or slow in many regions
+    return `https://cloudflare-ipfs.com/ipfs/${hash}`;
   }
-  
+
   // Lens URI (storage-client uses lens:// prefix)
   if (uri.startsWith('lens://')) {
     const hash = uri.replace('lens://', '');
     return `https://api.grove.storage/ipfs/${hash}`;
   }
-  
+
   return uri;
 }
 
