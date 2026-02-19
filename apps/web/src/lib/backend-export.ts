@@ -6,8 +6,8 @@ import { FORMAT_DIMENSIONS } from "./video-utils";
 // Backend export service configuration
 const BACKEND_URLS = [
   process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL,
-  'http://157.180.36.156:3001', // Production FFmpeg backend
-  'http://localhost:3001'       // Local development default
+  'http://157.180.36.156:3100', // Production FFmpeg backend
+  'http://localhost:3100'       // Local development default
 ].filter(Boolean) as string[];
 
 let cachedBackendUrl: string | null = null;

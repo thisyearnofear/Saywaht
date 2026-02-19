@@ -173,7 +173,7 @@ Before you begin, ensure you have the following installed on your system:
     STORACHA_DELEGATION=your-delegation-proof
 
     # Backend Export Service (Optional - enables server-side video processing)
-    NEXT_PUBLIC_BACKEND_EXPORT_URL=http://157.180.36.156:3001
+    NEXT_PUBLIC_BACKEND_EXPORT_URL=http://157.180.36.156:3100
 
     # Optional Features
     ELEVENLABS_API_KEY=your-elevenlabs-key
