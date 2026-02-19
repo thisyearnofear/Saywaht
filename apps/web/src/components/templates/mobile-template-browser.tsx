@@ -17,6 +17,10 @@ import { useProjectStore } from "@/stores/project-store";
 import { Input } from "@/components/ui/input";
 import { Search, Video as VideoIcon } from "lucide-react";
 import { useVideoPreloader } from "@/hooks/use-video-preloader";
+import { useTimelineStore } from "@/stores/timeline-store";
+import { usePlaybackStore } from "@/stores/playback-store";
+import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
+import { useSceneStore } from "@/stores/scene-store";
 
 export function MobileTemplateBrowser() {
   const { categories, isLoading, selectTemplate, applySelectedTemplate } = useTemplateStore();
@@ -82,14 +86,22 @@ export function MobileTemplateBrowser() {
   const handleUsePexelsVideo = (video: PexelsVideo) => {
     const { addMediaItem, clearAllMedia } = useMediaStore.getState();
     const { createNewProject } = useProjectStore.getState();
+    const { addTrack, addClipToTrack, setTracks } = useTimelineStore.getState();
+    const { setCurrentTime, pause } = usePlaybackStore.getState();
 
     const bestFile = video.video_files.find(f => f.quality === 'hd') || video.video_files[0];
+    const mediaId = `pexels-${video.id}`;
 
+    // 1. Initialize project
     createNewProject(`Pexels: ${video.user.name}`);
-    clearAllMedia();
 
+    // 2. Clear existing state for a fresh start
+    clearAllMedia();
+    setTracks([]);
+
+    // 3. Add the media item
     addMediaItem({
-      id: `pexels-${video.id}`,
+      id: mediaId,
       name: `Stock: ${video.user.name}`,
       type: "video",
       url: bestFile.link,
@@ -97,6 +109,36 @@ export function MobileTemplateBrowser() {
       duration: video.duration,
       aspectRatio: video.width / video.height,
     });
+
+    // 4. Create a track and add the clip so it's visible in the editor
+    const trackId = addTrack("video");
+    addClipToTrack(trackId, {
+      mediaId: mediaId,
+      name: `Stock: ${video.user.name}`,
+      duration: video.duration,
+      startTime: 0,
+      trimStart: 0,
+      trimEnd: 0,
+    });
+
+    // 5. Initialize canvas size based on video aspect ratio
+    const videoAspectRatio = video.width / video.height;
+    const { setCanvasPreset } = useCanvasStore.getState();
+    const preset = canvasPresets.reduce((prev, curr) => {
+      return (Math.abs(curr.aspectRatio - videoAspectRatio) < Math.abs(prev.aspectRatio - videoAspectRatio) ? curr : prev);
+    });
+    setCanvasPreset(preset);
+
+    // 6. Initialize scenes immediately
+    const { initializeScenes } = useSceneStore.getState();
+    const updatedProject = useProjectStore.getState().activeProject;
+    if (updatedProject) {
+      initializeScenes(updatedProject.scenes || [], updatedProject.currentSceneId);
+    }
+
+    // 7. Reset playback state
+    pause();
+    setCurrentTime(0);
 
     toast.success("Ready to edit!");
     router.push("/editor");

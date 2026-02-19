@@ -23,7 +23,7 @@ import {
 import { VideoInitializationTest } from "./video-initialization-test";
 
 // Debug flag - set to false to hide active clips info
-const SHOW_DEBUG_INFO = process.env.NODE_ENV === "development";
+const SHOW_DEBUG_INFO = true;
 
 interface PreviewPanelProps {
   controlsVariant?: "topbar" | "overlay";

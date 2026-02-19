@@ -5,6 +5,8 @@ import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useProjectStore } from "@/stores/project-store";
 import { usePlaybackStore } from "@/stores/playback-store";
+import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
+import { useSceneStore } from "@/stores/scene-store";
 import { toast } from "sonner";
 
 interface TemplateStore {
@@ -14,7 +16,7 @@ interface TemplateStore {
   error: string | null;
   selectedTemplate: Template | null;
   recentTemplates: Template[]; // Track recently used templates
-  
+
   // Actions
   fetchCategories: () => Promise<void>;
   selectTemplate: (templateId: string) => Promise<void>;
@@ -31,7 +33,7 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
   error: null,
   selectedTemplate: null,
   recentTemplates: [],
-  
+
   /**
    * Fetches all template categories
    */
@@ -42,13 +44,13 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       set({ categories, isLoading: false });
     } catch (error) {
       console.error('Failed to fetch templates:', error);
-      set({ 
-        error: error instanceof Error ? error.message : 'Failed to load templates', 
-        isLoading: false 
+      set({
+        error: error instanceof Error ? error.message : 'Failed to load templates',
+        isLoading: false
       });
     }
   },
-  
+
   /**
    * Selects a template by ID
    */
@@ -59,13 +61,13 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       set({ selectedTemplate: template, isLoading: false });
     } catch (error) {
       console.error('Failed to select template:', error);
-      set({ 
-        error: error instanceof Error ? error.message : 'Failed to select template', 
-        isLoading: false 
+      set({
+        error: error instanceof Error ? error.message : 'Failed to select template',
+        isLoading: false
       });
     }
   },
-  
+
   /**
    * Clears the selected template
    */
@@ -80,13 +82,13 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
     set((state) => {
       // Remove duplicate if exists
       const existingIndex = state.recentTemplates.findIndex(t => t.id === template.id);
-      let updatedRecents = existingIndex >= 0 
+      let updatedRecents = existingIndex >= 0
         ? [...state.recentTemplates.slice(0, existingIndex), ...state.recentTemplates.slice(existingIndex + 1)]
         : [...state.recentTemplates];
-      
+
       // Add new template at beginning
       updatedRecents = [template, ...updatedRecents];
-      
+
       // Limit to 5 most recent
       return { recentTemplates: updatedRecents.slice(0, 5) };
     });
@@ -98,7 +100,7 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
   clearRecentTemplates: () => {
     set({ recentTemplates: [] });
   },
-  
+
   /**
    * Applies the selected template to the current project
    * @param projectName Optional project name for new projects
@@ -111,16 +113,16 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       toast.error('No template selected');
       return false;
     }
-    
+
     set({ isLoading: true });
-    
+
     try {
       // Get required stores
       const { clearAllMedia, addMediaItem } = useMediaStore.getState();
       const { tracks, addTrack, addClipToTrack, removeTrack } = useTimelineStore.getState();
       const { createNewProject, activeProject } = useProjectStore.getState();
       const { setCurrentTime, pause } = usePlaybackStore.getState();
-      
+
       // Create a new project when:
       //  - there is no active project at all, OR
       //  - an explicit projectName was given AND we are replacing (i.e. the
@@ -133,24 +135,24 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
         const newProjectName = projectName || selectedTemplate.name;
         createNewProject(newProjectName);
       }
-      
+
       // Handle media based on merge strategy
       if (mergeStrategy === 'replace') {
         clearAllMedia();
         const currentTracks = useTimelineStore.getState().tracks;
         currentTracks.forEach(track => removeTrack(track.id));
       }
-      
+
       // Load template media and tracks
       const { mediaItems, tracks: templateTracks } = await applyTemplate(selectedTemplate);
-      
+
       // Add media items to the store
       mediaItems.forEach(item => addMediaItem(item));
-      
+
       // Add tracks and clips to the timeline
       templateTracks.forEach((track) => {
         const trackId = addTrack(track.type);
-        
+
         // Add clips to the track
         track.clips.forEach((clip) => {
           addClipToTrack(trackId, {
@@ -163,23 +165,40 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
           });
         });
       });
-      
+
+      // Initialize canvas size based on template aspect ratio
+      const { setCanvasPreset } = useCanvasStore.getState();
+      const preset = canvasPresets.find(p => {
+        if (selectedTemplate.aspectRatio === 'portrait') return p.name.includes('Portrait');
+        if (selectedTemplate.aspectRatio === 'square') return p.name.includes('Square');
+        if (selectedTemplate.aspectRatio === 'landscape') return p.name.includes('HD');
+        return false;
+      }) || canvasPresets[0];
+      setCanvasPreset(preset);
+
+      // Initialize scenes immediately so the scene store is in sync with the new project
+      const { initializeScenes } = useSceneStore.getState();
+      const updatedProject = useProjectStore.getState().activeProject;
+      if (updatedProject) {
+        initializeScenes(updatedProject.scenes || [], updatedProject.currentSceneId);
+      }
+
       // Reset playhead and pause playback
       pause();
       setCurrentTime(0);
       toast.success(`Template "${selectedTemplate.name}" applied successfully!`);
-      
+
       // Track this template as recently used
       get().addToRecentTemplates(selectedTemplate);
-      
+
       set({ isLoading: false });
       return true;
     } catch (error) {
       console.error('❌ Failed to apply template:', error);
       toast.error('Failed to apply template');
-      set({ 
-        error: error instanceof Error ? error.message : 'Failed to apply template', 
-        isLoading: false 
+      set({
+        error: error instanceof Error ? error.message : 'Failed to apply template',
+        isLoading: false
       });
       return false;
     }

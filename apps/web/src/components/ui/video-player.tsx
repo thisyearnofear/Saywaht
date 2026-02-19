@@ -120,6 +120,18 @@ export function VideoPlayer({
       video.playbackRate = e.detail.speed;
     };
 
+    // Sync initial time
+    if (video) {
+      const initialVideoTime = Math.max(
+        trimStart,
+        Math.min(
+          clipDuration - trimEnd,
+          currentTime - clipStartTime + trimStart
+        )
+      );
+      video.currentTime = initialVideoTime;
+    }
+
     window.addEventListener("playback-seek", handleSeekEvent as EventListener);
     window.addEventListener(
       "playback-update",
@@ -141,7 +153,7 @@ export function VideoPlayer({
         handleSpeed as EventListener
       );
     };
-  }, [clipStartTime, trimStart, trimEnd, clipDuration]);
+  }, [clipStartTime, trimStart, trimEnd, clipDuration, currentTime]);
 
   // Sync playback state
   useEffect(() => {
