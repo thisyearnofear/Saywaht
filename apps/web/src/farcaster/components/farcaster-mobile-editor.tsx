@@ -31,6 +31,7 @@ export function FarcasterMobileEditorLayout({
   const [showFarcasterOnboarding, setShowFarcasterOnboarding] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isSplashAnimationComplete, setIsSplashAnimationComplete] = useState(false);
 
   // Hydration guard - crucial for WebViews and Next.js
   useEffect(() => {
@@ -39,7 +40,7 @@ export function FarcasterMobileEditorLayout({
 
   // Stable callback for splash screen to prevent effect re-runs
   const handleSplashComplete = useCallback(() => {
-    console.log("Farcaster splash screen completed");
+    setIsSplashAnimationComplete(true);
   }, []);
 
   // Load SDK safely (returns null during SSR)
@@ -110,8 +111,13 @@ export function FarcasterMobileEditorLayout({
   };
 
   if (!isMounted) {
-    return <div className="h-screen w-screen bg-background" />;
+    // PREVENT WHITE FLASH: Use absolute black during hydration
+    return <div className="h-screen w-screen bg-[#000000]" />;
   }
+
+  // Determine if we should show the splash screen
+  // Show if initializing OR if the animation hasn't finished yet
+  const showSplash = isFarcasterMiniApp && (!isReady || !isSplashAnimationComplete);
 
   return (
     <div className={`h-screen w-screen flex flex-col bg-background overflow-hidden mobile-editor safe-area ${isFarcasterMiniApp ? 'farcaster-miniapp' : ''
@@ -140,14 +146,14 @@ export function FarcasterMobileEditorLayout({
 
       {/* Farcaster Mini App Splash Screen */}
       <FarcasterSplashScreen
-        isVisible={isFarcasterMiniApp && isInitializing}
+        isVisible={showSplash}
         onComplete={handleSplashComplete}
       />
 
       {/* Enhanced mobile editor layout with Farcaster features */}
       <div className={cn(
-        "flex-1 min-h-0 overflow-y-auto scrollable flex flex-col transition-opacity duration-300",
-        (isFarcasterMiniApp && isInitializing && !isReady) ? "opacity-0 invisible" : "opacity-100 visible"
+        "flex-1 min-h-0 overflow-y-auto scrollable flex flex-col transition-opacity duration-500",
+        showSplash ? "opacity-0 invisible" : "opacity-100 visible"
       )}>
         {/* LANDING PAGE: Show if we're in 'welcome' step and no cast is provided */}
         {isFarcasterMiniApp && frameState.step === 'welcome' && !frameState.castHash ? (
@@ -178,7 +184,7 @@ export function FarcasterMobileEditorLayout({
               >
                 Coin Commentary
               </Button>
-              
+
               <Button
                 size="lg"
                 variant="secondary"

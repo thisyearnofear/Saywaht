@@ -41,24 +41,27 @@ export function HoverVideoPreview({
     return () => observer.disconnect();
   }, []);
 
-  // Autoplay muted when in view
+  // Autoplay muted when in view with delay
   useEffect(() => {
     const video = videoRef.current;
     if (!video || hasError || !isInView) return;
 
-    if (isInView) {
-      // Try to play the video when in view
-      const playPromise = video.play();
-
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => setIsPlaying(true))
-          .catch((error: Error) => {
-            console.warn("Autoplay was prevented (likely not user interacted, or policy):", error);
-            setIsPlaying(false); // Failed to autoplay
-          });
+    // PERFORMANCE: Wait 300ms before playing to ensure the user has stopped scrolling
+    const playTimer = setTimeout(() => {
+      if (isInView) {
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => setIsPlaying(true))
+            .catch((error: Error) => {
+              console.warn("Autoplay prevented:", error);
+              setIsPlaying(false);
+            });
+        }
       }
-    }
+    }, 300);
+
+    return () => clearTimeout(playTimer);
   }, [isInView, hasError]);
 
   const handlePlayClick = () => {
@@ -141,7 +144,7 @@ export function HoverVideoPreview({
           )}
         </div>
       )}
-      
+
       {/* Muted indicator */}
       {!isLoading && isInView && !hasError && (
         <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">

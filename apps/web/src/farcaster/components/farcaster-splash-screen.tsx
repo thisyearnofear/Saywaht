@@ -73,7 +73,19 @@ export function FarcasterSplashScreen({
     };
   }, [isVisible, onComplete]);
 
-  if (!isVisible) return null;
+  // PERFORAMNCE: Keep a local state to know if we should render at all
+  // to avoid overhead after initial load
+  const [shouldRender, setShouldRender] = useState(true);
+
+  useEffect(() => {
+    if (!isVisible && shouldRender) {
+      // Small delay after it becomes invisible to unmount completely
+      const timer = setTimeout(() => setShouldRender(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isVisible, shouldRender]);
+
+  if (!shouldRender) return null;
 
   const getLoadingMessage = () => {
     switch (loadingStage) {
@@ -91,14 +103,14 @@ export function FarcasterSplashScreen({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex flex-col items-center justify-center bg-background",
-        "transition-opacity duration-300",
+        "fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#000000]",
+        "transition-opacity duration-700 ease-in-out",
         isVisible ? "opacity-100" : "opacity-0 pointer-events-none",
         className
       )}
     >
       {/* Farcaster-style gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-purple-500/10 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-blue-600/10 to-purple-800/20 pointer-events-none" />
 
       {/* Main content */}
       <div className="relative flex flex-col items-center space-y-8 px-8 text-center">
