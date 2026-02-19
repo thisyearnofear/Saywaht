@@ -75,7 +75,7 @@ export function MobileEditorLayout({
 
   // View mode: 'fullscreen' (default) or 'tools'
   const [viewMode, setViewMode] = useState<"fullscreen" | "tools">("fullscreen");
-  
+
   // Cinematic mode: auto-hide tools/timeline in landscape
   const isCinematicMode = orientation === "landscape";
 
@@ -96,6 +96,10 @@ export function MobileEditorLayout({
   // Timeline state
   const [timelineExpanded, setTimelineExpanded] = useState<boolean>(false);
   const [timelineHeight, setTimelineHeight] = useState<number>(120);
+
+  // Tools section state
+  const [isToolsCollapsed, setIsToolsCollapsed] = useState<boolean>(false);
+  const [isToolsMaximized, setIsToolsMaximized] = useState<boolean>(false);
 
   // Onboarding state
   const { showOnboarding, completeOnboarding, skipOnboarding } = useMobileOnboarding();
@@ -132,12 +136,17 @@ export function MobileEditorLayout({
     addHapticFeedback("medium");
     setActiveTab(tab);
     setViewMode("tools");
+    setIsToolsCollapsed(false);
+    setIsToolsMaximized(false);
   }, []);
 
   // Toggle between fullscreen and tools
   const toggleViewMode = useCallback(() => {
     addHapticFeedback("medium");
     setViewMode((prev) => (prev === "fullscreen" ? "tools" : "fullscreen"));
+    // Always ensure tools are in a sane state when entering tools mode
+    setIsToolsCollapsed(false);
+    setIsToolsMaximized(false);
   }, []);
 
   // Controls visibility in fullscreen mode
@@ -167,7 +176,7 @@ export function MobileEditorLayout({
               </div>
               saywaht
             </div>
-            
+
             <div className="flex items-center gap-2 pb-4">
               {!isCinematicMode && (
                 <Button
@@ -195,10 +204,12 @@ export function MobileEditorLayout({
             </div>
           </div>
 
-          <MobilePreviewPanel 
-            showResolution={false} 
-            showControls={!isCinematicMode} 
+          <MobilePreviewPanel
+            showResolution={false}
+            showControls={!isCinematicMode}
             controlsVariant="overlay"
+            isFullscreen={true}
+            onToggleFullscreen={toggleViewMode}
           />
 
           {/* Full-screen play/pause tap target */}
@@ -313,7 +324,7 @@ export function MobileEditorLayout({
         <div className="flex-1 min-h-0 flex flex-col">
           {/* Header */}
           <div
-            className="flex-shrink-0 flex items-center justify-between px-4 border-b bg-background/95 backdrop-blur-md z-30"
+            className="flex-shrink-0 flex items-center justify-between px-4 pr-10 border-b bg-background/95 backdrop-blur-md z-30"
             style={{
               height: "3.5rem",
               paddingTop: "env(safe-area-inset-top)",
@@ -323,7 +334,7 @@ export function MobileEditorLayout({
               <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center text-[10px] font-bold text-white">
                 W
               </div>
-              saywaht
+              <span className="hidden xs:inline">saywaht</span>
             </div>
 
             {/* History Controls */}
@@ -395,10 +406,17 @@ export function MobileEditorLayout({
             <div
               className={cn(
                 "relative flex-shrink-0 bg-black overflow-hidden transition-[height] duration-500 ease-in-out",
-                timelineExpanded ? "h-[22vh]" : "h-[32vh]"
+                isToolsMaximized
+                  ? "h-0"
+                  : isToolsCollapsed
+                    ? (timelineExpanded ? "h-[50vh]" : "h-[62vh]")
+                    : (timelineExpanded ? "h-[22vh]" : "h-[32vh]")
               )}
             >
-              <MobilePreviewPanel showResolution={true} />
+              <MobilePreviewPanel
+                showResolution={true}
+                onToggleFullscreen={toggleViewMode}
+              />
 
               {/* Tap to play/pause */}
               <button
@@ -422,98 +440,164 @@ export function MobileEditorLayout({
               onValueChange={(value) => {
                 setActiveTab(value);
                 addHapticFeedback("light");
+                if (isToolsCollapsed) setIsToolsCollapsed(false);
               }}
               className="flex-shrink-0 bg-background z-20 border-b border-border/50"
             >
-              <div className="px-4 py-3">
-                <TabsList className="w-full grid grid-cols-4 rounded-2xl bg-muted/30 h-14 p-1.5 border border-border/40">
-                  {/* Record — primary action, always first */}
-                  <TabsTrigger
-                    value="record"
-                    className="flex flex-col items-center justify-center gap-0.5 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-lg touch-manipulation transition-all duration-300"
-                  >
-                    <Mic className="h-4 w-4" />
-                    <span className="text-[9px] font-black uppercase tracking-tighter">Record</span>
-                  </TabsTrigger>
+              <motion.div
+                className="px-4 py-2 flex flex-col items-center gap-2 touch-none"
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={0.1}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 40) {
+                    // Dragged down
+                    if (isToolsMaximized) {
+                      setIsToolsMaximized(false);
+                      addHapticFeedback("medium");
+                    } else if (!isToolsCollapsed) {
+                      setIsToolsCollapsed(true);
+                      addHapticFeedback("medium");
+                    }
+                  } else if (info.offset.y < -40) {
+                    // Dragged up
+                    if (isToolsCollapsed) {
+                      setIsToolsCollapsed(false);
+                      addHapticFeedback("medium");
+                    } else if (!isToolsMaximized) {
+                      setIsToolsMaximized(true);
+                      addHapticFeedback("medium");
+                    }
+                  }
+                }}
+              >
+                {/* Drag Handle */}
+                <div className="w-10 h-1 bg-muted-foreground/20 rounded-full mb-1" />
 
-                  {/* Media — upload / library / project files */}
-                  <TabsTrigger
-                    value="media"
-                    className="flex flex-col items-center justify-center gap-0.5 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-lg touch-manipulation transition-all duration-300"
-                  >
-                    <Video className="h-4 w-4" />
-                    <span className="text-[9px] font-black uppercase tracking-tighter">Media</span>
-                  </TabsTrigger>
+                <div className="w-full flex items-center gap-2">
+                  <TabsList className="flex-1 grid grid-cols-4 rounded-2xl bg-muted/30 h-14 p-1.5 border border-border/40">
+                    {/* Record — primary action, always first */}
+                    <TabsTrigger
+                      value="record"
+                      className="flex flex-col items-center justify-center gap-0.5 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-lg touch-manipulation transition-all duration-300"
+                    >
+                      <Mic className="h-4 w-4" />
+                      <span className="text-[9px] font-black uppercase tracking-tighter">Record</span>
+                    </TabsTrigger>
 
-                  {/* Text overlays */}
-                  <TabsTrigger
-                    value="text"
-                    className="flex flex-col items-center justify-center gap-0.5 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-lg touch-manipulation transition-all duration-300"
-                  >
-                    <Type className="h-4 w-4" />
-                    <span className="text-[9px] font-black uppercase tracking-tighter">Text</span>
-                  </TabsTrigger>
+                    {/* Media — upload / library / project files */}
+                    <TabsTrigger
+                      value="media"
+                      className="flex flex-col items-center justify-center gap-0.5 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-lg touch-manipulation transition-all duration-300"
+                    >
+                      <Video className="h-4 w-4" />
+                      <span className="text-[9px] font-black uppercase tracking-tighter">Media</span>
+                    </TabsTrigger>
 
-                  {/* Effects */}
-                  <TabsTrigger
-                    value="effects"
-                    className="flex flex-col items-center justify-center gap-0.5 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-lg touch-manipulation transition-all duration-300"
+                    {/* Text overlays */}
+                    <TabsTrigger
+                      value="text"
+                      className="flex flex-col items-center justify-center gap-0.5 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-lg touch-manipulation transition-all duration-300"
+                    >
+                      <Type className="h-4 w-4" />
+                      <span className="text-[9px] font-black uppercase tracking-tighter">Text</span>
+                    </TabsTrigger>
+
+                    {/* Effects */}
+                    <TabsTrigger
+                      value="effects"
+                      className="flex flex-col items-center justify-center gap-0.5 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-lg touch-manipulation transition-all duration-300"
+                    >
+                      <Layers className="h-4 w-4" />
+                      <span className="text-[9px] font-black uppercase tracking-tighter">FX</span>
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-14 w-10 flex-shrink-0 rounded-xl hover:bg-muted/50"
+                    onClick={() => {
+                      if (isToolsMaximized) {
+                        setIsToolsMaximized(false);
+                      } else if (isToolsCollapsed) {
+                        setIsToolsCollapsed(false);
+                      } else {
+                        setIsToolsCollapsed(true);
+                      }
+                      addHapticFeedback("light");
+                    }}
+                    aria-label={isToolsCollapsed ? "Expand Tools" : "Collapse Tools"}
                   >
-                    <Layers className="h-4 w-4" />
-                    <span className="text-[9px] font-black uppercase tracking-tighter">FX</span>
-                  </TabsTrigger>
-                </TabsList>
-              </div>
+                    {isToolsCollapsed ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
+              </motion.div>
 
               {/* Tab content panels */}
-              <div className="overflow-hidden bg-background" style={{ height: "30vh" }}>
-                <AnimatePresence mode="wait">
+              <AnimatePresence mode="wait">
+                {!isToolsCollapsed && (
                   <motion.div
-                    key={activeTab}
-                    initial={{ opacity: 0, x: 6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -6 }}
-                    transition={{ duration: 0.18 }}
-                    className="h-full"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{
+                      height: isToolsMaximized ? "calc(100vh - 12rem)" : "30vh",
+                      opacity: 1
+                    }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="overflow-hidden bg-background"
                   >
-                    <TabsContent
-                      value="record"
-                      className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col"
+                    <motion.div
+                      key={activeTab}
+                      initial={{ opacity: 0, x: 6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -6 }}
+                      transition={{ duration: 0.18 }}
+                      className="h-full"
                     >
-                      <div className="flex-1 min-h-0 overflow-hidden">
-                        <MobileAudioPanel />
-                      </div>
-                    </TabsContent>
+                      <TabsContent
+                        value="record"
+                        className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col"
+                      >
+                        <div className="flex-1 min-h-0 overflow-hidden">
+                          <MobileAudioPanel />
+                        </div>
+                      </TabsContent>
 
-                    <TabsContent
-                      value="media"
-                      className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col"
-                    >
-                      <div className="flex-1 min-h-0 overflow-hidden">
-                        <MobileMediaPanel />
-                      </div>
-                    </TabsContent>
+                      <TabsContent
+                        value="media"
+                        className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col"
+                      >
+                        <div className="flex-1 min-h-0 overflow-hidden">
+                          <MobileMediaPanel />
+                        </div>
+                      </TabsContent>
 
-                    <TabsContent
-                      value="text"
-                      className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col"
-                    >
-                      <div className="flex-1 min-h-0 overflow-hidden">
-                        <MobileTextPanel />
-                      </div>
-                    </TabsContent>
+                      <TabsContent
+                        value="text"
+                        className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col"
+                      >
+                        <div className="flex-1 min-h-0 overflow-hidden">
+                          <MobileTextPanel />
+                        </div>
+                      </TabsContent>
 
-                    <TabsContent
-                      value="effects"
-                      className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col"
-                    >
-                      <div className="flex-1 min-h-0 overflow-hidden">
-                        <MobileEffectsPanel />
-                      </div>
-                    </TabsContent>
+                      <TabsContent
+                        value="effects"
+                        className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col"
+                      >
+                        <div className="flex-1 min-h-0 overflow-hidden">
+                          <MobileEffectsPanel />
+                        </div>
+                      </TabsContent>
+                    </motion.div>
                   </motion.div>
-                </AnimatePresence>
-              </div>
+                )}
+              </AnimatePresence>
             </Tabs>
 
             {/* ── Timeline — anchored at the bottom ── */}

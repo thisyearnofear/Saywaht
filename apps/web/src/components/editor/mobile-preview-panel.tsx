@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { PreviewPanel } from "@/components/editor/preview-panel";
 import { Button } from "@/components/ui/button";
-import { Maximize2, Minimize2, ZoomIn, ZoomOut } from "@/lib/icons";
+import { Maximize2, Minimize2, ZoomIn, ZoomOut, Video } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useMobileContext } from "@/contexts/mobile-context";
 import { usePinchZoom } from "@/hooks/use-touch-gestures";
@@ -22,6 +22,8 @@ interface MobilePreviewPanelProps {
    * in either fullscreen or tools mode on mobile.
    */
   controlsVariant?: "topbar" | "overlay";
+  onToggleFullscreen?: () => void;
+  isFullscreen?: boolean;
 }
 
 export function MobilePreviewPanel({
@@ -29,6 +31,8 @@ export function MobilePreviewPanel({
   showResolution = false,
   showControls = true,
   controlsVariant = "overlay",
+  onToggleFullscreen,
+  isFullscreen = false,
 }: MobilePreviewPanelProps) {
   const { orientation } = useMobileContext();
   const previewRef = useRef<HTMLDivElement>(null);
@@ -83,6 +87,24 @@ export function MobilePreviewPanel({
       {/* Zoom / fit controls — only visible in editing (tools) mode */}
       {showControls && (
         <div className="absolute top-3 right-3 z-20 flex flex-col gap-2">
+          {onToggleFullscreen && (
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-9 w-9 bg-black/40 text-white hover:bg-black/60 backdrop-blur-md border border-white/10 rounded-full shadow-lg"
+              onClick={() => {
+                addHapticFeedback("medium");
+                onToggleFullscreen();
+              }}
+              aria-label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            >
+              {isFullscreen ? (
+                <Minimize2 className="h-3.5 w-3.5" />
+              ) : (
+                <Maximize2 className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          )}
           <Button
             variant="secondary"
             size="icon"
@@ -91,7 +113,7 @@ export function MobilePreviewPanel({
             aria-label={videoObjectFit === "contain" ? "Fill frame" : "Fit frame"}
           >
             {videoObjectFit === "contain" ? (
-              <Maximize2 className="h-3.5 w-3.5" />
+              <Video className="h-3.5 w-3.5" />
             ) : (
               <Minimize2 className="h-3.5 w-3.5" />
             )}

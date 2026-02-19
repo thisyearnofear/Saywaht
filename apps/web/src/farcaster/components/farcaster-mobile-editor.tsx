@@ -96,6 +96,10 @@ export function FarcasterMobileEditorLayout({
           );
         }
         break;
+      case "templates":
+        // Direct navigation to templates page
+        window.location.href = '/templates';
+        break;
       case "create_coin":
         handleMiniAppNavigation('mint');
         break;
@@ -147,7 +151,7 @@ export function FarcasterMobileEditorLayout({
       )}>
         {/* LANDING PAGE: Show if we're in 'welcome' step and no cast is provided */}
         {isFarcasterMiniApp && frameState.step === 'welcome' && !frameState.castHash ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-12 bg-background relative overflow-hidden">
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-10 bg-background relative overflow-hidden">
             {/* Edge decoration */}
             <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse" />
             <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
@@ -166,25 +170,35 @@ export function FarcasterMobileEditorLayout({
               <p className="text-xl font-bold text-muted-foreground uppercase tracking-tight">See it. Say it. Coin it.</p>
             </div>
 
-            <div className="w-full max-w-xs space-y-4 pt-4 relative">
+            <div className="w-full max-w-xs space-y-4 pt-2 relative">
               <Button
                 size="lg"
-                className="w-full h-20 text-xl font-black uppercase tracking-widest rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95 transition-all border-none"
+                className="w-full h-16 text-lg font-black uppercase tracking-widest rounded-2xl shadow-xl bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95 transition-all border-none"
                 onClick={() => handleMiniAppAction('start_recording')}
               >
                 Coin Commentary
               </Button>
-              <div className="grid grid-cols-2 gap-4">
+              
+              <Button
+                size="lg"
+                variant="secondary"
+                className="w-full h-16 text-lg font-black uppercase tracking-widest rounded-2xl shadow-lg bg-white text-black hover:bg-white/90 active:scale-95 transition-all"
+                onClick={() => handleMiniAppAction('templates')}
+              >
+                Browse Templates
+              </Button>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
                 <Button
                   variant="outline"
-                  className="h-16 font-black uppercase tracking-wider border-2 rounded-2xl hover:bg-primary/5 transition-colors"
+                  className="h-12 text-[10px] font-black uppercase tracking-wider border-2 rounded-xl hover:bg-primary/5 transition-colors"
                   onClick={() => handleMiniAppAction('browse_coins')}
                 >
-                  Browse
+                  Market
                 </Button>
                 <Button
                   variant="outline"
-                  className="h-16 font-black uppercase tracking-wider border-2 rounded-2xl hover:bg-primary/5 transition-colors"
+                  className="h-12 text-[10px] font-black uppercase tracking-wider border-2 rounded-xl hover:bg-primary/5 transition-colors"
                   onClick={() => handleMiniAppAction('create_coin')}
                 >
                   Trending
@@ -192,11 +206,11 @@ export function FarcasterMobileEditorLayout({
               </div>
             </div>
 
-            <div className="pt-8 space-y-2">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-[0.5em] font-black opacity-40">
+            <div className="pt-6 space-y-2 opacity-60">
+              <p className="text-[9px] text-muted-foreground uppercase tracking-[0.5em] font-black">
                 No Permissions • No Watermarks
               </p>
-              <p className="text-[10px] text-primary uppercase tracking-[0.3em] font-black">
+              <p className="text-[9px] text-primary uppercase tracking-[0.3em] font-black">
                 Decentralized & Uncensored
               </p>
             </div>

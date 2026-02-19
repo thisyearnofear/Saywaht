@@ -17,6 +17,7 @@ import { HoverVideoPreview } from "@/components/templates/hover-video-preview";
 import Image from "next/image";
 import { useEffect, useMemo } from "react";
 import { Sparkles, Loader2, Video, Plus } from "@/lib/icons";
+import { resolveIpfsUrl } from "@/lib/utils";
 
 // Interface for templates with category name
 interface FeaturedTemplate extends Template {
@@ -100,11 +101,11 @@ export function WelcomeScreen() {
                 {/* Right Column - Templates (NOW PRIMARY) */}
                 <div className="flex-1 space-y-6">
                   <div className="space-y-4 text-center lg:text-left">
-                    <h2 className="text-2xl font-bold flex items-center justify-center lg:justify-start gap-2">
-                      <Sparkles className="h-6 w-6 text-yellow-400" />
-                      Need Inspiration?
+                    <h2 className="text-3xl font-black flex items-center justify-center lg:justify-start gap-3 italic uppercase tracking-tighter">
+                      <Sparkles className="h-8 w-8 text-yellow-400" />
+                      Create with Style
                     </h2>
-                    <p className="text-white/80">Start with a professionally crafted template.</p>
+                    <p className="text-white/80 font-medium">Pick a high-fidelity template to start your commentary.</p>
                   </div>
 
                   {isLoading ? (
@@ -118,34 +119,25 @@ export function WelcomeScreen() {
                         .map((template: FeaturedTemplate) => (
                           <Card
                             key={template.id}
-                            className="overflow-hidden bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-300 transform hover:scale-[1.03] cursor-pointer group"
+                            className="overflow-hidden bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-300 transform hover:scale-[1.03] cursor-pointer group rounded-2xl"
                             onClick={() =>
                               router.push(`/templates/${template.id}`)
                             }
                           >
-                            <div className="aspect-video relative overflow-hidden">
+                            <div className="aspect-[3/4] relative overflow-hidden">
                               {template.thumbnailUrl ? (
-                                template.thumbnailUrl.endsWith(".mp4") ? (
-                                  <HoverVideoPreview
-                                    videoSrc={template.thumbnailUrl}
-                                    alt={template.name}
-                                    className="w-full h-full"
-                                  />
-                                ) : (
-                                  <Image
-                                    src={template.thumbnailUrl}
-                                    alt={template.name}
-                                    fill
-                                    className="object-cover"
-                                  />
-                                )
+                                <HoverVideoPreview
+                                  videoSrc={resolveIpfsUrl(template.thumbnailUrl)}
+                                  alt={template.name}
+                                  className="w-full h-full"
+                                />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-gray-800">
                                   <Video className="h-8 w-8 text-white/20" />
                                 </div>
                               )}
-                              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors z-10"></div>
-                              <div className="absolute bottom-2 left-2 text-white z-20 text-[10px] font-black uppercase tracking-widest">
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10"></div>
+                              <div className="absolute bottom-3 left-3 text-white z-20 text-[10px] font-black uppercase tracking-widest leading-none">
                                 {template.name}
                               </div>
                             </div>
@@ -158,12 +150,12 @@ export function WelcomeScreen() {
                     </div>
                   )}
 
-                  <div className="flex justify-center lg:justify-start">
+                  <div className="flex justify-center lg:justify-start pt-2">
                     <Button
                       onClick={() => router.push("/templates")}
-                      className="w-full h-14 bg-white text-blue-900 hover:bg-white/90 font-black uppercase tracking-widest rounded-2xl shadow-xl transition-all active:scale-95"
+                      className="w-full h-16 bg-white text-blue-900 hover:bg-white/90 font-black uppercase tracking-widest rounded-2xl shadow-[0_20px_40px_rgba(255,255,255,0.1)] transition-all active:scale-95 text-lg"
                     >
-                      Browse All Templates
+                      Explore All Packs
                     </Button>
                   </div>
                 </div>

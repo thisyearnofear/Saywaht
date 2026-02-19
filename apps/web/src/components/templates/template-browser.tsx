@@ -11,6 +11,8 @@ import { Loader2, Search, ExternalLink, Image as ImageIcon, Video } from "@/lib/
 import { toast } from "sonner";
 import { useMediaStore } from "@/stores/media-store";
 import { useProjectStore } from "@/stores/project-store";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileTemplateBrowser } from "./mobile-template-browser";
 
 export function TemplateBrowser() {
   const { categories, isLoading, error, fetchCategories, recentTemplates } = useTemplateStore();
@@ -18,6 +20,7 @@ export function TemplateBrowser() {
   const [pexelsResults, setPexelsResults] = useState<PexelsVideo[]>([]);
   const [isPexelsLoading, setIsPexelsLoading] = useState(false);
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetchCategories();
@@ -79,6 +82,11 @@ export function TemplateBrowser() {
     toast.success("Ready to edit!");
     router.push("/editor");
   };
+
+  // If on mobile, use the high-impact mobile browser
+  if (isMobile) {
+    return <MobileTemplateBrowser />;
+  }
 
   // Filter templates based on search query
   const filteredCategories = categories.map(category => {
