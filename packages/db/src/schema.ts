@@ -80,4 +80,19 @@ export const coins = pgTable("coins", {
   createdAt: timestamp("created_at")
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
+}).enableRLS();
+
+export const userProgress = pgTable("user_progress", {
+  id: text("id").primaryKey(),
+  walletAddress: text("wallet_address").notNull().unique(),
+  level: text("level").notNull().default("1"),
+  currentXp: text("current_xp").notNull().default("0"),
+  nextLevelXp: text("next_level_xp").notNull().default("100"),
+  streakDays: text("streak_days").notNull().default("0"),
+  lastActivityDate: timestamp("last_activity_date"),
+  completedMissionIds: text("completed_mission_ids").notNull().default(""), // comma separated IDs
+  totalCommentaries: text("total_commentaries").notNull().default("0"),
+  updatedAt: timestamp("updated_at")
+    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .notNull(),
 }).enableRLS(); 

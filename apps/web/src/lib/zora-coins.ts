@@ -65,11 +65,39 @@ export interface TradingParams {
 }
 
 export class ZoraCoinsService {
-  private publicClient: any;
+  public publicClient: any;
   private isInitialized: boolean = false;
 
   constructor() {
     this.initializeService();
+  }
+
+  /**
+   * Fetch real user reward balance from Zora Protocol Rewards contract
+   */
+  async getRewardsBalance(userAddress: string): Promise<string> {
+    if (typeof window === 'undefined' || !this.publicClient) return "0.000";
+    
+    try {
+      const balance = await this.publicClient.readContract({
+        address: '0x7777777F279eba3d3Ad8F4E70E5412100F227974',
+        abi: [{
+          inputs: [{ name: 'account', type: 'address' }],
+          name: 'balanceOf',
+          outputs: [{ name: '', type: 'uint256' }],
+          stateMutability: 'view',
+          type: 'function',
+        }],
+        functionName: 'balanceOf',
+        args: [userAddress as Address],
+      });
+
+      const { formatEther } = await import("viem");
+      return parseFloat(formatEther(balance as bigint)).toFixed(4);
+    } catch (e) {
+      console.error("Failed to fetch rewards balance", e);
+      return "0.000";
+    }
   }
 
   // MODULAR: Separate initialization logic

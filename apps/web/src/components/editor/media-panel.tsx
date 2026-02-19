@@ -164,8 +164,8 @@ export function MediaPanel() {
     const type = result.filename.match(/\.(mp4|webm|mov|avi)$/i)
       ? ("video" as const)
       : result.filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)
-      ? ("image" as const)
-      : ("audio" as const);
+        ? ("image" as const)
+        : ("audio" as const);
 
     const mediaItem = {
       id: crypto.randomUUID(),
@@ -255,8 +255,8 @@ export function MediaPanel() {
             {...baseDragProps}
           >
             {item.thumbnailUrl.endsWith(".mp4") ||
-            item.thumbnailUrl.endsWith(".webm") ||
-            item.thumbnailUrl.endsWith(".mov") ? (
+              item.thumbnailUrl.endsWith(".webm") ||
+              item.thumbnailUrl.endsWith(".mov") ? (
               // For video files, use a video element to show first frame
               <video
                 src={item.thumbnailUrl}
@@ -344,9 +344,8 @@ export function MediaPanel() {
       />
 
       <div
-        className={`h-full flex flex-col transition-colors relative ${
-          isDragOver ? "bg-accent/30" : ""
-        }`}
+        className={`h-full flex flex-col transition-colors relative ${isDragOver ? "bg-accent/30" : ""
+          }`}
         {...dragProps}
       >
         {/* Show overlay when dragging files over the panel */}
@@ -357,7 +356,7 @@ export function MediaPanel() {
           {(
             [
               { id: "upload", icon: Upload, label: "Upload" },
-              { id: "library", icon: Sparkles, label: "Library" },
+              { id: "library", icon: Sparkles, label: "Stock" },
               { id: "text", icon: Type, label: "Text" },
               { id: "audio", icon: Mic, label: "Audio" },
             ] as const
@@ -381,7 +380,7 @@ export function MediaPanel() {
             <div className="flex-1 flex flex-col min-h-0 bg-muted/5">
               <div className="p-3 border-b space-y-2 bg-background">
                 <form onSubmit={handlePexelsSearch} className="flex gap-2">
-                  <Input 
+                  <Input
                     value={pexelsQuery}
                     onChange={(e) => setPexelsQuery(e.target.value)}
                     placeholder="Search stock templates..."
@@ -412,14 +411,14 @@ export function MediaPanel() {
                 <div className="p-3 grid grid-cols-2 gap-2">
                   {pexelsResults.length > 0 ? (
                     pexelsResults.map((item) => (
-                      <div 
-                        key={item.id} 
+                      <div
+                        key={item.id}
                         className="group relative aspect-video rounded-md overflow-hidden bg-muted cursor-pointer border border-border/50 hover:border-primary/50 transition-colors"
                         onClick={() => pexelsType === 'video' ? handleAddPexelsVideo(item) : handleAddPexelsImage(item)}
                       >
-                        <img 
-                          src={pexelsType === 'video' ? item.image : item.src.medium} 
-                          alt={pexelsType === 'video' ? item.user.name : item.photographer} 
+                        <img
+                          src={pexelsType === 'video' ? item.image : item.src.medium}
+                          alt={pexelsType === 'video' ? item.user.name : item.photographer}
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -535,92 +534,92 @@ export function MediaPanel() {
                     {/* Separate audio items for better visibility */}
                     {filteredMediaItems.filter((item) => item.type === "audio")
                       .length > 0 && (
-                      <>
-                        <div className="text-xs font-medium text-muted-foreground mb-1">
-                          Audio
-                        </div>
-                        <div className="space-y-1 mb-3">
-                          {filteredMediaItems
-                            .filter((item) => item.type === "audio")
-                            .map((item) => (
-                              <div key={item.id} className="relative group">
-                                <Button
-                                  variant="outline"
-                                  className="flex flex-col gap-1 p-2 h-auto w-full relative overflow-hidden"
-                                >
-                                  <div className="w-full">
-                                    {renderPreview(item)}
-                                  </div>
-                                </Button>
-                                {/* Show remove button on hover */}
-                                <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <>
+                          <div className="text-xs font-medium text-muted-foreground mb-1">
+                            Audio
+                          </div>
+                          <div className="space-y-1 mb-3">
+                            {filteredMediaItems
+                              .filter((item) => item.type === "audio")
+                              .map((item) => (
+                                <div key={item.id} className="relative group">
                                   <Button
-                                    variant="destructive"
-                                    size="icon"
-                                    className="h-5 w-5"
-                                    onClick={(e: React.MouseEvent) =>
-                                      handleRemove(e, item.id)
-                                    }
+                                    variant="outline"
+                                    className="flex flex-col gap-1 p-2 h-auto w-full relative overflow-hidden"
                                   >
-                                    <Trash2 className="h-3 w-3" />
+                                    <div className="w-full">
+                                      {renderPreview(item)}
+                                    </div>
                                   </Button>
+                                  {/* Show remove button on hover */}
+                                  <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                      variant="destructive"
+                                      size="icon"
+                                      className="h-5 w-5"
+                                      onClick={(e: React.MouseEvent) =>
+                                        handleRemove(e, item.id)
+                                      }
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
-                        </div>
-                      </>
-                    )}
+                              ))}
+                          </div>
+                        </>
+                      )}
 
                     {/* Grid for video/image items */}
                     {filteredMediaItems.filter((item) => item.type !== "audio")
                       .length > 0 && (
-                      <>
-                        <div className="text-xs font-medium text-muted-foreground mb-1">
-                          Media
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          {filteredMediaItems
-                            .filter((item) => item.type !== "audio")
-                            .map((item) => (
-                              <div key={item.id} className="relative group">
-                                <Button
-                                  variant="outline"
-                                  className="flex flex-col gap-1 p-2 h-auto w-full relative overflow-hidden"
-                                >
-                                  <AspectRatio ratio={item.aspectRatio}>
-                                    {renderPreview(item)}
-                                  </AspectRatio>
-                                  <span
-                                    className="text-xs truncate px-1 max-w-full"
-                                    aria-label={item.name}
-                                    title={item.name}
+                        <>
+                          <div className="text-xs font-medium text-muted-foreground mb-1">
+                            Media
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {filteredMediaItems
+                              .filter((item) => item.type !== "audio")
+                              .map((item) => (
+                                <div key={item.id} className="relative group">
+                                  <Button
+                                    variant="outline"
+                                    className="flex flex-col gap-1 p-2 h-auto w-full relative overflow-hidden"
                                   >
-                                    {item.name.length > 12
-                                      ? `${item.name.slice(
+                                    <AspectRatio ratio={item.aspectRatio}>
+                                      {renderPreview(item)}
+                                    </AspectRatio>
+                                    <span
+                                      className="text-xs truncate px-1 max-w-full"
+                                      aria-label={item.name}
+                                      title={item.name}
+                                    >
+                                      {item.name.length > 12
+                                        ? `${item.name.slice(
                                           0,
                                           8
                                         )}...${item.name.slice(-3)}`
-                                      : item.name}
-                                  </span>
-                                </Button>
-                                {/* Show remove button on hover */}
-                                <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button
-                                    variant="destructive"
-                                    size="icon"
-                                    className="h-5 w-5"
-                                    onClick={(e: React.MouseEvent) =>
-                                      handleRemove(e, item.id)
-                                    }
-                                  >
-                                    <Trash2 className="h-3 w-3" />
+                                        : item.name}
+                                    </span>
                                   </Button>
+                                  {/* Show remove button on hover */}
+                                  <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                      variant="destructive"
+                                      size="icon"
+                                      className="h-5 w-5"
+                                      onClick={(e: React.MouseEvent) =>
+                                        handleRemove(e, item.id)
+                                      }
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
-                        </div>
-                      </>
-                    )}
+                              ))}
+                          </div>
+                        </>
+                      )}
                   </div>
                 )}
               </div>

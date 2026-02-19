@@ -23,6 +23,7 @@ import { base } from "viem/chains";
 import { PLATFORM_ADDRESS } from "@/lib";
 import { triggerCoinCelebration } from "@/lib/confetti";
 import { getZoraCoins } from "@/lib/zora-coins";
+import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 
 import {
   Tooltip,
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useUserPreferencesStore } from "@/stores/user-preferences-store";
 import { cn } from "@/lib/utils";
+import { useMissionStore } from "@/services/mission-service";
 
 interface DeployStepProps {
   data: MintWizardData;
@@ -42,6 +44,8 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const { preferences, setHasCreatorCoin } = useUserPreferencesStore();
+  const { incrementCommentaryCount, completeMission } = useMissionStore();
+  const { isFarcasterMiniApp } = useFarcasterContext();
 
   const [contractCallParams, setContractCallParams] = useState<any>(null);
   const { data: walletClient } = useWalletClient();
