@@ -1,119 +1,136 @@
-/* Mobile-specific editor styles */
+/* Mobile-specific editor design system */
+:root {
+  --glass-bg: rgba(0, 0, 0, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: 24px;
+  --premium-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --cinematic-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-/* Pull to refresh prevention - add to root editor element */
-.mobile-editor.prevent-refresh,
 .mobile-editor {
   overscroll-behavior: none;
-  overscroll-behavior-y: none;
-  overscroll-behavior-x: none;
   touch-action: pan-x pan-y;
   overflow: hidden;
   position: relative;
-  /* Use dynamic viewport units for better mobile compatibility */
   min-height: 100dvh;
   max-height: 100dvh;
   width: 100dvw;
-  max-width: 100dvw;
+  background: black;
+  color: white;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Glassmorphism Classes */
+.glass-overlay {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* Farcaster Mini App specific styles */
 .mobile-editor.farcaster-miniapp {
-  /* Prevent overscroll behavior that can interfere with mini app gestures */
   overscroll-behavior: none;
-  overscroll-behavior-y: none;
-  overscroll-behavior-x: none;
-  
-  /* Optimize touch interactions for mini app context */
   touch-action: pan-y pinch-zoom;
-  
-  /* Use dynamic viewport units for better mobile compatibility */
-  min-height: 100dvh;
-  max-height: 100dvh;
-  width: 100dvw;
-  max-width: 100dvw;
-  
-  /* Ensure proper overflow handling */
-  overflow: hidden;
-  overflow-y: auto;
-  
-  /* Prevent text selection and callouts that can interfere with gestures */
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   user-select: none;
-  
-  /* Optimize for mini app modal context */
-  position: relative;
   isolation: isolate;
-  
-  /* Prevent zoom on input focus */
-  -webkit-text-size-adjust: 100%;
-  
-  /* Smooth scrolling for better UX */
-  scroll-behavior: smooth;
-  
-  /* Hardware acceleration for better performance */
-  transform: translateZ(0);
-  will-change: transform;
 }
 
-/* Enhanced scrollable containers within Farcaster context */
-.farcaster-miniapp .scrollable {
-  /* Better momentum scrolling */
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
-  
-  /* Prevent scroll chaining */
-  overscroll-behavior: contain;
-  
-  /* Optimize touch interactions */
-  touch-action: pan-y;
+/* Enhanced Tab Navigation */
+.mobile-tabs-list {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 20px !important;
+  padding: 4px !important;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Farcaster-specific input optimizations */
-.farcaster-miniapp input,
-.farcaster-miniapp textarea,
-.farcaster-miniapp select {
-  /* Prevent zoom on focus */
-  font-size: 16px;
-  
-  /* Re-enable user selection for inputs */
-  -webkit-user-select: text;
-  user-select: text;
+.mobile-tabs-trigger {
+  border-radius: 16px !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  transition: all 0.3s var(--premium-spring) !important;
 }
 
-/* Optimize buttons and interactive elements */
-.farcaster-miniapp button,
-.farcaster-miniapp [role="button"] {
-  /* Improve touch targets */
-  min-height: 44px;
-  min-width: 44px;
-  
-  /* Prevent text selection */
-  -webkit-user-select: none;
-  user-select: none;
-  
-  /* Optimize touch feedback */
-  touch-action: manipulation;
+.mobile-tabs-trigger[data-state="active"] {
+  background: white !important;
+  color: black !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4) !important;
+  transform: scale(1.02);
 }
 
-/* Comprehensive touch delay elimination - applies to ALL interactive elements */
-.mobile-editor button,
-.mobile-editor a,
-.mobile-editor [role="button"],
-.mobile-editor input,
-.mobile-editor textarea,
-.mobile-editor select,
-.mobile-editor [role="tab"],
-.mobile-editor [role="menuitem"],
-.mobile-editor [role="option"],
-.mobile-editor .clickable,
-.mobile-editor label {
-  touch-action: manipulation;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-  /* Remove 300ms tap delay on older browsers */
-  touch-action: manipulation;
+/* Floating Action Button (FAB) */
+.mobile-fab {
+  box-shadow: 0 12px 30px rgba(239, 68, 68, 0.4);
+  border: 4px solid black;
+  transition: all 0.3s var(--premium-spring);
+}
+
+.mobile-fab:active {
+  transform: scale(0.85);
+}
+
+/* Tool Panel Transitions */
+.tool-panel-enter {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+.tool-panel-enter-active {
+  transform: translateY(0);
+  opacity: 1;
+  transition: all 0.4s var(--cinematic-easing);
+}
+
+/* Cinematic Preview Area */
+.preview-container {
+  transition: all 0.5s var(--cinematic-easing);
+  background: radial-gradient(circle at center, #111 0%, #000 100%);
+}
+
+.preview-container.cinematic {
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* Precise Timeline Scrubbing Hint */
+.scrub-hint {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  color: black;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 900;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.is-scrubbing .scrub-hint {
+  opacity: 1;
+}
+
+/* Safe areas */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
 }
 
 /* Re-enable text selection for inputs */

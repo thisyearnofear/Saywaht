@@ -7,9 +7,18 @@
  */
 export function addHapticFeedback(intensity: 'light' | 'medium' | 'heavy' = 'light') {
   if (typeof window === 'undefined') return;
-  
+
+  // Try TWA (Telegram/Mini-App) haptics first as they are more refined
+  const twa = (window as any).Telegram?.WebApp || (window as any).twa;
+  if (twa?.HapticFeedback) {
+    if (intensity === 'light') twa.HapticFeedback.impactOccurred('light');
+    else if (intensity === 'medium') twa.HapticFeedback.impactOccurred('medium');
+    else twa.HapticFeedback.notificationOccurred('success');
+    return;
+  }
+
   if ('vibrate' in navigator) {
-    const duration = intensity === 'light' ? 10 : intensity === 'medium' ? 20 : 50;
+    const duration = intensity === 'light' ? 10 : intensity === 'medium' ? 25 : 50;
     navigator.vibrate(duration);
   }
 }
@@ -19,7 +28,7 @@ export function addHapticFeedback(intensity: 'light' | 'medium' | 'heavy' = 'lig
  */
 export function isTouchDevice(): boolean {
   if (typeof window === 'undefined') return false;
-  
+
   return (
     'ontouchstart' in window ||
     navigator.maxTouchPoints > 0 ||
@@ -33,7 +42,7 @@ export function isTouchDevice(): boolean {
  */
 export function preventDoubleTabZoom(element: HTMLElement) {
   let lastTouchEnd = 0;
-  
+
   element.addEventListener('touchend', function (event) {
     const now = new Date().getTime();
     if (now - lastTouchEnd <= 300) {
@@ -54,20 +63,20 @@ export function createMobileClickHandler(
   } = {}
 ) {
   let lastClickTime = 0;
-  
+
   return (event: MouseEvent | TouchEvent) => {
     const now = Date.now();
-    
+
     // Prevent double clicks if requested
     if (options.preventDoubleClick && now - lastClickTime < 300) {
       return;
     }
-    
+
     // Add haptic feedback
     if (options.hapticFeedback && isTouchDevice()) {
       addHapticFeedback('light');
     }
-    
+
     lastClickTime = now;
     handler(event);
   };
@@ -80,17 +89,17 @@ export function enhanceButtonForMobile(button: HTMLButtonElement) {
   // Prevent iOS button styling
   button.style.webkitAppearance = 'none';
   button.style.touchAction = 'manipulation';
-  
+
   // Add visual feedback
   button.addEventListener('touchstart', () => {
     button.style.transform = 'scale(0.95)';
     button.style.transition = 'transform 0.1s ease';
   });
-  
+
   button.addEventListener('touchend', () => {
     button.style.transform = 'scale(1)';
   });
-  
+
   button.addEventListener('touchcancel', () => {
     button.style.transform = 'scale(1)';
   });
