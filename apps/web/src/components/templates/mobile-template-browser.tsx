@@ -20,9 +20,16 @@ import { useVideoPreloader } from "@/hooks/use-video-preloader";
 
 export function MobileTemplateBrowser() {
   const { categories, isLoading, selectTemplate, applySelectedTemplate } = useTemplateStore();
-  const [mainTab, setMainTab] = useState<"packs" | "stock">("packs");
-  const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
+  const [mainTab, setMainTab] = useState<"packs" | "stock">("stock");
+  const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [isApplying, setIsApplying] = useState<string | null>(null);
+
+  // Set default category when categories are loaded
+  useEffect(() => {
+    if (categories.length > 0 && !activeCategoryId) {
+      setActiveCategoryId(categories[0].id);
+    }
+  }, [categories, activeCategoryId]);
 
   // Pexels state
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,7 +54,7 @@ export function MobileTemplateBrowser() {
   useVideoPreloader(mainTab === 'packs' ? templateUrls : stockUrls);
 
   const filteredTemplates = useMemo(() => {
-    if (activeCategoryId === "all") return allTemplates;
+    if (!activeCategoryId) return allTemplates;
     const category = categories.find(c => c.id === activeCategoryId);
     return category ? category.templates.map(t => ({ ...t, categoryName: category.name })) : [];
   }, [activeCategoryId, allTemplates, categories]);
@@ -160,7 +167,7 @@ export function MobileTemplateBrowser() {
                   mainTab === "stock" ? "bg-white text-black shadow-lg" : "text-muted-foreground"
                 )}
               >
-                Global Stock
+                Global
               </button>
             </div>
           </div>
@@ -175,17 +182,6 @@ export function MobileTemplateBrowser() {
                 exit={{ opacity: 0, y: -5 }}
                 className="flex gap-2 overflow-x-auto hide-scrollbar"
               >
-                <button
-                  onClick={() => setActiveCategoryId("all")}
-                  className={cn(
-                    "px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap border",
-                    activeCategoryId === "all"
-                      ? "bg-primary/20 border-primary text-primary"
-                      : "bg-white/5 border-transparent text-muted-foreground"
-                  )}
-                >
-                  All Templates
-                </button>
                 {categories.map((category) => (
                   <button
                     key={category.id}
@@ -281,7 +277,7 @@ export function MobileTemplateBrowser() {
                 </motion.div>
               ))
             ) : (
-              <EmptyState onReset={() => setActiveCategoryId("all")} />
+              <EmptyState onReset={() => setActiveCategoryId("")} />
             )}
           </div>
         ) : (
