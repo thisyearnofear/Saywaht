@@ -187,7 +187,8 @@ export const RecordingCountdown = {
    * Format time for countdown display
    */
   formatCountdownTime: (seconds: number): string => {
-    return Math.ceil(seconds).toString();
+    const s = Math.ceil(seconds);
+    return `0:${s.toString().padStart(2, "0")}`;
   },
 };
 

@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Mic,
-  Music,
   Volume2,
-  Upload,
   Play,
   Pause,
   Download,
@@ -21,7 +19,6 @@ import {
 } from "./mobile-recording-interface";
 import { cn } from "@/lib/utils";
 import { addHapticFeedback } from "@/lib/mobile-utils";
-import { processMediaFiles } from "@/lib/media-processing";
 import { toast } from "sonner";
 import { generateCaptionsFromAudioBlob } from "@/lib/transcription/caption-pipeline";
 
@@ -43,33 +40,12 @@ export function MobileAudioPanel({
   const { addTextElement } = useTextStore();
   const [showMobileRecording, setShowMobileRecording] = useState(false);
   const [autoStartRecording, setAutoStartRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const uploadInputRef = useRef<HTMLInputElement>(null);
 
   // Filter for audio files only
   const audioFiles = mediaItems.filter(
     (item) => item.type === "audio" || item.file?.type?.startsWith("audio/")
   );
-
-  const handleAudioUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files?.length) return;
-
-    setIsProcessing(true);
-    addHapticFeedback("medium");
-    try {
-      const items = await processMediaFiles(files);
-      items.forEach((item) => addMediaItem(item));
-      toast.success(`Added ${items.length} audio file(s)`);
-    } catch (error) {
-      console.error("Audio processing failed:", error);
-      toast.error("Failed to process audio files");
-    } finally {
-      setIsProcessing(false);
-      event.target.value = "";
-    }
-  };
 
   const handleVoiceoverRecord = () => {
     addHapticFeedback("medium");
@@ -95,9 +71,9 @@ export function MobileAudioPanel({
     });
 
     toast.promise(captionPromise, {
-      loading: "AI is transcribing your voiceover...",
-      success: (result) => `Generated ${result.count} captions!`,
-      error: (err) => `Captions failed: ${err.message}`,
+      loading: "AI transcribing...",
+      success: (result) => `Captioned!`,
+      error: (err) => `Failed: ${err.message}`,
     });
 
     try {
@@ -109,27 +85,23 @@ export function MobileAudioPanel({
   };
 
   const handleRecordingComplete = (audioBlob: Blob) => {
-    // Create a new audio media item
     const audioFile = new File([audioBlob], `voiceover-${Date.now()}.webm`, {
       type: "audio/webm",
     });
 
     const audioItem = {
       id: `audio-${Date.now()}`,
-      name: `Voiceover ${new Date().toLocaleTimeString()}`,
+      name: `Voiceover ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
       type: "audio" as const,
       file: audioFile,
       url: URL.createObjectURL(audioFile),
-      duration: 0, // Will be calculated when loaded
-      thumbnailUrl: "",
-      aspectRatio: 1, // Audio files don't have aspect ratio, but required by MediaItem type
+      duration: 0,
+      aspectRatio: 1,
       isLocal: true,
     };
 
-    // Add to media store
     addMediaItem(audioItem);
 
-    // Add to the timeline
     const existingAudioTrack = tracks.find((t) => t.type === "audio");
     const trackId = existingAudioTrack?.id ?? addTrack("audio");
 
@@ -137,21 +109,13 @@ export function MobileAudioPanel({
       mediaId: audioItem.id,
       name: audioItem.name,
       startTime: 0,
-      duration: audioItem.duration || 10, // Default duration
+      duration: 10,
       trimStart: 0,
       trimEnd: 0,
     });
     
-    toast.success("Voiceover added to timeline");
-
-    // Automatically trigger AI captions
+    toast.success("Added to timeline");
     generateCaptions(audioBlob);
-  };
-
-  const handleMusicLibrary = () => {
-    addHapticFeedback("light");
-    toast.info("Opening Stock Library...");
-    window.location.href = "/templates";
   };
 
   return (
@@ -163,23 +127,22 @@ export function MobileAudioPanel({
             onClose={() => {
               setShowMobileRecording(false);
               setAutoStartRecording(false);
+              if (onRecordingStateChange) onRecordingStateChange("idle");
             }}
             onComplete={handleRecordingComplete}
             autoStart={autoStartRecording}
             onRecordingStateChange={onRecordingStateChange}
           />
         ) : (
-          <>
-            <Button
-              variant="destructive"
-              className="h-10 w-full rounded-lg border-none text-[11px] font-black uppercase tracking-[0.14em]"
-              onClick={handleVoiceoverRecord}
-              disabled={isTranscribing}
-            >
-              <Mic className="mr-2 h-4 w-4" />
-              {isTranscribing ? "Transcribing..." : "Record Voiceover"}
-            </Button>
-          </>
+          <Button
+            variant="destructive"
+            className="h-10 w-full rounded-lg border-none text-[11px] font-black uppercase tracking-[0.14em]"
+            onClick={handleVoiceoverRecord}
+            disabled={isTranscribing}
+          >
+            <Mic className="mr-2 h-4 w-4" />
+            {isTranscribing ? "Transcribing..." : "Record Voiceover"}
+          </Button>
         )}
       </div>
 
@@ -190,10 +153,7 @@ export function MobileAudioPanel({
               <div className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-muted/30">
                 <Volume2 className="h-6 w-6 text-muted-foreground/40" />
               </div>
-              <p className="text-xs font-semibold text-muted-foreground">No audio clips yet</p>
-              <p className="mt-1 px-6 text-[11px] text-muted-foreground/60">
-                Record or import audio, then it will appear here.
-              </p>
+              <p className="text-xs font-semibold text-muted-foreground/60">No voiceovers yet</p>
             </div>
           ) : (
             audioFiles.map((audio) => (
@@ -202,48 +162,21 @@ export function MobileAudioPanel({
           )}
         </div>
       </ScrollArea>
-
-      <input
-        ref={uploadInputRef}
-        type="file"
-        accept="audio/*"
-        multiple
-        onChange={handleAudioUpload}
-        className="hidden"
-      />
     </div>
   );
 }
 
-interface AudioFileCardProps {
-  audio: any; // Replace with proper type
-}
-
-function AudioFileCard({ audio }: AudioFileCardProps) {
+function AudioFileCard({ audio }: { audio: any }) {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [duration, setDuration] = useState<string>("00:00");
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const handlePlayPause = (e: React.MouseEvent) => {
     e.stopPropagation();
     addHapticFeedback("light");
     if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
+      if (isPlaying) audioRef.current.pause();
+      else audioRef.current.play();
       setIsPlaying(!isPlaying);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      const minutes = Math.floor(audioRef.current.duration / 60);
-      const seconds = Math.floor(audioRef.current.duration % 60);
-      setDuration(
-        `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
-      );
     }
   };
 
@@ -252,45 +185,33 @@ function AudioFileCard({ audio }: AudioFileCardProps) {
       <Button
         variant="secondary"
         size="icon"
-        className="h-10 w-10 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 shrink-0 border-none"
+        className="h-10 w-10 rounded-lg bg-primary/10 text-primary shrink-0 border-none"
         onClick={handlePlayPause}
       >
-        {isPlaying ? (
-          <Pause className="h-4 w-4 fill-primary" />
-        ) : (
-          <Play className="h-4 w-4 fill-primary ml-0.5" />
-        )}
+        {isPlaying ? <Pause className="h-4 w-4 fill-primary" /> : <Play className="h-4 w-4 fill-primary ml-0.5" />}
       </Button>
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-bold text-xs truncate">
-          {audio.name || "Untitled Audio"}
+        <h3 className="font-bold text-[11px] truncate uppercase tracking-tight">
+          {audio.name}
         </h3>
-        <p className="text-[9px] font-medium text-muted-foreground mt-0.5">
-          {duration} •{" "}
-          {audio.size ? `${Math.round(audio.size / 1024)}KB` : "0KB"}
-        </p>
       </div>
 
-      <div className="flex items-center gap-1 shrink-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-full text-muted-foreground/40 hover:text-primary"
-          onClick={(e) => {
-            e.stopPropagation();
-            addHapticFeedback("light");
-            console.log("Download audio:", audio);
-          }}
-        >
-          <Download className="h-4 w-4" />
-        </Button>
-      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 rounded-full text-muted-foreground/40"
+        onClick={(e) => {
+          e.stopPropagation();
+          addHapticFeedback("light");
+        }}
+      >
+        <Download className="h-4 w-4" />
+      </Button>
 
       <audio
         ref={audioRef}
         src={audio.url}
-        onLoadedMetadata={handleLoadedMetadata}
         onEnded={() => setIsPlaying(false)}
         className="hidden"
       />

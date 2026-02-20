@@ -15,6 +15,7 @@ import {
   requestMicrophoneAccess,
   RecordingCountdown,
 } from "@/lib/audio-recording";
+import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 
 export type MobileRecorderState = "idle" | "recording" | "completed";
 
@@ -65,7 +66,7 @@ export function MobileRecordingInterface({
   }, []);
 
   // Constants
-  const MAX_RECORDING_DURATION = 15;
+  const MAX_RECORDING_DURATION = TIMELINE_CONSTANTS.MAX_RECORDING_DURATION;
 
   // Compute countdown state based on recording time
   const countdownState = {
@@ -193,7 +194,7 @@ export function MobileRecordingInterface({
     } catch (error) {
       console.error("Failed to start recording:", error);
     }
-  }, [visualizeAudio, stopRecording, isPlaying, play]);
+  }, [visualizeAudio, stopRecording, isPlaying, play, MAX_RECORDING_DURATION]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -236,9 +237,7 @@ export function MobileRecordingInterface({
              "rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-widest transition-colors",
              recordingState === "recording" ? "bg-red-500 text-white animate-pulse" : "bg-muted text-muted-foreground"
            )}>
-           {recordingState === "recording" 
-             ? RecordingCountdown.formatCountdownTime(countdownState.remaining) 
-             : "Ready"}
+           {RecordingCountdown.formatCountdownTime(countdownState.remaining)}
          </div>
          
          <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground" onClick={onClose}>

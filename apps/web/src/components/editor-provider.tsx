@@ -27,14 +27,6 @@ export function EditorProvider({ children }: EditorProviderProps) {
     initializeApp();
   }, [initializeApp]);
 
-  // Sync timeline duration to playback store
-  useEffect(() => {
-    if (isPanelsReady) {
-      const duration = getTotalDuration();
-      setDuration(duration);
-    }
-  }, [tracks, isPanelsReady, getTotalDuration, setDuration]);
-
   // Initialize scenes when project loads
   useEffect(() => {
     if (activeProject && isPanelsReady) {
@@ -44,15 +36,9 @@ export function EditorProvider({ children }: EditorProviderProps) {
     }
   }, [activeProject, isPanelsReady, initializeScenes]);
 
-  // Safety-net: if a selectedTemplate is still set when the editor mounts
-  // (e.g. the user navigated directly to /editor with a stale store), apply
-  // it now.  Under the normal use-client → /editor flow this effect is a
-  // no-op because use-client already awaits the apply and clears the template
-  // before navigating.  We intentionally do NOT pass a projectName here so
-  // that a new project is only created when there isn't one already.
+  // Safety-net: apply stale template
   useEffect(() => {
     if (isPanelsReady && selectedTemplate) {
-      console.log('[EditorProvider] Applying stale selected template:', selectedTemplate.name);
       applySelectedTemplate().then((success) => {
         if (success) {
           clearSelectedTemplate();
@@ -61,21 +47,30 @@ export function EditorProvider({ children }: EditorProviderProps) {
     }
   }, [isPanelsReady, selectedTemplate, applySelectedTemplate, clearSelectedTemplate]);
 
+  // Sync timeline duration to playback store
+  useEffect(() => {
+    if (isPanelsReady) {
+      const totalDuration = getTotalDuration();
+      // Ensure we have at least a tiny bit of duration if clips exist, to allow playback progress
+      const tracksWithClips = tracks.some(t => t.clips.length > 0);
+      const syncedDuration = totalDuration === 0 && tracksWithClips ? 0.1 : totalDuration;
+      setDuration(syncedDuration);
+    }
+  }, [tracks, isPanelsReady, getTotalDuration, setDuration]);
+
   // Global keyboard shortcuts
   useEffect(() => {
     if (!isPanelsReady) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in input/textarea
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
       }
 
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const modKey = isMac ? e.metaKey : e.ctrlKey;
 
-      // Cmd/Ctrl + C - Copy
       if (modKey && e.key === 'c') {
         e.preventDefault();
         if (selectedClips.length > 0) {
@@ -85,7 +80,6 @@ export function EditorProvider({ children }: EditorProviderProps) {
         return;
       }
 
-      // Cmd/Ctrl + V - Paste
       if (modKey && e.key === 'v') {
         e.preventDefault();
         pasteClipAtPlayhead(currentTime);
@@ -93,7 +87,6 @@ export function EditorProvider({ children }: EditorProviderProps) {
         return;
       }
 
-      // Delete/Backspace - Remove selected clip
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedClips.length > 0) {
         e.preventDefault();
         selectedClips.forEach(({ trackId, clipId }) => {
@@ -103,7 +96,6 @@ export function EditorProvider({ children }: EditorProviderProps) {
         return;
       }
 
-      // Space - Play/Pause
       if (e.key === ' ' && !e.shiftKey && !modKey) {
         e.preventDefault();
         toggle();
@@ -115,13 +107,13 @@ export function EditorProvider({ children }: EditorProviderProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isPanelsReady, selectedClips, copySelectedClip, pasteClipAtPlayhead, currentTime, removeClipFromTrack, toggle]);
 
-  // Show loading screen while initializing
-  if (isInitializing || !isPanelsReady) {
+  // Show loading screen only if panels are not ready at all
+  if (!isPanelsReady) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-background">
+      <div className="h-screen w-screen flex items-center justify-center bg-black">
         <div className="flex flex-col items-center gap-4">
-          <span className="h-8 w-8 animate-spin text-muted-foreground">⟳</span>
-          <p className="text-sm text-muted-foreground">Loading editor...</p>
+          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading Studio</p>
         </div>
       </div>
     );
