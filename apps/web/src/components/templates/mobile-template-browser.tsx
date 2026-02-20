@@ -34,6 +34,7 @@ export function MobileTemplateBrowser() {
     { name: "Meme", query: "funny animals vertical", image: "https://images.pexels.com/photos/5490276/pexels-photo-5490276.jpeg?auto=compress&cs=tinysrgb&w=800" },
     { name: "Mood", query: "cinematic mood vertical", image: "https://images.pexels.com/photos/1670977/pexels-photo-1670977.jpeg?auto=compress&cs=tinysrgb&w=800" },
   ];
+  const [failedCategoryImages, setFailedCategoryImages] = useState<Record<string, boolean>>({});
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [isApplying, setIsApplying] = useState<string | null>(null);
 
@@ -386,11 +387,22 @@ export function MobileTemplateBrowser() {
                     }}
                     className="relative aspect-square rounded-[2rem] overflow-hidden group border border-white/5 active:scale-95 transition-transform"
                   >
-                    <img
-                      src={cat.image}
-                      alt={cat.name}
-                      className="absolute inset-0 w-full h-full object-cover brightness-75 group-hover:scale-105 transition-transform duration-500"
-                    />
+                    {failedCategoryImages[cat.name] ? (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-950">
+                        <VideoIcon className="h-7 w-7 text-white/70" />
+                      </div>
+                    ) : (
+                      <img
+                        src={cat.image}
+                        alt={cat.name}
+                        className="absolute inset-0 w-full h-full object-cover brightness-75 group-hover:scale-105 transition-transform duration-500"
+                        onError={() =>
+                          setFailedCategoryImages((prev) =>
+                            prev[cat.name] ? prev : { ...prev, [cat.name]: true }
+                          )
+                        }
+                      />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     <div className="absolute inset-x-0 bottom-4 text-center">
                       <span className="text-sm font-black italic uppercase tracking-widest text-white drop-shadow-lg">
@@ -428,7 +440,7 @@ export function MobileTemplateBrowser() {
                 {pexelsResults.length === 0 && !isPexelsLoading && (
                   <div className="col-span-2 py-20 text-center">
                     <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                      No results for "{searchQuery}"
+                      No results for &quot;{searchQuery}&quot;
                     </p>
                     <Button
                       variant="link"
@@ -441,6 +453,18 @@ export function MobileTemplateBrowser() {
                 )}
               </div>
             )}
+            <p className="px-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              Stock media by{" "}
+              <a
+                href="https://www.pexels.com/license/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary underline underline-offset-2"
+              >
+                Pexels
+              </a>
+              {" "}and free to use under their license.
+            </p>
           </div>
         )}
       </div>

@@ -88,15 +88,21 @@ export function MobileEditorLayout({
   const [isRecordingInProgress, setIsRecordingInProgress] = useState(false);
   const [showCoachmark, setShowCoachmark] = useState(false);
   const [preferredCaptionGroupId, setPreferredCaptionGroupId] = useState<string | null>(null);
+  const [hasAutoOpenedMedia, setHasAutoOpenedMedia] = useState(false);
   const timelineVisible = activeTool === null || activeTool === "record";
+  const hasTimelineClips = tracks.some((track) => track.clips.length > 0);
 
   usePlaybackControls();
 
   useEffect(() => {
-    if (mediaItems.length === 0) {
-      setActiveTool("media");
+    if (hasAutoOpenedMedia) {
+      return;
     }
-  }, [mediaItems.length]);
+    if (mediaItems.length === 0 || !hasTimelineClips) {
+      setActiveTool("media");
+      setHasAutoOpenedMedia(true);
+    }
+  }, [hasAutoOpenedMedia, mediaItems.length, hasTimelineClips]);
 
   useEffect(() => {
     if (hideOnboarding || typeof window === "undefined") {
@@ -117,7 +123,7 @@ export function MobileEditorLayout({
 
   const handleFinish = useCallback(async () => {
     addHapticFeedback("heavy");
-    if (!activeProject || tracks.length === 0) {
+    if (!activeProject || !hasTimelineClips) {
       toast.error("Add some content first!");
       return;
     }
@@ -129,7 +135,7 @@ export function MobileEditorLayout({
 
     toast.info("Preparing to launch...");
     window.location.href = `/mint/${activeProject.id}`;
-  }, [activeProject, tracks.length, isFarcasterMiniApp, shareToFarcaster]);
+  }, [activeProject, hasTimelineClips, isFarcasterMiniApp, shareToFarcaster]);
 
   const openToolSheet = useCallback((tool: MobileTool, options?: { autoStartRecording?: boolean }) => {
     addHapticFeedback("medium");
@@ -239,6 +245,10 @@ export function MobileEditorLayout({
             className="absolute inset-0 z-10 flex items-center justify-center touch-manipulation"
             onClick={() => {
               addHapticFeedback("light");
+              if (!hasTimelineClips) {
+                openToolSheet("media");
+                return;
+              }
               if (!isPlaying) {
                 play();
                 return;
@@ -257,6 +267,26 @@ export function MobileEditorLayout({
           {isRecordingInProgress && (
             <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-full bg-red-500/90 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-white">
               Recording
+            </div>
+          )}
+
+          {!hasTimelineClips && (
+            <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20">
+              <div className="pointer-events-auto rounded-2xl border border-white/15 bg-black/65 p-3 backdrop-blur-md">
+                <p className="text-[11px] font-black uppercase tracking-[0.08em] text-white">
+                  Add media to timeline
+                </p>
+                <p className="mt-1 text-[10px] text-white/75">
+                  Pick a project clip, then tap Add so it can preview here.
+                </p>
+                <Button
+                  size="sm"
+                  className="mt-2 h-8 rounded-full px-3 text-[10px] font-black uppercase tracking-widest"
+                  onClick={() => openToolSheet("media")}
+                >
+                  Open Media
+                </Button>
+              </div>
             </div>
           )}
         </div>

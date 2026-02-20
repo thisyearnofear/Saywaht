@@ -440,6 +440,18 @@ function PexelsLibrary({
             Images
           </Button>
         </div>
+        <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+          Stock by{" "}
+          <a
+            href="https://www.pexels.com/license/"
+            target="_blank"
+            rel="noreferrer"
+            className="text-primary underline underline-offset-2"
+          >
+            Pexels
+          </a>
+          {" "}and free to use under their license.
+        </p>
       </div>
 
       <ScrollArea className="flex-1">
