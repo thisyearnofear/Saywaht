@@ -206,6 +206,17 @@ export const useMediaStore = create<MediaStore>()(
     {
       name: "media-storage",
       storage: createSSRSafeStorage(),
+      partialize: (state) => ({
+        // Do not persist local blob-backed media across sessions.
+        // Blob URLs are session-scoped and become invalid after refresh,
+        // which can leave preview players stuck in "Loading...".
+        mediaItems: state.mediaItems
+          .filter((item) => !item.url.startsWith("blob:"))
+          .map((item) => {
+            const { file: _file, ...persistable } = item;
+            return persistable;
+          }),
+      }),
     }
   )
 );

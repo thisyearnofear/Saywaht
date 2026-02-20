@@ -23,20 +23,20 @@ import { cn } from "@/lib/utils";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { processMediaFiles } from "@/lib/media-processing";
 import { toast } from "sonner";
-import { transcriptionService } from "@/services/transcription/service";
-import { buildCaptionChunks } from "@/lib/transcription/caption";
-import { decodeAudioToFloat32 } from "@/lib/media/audio";
+import { generateCaptionsFromAudioBlob } from "@/lib/transcription/caption-pipeline";
 
 interface MobileAudioPanelProps {
   className?: string;
   autoStartRecordingNonce?: number;
   onRecordingStateChange?: (state: MobileRecorderState) => void;
+  onCaptionsGenerated?: (result: { groupId: string; count: number }) => void;
 }
 
 export function MobileAudioPanel({
   className,
   autoStartRecordingNonce = 0,
   onRecordingStateChange,
+  onCaptionsGenerated,
 }: MobileAudioPanelProps) {
   const { mediaItems, addMediaItem } = useMediaStore();
   const { tracks, addTrack, addClipToTrack } = useTimelineStore();
@@ -85,50 +85,24 @@ export function MobileAudioPanel({
 
   const generateCaptions = async (blob: Blob) => {
     setIsTranscribing(true);
-    
-    const transcriptionPromise = (async () => {
-      // 1. Decode
-      const { samples } = await decodeAudioToFloat32(blob);
-      
-      // 2. Transcribe
-      const result = await transcriptionService.transcribe({
-        audioData: samples,
-        language: "en",
-      });
-      
-      // 3. Build Chunks
-      const chunks = buildCaptionChunks(result.segments);
-      
-      if (chunks.length === 0) throw new Error("No speech detected");
 
-      // 4. Add to Text Store
-      for (const chunk of chunks) {
-        addTextElement({
-          content: chunk.text,
-          fontSize: 28,
-          fontWeight: "bold",
-          color: "#FFFFFF",
-          textAlign: "center",
-          x: 0.5,
-          y: 0.85, // Standard bottom position
-          opacity: 1,
-          fontFamily: "Inter",
-          startTime: chunk.startTime,
-          endTime: chunk.startTime + chunk.duration,
-        });
-      }
-      
-      return chunks.length;
-    })();
+    const captionPromise = generateCaptionsFromAudioBlob(blob, {
+      addTextElement,
+      position: "bottom",
+      language: "en",
+      source: "voiceover",
+      cancelPrevious: true,
+    });
 
-    toast.promise(transcriptionPromise, {
-      loading: 'AI is transcribing your voiceover...',
-      success: (count) => `Generated ${count} captions!`,
+    toast.promise(captionPromise, {
+      loading: "AI is transcribing your voiceover...",
+      success: (result) => `Generated ${result.count} captions!`,
       error: (err) => `Captions failed: ${err.message}`,
     });
 
     try {
-      await transcriptionPromise;
+      const result = await captionPromise;
+      onCaptionsGenerated?.({ groupId: result.groupId, count: result.count });
     } finally {
       setIsTranscribing(false);
     }
@@ -187,9 +161,10 @@ export function MobileAudioPanel({
           variant="destructive"
           className="h-10 w-full rounded-lg border-none text-[11px] font-black uppercase tracking-[0.14em]"
           onClick={handleVoiceoverRecord}
+          disabled={isTranscribing}
         >
           <Mic className="mr-2 h-4 w-4" />
-          {showMobileRecording ? "Recorder Open" : "Record Voiceover"}
+          {isTranscribing ? "Transcribing..." : showMobileRecording ? "Recorder Open" : "Record Voiceover"}
         </Button>
 
         <div className="grid grid-cols-2 gap-2">

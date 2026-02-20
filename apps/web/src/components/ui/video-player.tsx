@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { usePlaybackStore } from "@/stores/playback-store";
 
 interface VideoPlayerProps {
@@ -31,8 +31,11 @@ export function VideoPlayer({
   objectFit = "contain",
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const loadTimeoutRef = useRef<number | null>(null);
   const { isPlaying, currentTime, volume, speed, muted } = usePlaybackStore();
   const [isVideoReady, setIsVideoReady] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Calculate effective speed (per-clip override or global)
   const effectiveSpeed = clipSpeed ?? speed;
@@ -43,13 +46,33 @@ export function VideoPlayer({
   const isInClipRange =
     currentTime >= clipStartTime && currentTime < clipEndTime;
 
+  const clearLoadTimeout = useCallback(() => {
+    if (loadTimeoutRef.current !== null) {
+      window.clearTimeout(loadTimeoutRef.current);
+      loadTimeoutRef.current = null;
+    }
+  }, []);
+
+  const armLoadTimeout = useCallback(() => {
+    clearLoadTimeout();
+    loadTimeoutRef.current = window.setTimeout(() => {
+      if ((videoRef.current?.readyState ?? 0) < 2) {
+        setHasError(true);
+        setErrorMessage("Video load timed out");
+      }
+    }, 8000);
+  }, [clearLoadTimeout]);
+
   // Handle video ready state
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const handleCanPlay = () => {
+      clearLoadTimeout();
       setIsVideoReady(true);
+      setHasError(false);
+      setErrorMessage("");
       if (process.env.NODE_ENV === "development") {
         console.log("Video ready:", src);
       }
@@ -57,30 +80,59 @@ export function VideoPlayer({
 
     const handleLoadStart = () => {
       setIsVideoReady(false);
+      setHasError(false);
+      setErrorMessage("");
+      armLoadTimeout();
       if (process.env.NODE_ENV === "development") {
         console.log("Video loading:", src);
       }
     };
 
     const handleError = (e: Event) => {
+      clearLoadTimeout();
       setIsVideoReady(false);
+      setHasError(true);
+      const mediaError = (e.currentTarget as HTMLVideoElement | null)?.error;
+      setErrorMessage(mediaError?.message || "Failed to load video");
       console.error("Video error:", e, "src:", src);
+    };
+
+    const handleStalled = () => {
+      if ((videoRef.current?.readyState ?? 0) < 2) {
+        setHasError(true);
+        setErrorMessage("Video stalled while loading");
+      }
     };
 
     video.addEventListener('canplay', handleCanPlay);
     video.addEventListener('loadstart', handleLoadStart);
     video.addEventListener('error', handleError);
+    video.addEventListener('stalled', handleStalled);
 
     // Check if video is already ready
     if (video.readyState >= 2) {
+      clearLoadTimeout();
       setIsVideoReady(true);
+      setHasError(false);
+      setErrorMessage("");
+    } else {
+      armLoadTimeout();
     }
 
     return () => {
+      clearLoadTimeout();
       video.removeEventListener('canplay', handleCanPlay);
       video.removeEventListener('loadstart', handleLoadStart);
       video.removeEventListener('error', handleError);
+      video.removeEventListener('stalled', handleStalled);
     };
+  }, [src, armLoadTimeout, clearLoadTimeout]);
+
+  useEffect(() => {
+    // Hard reset visual state on source changes.
+    setIsVideoReady(false);
+    setHasError(false);
+    setErrorMessage("");
   }, [src]);
 
   // Sync playback events
@@ -193,11 +245,6 @@ export function VideoPlayer({
     video.playbackRate = finalSpeed;
   }, [volume, speed, muted, muteAudio, finalSpeed]);
 
-  const [hasError, setHasError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-
-  // ... (previous effects)
-
   return (
     <div className="relative w-full h-full bg-black">
       {/* Loading indicator when video is not ready */}
@@ -221,7 +268,9 @@ export function VideoPlayer({
               onClick={() => {
                 setHasError(false);
                 setIsVideoReady(false);
+                setErrorMessage("");
                 if (videoRef.current) {
+                  armLoadTimeout();
                   videoRef.current.load();
                 }
               }}
@@ -256,18 +305,32 @@ export function VideoPlayer({
         onLoadStart={() => {
           setIsVideoReady(false);
           setHasError(false);
+          setErrorMessage("");
+          armLoadTimeout();
         }}
         onCanPlay={() => {
+          clearLoadTimeout();
           setIsVideoReady(true);
           setHasError(false);
+          setErrorMessage("");
         }}
         onCanPlayThrough={() => {
+          clearLoadTimeout();
           setIsVideoReady(true);
           setHasError(false);
+          setErrorMessage("");
         }}
         onPlaying={() => {
+          clearLoadTimeout();
           setIsVideoReady(true);
           setHasError(false);
+          setErrorMessage("");
+        }}
+        onStalled={() => {
+          if (!isVideoReady) {
+            setHasError(true);
+            setErrorMessage("Video stalled while loading");
+          }
         }}
       />
     </div>

@@ -2,13 +2,17 @@
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Sparkles } from "@/lib/icons";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { toast } from "sonner";
+import { useTimelineStore } from "@/stores/timeline-store";
+import { useMediaStore } from "@/stores/media-store";
 
 interface MobileEffectsPanelProps {
   className?: string;
+  onRequestMedia?: () => void;
 }
 
 const videoEffects = [
@@ -92,11 +96,35 @@ function EffectsGrid({
   );
 }
 
-export function MobileEffectsPanel({ className }: MobileEffectsPanelProps) {
+export function MobileEffectsPanel({ className, onRequestMedia }: MobileEffectsPanelProps) {
+  const tracks = useTimelineStore((s) => s.tracks);
+  const mediaItems = useMediaStore((s) => s.mediaItems);
+  const hasTimelineContent = tracks.some((track) => track.clips.length > 0);
+
   const handleEffectApply = (effectId: string) => {
     addHapticFeedback("medium");
     toast.success(`Effect applied: ${effectId}`);
   };
+
+  if (!hasTimelineContent && mediaItems.length === 0) {
+    return (
+      <div className={cn("flex h-full flex-col items-center justify-center bg-background p-6 text-center", className)}>
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted/30">
+          <Sparkles className="h-6 w-6 text-muted-foreground/40" />
+        </div>
+        <p className="text-sm font-semibold text-muted-foreground">Add media first</p>
+        <p className="mt-1 text-[11px] text-muted-foreground/60">
+          Effects work best after you add clips to your project.
+        </p>
+        <Button
+          className="mt-3 h-8 rounded-lg text-[10px] uppercase tracking-widest"
+          onClick={onRequestMedia}
+        >
+          Open Media
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>

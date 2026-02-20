@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, ChangeEvent } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +12,6 @@ import {
   Upload,
   Music,
   Video,
-  Image as ImageIcon,
   Plus,
   Sparkles,
   Loader2,
@@ -29,8 +27,7 @@ interface MobileMediaPanelProps {
 }
 
 export function MobileMediaPanel({ className }: MobileMediaPanelProps) {
-  // Default to "library" so new users land on discoverable content
-  const [activeTab, setActiveTab] = useState<string>("library");
+  const [viewMode, setViewMode] = useState<"project" | "library">("project");
   const { mediaItems, addMediaItem } = useMediaStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -92,7 +89,6 @@ export function MobileMediaPanel({ className }: MobileMediaPanelProps) {
 
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -102,80 +98,68 @@ export function MobileMediaPanel({ className }: MobileMediaPanelProps) {
         onChange={handleFileChange}
       />
 
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => {
-          setActiveTab(value);
-          addHapticFeedback("light");
-        }}
-        className="flex-1 flex flex-col min-h-0"
-      >
-        {/* Tab bar — 3 tabs: Library, Project, Upload */}
-        <div className="flex-shrink-0 px-3 pt-3 pb-0 border-b bg-muted/10">
-          <TabsList className="grid grid-cols-3 w-full h-11 p-1">
-            <TabsTrigger
-              value="library"
-              className="flex items-center justify-center gap-1.5 text-sm data-[state=active]:bg-background h-9 px-2"
-            >
-              <Sparkles className="h-4 w-4 shrink-0" />
-              <span className="text-[11px] font-bold">Library</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="project"
-              className="flex items-center justify-center gap-1.5 text-sm data-[state=active]:bg-background h-9 px-2"
-            >
-              <Video className="h-4 w-4 shrink-0" />
-              <span className="text-[11px] font-bold">Project</span>
-              {videoCount + imageCount + audioCount > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="ml-0.5 h-4 min-w-[16px] px-1 text-[9px] shrink-0"
-                >
-                  {videoCount + imageCount + audioCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger
-              value="upload"
-              className="flex items-center justify-center gap-1.5 text-sm data-[state=active]:bg-background h-9 px-2"
-            >
-              <Upload className="h-4 w-4 shrink-0" />
-              <span className="text-[11px] font-bold">Upload</span>
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
-        {/* Library — Pexels templates */}
-        <TabsContent
-          value="library"
-          className="flex-1 min-h-0 m-0 data-[state=active]:flex data-[state=active]:flex-col"
+      <div className="flex items-center gap-2 border-b bg-muted/10 px-3 py-2.5">
+        <Button
+          onClick={handleFileSelect}
+          disabled={isProcessing}
+          className="h-10 rounded-lg px-3 text-[11px] font-black uppercase tracking-[0.12em]"
         >
+          {isProcessing ? (
+            <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="mr-1.5 h-4 w-4" />
+          )}
+          Add Media
+        </Button>
+        <div className="ml-auto flex items-center rounded-lg bg-muted/40 p-1">
+          <Button
+            variant={viewMode === "project" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 rounded-md px-2.5 text-[10px] font-black uppercase tracking-wider"
+            onClick={() => {
+              setViewMode("project");
+              addHapticFeedback("light");
+            }}
+          >
+            Project
+            {videoCount + imageCount + audioCount > 0 && (
+              <Badge
+                variant="secondary"
+                className="ml-1 h-4 min-w-[16px] px-1 text-[9px]"
+              >
+                {videoCount + imageCount + audioCount}
+              </Badge>
+            )}
+          </Button>
+          <Button
+            variant={viewMode === "library" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 rounded-md px-2.5 text-[10px] font-black uppercase tracking-wider"
+            onClick={() => {
+              setViewMode("library");
+              addHapticFeedback("light");
+            }}
+          >
+            <Sparkles className="mr-1 h-3.5 w-3.5" />
+            Library
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-0">
+        {viewMode === "library" ? (
           <PexelsLibrary
             onAddVideo={handleAddPexelsVideo}
             onAddImage={handleAddPexelsImage}
           />
-        </TabsContent>
-
-        {/* Project — existing media items (lightweight mobile list, no desktop panel) */}
-        <TabsContent
-          value="project"
-          className="flex-1 min-h-0 m-0 data-[state=active]:flex data-[state=active]:flex-col"
-        >
-          <ProjectMediaList onFileSelect={handleFileSelect} isProcessing={isProcessing} />
-        </TabsContent>
-
-        {/* Upload — add new files */}
-        <TabsContent
-          value="upload"
-          className="flex-1 min-h-0 m-0 data-[state=active]:flex data-[state=active]:flex-col"
-        >
-          <UploadTab
+        ) : (
+          <ProjectMediaList
             onFileSelect={handleFileSelect}
+            onBrowseLibrary={() => setViewMode("library")}
             isProcessing={isProcessing}
-            mediaCounts={{ video: videoCount, audio: audioCount, image: imageCount }}
           />
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
     </div>
   );
 }
@@ -186,10 +170,11 @@ export function MobileMediaPanel({ className }: MobileMediaPanelProps) {
 
 interface ProjectMediaListProps {
   onFileSelect: () => void;
+  onBrowseLibrary: () => void;
   isProcessing: boolean;
 }
 
-function ProjectMediaList({ onFileSelect, isProcessing }: ProjectMediaListProps) {
+function ProjectMediaList({ onFileSelect, onBrowseLibrary, isProcessing }: ProjectMediaListProps) {
   const { mediaItems, removeMediaItem } = useMediaStore();
   const { addTrack, addClipToTrack, tracks } = useTimelineStore();
 
@@ -237,6 +222,14 @@ function ProjectMediaList({ onFileSelect, isProcessing }: ProjectMediaListProps)
           {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
           Add Files
         </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="rounded-full text-[10px] uppercase tracking-widest"
+          onClick={onBrowseLibrary}
+        >
+          Browse Library
+        </Button>
       </div>
     );
   }
@@ -268,9 +261,11 @@ function ProjectMediaList({ onFileSelect, isProcessing }: ProjectMediaListProps)
             </p>
             <div className="grid grid-cols-2 gap-3">
               {videoItems.map((item) => (
-                <div
+                <button
                   key={item.id}
-                  className="relative rounded-2xl overflow-hidden bg-muted border border-border/30 group"
+                  type="button"
+                  className="relative overflow-hidden rounded-2xl border border-border/30 bg-muted text-left transition-transform active:scale-[0.98]"
+                  onClick={() => handleAddToTimeline(item)}
                 >
                   <div className="aspect-video">
                     {item.thumbnailUrl ? (
@@ -285,21 +280,21 @@ function ProjectMediaList({ onFileSelect, isProcessing }: ProjectMediaListProps)
                       </div>
                     )}
                   </div>
-                  {/* Overlay with actions */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-active:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <div className="absolute right-2 top-2 flex gap-1.5">
+                    <span className="inline-flex h-7 min-w-[28px] items-center justify-center rounded-full bg-primary px-2 text-[10px] font-black text-white shadow-lg">
+                      <Plus className="mr-0.5 h-3.5 w-3.5" />
+                      Add
+                    </span>
                     <button
-                      className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shadow-lg"
-                      onClick={() => handleAddToTimeline(item)}
-                      aria-label="Add to timeline"
-                    >
-                      <Plus className="h-4 w-4 text-white" />
-                    </button>
-                    <button
-                      className="h-8 w-8 rounded-full bg-destructive flex items-center justify-center shadow-lg"
-                      onClick={() => handleRemove(item.id)}
+                      type="button"
+                      className="h-7 w-7 rounded-full bg-black/65 text-white shadow-lg"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemove(item.id);
+                      }}
                       aria-label="Remove"
                     >
-                      <Trash2 className="h-4 w-4 text-white" />
+                      <Trash2 className="mx-auto h-3.5 w-3.5" />
                     </button>
                   </div>
                   <div className="px-2 py-1.5 bg-background/90">
@@ -310,7 +305,7 @@ function ProjectMediaList({ onFileSelect, isProcessing }: ProjectMediaListProps)
                       </p>
                     ) : null}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -502,135 +497,5 @@ function PexelsLibrary({
         </div>
       </ScrollArea>
     </div>
-  );
-}
-
-// ── Upload Tab ──────────────────────────────────────────────────────────────
-
-interface UploadTabProps {
-  onFileSelect: () => void;
-  isProcessing: boolean;
-  mediaCounts: { video: number; audio: number; image: number };
-}
-
-function UploadTab({ onFileSelect, isProcessing, mediaCounts }: UploadTabProps) {
-  return (
-    <ScrollArea className="flex-1 bg-muted/5">
-      <div className="p-6 space-y-6">
-        {/* Upload area */}
-        <button
-          onClick={onFileSelect}
-          disabled={isProcessing}
-          className={cn(
-            "w-full aspect-video rounded-3xl border-2 border-dashed flex flex-col items-center justify-center transition-all active:scale-[0.98]",
-            isProcessing
-              ? "bg-muted border-muted-foreground/20 cursor-not-allowed"
-              : "bg-primary/5 border-primary/20 hover:bg-primary/10 hover:border-primary/40"
-          )}
-        >
-          {isProcessing ? (
-            <>
-              <div className="h-10 w-10 mb-4 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-              <p className="font-bold text-muted-foreground">Processing Files…</p>
-            </>
-          ) : (
-            <>
-              <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
-                <Upload className="h-7 w-7" />
-              </div>
-              <p className="font-bold text-lg">Add Media</p>
-              <p className="text-xs text-muted-foreground mt-1 px-10 text-center">
-                Upload videos, photos, or audio from your device
-              </p>
-            </>
-          )}
-        </button>
-
-        {/* Project asset counts */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
-              Project Assets
-            </h3>
-            <Badge
-              variant="outline"
-              className="text-[10px] font-bold border-muted-foreground/20"
-            >
-              {mediaCounts.video + mediaCounts.audio + mediaCounts.image} TOTAL
-            </Badge>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              {
-                label: "Videos",
-                count: mediaCounts.video,
-                icon: Video,
-                color: "text-blue-500",
-                bg: "bg-blue-500/10",
-              },
-              {
-                label: "Audio",
-                count: mediaCounts.audio,
-                icon: Music,
-                color: "text-green-500",
-                bg: "bg-green-500/10",
-              },
-              {
-                label: "Images",
-                count: mediaCounts.image,
-                icon: ImageIcon,
-                color: "text-purple-500",
-                bg: "bg-purple-500/10",
-              },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="bg-card border border-border/50 p-4 rounded-2xl flex flex-col items-center text-center shadow-sm"
-              >
-                <div
-                  className={cn(
-                    "h-10 w-10 rounded-xl flex items-center justify-center mb-2",
-                    item.bg
-                  )}
-                >
-                  <item.icon className={cn("h-5 w-5", item.color)} />
-                </div>
-                <div className="text-lg font-black tabular-nums">{item.count}</div>
-                <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-                  {item.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Tips */}
-        <div className="bg-primary/5 rounded-2xl p-5 border border-primary/10">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/80">
-              Quick Tips
-            </h4>
-          </div>
-          <ul className="space-y-3">
-            {[
-              "Keep videos under 60 seconds for best social results",
-              "Record voiceover while watching your preview",
-              "Add text overlays for better accessibility",
-            ].map((tip, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-[10px] font-black text-primary">
-                  {i + 1}
-                </div>
-                <p className="text-[11px] font-medium leading-relaxed text-muted-foreground">
-                  {tip}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </ScrollArea>
   );
 }

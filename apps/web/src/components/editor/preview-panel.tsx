@@ -29,9 +29,14 @@ interface PreviewPanelProps {
   controlsVariant?: "topbar" | "overlay";
   /** When true, the preview fills the entire container (no aspect-ratio constraint) */
   fillContainer?: boolean;
+  onTextElementTap?: (textId: string) => void;
 }
 
-export function PreviewPanel({ controlsVariant = "topbar", fillContainer = false }: PreviewPanelProps) {
+export function PreviewPanel({
+  controlsVariant = "topbar",
+  fillContainer = false,
+  onTextElementTap,
+}: PreviewPanelProps) {
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
   const { isPlaying, toggle, currentTime, muted, toggleMute, volume } =
@@ -240,7 +245,7 @@ export function PreviewPanel({ controlsVariant = "topbar", fillContainer = false
     return (
       <div
         key={text.id}
-        className="absolute pointer-events-none"
+        className={cn("absolute", onTextElementTap ? "pointer-events-auto cursor-pointer" : "pointer-events-none")}
         style={{
           left: `${text.x * 100}%`,
           top: `${text.y * 100}%`,
@@ -254,6 +259,11 @@ export function PreviewPanel({ controlsVariant = "topbar", fillContainer = false
           whiteSpace: "pre-wrap",
           maxWidth: "90%",
           textShadow: "2px 2px 4px rgba(0, 0, 0, 0.8)",
+        }}
+        onClick={(e) => {
+          if (!onTextElementTap) return;
+          e.stopPropagation();
+          onTextElementTap(text.id);
         }}
       >
         {text.content}

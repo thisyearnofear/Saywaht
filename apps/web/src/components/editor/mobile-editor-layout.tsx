@@ -22,6 +22,7 @@ import { usePlaybackStore } from "@/stores/playback-store";
 import { useMediaStore } from "@/stores/media-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useTimelineStore } from "@/stores/timeline-store";
+import { useTextStore } from "@/stores/text-store";
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 import { useFarcasterShare } from "@/farcaster/hooks/use-farcaster-share";
 import { useEditorHistory } from "@/hooks/use-editor-history";
@@ -61,6 +62,12 @@ const MOBILE_TOOL_CONFIG: Array<{ id: MobileTool; label: string; icon: typeof Mi
 ];
 
 const COACHMARK_STORAGE_KEY = "saywaht-mobile-coachmark-v2";
+const TOOL_SHEET_SIZES: Record<MobileTool, string> = {
+  record: "h-[40vh] min-h-[250px] max-h-[430px]",
+  media: "h-[64vh] min-h-[360px] max-h-[620px]",
+  text: "h-[62vh] min-h-[340px] max-h-[600px]",
+  effects: "h-[56vh] min-h-[300px] max-h-[540px]",
+};
 
 export function MobileEditorLayout({
   children,
@@ -71,6 +78,7 @@ export function MobileEditorLayout({
   const { mediaItems } = useMediaStore();
   const { activeProject } = useProjectStore();
   const { tracks } = useTimelineStore();
+  const { selectText } = useTextStore();
   const { isFarcasterMiniApp } = useFarcasterContext();
   const { shareToFarcaster, isSharing } = useFarcasterShare();
   const { undo, redo, canUndo, canRedo } = useEditorHistory();
@@ -79,6 +87,8 @@ export function MobileEditorLayout({
   const [recordAutoStartNonce, setRecordAutoStartNonce] = useState(0);
   const [isRecordingInProgress, setIsRecordingInProgress] = useState(false);
   const [showCoachmark, setShowCoachmark] = useState(false);
+  const [preferredCaptionGroupId, setPreferredCaptionGroupId] = useState<string | null>(null);
+  const timelineVisible = activeTool === null || activeTool === "record";
 
   usePlaybackControls();
 
@@ -218,6 +228,11 @@ export function MobileEditorLayout({
             showControls={false}
             controlsVariant="overlay"
             isFullscreen={true}
+            onTextElementTap={(textId) => {
+              addHapticFeedback("light");
+              selectText(textId);
+              setActiveTool("text");
+            }}
           />
 
           <button
@@ -254,7 +269,10 @@ export function MobileEditorLayout({
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 24, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="z-20 flex h-[38vh] min-h-[240px] max-h-[400px] flex-col border-t border-white/10 bg-background"
+              className={cn(
+                "z-20 flex flex-col border-t border-white/10 bg-background",
+                TOOL_SHEET_SIZES[activeTool]
+              )}
             >
               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-background/95 px-3 py-2.5 backdrop-blur">
                 <div className="flex items-center gap-2">
@@ -292,19 +310,67 @@ export function MobileEditorLayout({
                     onRecordingStateChange={(state) => {
                       setIsRecordingInProgress(state === "recording");
                     }}
+                    onCaptionsGenerated={({ groupId, count }) => {
+                      setPreferredCaptionGroupId(groupId);
+                      setActiveTool("text");
+                      toast.success(`Generated ${count} captions. Edit them in Text.`);
+                    }}
                   />
                 )}
                 {activeTool === "media" && <MobileMediaPanel />}
-                {activeTool === "text" && <MobileTextPanel />}
-                {activeTool === "effects" && <MobileEffectsPanel />}
+                {activeTool === "text" && (
+                  <MobileTextPanel preferredCaptionGroupId={preferredCaptionGroupId} />
+                )}
+                {activeTool === "effects" && (
+                  <MobileEffectsPanel onRequestMedia={() => openToolSheet("media")} />
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-1 border-t border-border/60 px-3 py-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 rounded-full"
+                  onClick={() => {
+                    addHapticFeedback("light");
+                    undo();
+                  }}
+                  disabled={!canUndo()}
+                  aria-label="Undo"
+                >
+                  <Undo2 className={cn("h-4 w-4", !canUndo() && "opacity-25")} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 rounded-full"
+                  onClick={() => {
+                    addHapticFeedback("light");
+                    redo();
+                  }}
+                  disabled={!canRedo()}
+                  aria-label="Redo"
+                >
+                  <Redo2 className={cn("h-4 w-4", !canRedo() && "opacity-25")} />
+                </Button>
               </div>
             </motion.section>
           )}
         </AnimatePresence>
 
-        <div className="z-20 border-t border-white/10 bg-background/95">
-          <MobileTimeline compact />
-        </div>
+        <AnimatePresence initial={false}>
+          {timelineVisible && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="z-20 overflow-hidden border-t border-white/10 bg-background/95"
+            >
+              <MobileTimeline compact />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div
           className="z-30 border-t border-white/10 bg-black/95 px-3 pb-safe"

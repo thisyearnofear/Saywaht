@@ -96,6 +96,12 @@ export interface TextElement {
   textAlign?: "left" | "center" | "right";
   fontWeight?: "normal" | "bold";
   opacity?: number;       // 0-1
+  // Caption metadata
+  isAutoCaption?: boolean;
+  captionGroupId?: string;
+  captionSource?: "timeline" | "voiceover";
+  captionAudioHash?: string;
+  captionGeneratedAt?: number;
 }
 
 // ============================================================================

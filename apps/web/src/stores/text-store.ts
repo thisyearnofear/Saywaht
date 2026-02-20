@@ -42,6 +42,10 @@ interface TextStore {
   deleteTextElement: (id: string) => void;
   selectText: (id: string | null) => void;
   getTextElement: (id: string) => TextElement | null;
+  getCaptionGroupIds: () => string[];
+  getCaptionElements: (groupId?: string) => TextElement[];
+  deleteCaptionGroup: (groupId: string) => void;
+  updateCaptionGroup: (groupId: string, updates: Partial<TextElement>) => void;
   
   // Utilities
   clearAllText: () => void;
@@ -99,6 +103,41 @@ export const useTextStore = create<TextStore>((set, get) => ({
 
   getTextElement: (id) => {
     return get().textElements.find((el) => el.id === id) || null;
+  },
+
+  getCaptionGroupIds: () => {
+    const ids = get()
+      .textElements
+      .map((el) => el.captionGroupId)
+      .filter((id): id is string => Boolean(id));
+    return Array.from(new Set(ids));
+  },
+
+  getCaptionElements: (groupId) => {
+    const elements = get().textElements.filter((el) => el.isAutoCaption);
+    if (!groupId) return elements;
+    return elements.filter((el) => el.captionGroupId === groupId);
+  },
+
+  deleteCaptionGroup: (groupId) => {
+    get().pushHistory();
+    set((state) => ({
+      textElements: state.textElements.filter((el) => el.captionGroupId !== groupId),
+      selectedTextId:
+        state.selectedTextId &&
+        state.textElements.find((el) => el.id === state.selectedTextId)?.captionGroupId === groupId
+          ? null
+          : state.selectedTextId,
+    }));
+  },
+
+  updateCaptionGroup: (groupId, updates) => {
+    get().pushHistory();
+    set((state) => ({
+      textElements: state.textElements.map((el) =>
+        el.captionGroupId === groupId ? { ...el, ...updates } : el
+      ),
+    }));
   },
 
   clearAllText: () => {

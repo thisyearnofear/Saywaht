@@ -24,6 +24,7 @@ interface MobilePreviewPanelProps {
   controlsVariant?: "topbar" | "overlay";
   onToggleFullscreen?: () => void;
   isFullscreen?: boolean;
+  onTextElementTap?: (textId: string) => void;
 }
 
 export function MobilePreviewPanel({
@@ -33,6 +34,7 @@ export function MobilePreviewPanel({
   controlsVariant = "overlay",
   onToggleFullscreen,
   isFullscreen = false,
+  onTextElementTap,
 }: MobilePreviewPanelProps) {
   const { orientation } = useMobileContext();
   const previewRef = useRef<HTMLDivElement>(null);
@@ -163,7 +165,11 @@ export function MobilePreviewPanel({
             transformOrigin: "center center",
           }}
         >
-          <PreviewPanel controlsVariant={controlsVariant} fillContainer={isFullscreen} />
+          <PreviewPanel
+            controlsVariant={controlsVariant}
+            fillContainer={isFullscreen}
+            onTextElementTap={onTextElementTap}
+          />
         </div>
       </div>
     </div>

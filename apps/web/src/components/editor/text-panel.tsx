@@ -6,12 +6,11 @@ import { useTextStore, DEFAULT_TEXT_PROPERTIES } from "@/stores/text-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
-import { transcriptionService } from "@/services/transcription/service";
-import { buildCaptionChunks } from "@/lib/transcription/caption";
 import {
-  extractAudioFromTimeline,
-  decodeAudioToFloat32,
-} from "@/lib/media/audio";
+  CAPTION_POSITION_Y,
+  generateCaptionsFromTimeline,
+  updateCaptionGroupStyle,
+} from "@/lib/transcription/caption-pipeline";
 import {
   Type,
   Plus,
@@ -56,16 +55,18 @@ const TEXT_PRESETS = [
 ] as const;
 
 type CaptionPosition = "top" | "bottom";
-const POSITION_Y: Record<CaptionPosition, number> = { top: 0.12, bottom: 0.85 };
 
 export function TextPanel() {
   const {
     addTextElement,
-    deleteTextElement,
     updateTextElement,
     textElements,
     selectText,
     selectedTextId,
+    getCaptionGroupIds,
+    getCaptionElements,
+    deleteCaptionGroup,
+    updateCaptionGroup,
   } = useTextStore();
   const { currentTime, duration } = usePlaybackStore();
   const setCurrentTime = usePlaybackStore((s) => s.setCurrentTime);
@@ -76,11 +77,14 @@ export function TextPanel() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState("");
-  const [captionIds, setCaptionIds] = useState<string[]>([]);
+  const [activeCaptionGroupId, setActiveCaptionGroupId] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] =
     useState<TranscriptionLanguage>("en");
   const [captionPosition, setCaptionPosition] =
     useState<CaptionPosition>("bottom");
+  const captionGroupIds = getCaptionGroupIds();
+  const resolvedGroupId =
+    activeCaptionGroupId || captionGroupIds[captionGroupIds.length - 1] || null;
 
   // Manual text
   const handleAddText = (presetIndex?: number) => {
@@ -105,24 +109,14 @@ export function TextPanel() {
   const handleGenerate = useCallback(async () => {
     setIsGenerating(true);
     setProgress(0);
-    setStatusMessage("Extracting audio...");
+    setStatusMessage("Preparing audio...");
 
     try {
-      const blobs = await extractAudioFromTimeline(tracks, mediaItems);
-      if (blobs.length === 0) {
-        toast.error("No audio or video clips found on the timeline");
-        setIsGenerating(false);
-        setStatusMessage("");
-        return;
-      }
-
-      setStatusMessage("Decoding audio...");
-      const { samples } = await decodeAudioToFloat32(blobs[0]);
-
-      setStatusMessage("Loading model...");
-      const result = await transcriptionService.transcribe({
-        audioData: samples,
+      const result = await generateCaptionsFromTimeline(tracks, mediaItems, {
+        addTextElement,
         language: selectedLanguage,
+        position: captionPosition,
+        cancelPrevious: true,
         onProgress: (info) => {
           if (typeof info.progress === "number") {
             setProgress(Math.round(info.progress));
@@ -135,38 +129,10 @@ export function TextPanel() {
         },
       });
 
-      setStatusMessage("Building captions...");
-      const chunks = buildCaptionChunks(result.segments);
-
-      if (chunks.length === 0) {
-        toast.error("No speech detected in the audio");
-        setIsGenerating(false);
-        setStatusMessage("");
-        return;
-      }
-
-      const newIds: string[] = [];
-      for (const chunk of chunks) {
-        const id = addTextElement({
-          content: chunk.text,
-          fontSize: 28,
-          fontWeight: "bold",
-          color: "#FFFFFF",
-          textAlign: "center",
-          x: 0.5,
-          y: POSITION_Y[captionPosition],
-          opacity: 1,
-          fontFamily: "Inter",
-          startTime: chunk.startTime,
-          endTime: chunk.startTime + chunk.duration,
-        });
-        newIds.push(id);
-      }
-
-      setCaptionIds((prev) => [...prev, ...newIds]);
+      setActiveCaptionGroupId(result.groupId);
       setStatusMessage("Done!");
       setProgress(100);
-      toast.success(`Generated ${chunks.length} caption(s)`);
+      toast.success(`Generated ${result.count} caption(s)`);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Transcription failed";
@@ -181,24 +147,32 @@ export function TextPanel() {
     (pos: CaptionPosition) => {
       if (pos === captionPosition) return;
       setCaptionPosition(pos);
-      for (const id of captionIds) {
-        updateTextElement(id, { y: POSITION_Y[pos] });
-      }
+      if (!resolvedGroupId) return;
+      updateCaptionGroup(resolvedGroupId, { y: CAPTION_POSITION_Y[pos] });
     },
-    [captionPosition, captionIds, updateTextElement]
+    [captionPosition, resolvedGroupId, updateCaptionGroup]
   );
 
   const handleClearCaptions = useCallback(() => {
-    for (const id of captionIds) {
-      deleteTextElement(id);
-    }
-    setCaptionIds([]);
+    if (!resolvedGroupId) return;
+    deleteCaptionGroup(resolvedGroupId);
+    setActiveCaptionGroupId(null);
     setStatusMessage("");
     setProgress(0);
     toast.success("Captions cleared");
-  }, [captionIds, deleteTextElement]);
+  }, [resolvedGroupId, deleteCaptionGroup]);
 
-  const captionElements = textElements.filter((t) => captionIds.includes(t.id));
+  const handleApplyCaptionStyle = useCallback(() => {
+    if (!resolvedGroupId) return;
+    updateCaptionGroupStyle(
+      getCaptionElements(resolvedGroupId).map((item) => item.id),
+      { fontSize: 32, fontWeight: "bold", color: "#FFFFFF" },
+      updateTextElement
+    );
+    toast.success("Caption style updated");
+  }, [resolvedGroupId, getCaptionElements, updateTextElement]);
+
+  const captionElements = resolvedGroupId ? getCaptionElements(resolvedGroupId) : [];
 
   return (
     <div className="h-full flex flex-col">
@@ -222,6 +196,19 @@ export function TextPanel() {
           </div>
 
           <div className="flex gap-2">
+            {captionGroupIds.length > 0 && (
+              <select
+                value={resolvedGroupId || ""}
+                onChange={(e) => setActiveCaptionGroupId(e.target.value || null)}
+                className="h-9 px-2 rounded-md border border-input bg-background text-xs"
+              >
+                {captionGroupIds.map((id) => (
+                  <option key={id} value={id}>
+                    Group {id.slice(0, 8)}
+                  </option>
+                ))}
+              </select>
+            )}
             <select
               value={selectedLanguage}
               onChange={(e) =>
@@ -298,6 +285,14 @@ export function TextPanel() {
                   {captionElements.length} captions
                 </span>
                 <Button
+                  onClick={handleApplyCaptionStyle}
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                >
+                  Style All
+                </Button>
+                <Button
                   onClick={handleClearCaptions}
                   variant="ghost"
                   size="sm"
@@ -308,7 +303,7 @@ export function TextPanel() {
                 </Button>
               </div>
               <div className="space-y-1 max-h-32 overflow-y-auto">
-                {captionElements.map((caption) => (
+                  {captionElements.map((caption) => (
                   <button
                     key={caption.id}
                     onClick={() => setCurrentTime(caption.startTime)}
