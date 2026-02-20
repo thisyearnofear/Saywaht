@@ -9,6 +9,7 @@ interface AudioPlayerProps {
   trimStart: number;
   trimEnd: number;
   clipDuration: number;
+  clipAudioGain?: number;
 }
 
 export function AudioPlayer({
@@ -17,6 +18,7 @@ export function AudioPlayer({
   trimStart,
   trimEnd,
   clipDuration,
+  clipAudioGain = 1,
 }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const { isPlaying, currentTime, volume, speed, muted } = usePlaybackStore();
@@ -98,10 +100,10 @@ export function AudioPlayer({
     const audio = audioRef.current;
     if (!audio) return;
 
-    audio.volume = volume;
+    audio.volume = Math.max(0, Math.min(1, volume * clipAudioGain));
     audio.muted = muted;
     audio.playbackRate = speed;
-  }, [volume, speed, muted]);
+  }, [volume, speed, muted, clipAudioGain]);
 
   return <audio ref={audioRef} src={src} playsInline preload="auto" />;
 }

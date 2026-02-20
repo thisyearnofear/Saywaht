@@ -83,26 +83,21 @@ export function MobileEditorLayout({
   const { shareToFarcaster, isSharing } = useFarcasterShare();
   const { undo, redo, canUndo, canRedo } = useEditorHistory();
 
-  const [activeTool, setActiveTool] = useState<MobileTool | null>(null);
+  const [activeTool, setActiveTool] = useState<MobileTool | null>("media");
   const [recordAutoStartNonce, setRecordAutoStartNonce] = useState(0);
   const [isRecordingInProgress, setIsRecordingInProgress] = useState(false);
   const [showCoachmark, setShowCoachmark] = useState(false);
   const [preferredCaptionGroupId, setPreferredCaptionGroupId] = useState<string | null>(null);
-  const [hasAutoOpenedMedia, setHasAutoOpenedMedia] = useState(false);
   const timelineVisible = activeTool === null || activeTool === "record";
   const hasTimelineClips = tracks.some((track) => track.clips.length > 0);
 
   usePlaybackControls();
 
   useEffect(() => {
-    if (hasAutoOpenedMedia) {
-      return;
-    }
-    if (mediaItems.length === 0 || !hasTimelineClips) {
+    if ((mediaItems.length === 0 || !hasTimelineClips) && activeTool === null) {
       setActiveTool("media");
-      setHasAutoOpenedMedia(true);
     }
-  }, [hasAutoOpenedMedia, mediaItems.length, hasTimelineClips]);
+  }, [activeTool, mediaItems.length, hasTimelineClips]);
 
   useEffect(() => {
     if (hideOnboarding || typeof window === "undefined") {
@@ -229,59 +224,51 @@ export function MobileEditorLayout({
             isRecordingInProgress && "ring-2 ring-red-500 ring-inset"
           )}
         >
-          <MobilePreviewPanel
-            showResolution={false}
-            showControls={false}
-            controlsVariant="overlay"
-            isFullscreen={true}
-            onTextElementTap={(textId) => {
-              addHapticFeedback("light");
-              selectText(textId);
-              setActiveTool("text");
-            }}
-          />
+          {hasTimelineClips ? (
+            <>
+              <MobilePreviewPanel
+                showResolution={false}
+                showControls={false}
+                controlsVariant="overlay"
+                isFullscreen={true}
+                onTextElementTap={(textId) => {
+                  addHapticFeedback("light");
+                  selectText(textId);
+                  setActiveTool("text");
+                }}
+              />
 
-          <button
-            className="absolute inset-0 z-10 flex items-center justify-center touch-manipulation"
-            onClick={() => {
-              addHapticFeedback("light");
-              if (!hasTimelineClips) {
-                openToolSheet("media");
-                return;
-              }
-              if (!isPlaying) {
-                play();
-                return;
-              }
-              toggle();
-            }}
-            aria-label={isPlaying ? "Pause preview" : "Play preview"}
-          >
-            {!isPlaying && (
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-black/35 backdrop-blur-xl">
-                <Play className="ml-0.5 h-8 w-8 fill-white text-white" />
-              </div>
-            )}
-          </button>
-
-          {isRecordingInProgress && (
-            <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-full bg-red-500/90 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-white">
-              Recording
-            </div>
-          )}
-
-          {!hasTimelineClips && (
-            <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20">
-              <div className="pointer-events-auto rounded-2xl border border-white/15 bg-black/65 p-3 backdrop-blur-md">
-                <p className="text-[11px] font-black uppercase tracking-[0.08em] text-white">
-                  Add media to timeline
+              <button
+                className="absolute inset-0 z-10 flex items-center justify-center touch-manipulation"
+                onClick={() => {
+                  addHapticFeedback("light");
+                  if (!isPlaying) {
+                    play();
+                    return;
+                  }
+                  toggle();
+                }}
+                aria-label={isPlaying ? "Pause preview" : "Play preview"}
+              >
+                {!isPlaying && (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-black/35 backdrop-blur-xl">
+                    <Play className="ml-0.5 h-8 w-8 fill-white text-white" />
+                  </div>
+                )}
+              </button>
+            </>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-neutral-950 via-black to-neutral-950">
+              <div className="mx-5 rounded-2xl border border-white/15 bg-black/55 p-4 text-center backdrop-blur">
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-white">
+                  Your preview starts after add
                 </p>
-                <p className="mt-1 text-[10px] text-white/75">
-                  Pick a project clip, then tap Add so it can preview here.
+                <p className="mt-2 text-[11px] text-white/70">
+                  Open Media, choose a clip, then tap Add to timeline.
                 </p>
                 <Button
                   size="sm"
-                  className="mt-2 h-8 rounded-full px-3 text-[10px] font-black uppercase tracking-widest"
+                  className="mt-3 h-8 rounded-full px-3 text-[10px] font-black uppercase tracking-widest"
                   onClick={() => openToolSheet("media")}
                 >
                   Open Media
@@ -289,6 +276,13 @@ export function MobileEditorLayout({
               </div>
             </div>
           )}
+
+          {isRecordingInProgress && (
+            <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-full bg-red-500/90 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-white">
+              Recording
+            </div>
+          )}
+
         </div>
 
         <AnimatePresence initial={false}>

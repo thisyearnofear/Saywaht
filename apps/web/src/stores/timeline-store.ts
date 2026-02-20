@@ -14,6 +14,10 @@ export interface TimelineClip {
   speed?: number;     // Playback speed multiplier (1.0 = normal)
   reversed?: boolean; // Reverse playback direction
   audioMuted?: boolean; // Mute audio for this clip (used when audio is separated)
+  brightness?: number; // Visual effect multiplier (1.0 = neutral)
+  contrast?: number; // Visual effect multiplier (1.0 = neutral)
+  saturation?: number; // Visual effect multiplier (1.0 = neutral)
+  audioGain?: number; // Clip gain multiplier (1.0 = neutral)
 }
 
 export interface TimelineTrack {
@@ -67,6 +71,12 @@ interface TimelineStore {
   ) => void;
   toggleClipReversed: (trackId: string, clipId: string) => void;
   updateClipAudioMuted: (trackId: string, clipId: string, muted: boolean) => void;
+  updateClipVisualEffects: (
+    trackId: string,
+    clipId: string,
+    effects: Partial<Pick<TimelineClip, "brightness" | "contrast" | "saturation">>
+  ) => void;
+  updateClipAudioGain: (trackId: string, clipId: string, audioGain: number) => void;
   toggleTrackMute: (trackId: string) => void;
 
   // Computed values
@@ -281,6 +291,47 @@ export const useTimelineStore = create<TimelineStore>()(
                   ...track,
                   clips: track.clips.map((clip: TimelineClip) =>
                     clip.id === clipId ? { ...clip, audioMuted: muted } : clip
+                  ),
+                }
+              : track
+          ),
+        }));
+      },
+
+      updateClipVisualEffects: (trackId: string, clipId: string, effects) => {
+        get().pushHistory();
+        set((state: TimelineStore) => ({
+          tracks: state.tracks.map((track: TimelineTrack) =>
+            track.id === trackId
+              ? {
+                  ...track,
+                  clips: track.clips.map((clip: TimelineClip) =>
+                    clip.id === clipId
+                      ? {
+                          ...clip,
+                          ...(effects.brightness !== undefined ? { brightness: Math.max(0, Math.min(2, effects.brightness)) } : {}),
+                          ...(effects.contrast !== undefined ? { contrast: Math.max(0, Math.min(2, effects.contrast)) } : {}),
+                          ...(effects.saturation !== undefined ? { saturation: Math.max(0, Math.min(2, effects.saturation)) } : {}),
+                        }
+                      : clip
+                  ),
+                }
+              : track
+          ),
+        }));
+      },
+
+      updateClipAudioGain: (trackId: string, clipId: string, audioGain: number) => {
+        get().pushHistory();
+        set((state: TimelineStore) => ({
+          tracks: state.tracks.map((track: TimelineTrack) =>
+            track.id === trackId
+              ? {
+                  ...track,
+                  clips: track.clips.map((clip: TimelineClip) =>
+                    clip.id === clipId
+                      ? { ...clip, audioGain: Math.max(0, Math.min(3, audioGain)) }
+                      : clip
                   ),
                 }
               : track

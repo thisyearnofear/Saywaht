@@ -1,6 +1,6 @@
 "use client";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -9,40 +9,29 @@ import { addHapticFeedback } from "@/lib/mobile-utils";
 import { toast } from "sonner";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
+import { usePlaybackStore } from "@/stores/playback-store";
+import { TimelineClip } from "@/stores/timeline-store";
 
 interface MobileEffectsPanelProps {
   className?: string;
   onRequestMedia?: () => void;
 }
 
-const videoEffects = [
-  { id: "fade", name: "Fade", category: "transition", icon: "✨" },
-  { id: "blur", name: "Blur", category: "filter", icon: "🔍" },
-  { id: "brightness", name: "Bright", category: "color", icon: "☀️" },
-  { id: "contrast", name: "Contrast", category: "color", icon: "🌓" },
-  { id: "vibrance", name: "Vibrance", category: "color", icon: "🌈" },
-  { id: "crop", name: "Crop", category: "transform", icon: "✂️" },
-  { id: "rotate", name: "Rotate", category: "transform", icon: "🔄" },
-  { id: "move", name: "Position", category: "transform", icon: "🎯" },
+type Effect = { id: string; name: string; icon: string };
+type ActiveClipRef = { trackId: string; clip: TimelineClip; mediaType: "video" | "image" | "audio" | "unknown" };
+
+const VIDEO_EFFECTS: Effect[] = [
+  { id: "brighten", name: "Brighten", icon: "☀️" },
+  { id: "darken", name: "Darken", icon: "🌘" },
+  { id: "contrast-up", name: "Contrast+", icon: "🌓" },
+  { id: "reset-video", name: "Reset", icon: "↺" },
 ];
 
-const audioEffects = [
-  { id: "volume", name: "Volume", category: "basic", icon: "🔊" },
-  { id: "fade-in", name: "Fade In", category: "transition", icon: "📈" },
-  { id: "fade-out", name: "Fade Out", category: "transition", icon: "📉" },
-  { id: "echo", name: "Echo", category: "effect", icon: "🗣️" },
-  { id: "reverb", name: "Reverb", category: "effect", icon: "🏛️" },
+const AUDIO_EFFECTS: Effect[] = [
+  { id: "boost", name: "Boost", icon: "🔊" },
+  { id: "soften", name: "Soften", icon: "🔉" },
+  { id: "reset-audio", name: "Reset", icon: "↺" },
 ];
-
-type Effect = { id: string; name: string; category: string; icon: string };
-
-function groupByCategory(effects: Effect[]) {
-  return effects.reduce<Record<string, Effect[]>>((acc, effect) => {
-    if (!acc[effect.category]) acc[effect.category] = [];
-    acc[effect.category].push(effect);
-    return acc;
-  }, {});
-}
 
 function EffectCard({
   effect,
@@ -54,56 +43,101 @@ function EffectCard({
   return (
     <button
       onClick={() => onApply(effect.id)}
-      className="flex flex-col items-center gap-2 group touch-manipulation"
+      className="flex flex-col items-center gap-2 rounded-xl border border-border/40 bg-card/40 p-2 transition-colors active:scale-95 active:bg-muted touch-manipulation"
     >
-      <div className="w-full aspect-square rounded-2xl bg-card border border-border/50 flex items-center justify-center text-2xl shadow-sm group-active:scale-95 group-active:bg-muted transition-all">
+      <div className="flex h-14 w-full items-center justify-center rounded-xl bg-card text-2xl shadow-sm">
         {effect.icon}
       </div>
-      <span className="text-[10px] font-bold text-muted-foreground group-active:text-primary transition-colors uppercase tracking-tight">
+      <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">
         {effect.name}
       </span>
     </button>
   );
 }
 
-function EffectsGrid({
-  effects,
-  onApply,
-}: {
-  effects: Effect[];
-  onApply: (id: string) => void;
-}) {
-  const grouped = groupByCategory(effects);
-
-  return (
-    <ScrollArea className="h-full">
-      <div className="p-4 space-y-8 pb-10">
-        {Object.entries(grouped).map(([categoryName, categoryEffects]) => (
-          <div key={categoryName} className="space-y-3">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
-              <div className="h-1 w-1 rounded-full bg-primary/40" />
-              {categoryName}
-            </h3>
-            <div className="grid grid-cols-3 gap-3">
-              {categoryEffects.map((effect) => (
-                <EffectCard key={effect.id} effect={effect} onApply={onApply} />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </ScrollArea>
-  );
-}
-
 export function MobileEffectsPanel({ className, onRequestMedia }: MobileEffectsPanelProps) {
   const tracks = useTimelineStore((s) => s.tracks);
+  const updateClipVisualEffects = useTimelineStore((s) => s.updateClipVisualEffects);
+  const updateClipAudioGain = useTimelineStore((s) => s.updateClipAudioGain);
   const mediaItems = useMediaStore((s) => s.mediaItems);
+  const currentTime = usePlaybackStore((s) => s.currentTime);
   const hasTimelineContent = tracks.some((track) => track.clips.length > 0);
+
+  const activeClipRefs = useMemo<ActiveClipRef[]>(() => {
+    return tracks.flatMap((track) =>
+      track.clips
+        .filter((clip) => {
+          const clipEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+          return currentTime >= clip.startTime && currentTime < clipEnd;
+        })
+        .map((clip) => {
+          const media = mediaItems.find((item) => item.id === clip.mediaId);
+          return {
+            trackId: track.id,
+            clip,
+            mediaType: (media?.type || "unknown") as ActiveClipRef["mediaType"],
+          };
+        })
+    );
+  }, [tracks, mediaItems, currentTime]);
+
+  const applyVideoEffect = (effectId: string) => {
+    const targets = activeClipRefs.filter((ref) => ref.mediaType === "video" || ref.mediaType === "image");
+    if (targets.length === 0) {
+      toast.info("Move playhead over a video or image clip.");
+      return;
+    }
+    targets.forEach(({ trackId, clip }) => {
+      const brightness = clip.brightness ?? 1;
+      const contrast = clip.contrast ?? 1;
+      switch (effectId) {
+        case "brighten":
+          updateClipVisualEffects(trackId, clip.id, { brightness: brightness + 0.15 });
+          break;
+        case "darken":
+          updateClipVisualEffects(trackId, clip.id, { brightness: brightness - 0.15 });
+          break;
+        case "contrast-up":
+          updateClipVisualEffects(trackId, clip.id, { contrast: contrast + 0.15 });
+          break;
+        case "reset-video":
+          updateClipVisualEffects(trackId, clip.id, { brightness: 1, contrast: 1, saturation: 1 });
+          break;
+      }
+    });
+    toast.success(`Applied to ${targets.length} clip${targets.length > 1 ? "s" : ""}.`);
+  };
+
+  const applyAudioEffect = (effectId: string) => {
+    const targets = activeClipRefs.filter((ref) => ref.mediaType === "audio" || ref.mediaType === "video");
+    if (targets.length === 0) {
+      toast.info("Move playhead over a clip with audio.");
+      return;
+    }
+    targets.forEach(({ trackId, clip }) => {
+      const gain = clip.audioGain ?? 1;
+      switch (effectId) {
+        case "boost":
+          updateClipAudioGain(trackId, clip.id, gain + 0.2);
+          break;
+        case "soften":
+          updateClipAudioGain(trackId, clip.id, gain - 0.2);
+          break;
+        case "reset-audio":
+          updateClipAudioGain(trackId, clip.id, 1);
+          break;
+      }
+    });
+    toast.success(`Applied to ${targets.length} clip${targets.length > 1 ? "s" : ""}.`);
+  };
 
   const handleEffectApply = (effectId: string) => {
     addHapticFeedback("medium");
-    toast.success(`Effect applied: ${effectId}`);
+    if (effectId === "brighten" || effectId === "darken" || effectId === "contrast-up" || effectId === "reset-video") {
+      applyVideoEffect(effectId);
+      return;
+    }
+    applyAudioEffect(effectId);
   };
 
   if (!hasTimelineContent && mediaItems.length === 0) {
@@ -135,7 +169,7 @@ export function MobileEffectsPanel({ className, onRequestMedia }: MobileEffectsP
             <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <Sparkles className="h-4 w-4 text-primary" />
             </div>
-            <h2 className="text-sm font-bold uppercase tracking-wider">Effects & FX</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider">Effects</h2>
           </div>
 
           <TabsList className="grid w-full grid-cols-2 rounded-xl bg-muted/30 h-11 p-1">
@@ -154,23 +188,32 @@ export function MobileEffectsPanel({ className, onRequestMedia }: MobileEffectsP
               Audio FX
             </TabsTrigger>
           </TabsList>
+          <p className="mt-3 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            Applies to clips at the current playhead position.
+          </p>
         </div>
 
-        {/* Tab Content — properly inside the Tabs context */}
         <div className="flex-1 min-h-0">
           <TabsContent value="video" className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col">
-            <EffectsGrid effects={videoEffects} onApply={handleEffectApply} />
+            <div className="grid grid-cols-3 gap-3 p-4">
+              {VIDEO_EFFECTS.map((effect) => (
+                <EffectCard key={effect.id} effect={effect} onApply={handleEffectApply} />
+              ))}
+            </div>
           </TabsContent>
 
           <TabsContent value="audio" className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col">
-            <EffectsGrid effects={audioEffects} onApply={handleEffectApply} />
+            <div className="grid grid-cols-3 gap-3 p-4">
+              {AUDIO_EFFECTS.map((effect) => (
+                <EffectCard key={effect.id} effect={effect} onApply={handleEffectApply} />
+              ))}
+            </div>
           </TabsContent>
         </div>
 
-        {/* Footer hint */}
         <div className="flex-shrink-0 p-3 bg-muted/10 text-center border-t border-border/50">
           <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-            Tap an effect to apply
+            Working effects only
           </p>
         </div>
       </Tabs>

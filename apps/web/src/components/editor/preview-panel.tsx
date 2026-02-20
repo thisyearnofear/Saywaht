@@ -30,12 +30,14 @@ interface PreviewPanelProps {
   /** When true, the preview fills the entire container (no aspect-ratio constraint) */
   fillContainer?: boolean;
   onTextElementTap?: (textId: string) => void;
+  showPlaybackControls?: boolean;
 }
 
 export function PreviewPanel({
   controlsVariant = "topbar",
   fillContainer = false,
   onTextElementTap,
+  showPlaybackControls = true,
 }: PreviewPanelProps) {
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
@@ -156,6 +158,11 @@ export function PreviewPanel({
   // Render a clip
   const renderClip = (clipData: any, index: number) => {
     const { clip, track, mediaItem } = clipData;
+    const brightness = clip.brightness ?? 1;
+    const contrast = clip.contrast ?? 1;
+    const saturation = clip.saturation ?? 1;
+    const cssFilter = `brightness(${brightness}) contrast(${contrast}) saturate(${saturation})`;
+    const clipAudioGain = clip.audioGain ?? 1;
 
     // Test clips
     if (!mediaItem || clip.mediaId === "test") {
@@ -184,6 +191,7 @@ export function PreviewPanel({
             trimStart={clip.trimStart}
             trimEnd={clip.trimEnd}
             clipDuration={clip.duration}
+            clipAudioGain={clipAudioGain}
           />
         );
       }
@@ -203,6 +211,8 @@ export function PreviewPanel({
             clipSpeed={clip.speed}
             clipReversed={clip.reversed}
             objectFit={videoObjectFit}
+            cssFilter={cssFilter}
+            clipAudioGain={clipAudioGain}
           />
         </div>
       );
@@ -216,7 +226,7 @@ export function PreviewPanel({
             src={mediaItem.url}
             alt={mediaItem.name}
             fill
-            style={{ objectFit: videoObjectFit }}
+            style={{ objectFit: videoObjectFit, filter: cssFilter }}
             draggable={false}
           />
         </div>
@@ -233,6 +243,7 @@ export function PreviewPanel({
           trimStart={clip.trimStart}
           trimEnd={clip.trimEnd}
           clipDuration={clip.duration}
+          clipAudioGain={clipAudioGain}
         />
       );
     }
@@ -355,7 +366,7 @@ export function PreviewPanel({
 
   return (
     <div className="h-full w-full flex flex-col min-h-0 min-w-0">
-      {controlsVariant === "topbar" && (
+      {controlsVariant === "topbar" && showPlaybackControls && (
         <div className="border-b p-2 flex items-center justify-center gap-2 text-xs flex-shrink-0">
           {renderPlaybackControls()}
         </div>
@@ -423,7 +434,7 @@ export function PreviewPanel({
         </div>
 
         {/* Floating controls — restored for both overlay and legacy topbar modes */}
-        {(controlsAreOverlay || controlsVariant === "topbar") && (
+        {showPlaybackControls && (controlsAreOverlay || controlsVariant === "topbar") && (
           <div
             className={cn(
               "absolute bottom-8 left-1/2 -translate-x-1/2 z-20 transition-all duration-300",

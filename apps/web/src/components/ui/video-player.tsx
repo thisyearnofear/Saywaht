@@ -15,6 +15,8 @@ interface VideoPlayerProps {
   clipSpeed?: number; // Per-clip speed override
   clipReversed?: boolean; // Per-clip reversal
   objectFit?: "contain" | "cover"; // Display mode for the video
+  cssFilter?: string;
+  clipAudioGain?: number;
 }
 
 export function VideoPlayer({
@@ -29,6 +31,8 @@ export function VideoPlayer({
   clipSpeed,
   clipReversed = false,
   objectFit = "contain",
+  cssFilter,
+  clipAudioGain = 1,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const loadTimeoutRef = useRef<number | null>(null);
@@ -240,10 +244,10 @@ export function VideoPlayer({
     const video = videoRef.current;
     if (!video) return;
 
-    video.volume = muteAudio ? 0 : volume;
+    video.volume = muteAudio ? 0 : Math.max(0, Math.min(1, volume * clipAudioGain));
     video.muted = muteAudio || muted;
     video.playbackRate = finalSpeed;
-  }, [volume, speed, muted, muteAudio, finalSpeed]);
+  }, [volume, speed, muted, muteAudio, finalSpeed, clipAudioGain]);
 
   return (
     <div className="relative w-full h-full bg-black">
@@ -293,7 +297,7 @@ export function VideoPlayer({
         controls={false}
         disablePictureInPicture
         disableRemotePlayback
-        style={{ pointerEvents: "none" }}
+        style={{ pointerEvents: "none", ...(cssFilter ? { filter: cssFilter } : {}) }}
         onContextMenu={(e) => e.preventDefault()}
         onError={(e) => {
           console.error("Video error event:", e, "src:", src);

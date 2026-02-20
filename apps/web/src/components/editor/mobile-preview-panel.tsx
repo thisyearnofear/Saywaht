@@ -169,6 +169,7 @@ export function MobilePreviewPanel({
             controlsVariant={controlsVariant}
             fillContainer={isFullscreen}
             onTextElementTap={onTextElementTap}
+            showPlaybackControls={false}
           />
         </div>
       </div>
