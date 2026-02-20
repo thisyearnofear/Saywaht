@@ -224,7 +224,13 @@ export function MobileEditorLayout({
               className="absolute inset-0 flex items-center justify-center touch-manipulation z-10"
               onClick={() => {
                 addHapticFeedback("light");
-                toggle();
+                // Explicitly call play to unblock autoplay if stalled
+                if (!isPlaying) {
+                  const { play } = usePlaybackStore.getState();
+                  play();
+                } else {
+                  toggle();
+                }
               }}
               aria-label={isPlaying ? "Pause" : "Play"}
               onDoubleClick={(e) => {
@@ -236,9 +242,9 @@ export function MobileEditorLayout({
                 <motion.div
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1, y: 0 }}
-                  className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center backdrop-blur-3xl border border-white/20 shadow-[0_0_50px_rgba(255,255,255,0.1)]"
+                  className="w-20 h-20 xxs:w-24 xxs:h-24 rounded-full bg-white/5 flex items-center justify-center backdrop-blur-3xl border border-white/20 shadow-[0_0_50px_rgba(255,255,255,0.1)]"
                 >
-                  <Play className="h-12 w-12 text-white fill-white ml-2" />
+                  <Play className="h-10 w-10 xxs:h-12 xxs:w-12 text-white fill-white ml-1.5 xxs:ml-2" />
                 </motion.div>
               )}
             </button>
@@ -300,11 +306,11 @@ export function MobileEditorLayout({
                 </div>
 
                 <button
-                  className="w-full flex flex-col items-center gap-1 text-white/40 hover:text-white transition-colors touch-manipulation group pb-1"
+                  className="w-full flex flex-col items-center gap-1.5 text-white/50 hover:text-white transition-all touch-manipulation group pb-safe-offset-2 active:scale-95"
                   onClick={toggleViewMode}
                 >
-                  <ChevronUp className="h-4 w-4 animate-bounce group-hover:text-primary" />
-                  <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white/50">
+                  <ChevronUp className="h-5 w-5 animate-bounce group-hover:text-primary transition-colors" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.4em] group-hover:text-primary transition-colors">
                     Open Studio
                   </span>
                 </button>

@@ -27,11 +27,11 @@ export function MobileTemplateBrowser() {
   const [mainTab, setMainTab] = useState<"packs" | "stock">("stock");
   // Enhanced Categories with curated imagery for Discovery Mode
   const STOCK_CATEGORIES = [
-    { name: "Aesthetic", query: "vertical aesthetic", image: "https://images.pexels.com/photos/2832432/pexels-photo-2832432.jpeg?auto=compress&cs=tinysrgb&w=800" },
+    { name: "Animals", query: "animals vertical", image: "https://images.pexels.com/photos/45201/kitty-cat-baby-akc-45201.jpeg?auto=compress&cs=tinysrgb&w=800" },
+    { name: "AI", query: "artificial intelligence vertical", image: "https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&w=800" },
     { name: "Nature", query: "nature vertical", image: "https://images.pexels.com/photos/15286/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=800" },
-    { name: "Abstract", query: "abstract background vertical", image: "https://images.pexels.com/photos/2693212/pexels-photo-2693212.jpeg?auto=compress&cs=tinysrgb&w=800" },
-    { name: "Tech", query: "future tech vertical", image: "https://images.pexels.com/photos/2582937/pexels-photo-2582937.jpeg?auto=compress&cs=tinysrgb&w=800" },
-    { name: "Street", query: "street photography vertical", image: "https://images.pexels.com/photos/3052361/pexels-photo-3052361.jpeg?auto=compress&cs=tinysrgb&w=800" },
+    { name: "Drone", query: "drone vertical", image: "https://images.pexels.com/photos/2050748/pexels-photo-2050748.jpeg?auto=compress&cs=tinysrgb&w=800" },
+    { name: "Meme", query: "funny animals vertical", image: "https://images.pexels.com/photos/5490276/pexels-photo-5490276.jpeg?auto=compress&cs=tinysrgb&w=800" },
     { name: "Mood", query: "cinematic mood vertical", image: "https://images.pexels.com/photos/1670977/pexels-photo-1670977.jpeg?auto=compress&cs=tinysrgb&w=800" },
   ];
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");

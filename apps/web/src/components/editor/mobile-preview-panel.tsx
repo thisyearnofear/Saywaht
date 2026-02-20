@@ -149,7 +149,10 @@ export function MobilePreviewPanel({
       )}
 
       <div
-        className="h-full w-full overflow-hidden flex items-center justify-center p-2"
+        className={cn(
+          "h-full w-full overflow-hidden flex items-center justify-center",
+          !isFullscreen ? "p-2" : "p-0"
+        )}
         {...gestureHandlers}
       >
         <div

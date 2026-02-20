@@ -349,13 +349,16 @@ export function PreviewPanel({ controlsVariant = "topbar" }: PreviewPanelProps) 
         </div>
       )}
 
-      {/* Preview Area - Scrollable to prevent portrait format from dominating */}
+      {/* Preview Area - Edge-to-edge in overlay mode */}
       <div
-        className="flex-1 flex items-center justify-center p-2 sm:p-4 bg-gray-900 relative overflow-auto"
+        className={cn(
+          "flex-1 flex items-center justify-center bg-black relative overflow-hidden",
+          !controlsAreOverlay ? "p-2 sm:p-4 bg-gray-900" : "p-0"
+        )}
         style={{ minHeight: "300px" }}
-        onPointerMove={() => controlsAreOverlay && setShowOverlayControls(true)}
-        onTouchStart={() => controlsAreOverlay && setShowOverlayControls(true)}
-        onClick={() => controlsAreOverlay && setShowOverlayControls(true)}
+        onPointerMove={() => (controlsAreOverlay || showOverlayControls) && setShowOverlayControls(true)}
+        onTouchStart={() => (controlsAreOverlay || showOverlayControls) && setShowOverlayControls(true)}
+        onClick={() => (controlsAreOverlay || showOverlayControls) && setShowOverlayControls(true)}
       >
         <div
           className="flex items-center justify-center flex-1"
@@ -366,17 +369,18 @@ export function PreviewPanel({ controlsVariant = "topbar" }: PreviewPanelProps) 
         >
           <div
             ref={previewRef}
-            className="relative overflow-hidden rounded-sm bg-black border border-gray-600"
+            className={cn(
+              "relative overflow-hidden bg-black transition-all duration-500",
+              !controlsAreOverlay ? "rounded-sm border border-gray-600" : "border-none shadow-2xl"
+            )}
             style={{
               aspectRatio: aspectRatio.toString(),
               width: "auto",
               height: "auto",
               maxWidth: "100%",
               maxHeight: "100%",
-              // In topbar mode (tools mode), we want it to fit the 22-32vh container
-              // In overlay mode (fullscreen), we want it to fill as much as possible
-              minWidth: "150px", // Reduced min size for very small panels
-              minHeight: "150px",
+              minWidth: "100px",
+              minHeight: "100px",
             }}
           >
             {activeClips.length === 0 ? (
@@ -401,17 +405,17 @@ export function PreviewPanel({ controlsVariant = "topbar" }: PreviewPanelProps) 
           </div>
         </div>
 
-        {/* Floating controls — only show when in 'topbar' mode (editor tools) */}
-        {controlsVariant === "topbar" && (
+        {/* Floating controls — restored for both overlay and legacy topbar modes */}
+        {(controlsAreOverlay || controlsVariant === "topbar") && (
           <div
             className={cn(
-              "absolute bottom-4 left-1/2 -translate-x-1/2 z-20 transition-all duration-200",
+              "absolute bottom-8 left-1/2 -translate-x-1/2 z-20 transition-all duration-300",
               showOverlayControls
                 ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-2 pointer-events-none"
+                : "opacity-0 translate-y-4 pointer-events-none"
             )}
           >
-            <div className="flex items-center justify-center gap-2 rounded-full border border-white/20 bg-black/65 px-2 py-2 backdrop-blur-sm">
+            <div className="flex items-center justify-center gap-2 rounded-full border border-white/20 bg-black/60 px-2 py-2 backdrop-blur-xl shadow-2xl">
               {renderPlaybackControls()}
             </div>
           </div>
