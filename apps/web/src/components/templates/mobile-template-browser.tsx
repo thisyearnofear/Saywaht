@@ -25,8 +25,15 @@ import { useSceneStore } from "@/stores/scene-store";
 export function MobileTemplateBrowser() {
   const { categories, isLoading, selectTemplate, applySelectedTemplate } = useTemplateStore();
   const [mainTab, setMainTab] = useState<"packs" | "stock">("stock");
-  // Filtered for better mobile fit: short, punchy keywords
-  const STOCK_CATEGORIES = ["Aesthetic", "Nature", "Abstract", "Tech", "Street", "Mood"];
+  // Enhanced Categories with curated imagery for Discovery Mode
+  const STOCK_CATEGORIES = [
+    { name: "Aesthetic", query: "vertical aesthetic", image: "https://images.pexels.com/photos/2832432/pexels-photo-2832432.jpeg?auto=compress&cs=tinysrgb&w=800" },
+    { name: "Nature", query: "nature vertical", image: "https://images.pexels.com/photos/15286/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=800" },
+    { name: "Abstract", query: "abstract background vertical", image: "https://images.pexels.com/photos/2693212/pexels-photo-2693212.jpeg?auto=compress&cs=tinysrgb&w=800" },
+    { name: "Tech", query: "future tech vertical", image: "https://images.pexels.com/photos/2582937/pexels-photo-2582937.jpeg?auto=compress&cs=tinysrgb&w=800" },
+    { name: "Street", query: "street photography vertical", image: "https://images.pexels.com/photos/3052361/pexels-photo-3052361.jpeg?auto=compress&cs=tinysrgb&w=800" },
+    { name: "Mood", query: "cinematic mood vertical", image: "https://images.pexels.com/photos/1670977/pexels-photo-1670977.jpeg?auto=compress&cs=tinysrgb&w=800" },
+  ];
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [isApplying, setIsApplying] = useState<string | null>(null);
 
@@ -73,11 +80,16 @@ export function MobileTemplateBrowser() {
     if (mainTab !== 'stock') return;
 
     const timer = setTimeout(async () => {
+      // Don't auto-fetch if we are in Discovery mode (empty search)
+      if (!searchQuery) {
+        setIsPexelsLoading(false);
+        setPexelsResults([]);
+        return;
+      }
+
       setIsPexelsLoading(true);
       try {
-        // Default to 'vertical aesthetic' if empty to ensure portrait content and better results
-        const query = searchQuery || "vertical aesthetic";
-        const response = await pexelsService.search(query, 'video', 1, 12, 'portrait');
+        const response = await pexelsService.search(searchQuery, 'video', 1, 12, 'portrait');
         setPexelsResults(response.videos || []);
       } catch (err) {
         console.error("Pexels load failed:", err);
@@ -253,36 +265,37 @@ export function MobileTemplateBrowser() {
                 exit={{ opacity: 0, y: -5 }}
                 className="space-y-3"
               >
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    className="bg-white/5 border-white/10 rounded-xl pl-10 h-10 text-xs placeholder:text-muted-foreground"
-                    placeholder="Search 10,000+ stock clips..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-
-                {/* Discovery Chips - Refined for mobile */}
-                <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-4 px-4 pb-2 snap-x snap-mandatory">
-                  {STOCK_CATEGORIES.map((cat) => (
+                {searchQuery ? (
+                  <div className="flex items-center gap-2">
                     <button
-                      key={cat}
                       onClick={() => {
-                        setSearchQuery(cat);
+                        setSearchQuery("");
                         addHapticFeedback("light");
                       }}
-                      className={cn(
-                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border snap-start",
-                        searchQuery.toLowerCase() === cat.toLowerCase()
-                          ? "bg-white text-black border-white shadow-[0_4px_12px_rgba(255,255,255,0.2)]"
-                          : "bg-white/5 border-white/5 text-white/50 hover:bg-white/10"
-                      )}
+                      className="h-10 w-10 shrink-0 bg-white/5 border border-white/5 rounded-xl flex items-center justify-center text-white"
                     >
-                      {cat}
+                      <ChevronRight className="h-4 w-4 rotate-180" />
                     </button>
-                  ))}
-                </div>
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        className="bg-white/5 border-white/10 rounded-xl pl-10 h-10 text-xs text-white"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search stock..."
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <h2 className="text-xl font-black italic uppercase tracking-tighter text-white">
+                      Discovery
+                    </h2>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                      Pick a mood to start exploring
+                    </p>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -354,28 +367,78 @@ export function MobileTemplateBrowser() {
         ) : (
           /* STOCK LIBRARY VIEW */
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-3">
-              {pexelsResults.map((video) => (
-                <div
-                  key={video.id}
-                  className="relative aspect-[9/16] rounded-2xl overflow-hidden bg-white/5 border border-white/5 group"
-                  onClick={() => handleUsePexelsVideo(video)}
-                >
-                  <HoverVideoPreview
-                    videoSrc={video.video_files.find(f => f.quality === 'sd')?.link || video.video_files[0].link}
-                    alt={video.user.name}
-                  />
-                  <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
-                    <p className="text-[10px] font-bold text-white uppercase tracking-tighter truncate">
-                      {video.user.name}
-                    </p>
+            {!searchQuery ? (
+              /* DISCOVERY GRID */
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="grid grid-cols-2 gap-4"
+              >
+                {STOCK_CATEGORIES.map((cat, i) => (
+                  <motion.button
+                    key={cat.name}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    onClick={() => {
+                      setSearchQuery(cat.query);
+                      addHapticFeedback("medium");
+                    }}
+                    className="relative aspect-square rounded-[2rem] overflow-hidden group border border-white/5 active:scale-95 transition-transform"
+                  >
+                    <img
+                      src={cat.image}
+                      alt={cat.name}
+                      className="absolute inset-0 w-full h-full object-cover brightness-75 group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute inset-x-0 bottom-4 text-center">
+                      <span className="text-sm font-black italic uppercase tracking-widest text-white drop-shadow-lg">
+                        {cat.name}
+                      </span>
+                    </div>
+                  </motion.button>
+                ))}
+              </motion.div>
+            ) : (
+              /* SEARCH RESULTS GRID */
+              <div className="grid grid-cols-2 gap-3">
+                {pexelsResults.map((video) => (
+                  <div
+                    key={video.id}
+                    className="relative aspect-[9/16] rounded-2xl overflow-hidden bg-white/5 border border-white/5 group"
+                    onClick={() => handleUsePexelsVideo(video)}
+                  >
+                    <HoverVideoPreview
+                      videoSrc={video.video_files.find(f => f.quality === 'sd')?.link || video.video_files[0].link}
+                      alt={video.user.name}
+                    />
+                    <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+                      <p className="text-[10px] font-bold text-white uppercase tracking-tighter truncate">
+                        {video.user.name}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            {isPexelsLoading && (
-              <div className="flex justify-center py-10">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                ))}
+                {isPexelsLoading && (
+                  <div className="col-span-2 flex justify-center py-10">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                )}
+                {pexelsResults.length === 0 && !isPexelsLoading && (
+                  <div className="col-span-2 py-20 text-center">
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                      No results for "{searchQuery}"
+                    </p>
+                    <Button
+                      variant="link"
+                      className="mt-2 text-primary"
+                      onClick={() => setSearchQuery("")}
+                    >
+                      Back to Discovery
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
