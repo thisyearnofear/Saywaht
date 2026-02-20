@@ -8,7 +8,6 @@ import {
   RotateCcw,
   Check,
   X,
-  Sparkles,
 } from "@/lib/icons";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { cn } from "@/lib/utils";
@@ -52,8 +51,6 @@ export function MobileRecordingInterface({
   const [recordingState, setRecordingState] = useState<MobileRecorderState>("idle");
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [currentHint, setCurrentHint] = useState<string>("");
-  const [audioLevel, setAudioLevel] = useState(0);
 
   // Cleanup animation on unmount
   useEffect(() => {
@@ -77,16 +74,6 @@ export function MobileRecordingInterface({
     isCritical: recordingTime >= MAX_RECORDING_DURATION * 0.9,
   };
 
-  // Update current hint as recording progresses
-  useEffect(() => {
-    if (recordingState === "recording") {
-      if (recordingTime < 2) setCurrentHint("Start speaking clearly...");
-      else if (recordingTime < 5) setCurrentHint("Great! Keep going...");
-      else if (recordingTime < 8) setCurrentHint("Almost there...");
-      else setCurrentHint("Finish up!");
-    }
-  }, [recordingTime, recordingState]);
-
   useEffect(() => {
     onRecordingStateChange?.(recordingState);
   }, [recordingState, onRecordingStateChange]);
@@ -109,7 +96,7 @@ export function MobileRecordingInterface({
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 128; // Smaller for mobile performance
+    analyser.fftSize = 64; // Smaller for minimal visualizer
     source.connect(analyser);
     analyserRef.current = analyser;
 
@@ -127,27 +114,18 @@ export function MobileRecordingInterface({
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const barWidth = (canvas.width / bufferLength) * 2.5;
-      let barHeight;
-      let x = 0;
+      // Simple centered bars
+      const barWidth = (canvas.width / bufferLength) * 0.8;
+      let x = (canvas.width - (bufferLength * (barWidth + 1))) / 2;
 
       for (let i = 0; i < bufferLength; i++) {
-        barHeight = dataArray[i] / 2;
+        const barHeight = (dataArray[i] / 255) * canvas.height;
+        
+        ctx.fillStyle = recordingState === "recording" ? "#ef4444" : "#3b82f6";
+        ctx.fillRect(x, (canvas.height - barHeight) / 2, barWidth, barHeight);
 
-        // Dynamic gradient
-        const gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
-        gradient.addColorStop(0, "#3b82f6"); // Blue
-        gradient.addColorStop(1, "#ef4444"); // Red
-
-        ctx.fillStyle = gradient;
-        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-
-        x += barWidth + 1;
+        x += barWidth + 2;
       }
-
-      // Update audio level state for simpler visualizer
-      const average = dataArray.reduce((a, b) => a + b) / bufferLength;
-      setAudioLevel(average / 255);
     };
 
     draw();
@@ -158,7 +136,7 @@ export function MobileRecordingInterface({
       }
       audioContext.close();
     };
-  }, []);
+  }, [recordingState]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -184,7 +162,6 @@ export function MobileRecordingInterface({
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         setAudioBlob(blob);
         setRecordingState("completed");
-        setAudioLevel(0);
 
         // Stop all tracks
         stream.getTracks().forEach((track) => track.stop());
@@ -223,8 +200,6 @@ export function MobileRecordingInterface({
       setRecordingState("idle");
       setRecordingTime(0);
       setAudioBlob(null);
-      setCurrentHint("");
-      setAudioLevel(0);
       return;
     }
 
@@ -250,118 +225,60 @@ export function MobileRecordingInterface({
       onClose();
     }
   };
+  
   if (!isOpen) return null;
 
   return (
-    <div className="rounded-xl border border-red-500/20 bg-background/95 p-3 shadow-2xl">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div
-            className={cn(
-              "h-2.5 w-2.5 rounded-full",
-              recordingState === "recording" ? "bg-red-500 animate-pulse" : "bg-muted-foreground/40"
-            )}
-          />
-          <span className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">
-            Voiceover
-          </span>
-          <span
-            className={cn(
-              "rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-widest",
-              countdownState.isCritical
-                ? "bg-red-500/15 text-red-500"
-                : countdownState.isWarning
-                  ? "bg-orange-500/15 text-orange-500"
-                  : "bg-muted text-muted-foreground"
-            )}
-          >
-            {RecordingCountdown.formatCountdownTime(countdownState.remaining)}
-          </span>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-full"
-          onClick={onClose}
-          disabled={recordingState === "recording"}
-          aria-label="Close recording"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+    <div className="rounded-xl border border-border/50 bg-background/95 p-4 shadow-sm flex flex-col items-center gap-4">
+      {/* Top Row: Timer and Close */}
+      <div className="w-full flex items-center justify-between">
+         <div className={cn(
+             "rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-widest transition-colors",
+             recordingState === "recording" ? "bg-red-500 text-white animate-pulse" : "bg-muted text-muted-foreground"
+           )}>
+           {recordingState === "recording" 
+             ? RecordingCountdown.formatCountdownTime(countdownState.remaining) 
+             : "Ready"}
+         </div>
+         
+         <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground" onClick={onClose}>
+           <X className="h-4 w-4" />
+         </Button>
       </div>
 
-      {recordingState === "recording" && currentHint && (
-        <div className="mb-2.5 rounded-lg border border-primary/20 bg-primary/5 p-2">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
-            <span className="text-[11px] font-medium">{currentHint}</span>
-          </div>
-        </div>
-      )}
-
-      <div className="mb-3 rounded-lg border border-border/60 bg-muted/20 p-2.5">
-        <canvas
-          ref={canvasRef}
-          width={300}
-          height={48}
-          className="h-12 w-full"
-        />
-        <div className="mt-1 flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
-          <span>Live Waveform</span>
-          <span>{Math.round(audioLevel * 100)}%</span>
-        </div>
+      {/* Waveform - Clean, no text */}
+      <div className="w-full h-12 bg-muted/20 rounded-lg overflow-hidden relative border border-border/30">
+         <canvas ref={canvasRef} width={300} height={48} className="w-full h-full" />
       </div>
 
-      <div className="flex items-center justify-center gap-4">
-        {recordingState === "completed" && (
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-10 w-10 rounded-full"
-            onClick={retakeRecording}
-            aria-label="Retake recording"
-          >
-            <RotateCcw className="h-4 w-4" />
-          </Button>
-        )}
-        <Button
-          size="lg"
-          className={cn(
-            "h-14 w-14 rounded-full transition-colors",
-            recordingState === "idle" && "bg-red-500 hover:bg-red-600",
-            recordingState === "recording" && "bg-red-600 hover:bg-red-700",
-            recordingState === "completed" && "bg-green-600 hover:bg-green-700"
-          )}
-          onClick={
-            recordingState === "idle"
-              ? startRecording
-              : recordingState === "recording"
-                ? stopRecording
-                : acceptRecording
-          }
-          aria-label={
-            recordingState === "idle"
-              ? "Start recording"
-              : recordingState === "recording"
-                ? "Stop recording"
-                : "Accept recording"
-          }
-        >
-          {recordingState === "idle" && <Mic className="h-6 w-6" />}
-          {recordingState === "recording" && <Square className="h-6 w-6" />}
-          {recordingState === "completed" && <Check className="h-6 w-6" />}
-        </Button>
-      </div>
+      {/* Controls - Centered and Big */}
+      <div className="flex items-center gap-6">
+         {recordingState === "completed" && (
+           <Button variant="ghost" size="icon" onClick={retakeRecording} className="h-10 w-10 text-muted-foreground hover:text-foreground">
+              <RotateCcw className="h-5 w-5" />
+           </Button>
+         )}
 
-      <div className="mt-2 text-center text-[11px] text-muted-foreground">
-        {recordingState === "idle" && "Tap to start recording in place"}
-        {recordingState === "recording" && "Recording while preview keeps playing"}
-        {recordingState === "completed" && "Tap check to keep, or retake"}
-      </div>
-
-      <div className="mt-1.5 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-primary/80">
-        <Sparkles className="h-3.5 w-3.5" />
-        AI captions enabled
+         <Button
+           size="lg"
+           className={cn(
+             "h-16 w-16 rounded-full transition-all shadow-lg scale-100 active:scale-95 flex items-center justify-center",
+             recordingState === "idle" && "bg-red-500 hover:bg-red-600 shadow-red-500/20",
+             recordingState === "recording" && "bg-red-600 hover:bg-red-700 ring-4 ring-red-500/30",
+             recordingState === "completed" && "bg-green-500 hover:bg-green-600 shadow-green-500/20"
+           )}
+           onClick={
+             recordingState === "idle"
+               ? startRecording
+               : recordingState === "recording"
+                 ? stopRecording
+                 : acceptRecording
+           }
+         >
+           {recordingState === "idle" && <Mic className="h-7 w-7" />}
+           {recordingState === "recording" && <Square className="h-6 w-6 fill-white" />}
+           {recordingState === "completed" && <Check className="h-7 w-7" />}
+         </Button>
       </div>
     </div>
   );

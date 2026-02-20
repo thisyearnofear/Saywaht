@@ -261,36 +261,7 @@ export function VideoPlayer({
         </div>
       )}
 
-      {/* Error state - Non-blocking overlay */}
-      {hasError && (
-        <div className="absolute top-2 right-2 z-20 flex flex-col items-end gap-1 pointer-events-none">
-          <div className="flex items-center gap-1.5 bg-red-500/90 text-white px-2 py-1 rounded-md shadow-lg backdrop-blur-sm">
-            <span className="text-xs">⚠️</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider">Error</span>
-          </div>
-          {errorMessage && (
-            <div className="bg-black/60 text-white/80 px-2 py-1 rounded-md text-[9px] max-w-[150px] truncate backdrop-blur-sm">
-              {errorMessage}
-            </div>
-          )}
-          <button
-            onClick={(e) => {
-              // Enable pointer events just for the button
-              e.stopPropagation(); 
-              setHasError(false);
-              setIsVideoReady(false);
-              setErrorMessage("");
-              if (videoRef.current) {
-                armLoadTimeout();
-                videoRef.current.load();
-              }
-            }}
-            className="pointer-events-auto mt-1 px-2 py-1 bg-white/20 hover:bg-white/30 rounded text-[9px] font-bold text-white transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      )}
+      {/* Error state removed as per request to avoid clutter for ghost clips */}
 
       <video
         ref={videoRef}

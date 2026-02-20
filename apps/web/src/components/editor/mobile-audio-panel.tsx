@@ -157,46 +157,50 @@ export function MobileAudioPanel({
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
       <div className="border-b border-border/50 bg-muted/5 p-2.5 space-y-2.5">
-        <Button
-          variant="destructive"
-          className="h-10 w-full rounded-lg border-none text-[11px] font-black uppercase tracking-[0.14em]"
-          onClick={handleVoiceoverRecord}
-          disabled={isTranscribing}
-        >
-          <Mic className="mr-2 h-4 w-4" />
-          {isTranscribing ? "Transcribing..." : showMobileRecording ? "Recorder Open" : "Record Voiceover"}
-        </Button>
+        {showMobileRecording ? (
+          <MobileRecordingInterface
+            isOpen={showMobileRecording}
+            onClose={() => {
+              setShowMobileRecording(false);
+              setAutoStartRecording(false);
+            }}
+            onComplete={handleRecordingComplete}
+            autoStart={autoStartRecording}
+            onRecordingStateChange={onRecordingStateChange}
+          />
+        ) : (
+          <>
+            <Button
+              variant="destructive"
+              className="h-10 w-full rounded-lg border-none text-[11px] font-black uppercase tracking-[0.14em]"
+              onClick={handleVoiceoverRecord}
+              disabled={isTranscribing}
+            >
+              <Mic className="mr-2 h-4 w-4" />
+              {isTranscribing ? "Transcribing..." : "Record Voiceover"}
+            </Button>
 
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant="secondary"
-            className="h-10 rounded-lg bg-muted/50 border-none px-3 text-[11px] font-bold"
-            onClick={handleMusicLibrary}
-          >
-            <Music className="mr-1.5 h-4 w-4 text-primary" />
-            Stock
-          </Button>
-          <Button
-            variant="secondary"
-            className="h-10 rounded-lg bg-muted/50 border-none px-3 text-[11px] font-bold"
-            onClick={() => uploadInputRef.current?.click()}
-            disabled={isProcessing}
-          >
-            <Upload className="mr-1.5 h-4 w-4 text-primary" />
-            Import
-          </Button>
-        </div>
-
-        <MobileRecordingInterface
-          isOpen={showMobileRecording}
-          onClose={() => {
-            setShowMobileRecording(false);
-            setAutoStartRecording(false);
-          }}
-          onComplete={handleRecordingComplete}
-          autoStart={autoStartRecording}
-          onRecordingStateChange={onRecordingStateChange}
-        />
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="secondary"
+                className="h-10 rounded-lg bg-muted/50 border-none px-3 text-[11px] font-bold"
+                onClick={handleMusicLibrary}
+              >
+                <Music className="mr-1.5 h-4 w-4 text-primary" />
+                Stock
+              </Button>
+              <Button
+                variant="secondary"
+                className="h-10 rounded-lg bg-muted/50 border-none px-3 text-[11px] font-bold"
+                onClick={() => uploadInputRef.current?.click()}
+                disabled={isProcessing}
+              >
+                <Upload className="mr-1.5 h-4 w-4 text-primary" />
+                Import
+              </Button>
+            </div>
+          </>
+        )}
       </div>
 
       <ScrollArea className="flex-1">
