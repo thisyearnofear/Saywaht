@@ -1,16 +1,8 @@
 "use client";
 
-import { useState, useRef, ChangeEvent } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import {
   Mic,
   Music,
@@ -23,8 +15,10 @@ import {
 import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useTextStore } from "@/stores/text-store";
-import { useMobileContext } from "@/contexts/mobile-context";
-import { MobileRecordingInterface } from "./mobile-recording-interface";
+import {
+  MobileRecordingInterface,
+  type MobileRecorderState,
+} from "./mobile-recording-interface";
 import { cn } from "@/lib/utils";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { processMediaFiles } from "@/lib/media-processing";
@@ -35,16 +29,23 @@ import { decodeAudioToFloat32 } from "@/lib/media/audio";
 
 interface MobileAudioPanelProps {
   className?: string;
+  autoStartRecordingNonce?: number;
+  onRecordingStateChange?: (state: MobileRecorderState) => void;
 }
 
-export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
-  const { orientation } = useMobileContext();
+export function MobileAudioPanel({
+  className,
+  autoStartRecordingNonce = 0,
+  onRecordingStateChange,
+}: MobileAudioPanelProps) {
   const { mediaItems, addMediaItem } = useMediaStore();
   const { tracks, addTrack, addClipToTrack } = useTimelineStore();
   const { addTextElement } = useTextStore();
   const [showMobileRecording, setShowMobileRecording] = useState(false);
+  const [autoStartRecording, setAutoStartRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
 
   // Filter for audio files only
   const audioFiles = mediaItems.filter(
@@ -72,8 +73,15 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
 
   const handleVoiceoverRecord = () => {
     addHapticFeedback("medium");
+    setAutoStartRecording(false);
     setShowMobileRecording(true);
   };
+
+  useEffect(() => {
+    if (!autoStartRecordingNonce) return;
+    setAutoStartRecording(true);
+    setShowMobileRecording(true);
+  }, [autoStartRecordingNonce]);
 
   const generateCaptions = async (blob: Blob) => {
     setIsTranscribing(true);
@@ -174,96 +182,76 @@ export function MobileAudioPanel({ className }: MobileAudioPanelProps) {
 
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
-      {/* Header - Consistent with other panels */}
-      <div className="p-4 border-b border-border/50 bg-muted/5">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Volume2 className="h-4 w-4 text-primary" />
-          </div>
-          <h2 className="text-sm font-bold uppercase tracking-wider">Audio Tracks</h2>
-          <span className="ml-auto text-[10px] font-bold bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
-            {audioFiles.length} TOTAL
-          </span>
-        </div>
-
-        {/* Primary Record Action - Standout UI */}
+      <div className="border-b border-border/50 bg-muted/5 p-2.5 space-y-2.5">
         <Button
           variant="destructive"
-          className="h-16 w-full font-bold text-base rounded-2xl shadow-lg shadow-destructive/20 border-none transition-all active:scale-[0.98] touch-manipulation mb-4"
+          className="h-10 w-full rounded-lg border-none text-[11px] font-black uppercase tracking-[0.14em]"
           onClick={handleVoiceoverRecord}
         >
-          <div className="relative mr-3">
-            <div className="absolute inset-0 bg-white rounded-full animate-ping opacity-20" />
-            <Mic className="h-6 w-6 relative z-10" />
-          </div>
-          Record Voiceover
+          <Mic className="mr-2 h-4 w-4" />
+          {showMobileRecording ? "Recorder Open" : "Record Voiceover"}
         </Button>
 
-        {/* Secondary Actions - More compact and touch-friendly */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <Button
             variant="secondary"
-            className="h-12 rounded-xl bg-muted/50 border-none font-bold text-xs flex items-center justify-center gap-2 touch-manipulation"
+            className="h-10 rounded-lg bg-muted/50 border-none px-3 text-[11px] font-bold"
             onClick={handleMusicLibrary}
           >
-            <Music className="h-4 w-4 text-primary" />
-            Stock Music
+            <Music className="mr-1.5 h-4 w-4 text-primary" />
+            Stock
           </Button>
           <Button
             variant="secondary"
-            className="h-12 rounded-xl bg-muted/50 border-none font-bold text-xs flex items-center justify-center gap-2 touch-manipulation"
-            onClick={() => document.getElementById("audio-upload")?.click()}
+            className="h-10 rounded-lg bg-muted/50 border-none px-3 text-[11px] font-bold"
+            onClick={() => uploadInputRef.current?.click()}
+            disabled={isProcessing}
           >
-            <Upload className="h-4 w-4 text-primary" />
-            Import Audio
+            <Upload className="mr-1.5 h-4 w-4 text-primary" />
+            Import
           </Button>
         </div>
+
+        <MobileRecordingInterface
+          isOpen={showMobileRecording}
+          onClose={() => {
+            setShowMobileRecording(false);
+            setAutoStartRecording(false);
+          }}
+          onComplete={handleRecordingComplete}
+          autoStart={autoStartRecording}
+          onRecordingStateChange={onRecordingStateChange}
+        />
       </div>
 
-      {/* Audio Files List - Improved visual hierarchy */}
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-3">
+        <div className="p-3 space-y-2.5">
           {audioFiles.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
-                <Volume2 className="h-8 w-8 text-muted-foreground/40" />
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <div className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-muted/30">
+                <Volume2 className="h-6 w-6 text-muted-foreground/40" />
               </div>
-              <p className="text-sm font-semibold text-muted-foreground">No audio tracks yet</p>
-              <p className="text-xs text-muted-foreground/60 mt-1 px-8">
-                Record your voice or import background music to bring your story to life.
+              <p className="text-xs font-semibold text-muted-foreground">No audio clips yet</p>
+              <p className="mt-1 px-6 text-[11px] text-muted-foreground/60">
+                Record or import audio, then it will appear here.
               </p>
             </div>
           ) : (
-            audioFiles.map((audio, index) => (
-              <AudioFileCard key={index} audio={audio} />
+            audioFiles.map((audio) => (
+              <AudioFileCard key={audio.id} audio={audio} />
             ))
           )}
         </div>
       </ScrollArea>
 
-      {/* Hidden file input */}
       <input
-        id="audio-upload"
+        ref={uploadInputRef}
         type="file"
         accept="audio/*"
         multiple
         onChange={handleAudioUpload}
         className="hidden"
       />
-
-      {/* Mobile Recording Interface */}
-      <MobileRecordingInterface
-        isOpen={showMobileRecording}
-        onClose={() => setShowMobileRecording(false)}
-        onComplete={handleRecordingComplete}
-      />
-      
-      {/* Footer Instructions */}
-      <div className="p-3 bg-muted/10 text-center">
-        <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-          Tap record to start voiceover
-        </p>
-      </div>
     </div>
   );
 }
@@ -301,25 +289,25 @@ function AudioFileCard({ audio }: AudioFileCardProps) {
   };
 
   return (
-    <div className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card border border-border/50 shadow-sm active:bg-muted/50 transition-all">
+    <div className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 shadow-sm active:bg-muted/50 transition-all">
       <Button
         variant="secondary"
         size="icon"
-        className="h-12 w-12 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 shrink-0 border-none"
+        className="h-10 w-10 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 shrink-0 border-none"
         onClick={handlePlayPause}
       >
         {isPlaying ? (
-          <Pause className="h-5 w-5 fill-primary" />
+          <Pause className="h-4 w-4 fill-primary" />
         ) : (
-          <Play className="h-5 w-5 fill-primary ml-0.5" />
+          <Play className="h-4 w-4 fill-primary ml-0.5" />
         )}
       </Button>
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-bold text-sm truncate">
+        <h3 className="font-bold text-xs truncate">
           {audio.name || "Untitled Audio"}
         </h3>
-        <p className="text-[10px] font-medium text-muted-foreground mt-0.5">
+        <p className="text-[9px] font-medium text-muted-foreground mt-0.5">
           {duration} •{" "}
           {audio.size ? `${Math.round(audio.size / 1024)}KB` : "0KB"}
         </p>
@@ -329,7 +317,7 @@ function AudioFileCard({ audio }: AudioFileCardProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="h-10 w-10 rounded-full text-muted-foreground/40 hover:text-primary"
+          className="h-8 w-8 rounded-full text-muted-foreground/40 hover:text-primary"
           onClick={(e) => {
             e.stopPropagation();
             addHapticFeedback("light");

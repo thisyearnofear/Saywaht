@@ -28,11 +28,13 @@ import { formatTime } from "@/lib/utils";
 interface MobileTimelineProps {
   expanded?: boolean;
   onToggleExpand?: () => void;
+  compact?: boolean;
 }
 
 export function MobileTimeline({
   expanded = false,
   onToggleExpand,
+  compact = false,
 }: MobileTimelineProps) {
   // Connect to real stores
   const { currentTime, duration, seek, isPlaying, toggle } = usePlaybackStore();
@@ -226,11 +228,61 @@ export function MobileTimeline({
   }, [removeClipFromTrack]);
 
   const actualExpanded = onToggleExpand ? expanded : isExpanded;
+  const timelineProgress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   // Calculate visible time range based on zoom
   const visibleDuration = duration / zoomLevel;
   const startTime = Math.max(0, currentTime - visibleDuration / 2);
   const endTime = Math.min(duration, startTime + visibleDuration);
+
+  if (compact) {
+    return (
+      <div className="bg-background px-3 py-2">
+        <div className="mb-2 flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-8 w-8 rounded-full bg-primary/10 text-primary hover:bg-primary/20"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggle();
+            }}
+            aria-label={isPlaying ? "Pause" : "Play"}
+          >
+            {isPlaying ? (
+              <Pause className="h-4 w-4 fill-primary" />
+            ) : (
+              <Play className="h-4 w-4 fill-primary ml-0.5" />
+            )}
+          </Button>
+          <span className="text-xs font-bold tabular-nums text-muted-foreground">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </span>
+        </div>
+
+        <div
+          ref={timelineRef}
+          className="relative h-7 w-full touch-manipulation"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+        >
+          <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-muted" />
+          <div
+            className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-primary"
+            style={{ width: `${timelineProgress}%` }}
+          />
+          <div
+            className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/40 bg-background shadow"
+            style={{ left: `${timelineProgress}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

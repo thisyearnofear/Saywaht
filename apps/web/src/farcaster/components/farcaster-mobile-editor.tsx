@@ -110,18 +110,15 @@ export function FarcasterMobileEditorLayout({
     }
   };
 
-  if (!isMounted) {
-    // PREVENT WHITE FLASH: Use absolute black during hydration
-    return <div className="h-screen w-screen bg-[#000000]" />;
-  }
-
   // Determine if we should show the splash screen
-  // Show if initializing OR if the animation hasn't finished yet
-  const showSplash = isFarcasterMiniApp && (!isReady || !isSplashAnimationComplete);
+  // Show if not mounted yet OR if initializing and animation hasn't finished
+  const showSplash = !isMounted || (isFarcasterMiniApp && (!isReady || !isSplashAnimationComplete));
 
   return (
-    <div className={`h-screen w-screen flex flex-col bg-background overflow-hidden mobile-editor safe-area ${isFarcasterMiniApp ? 'farcaster-miniapp' : ''
-      }`}>
+    <div
+      className={`h-screen w-screen flex flex-col bg-background overflow-hidden mobile-editor safe-area ${isFarcasterMiniApp ? 'farcaster-miniapp' : ''}`}
+      style={{ backgroundColor: "#000" }}
+    >
       {/* Debug Panel */}
       {debugMode && (
         <div className="fixed top-0 left-0 z-50 bg-black/90 text-white p-2 text-xs max-w-sm">

@@ -163,9 +163,9 @@ export function FarcasterProvider({
       }
     };
 
-    // Minimal delay for DOM readiness
-    const timer = setTimeout(initializeSDK, 50);
-    return () => clearTimeout(timer);
+    // Start immediately — no delay needed, useEffect already runs after mount
+    initializeSDK();
+    return () => {};
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Memoize stable setters to prevent loops in consumers

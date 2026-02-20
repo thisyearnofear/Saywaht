@@ -163,7 +163,7 @@ export function MobilePreviewPanel({
             transformOrigin: "center center",
           }}
         >
-          <PreviewPanel controlsVariant={controlsVariant} />
+          <PreviewPanel controlsVariant={controlsVariant} fillContainer={isFullscreen} />
         </div>
       </div>
     </div>

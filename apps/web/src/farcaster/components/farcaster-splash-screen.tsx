@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Loader2 } from "@/lib/icons";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface FarcasterSplashScreenProps {
@@ -12,160 +11,86 @@ interface FarcasterSplashScreenProps {
 
 /**
  * Farcaster Mini App Splash Screen
- * Shows during SDK initialization with proper loading states
- * Follows Farcaster design guidelines for mini apps
+ * Matches the native Farcaster splash (black bg) for a seamless transition.
+ * Shows a minimal branded screen, then calls onComplete after a short
+ * minimum duration (to avoid jarring flashes if SDK inits instantly).
  */
 export function FarcasterSplashScreen({
   isVisible,
   onComplete,
   className,
 }: FarcasterSplashScreenProps) {
-  const [loadingStage, setLoadingStage] = useState<
-    "initializing" | "connecting" | "ready"
-  >("initializing");
-  const [progress, setProgress] = useState(0);
+  const hasCompleted = useRef(false);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
 
+  // Minimum display time so the splash doesn't flash for 0ms
   useEffect(() => {
-    if (!isVisible) return;
+    const timer = setTimeout(() => setMinTimeElapsed(true), 800);
+    return () => clearTimeout(timer);
+  }, []);
 
-    // Maximum splash screen duration - prevent infinite loading
-    const maxTimeout = setTimeout(() => {
-      console.log("Splash screen max timeout reached, proceeding to app");
-      onComplete();
-    }, 4000); // 4 second maximum (reduced from 8s)
-
-    // Faster loading stages for better UX
-    const stages = [
-      { stage: "initializing" as const, duration: 400, progress: 33 },
-      { stage: "connecting" as const, duration: 600, progress: 66 },
-      { stage: "ready" as const, duration: 300, progress: 100 },
-    ];
-
-    let currentStageIndex = 0;
-    let timeoutId: NodeJS.Timeout;
-
-    const progressStage = () => {
-      if (currentStageIndex >= stages.length) {
-        // Complete the splash screen
-        setTimeout(() => {
-          clearTimeout(maxTimeout);
-          onComplete();
-        }, 300);
-        return;
+  // Safety: force-complete after 4s max
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!hasCompleted.current) {
+        hasCompleted.current = true;
+        onComplete();
       }
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [onComplete]);
 
-      const currentStage = stages[currentStageIndex];
-      setLoadingStage(currentStage.stage);
-      setProgress(currentStage.progress);
-
-      timeoutId = setTimeout(() => {
-        currentStageIndex++;
-        progressStage();
-      }, currentStage.duration);
-    };
-
-    // Start the loading sequence
-    progressStage();
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      clearTimeout(maxTimeout);
-    };
-  }, [isVisible, onComplete]);
-
-  // PERFORAMNCE: Keep a local state to know if we should render at all
-  // to avoid overhead after initial load
-  const [shouldRender, setShouldRender] = useState(true);
-
+  // Complete once minimum time has elapsed (SDK may already be ready)
   useEffect(() => {
-    if (!isVisible && shouldRender) {
-      // Small delay after it becomes invisible to unmount completely
-      const timer = setTimeout(() => setShouldRender(false), 500);
-      return () => clearTimeout(timer);
+    if (minTimeElapsed && !hasCompleted.current) {
+      hasCompleted.current = true;
+      onComplete();
     }
-  }, [isVisible, shouldRender]);
+  }, [minTimeElapsed, onComplete]);
 
-  if (!shouldRender) return null;
-
-  const getLoadingMessage = () => {
-    switch (loadingStage) {
-      case "initializing":
-        return "Initializing Saywaht...";
-      case "connecting":
-        return "Connecting to Farcaster...";
-      case "ready":
-        return "Ready to create!";
-      default:
-        return "Loading...";
-    }
-  };
+  if (hasCompleted.current && !isVisible) return null;
 
   return (
     <div
       className={cn(
-        "fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#000000]",
-        "transition-opacity duration-700 ease-in-out",
+        "fixed inset-0 z-[100] flex flex-col items-center justify-center",
+        "transition-opacity duration-500 ease-out",
         isVisible ? "opacity-100" : "opacity-0 pointer-events-none",
         className
       )}
+      style={{ backgroundColor: "#000" }}
     >
-      {/* Farcaster-style gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-blue-600/10 to-purple-800/20 pointer-events-none" />
+      {/* Subtle gradient — matches Farcaster aesthetic */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-600/15 via-transparent to-blue-600/10 pointer-events-none" />
 
-      {/* Main content */}
-      <div className="relative flex flex-col items-center space-y-8 px-8 text-center">
-        {/* Logo/Brand */}
-        <div className="flex flex-col items-center space-y-4">
-          <div className="relative">
-            {/* Animated logo container */}
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-2xl">
-              <span className="text-2xl font-bold text-white">S</span>
-            </div>
-
-            {/* Pulsing ring animation */}
-            <div className="absolute inset-0 rounded-2xl border-2 border-purple-500/30 animate-ping" />
-            <div className="absolute inset-0 rounded-2xl border border-blue-500/20 animate-pulse" />
+      <div className="relative flex flex-col items-center gap-6">
+        {/* Logo */}
+        <div className="relative">
+          <div className="w-20 h-20 rounded-[1.25rem] bg-primary flex items-center justify-center shadow-2xl shadow-primary/30">
+            <span className="text-3xl font-black text-white italic">W</span>
           </div>
-
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-foreground">Saywaht</h1>
-            <p className="text-sm text-muted-foreground">Video Commentary Coins</p>
-          </div>
+          <div className="absolute inset-0 rounded-[1.25rem] border border-white/10 animate-pulse" />
         </div>
 
-        {/* Loading indicator */}
-        <div className="flex flex-col items-center space-y-4 w-full max-w-xs">
-          {/* Progress bar */}
-          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+        <div className="text-center space-y-1">
+          <h1 className="text-2xl font-black text-white tracking-tighter italic">
+            saywaht
+          </h1>
+          <p className="text-xs text-white/40 font-bold uppercase tracking-widest">
+            Coin Your Commentary
+          </p>
+        </div>
+
+        {/* Minimal loading indicator */}
+        <div className="flex items-center gap-1.5 mt-2">
+          {[0, 1, 2].map((i) => (
             <div
-              className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${progress}%` }}
+              key={i}
+              className="w-1.5 h-1.5 rounded-full bg-white/40 animate-pulse"
+              style={{ animationDelay: `${i * 200}ms` }}
             />
-          </div>
-
-          {/* Loading message with spinner */}
-          <div className="flex items-center space-x-3">
-            <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
-            <span className="text-sm text-muted-foreground font-medium">
-              {getLoadingMessage()}
-            </span>
-          </div>
+          ))}
         </div>
-
-        {/* Farcaster Mini App indicator */}
-        <div className="flex items-center space-x-2 px-4 py-2 bg-muted/50 rounded-full">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-xs text-muted-foreground font-medium">
-            Farcaster Mini App
-          </span>
-        </div>
-      </div>
-
-      {/* Bottom branding */}
-      <div className="absolute bottom-8 text-center">
-        <p className="text-xs text-muted-foreground">
-          Powered by Farcaster • Built for creators
-        </p>
       </div>
     </div>
   );

@@ -87,7 +87,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         {/* ENHANCEMENT: Improved viewport for mobile wallet compatibility */}
         {/* Removed user-scalable=no to prevent issues with wallet browsers */}
@@ -102,7 +102,7 @@ export default function RootLayout({
         {/* ENHANCEMENT: Prevent text size adjustment on orientation change */}
         <meta name="format-detection" content="telephone=no" />
       </head>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} font-sans antialiased`} style={{ backgroundColor: "#09090b" }}>
         <Web3Provider>
           <ThemeProvider attribute="class" forcedTheme="dark" enableSystem>
             <MobileProvider>

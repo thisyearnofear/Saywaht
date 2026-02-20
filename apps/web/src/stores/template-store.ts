@@ -7,6 +7,7 @@ import { useProjectStore } from "@/stores/project-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
 import { useSceneStore } from "@/stores/scene-store";
+import { useEditorStore } from "@/stores/editor-store";
 import { toast } from "sonner";
 
 interface TemplateStore {
@@ -186,6 +187,10 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       // Reset playhead and pause playback
       pause();
       setCurrentTime(0);
+
+      // Default to cover mode so video fills the fullscreen preview
+      useEditorStore.getState().setVideoObjectFit("cover");
+
       toast.success(`Template "${selectedTemplate.name}" applied successfully!`);
 
       // Track this template as recently used

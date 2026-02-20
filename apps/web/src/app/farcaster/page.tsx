@@ -12,7 +12,7 @@ import { FarcasterMobileEditorLayout } from "@/farcaster/components/farcaster-mo
 
 export default function FarcasterPage() {
   return (
-    <Suspense fallback={<div className="h-screen w-screen bg-black" />}>
+    <Suspense fallback={<div className="h-screen w-screen" style={{ backgroundColor: "#000" }} />}>
       <FarcasterMobileEditorLayout />
     </Suspense>
   );

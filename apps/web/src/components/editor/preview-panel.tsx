@@ -27,9 +27,11 @@ const SHOW_DEBUG_INFO = true;
 
 interface PreviewPanelProps {
   controlsVariant?: "topbar" | "overlay";
+  /** When true, the preview fills the entire container (no aspect-ratio constraint) */
+  fillContainer?: boolean;
 }
 
-export function PreviewPanel({ controlsVariant = "topbar" }: PreviewPanelProps) {
+export function PreviewPanel({ controlsVariant = "topbar", fillContainer = false }: PreviewPanelProps) {
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
   const { isPlaying, toggle, currentTime, muted, toggleMute, volume } =
@@ -353,15 +355,16 @@ export function PreviewPanel({ controlsVariant = "topbar" }: PreviewPanelProps) 
       <div
         className={cn(
           "flex-1 flex items-center justify-center bg-black relative overflow-hidden",
-          !controlsAreOverlay ? "p-2 sm:p-4 bg-gray-900" : "p-0"
+          !controlsAreOverlay ? "p-2 sm:p-4 bg-gray-900" : "p-0",
+          fillContainer && "h-full"
         )}
-        style={{ minHeight: "300px" }}
+        style={fillContainer ? undefined : { minHeight: "300px" }}
         onPointerMove={() => (controlsAreOverlay || showOverlayControls) && setShowOverlayControls(true)}
         onTouchStart={() => (controlsAreOverlay || showOverlayControls) && setShowOverlayControls(true)}
         onClick={() => (controlsAreOverlay || showOverlayControls) && setShowOverlayControls(true)}
       >
         <div
-          className="flex items-center justify-center flex-1"
+          className={cn("flex items-center justify-center flex-1", fillContainer && "w-full h-full")}
           style={{
             zoom: previewZoom,
             transformOrigin: "center",
@@ -371,9 +374,13 @@ export function PreviewPanel({ controlsVariant = "topbar" }: PreviewPanelProps) 
             ref={previewRef}
             className={cn(
               "relative overflow-hidden bg-black transition-all duration-500",
-              !controlsAreOverlay ? "rounded-sm border border-gray-600" : "border-none shadow-2xl"
+              !controlsAreOverlay ? "rounded-sm border border-gray-600" : "border-none shadow-2xl",
+              fillContainer && "!w-full !h-full"
             )}
-            style={{
+            style={fillContainer ? {
+              width: "100%",
+              height: "100%",
+            } : {
               aspectRatio: aspectRatio.toString(),
               width: "auto",
               height: "auto",
