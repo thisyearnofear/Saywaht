@@ -3,11 +3,11 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTemplateStore } from "@/stores/template-store";
-import { Template, TemplateCategory } from "@/lib/types";
+import { Template } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { HoverVideoPreview } from "./hover-video-preview";
-import { Play, Zap, Flame, Award, Music, Smartphone, Sparkles, ChevronRight, Loader2 } from "@/lib/icons";
+import { ChevronRight, Loader2, Sparkles, Video as VideoIcon, Search } from "lucide-react";
 import { resolveIpfsUrl, cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
@@ -15,26 +15,153 @@ import { pexelsService, PexelsVideo } from "@/services/pexels-service";
 import { useMediaStore } from "@/stores/media-store";
 import { useProjectStore } from "@/stores/project-store";
 import { Input } from "@/components/ui/input";
-import { Search, Video as VideoIcon } from "lucide-react";
 import { useVideoPreloader } from "@/hooks/use-video-preloader";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
 import { useSceneStore } from "@/stores/scene-store";
 
+// Helper to construct Pexels image URL
+const pexelsImg = (id: string | number) => 
+  `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=800`;
+
+const STOCK_CATEGORIES = [
+  { 
+    name: "Animals", 
+    query: "animals vertical", 
+    images: [
+      pexelsImg(247502),
+      pexelsImg(1108099),
+      pexelsImg(2295744),
+      pexelsImg(145939)
+    ]
+  },
+  { 
+    name: "AI", 
+    query: "artificial intelligence vertical", 
+    images: [
+      pexelsImg(8386440),
+      pexelsImg(8386434),
+      pexelsImg(2599244)
+    ]
+  },
+  { 
+    name: "Nature", 
+    query: "nature vertical", 
+    images: [
+      pexelsImg(3225517),
+      pexelsImg(3408744),
+      pexelsImg(2662116),
+      pexelsImg(1761279)
+    ]
+  },
+  { 
+    name: "Drone", 
+    query: "drone vertical", 
+    images: [
+      pexelsImg(1906658),
+      pexelsImg(1680140),
+      pexelsImg(2559941),
+      pexelsImg(691668)
+    ]
+  },
+  { 
+    name: "Meme", 
+    query: "funny animals vertical", 
+    images: [
+      pexelsImg(1741205),
+      pexelsImg(2061057),
+      pexelsImg(1472999),
+      pexelsImg(3687770)
+    ]
+  },
+  { 
+    name: "Mood", 
+    query: "cinematic mood vertical", 
+    images: [
+      pexelsImg(1252890),
+      pexelsImg(2387793),
+      pexelsImg(1666021),
+      pexelsImg(2662116)
+    ]
+  },
+];
+
+function RotatingCategoryCard({ 
+  category, 
+  index, 
+  onClick 
+}: { 
+  category: typeof STOCK_CATEGORIES[0]; 
+  index: number; 
+  onClick: () => void 
+}) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    // Stagger the rotation slightly so they don't all flip at once
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % category.images.length);
+    }, 4000 + (index * 500)); 
+
+    return () => clearInterval(interval);
+  }, [category.images.length, index]);
+
+  const currentImage = category.images[currentImageIndex];
+  const hasError = failedImages[currentImage];
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      onClick={() => {
+        onClick();
+        addHapticFeedback("medium");
+      }}
+      className="relative aspect-square rounded-[2rem] overflow-hidden group border border-white/5 active:scale-95 transition-transform"
+    >
+      <AnimatePresence mode="popLayout">
+        <motion.div
+          key={currentImage}
+          initial={{ opacity: 0, scale: 1.1 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1.2, ease: "easeOut" }}
+          className="absolute inset-0"
+        >
+          {hasError ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-950">
+              <VideoIcon className="h-7 w-7 text-white/70" />
+            </div>
+          ) : (
+            <img
+              src={currentImage}
+              alt={category.name}
+              className="w-full h-full object-cover brightness-75 group-hover:scale-105 transition-transform duration-500"
+              onError={() =>
+                setFailedImages((prev) => ({ ...prev, [currentImage]: true }))
+              }
+            />
+          )}
+        </motion.div>
+      </AnimatePresence>
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-4 text-center pointer-events-none">
+        <span className="text-sm font-black italic uppercase tracking-widest text-white drop-shadow-lg">
+          {category.name}
+        </span>
+      </div>
+    </motion.button>
+  );
+}
+
 export function MobileTemplateBrowser() {
   const { categories, isLoading, selectTemplate, applySelectedTemplate } = useTemplateStore();
   const [mainTab, setMainTab] = useState<"packs" | "stock">("stock");
-  // Enhanced Categories with curated imagery for Discovery Mode
-  const STOCK_CATEGORIES = [
-    { name: "Animals", query: "animals vertical", image: "https://images.pexels.com/photos/45201/kitty-cat-baby-akc-45201.jpeg?auto=compress&cs=tinysrgb&w=800" },
-    { name: "AI", query: "artificial intelligence vertical", image: "https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&w=800" },
-    { name: "Nature", query: "nature vertical", image: "https://images.pexels.com/photos/15286/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=800" },
-    { name: "Drone", query: "drone vertical", image: "https://images.pexels.com/photos/2050748/pexels-photo-2050748.jpeg?auto=compress&cs=tinysrgb&w=800" },
-    { name: "Meme", query: "funny animals vertical", image: "https://images.pexels.com/photos/5490276/pexels-photo-5490276.jpeg?auto=compress&cs=tinysrgb&w=800" },
-    { name: "Mood", query: "cinematic mood vertical", image: "https://images.pexels.com/photos/1670977/pexels-photo-1670977.jpeg?auto=compress&cs=tinysrgb&w=800" },
-  ];
-  const [failedCategoryImages, setFailedCategoryImages] = useState<Record<string, boolean>>({});
+  
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [isApplying, setIsApplying] = useState<string | null>(null);
 
@@ -103,64 +230,88 @@ export function MobileTemplateBrowser() {
   }, [searchQuery, mainTab]);
 
   const handleUsePexelsVideo = (video: PexelsVideo) => {
+    // 1. Validation
+    const bestFile = video.video_files.find(f => f.quality === 'hd') || video.video_files[0];
+    
+    if (!bestFile || !bestFile.link) {
+      toast.error("Video format not supported");
+      console.error("No valid video file found:", video);
+      return;
+    }
+
     const { addMediaItem, clearAllMedia } = useMediaStore.getState();
     const { createNewProject } = useProjectStore.getState();
     const { addTrack, addClipToTrack, setTracks } = useTimelineStore.getState();
     const { setCurrentTime, pause } = usePlaybackStore.getState();
 
-    const bestFile = video.video_files.find(f => f.quality === 'hd') || video.video_files[0];
     const mediaId = `pexels-${video.id}`;
-
-    // 1. Initialize project
-    createNewProject(`Pexels: ${video.user.name}`);
-
-    // 2. Clear existing state for a fresh start
-    clearAllMedia();
-    setTracks([]);
-
-    // 3. Add the media item
-    addMediaItem({
+    
+    console.log("Loading Pexels video:", {
       id: mediaId,
-      name: `Stock: ${video.user.name}`,
-      type: "video",
       url: bestFile.link,
-      thumbnailUrl: video.image,
-      duration: video.duration,
-      aspectRatio: video.width / video.height,
+      type: bestFile.file_type
     });
 
-    // 4. Create a track and add the clip so it's visible in the editor
-    const trackId = addTrack("video");
-    addClipToTrack(trackId, {
-      mediaId: mediaId,
-      name: `Stock: ${video.user.name}`,
-      duration: video.duration,
-      startTime: 0,
-      trimStart: 0,
-      trimEnd: 0,
-    });
+    try {
+      // 2. Initialize project
+      createNewProject(`Pexels: ${video.user.name}`);
 
-    // 5. Initialize canvas size based on video aspect ratio
-    const videoAspectRatio = video.width / video.height;
-    const { setCanvasPreset } = useCanvasStore.getState();
-    const preset = canvasPresets.reduce((prev, curr) => {
-      return (Math.abs(curr.aspectRatio - videoAspectRatio) < Math.abs(prev.aspectRatio - videoAspectRatio) ? curr : prev);
-    });
-    setCanvasPreset(preset);
+      // 3. Clear existing state for a fresh start
+      clearAllMedia();
+      setTracks([]);
 
-    // 6. Initialize scenes immediately
-    const { initializeScenes } = useSceneStore.getState();
-    const updatedProject = useProjectStore.getState().activeProject;
-    if (updatedProject) {
-      initializeScenes(updatedProject.scenes || [], updatedProject.currentSceneId);
+      // 4. Add the media item
+      addMediaItem({
+        id: mediaId,
+        name: `Stock: ${video.user.name}`,
+        type: "video",
+        url: bestFile.link,
+        thumbnailUrl: video.image,
+        duration: video.duration,
+        aspectRatio: video.width / video.height,
+      });
+
+      // 5. Create a track and add the clip so it's visible in the editor
+      const trackId = addTrack("video");
+      if (!trackId) {
+        throw new Error("Failed to create track");
+      }
+
+      addClipToTrack(trackId, {
+        mediaId: mediaId,
+        name: `Stock: ${video.user.name}`,
+        duration: video.duration,
+        startTime: 0,
+        trimStart: 0,
+        trimEnd: 0,
+      });
+
+      // 6. Initialize canvas size based on video aspect ratio
+      const videoAspectRatio = video.width / video.height;
+      const { setCanvasPreset } = useCanvasStore.getState();
+      const preset = canvasPresets.reduce((prev, curr) => {
+        return (Math.abs(curr.aspectRatio - videoAspectRatio) < Math.abs(prev.aspectRatio - videoAspectRatio) ? curr : prev);
+      });
+      setCanvasPreset(preset);
+
+      // 7. Initialize scenes immediately
+      const { initializeScenes } = useSceneStore.getState();
+      const updatedProject = useProjectStore.getState().activeProject;
+      if (updatedProject) {
+        initializeScenes(updatedProject.scenes || [], updatedProject.currentSceneId);
+      }
+
+      // 8. Reset playback state
+      pause();
+      setCurrentTime(0);
+
+      toast.success("Ready to edit!");
+      router.push("/editor");
+
+    } catch (err) {
+      console.error("Failed to load Pexels video:", err);
+      toast.error("Failed to load video");
     }
-
-    // 7. Reset playback state
-    pause();
-    setCurrentTime(0);
-
-    toast.success("Ready to edit!");
-    router.push("/editor");
   };
 
   const handleUseTemplate = async (template: Template) => {
@@ -376,40 +527,12 @@ export function MobileTemplateBrowser() {
                 className="grid grid-cols-2 gap-4"
               >
                 {STOCK_CATEGORIES.map((cat, i) => (
-                  <motion.button
+                  <RotatingCategoryCard
                     key={cat.name}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    onClick={() => {
-                      setSearchQuery(cat.query);
-                      addHapticFeedback("medium");
-                    }}
-                    className="relative aspect-square rounded-[2rem] overflow-hidden group border border-white/5 active:scale-95 transition-transform"
-                  >
-                    {failedCategoryImages[cat.name] ? (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-950">
-                        <VideoIcon className="h-7 w-7 text-white/70" />
-                      </div>
-                    ) : (
-                      <img
-                        src={cat.image}
-                        alt={cat.name}
-                        className="absolute inset-0 w-full h-full object-cover brightness-75 group-hover:scale-105 transition-transform duration-500"
-                        onError={() =>
-                          setFailedCategoryImages((prev) =>
-                            prev[cat.name] ? prev : { ...prev, [cat.name]: true }
-                          )
-                        }
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    <div className="absolute inset-x-0 bottom-4 text-center">
-                      <span className="text-sm font-black italic uppercase tracking-widest text-white drop-shadow-lg">
-                        {cat.name}
-                      </span>
-                    </div>
-                  </motion.button>
+                    category={cat}
+                    index={i}
+                    onClick={() => setSearchQuery(cat.query)}
+                  />
                 ))}
               </motion.div>
             ) : (

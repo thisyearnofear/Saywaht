@@ -84,6 +84,8 @@ export async function fetchTemplateById(id: string): Promise<Template | null> {
   }
 }
 
+import { resolveIpfsUrl } from "@/lib/utils";
+
 /**
  * Converts a template media item to an actual MediaItem
  * for use in the application. Keeps original URLs to ensure proper video playback.
@@ -93,7 +95,7 @@ export async function convertTemplateMediaItem(item: TemplateMediaItem): Promise
     // Try to get file size via HEAD request first (much faster than downloading)
     let size = 0;
     try {
-      const headResponse = await fetch(item.url, { method: 'HEAD' });
+      const headResponse = await fetch(resolveIpfsUrl(item.url), { method: 'HEAD' });
       if (headResponse.ok) {
         const contentLength = headResponse.headers.get('Content-Length');
         if (contentLength) {
@@ -120,8 +122,8 @@ export async function convertTemplateMediaItem(item: TemplateMediaItem): Promise
       name: item.name,
       type: item.type,
       file,
-      url: item.url, 
-      thumbnailUrl: item.thumbnailUrl || item.url,
+      url: resolveIpfsUrl(item.url), 
+      thumbnailUrl: resolveIpfsUrl(item.thumbnailUrl || item.url),
       duration: item.duration || 0,
       aspectRatio: item.aspectRatio,
       size: size || 0
