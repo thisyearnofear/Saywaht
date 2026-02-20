@@ -179,26 +179,6 @@ export function MobileAudioPanel({
               <Mic className="mr-2 h-4 w-4" />
               {isTranscribing ? "Transcribing..." : "Record Voiceover"}
             </Button>
-
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="secondary"
-                className="h-10 rounded-lg bg-muted/50 border-none px-3 text-[11px] font-bold"
-                onClick={handleMusicLibrary}
-              >
-                <Music className="mr-1.5 h-4 w-4 text-primary" />
-                Stock
-              </Button>
-              <Button
-                variant="secondary"
-                className="h-10 rounded-lg bg-muted/50 border-none px-3 text-[11px] font-bold"
-                onClick={() => uploadInputRef.current?.click()}
-                disabled={isProcessing}
-              >
-                <Upload className="mr-1.5 h-4 w-4 text-primary" />
-                Import
-              </Button>
-            </div>
           </>
         )}
       </div>

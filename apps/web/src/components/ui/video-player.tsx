@@ -252,12 +252,9 @@ export function VideoPlayer({
   return (
     <div className="relative w-full h-full bg-black">
       {/* Loading indicator when video is not ready */}
-      {!isVideoReady && !hasError && (
+      {!isVideoReady && !hasError && src && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
-          <div className="flex flex-col items-center gap-2">
-            <div className="h-6 w-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-            <div className="text-white text-xs font-bold uppercase tracking-widest animate-pulse">Loading...</div>
-          </div>
+          <div className="h-6 w-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
         </div>
       )}
 

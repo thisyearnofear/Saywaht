@@ -303,16 +303,9 @@ export function MobileEditorLayout({
                   <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
                     Editing • {activeTool}
                   </div>
-                  {activeTool === "record" && (
-                    <span
-                      className={cn(
-                        "rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest",
-                        isRecordingInProgress
-                          ? "bg-red-500/15 text-red-500"
-                          : "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {isRecordingInProgress ? "Now recording" : "Ready"}
+                  {activeTool === "record" && isRecordingInProgress && (
+                    <span className="rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest bg-red-500/15 text-red-500">
+                      Now recording
                     </span>
                   )}
                 </div>

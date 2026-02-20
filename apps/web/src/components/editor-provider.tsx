@@ -19,13 +19,21 @@ export function EditorProvider({ children }: EditorProviderProps) {
   const { selectedTemplate, applySelectedTemplate, clearSelectedTemplate } = useTemplateStore();
   const { initializeScenes } = useSceneStore();
   const { activeProject } = useProjectStore();
-  const { copySelectedClip, pasteClipAtPlayhead, selectedClips, removeClipFromTrack } = useTimelineStore();
-  const { currentTime, toggle, isPlaying } = usePlaybackStore();
+  const { copySelectedClip, pasteClipAtPlayhead, selectedClips, removeClipFromTrack, tracks, getTotalDuration } = useTimelineStore();
+  const { currentTime, toggle, isPlaying, setDuration } = usePlaybackStore();
 
   // Initialize editor on mount
   useEffect(() => {
     initializeApp();
   }, [initializeApp]);
+
+  // Sync timeline duration to playback store
+  useEffect(() => {
+    if (isPanelsReady) {
+      const duration = getTotalDuration();
+      setDuration(duration);
+    }
+  }, [tracks, isPanelsReady, getTotalDuration, setDuration]);
 
   // Initialize scenes when project loads
   useEffect(() => {
