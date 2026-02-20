@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Mic,
@@ -8,6 +8,9 @@ import {
   RotateCcw,
   Check,
   X,
+  Play,
+  Pause as PauseIcon,
+  Scissors,
 } from "@/lib/icons";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { cn } from "@/lib/utils";
@@ -16,13 +19,15 @@ import {
   RecordingCountdown,
 } from "@/lib/audio-recording";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import { motion, AnimatePresence } from "motion/react";
+import { addHapticFeedback } from "@/lib/mobile-utils";
 
 export type MobileRecorderState = "idle" | "recording" | "completed";
 
 interface MobileRecordingInterfaceProps {
   isOpen: boolean;
   onClose: () => void;
-  onComplete: (audioBlob: Blob) => void;
+  onComplete: (audioBlob: Blob, result: { duration: number; trimStart: number; trimEnd: number }) => void;
   autoStart?: boolean;
   onRecordingStateChange?: (state: MobileRecorderState) => void;
 }
@@ -40,35 +45,41 @@ export function MobileRecordingInterface({
   const animationFrameRef = useRef<number | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const reviewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Get playback controls and state
   const {
-    isPlaying,
-    play,
-    pause,
-    seek,
+    isPlaying: isVideoPlaying,
+    play: playVideo,
+    pause: pauseVideo,
+    seek: seekVideo,
   } = usePlaybackStore();
 
   const [recordingState, setRecordingState] = useState<MobileRecorderState>("idle");
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [isReviewPlaying, setIsReviewPlaying] = useState(false);
+  
+  // Trim state
+  const [trimStart, setTrimStart] = useState(0);
+  const [trimEnd, setTrimEnd] = useState(0); // Offset from the end
 
-  // Cleanup animation on unmount
+  // Constants
+  const MAX_RECORDING_DURATION = TIMELINE_CONSTANTS.MAX_RECORDING_DURATION || 10;
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (reviewAudioRef.current) {
+        reviewAudioRef.current.pause();
+        reviewAudioRef.current = null;
       }
     };
   }, []);
 
-  // Constants
-  const MAX_RECORDING_DURATION = TIMELINE_CONSTANTS.MAX_RECORDING_DURATION;
-
-  // Compute countdown state based on recording time
+  // Compute countdown state
   const countdownState = {
     remaining: Math.max(0, MAX_RECORDING_DURATION - recordingTime),
     isWarning: recordingTime >= MAX_RECORDING_DURATION * 0.7 && recordingTime < MAX_RECORDING_DURATION * 0.9,
@@ -82,22 +93,21 @@ export function MobileRecordingInterface({
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && recordingState === "recording") {
       mediaRecorderRef.current.stop();
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      pause();
+      pauseVideo();
+      addHapticFeedback("medium");
     }
-  }, [recordingState, pause]);
+  }, [recordingState, pauseVideo]);
 
   const visualizeAudio = useCallback((stream: MediaStream) => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 64; // Smaller for minimal visualizer
+    analyser.fftSize = 64;
     source.connect(analyser);
     analyserRef.current = analyser;
 
@@ -106,25 +116,28 @@ export function MobileRecordingInterface({
 
     const draw = () => {
       if (!canvasRef.current) return;
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      
+      // Stop animating if completed
+      if (mediaRecorderRef.current?.state === "inactive") {
+        return;
+      }
 
       animationFrameRef.current = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
 
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Simple centered bars
       const barWidth = (canvas.width / bufferLength) * 0.8;
       let x = (canvas.width - (bufferLength * (barWidth + 1))) / 2;
 
       for (let i = 0; i < bufferLength; i++) {
         const barHeight = (dataArray[i] / 255) * canvas.height;
-        
-        ctx.fillStyle = recordingState === "recording" ? "#ef4444" : "#3b82f6";
+        ctx.fillStyle = mediaRecorderRef.current?.state === "recording" ? "#ef4444" : "#3b82f6";
         ctx.fillRect(x, (canvas.height - barHeight) / 2, barWidth, barHeight);
-
         x += barWidth + 2;
       }
     };
@@ -132,18 +145,14 @@ export function MobileRecordingInterface({
     draw();
 
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       audioContext.close();
     };
-  }, [recordingState]);
+  }, []);
 
   const startRecording = useCallback(async () => {
     try {
       const stream = await requestMicrophoneAccess();
-
-      // Start visualization
       visualizeAudio(stream);
 
       const mediaRecorder = new MediaRecorder(stream, {
@@ -154,47 +163,37 @@ export function MobileRecordingInterface({
       chunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
+        if (event.data.size > 0) chunksRef.current.push(event.data);
       };
 
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         setAudioBlob(blob);
         setRecordingState("completed");
-
-        // Stop all tracks
         stream.getTracks().forEach((track) => track.stop());
       };
 
       mediaRecorder.start();
       setRecordingState("recording");
       setRecordingTime(0);
+      setTrimStart(0);
+      setTrimEnd(0);
+      seekVideo(0); // Sync video start
+      playVideo();
 
-      // Start timer to track recording time
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
       timerRef.current = setInterval(() => {
         setRecordingTime((prev) => {
           const newTime = prev + 1;
-          if (newTime >= MAX_RECORDING_DURATION) {
-            // Auto-stop when time limit reached
-            stopRecording();
-          }
+          if (newTime >= MAX_RECORDING_DURATION) stopRecording();
           return newTime;
         });
       }, 1000);
 
-      // Start video playback
-      if (!isPlaying) {
-        play();
-      }
+      addHapticFeedback("heavy");
     } catch (error) {
       console.error("Failed to start recording:", error);
     }
-  }, [visualizeAudio, stopRecording, isPlaying, play, MAX_RECORDING_DURATION]);
+  }, [visualizeAudio, stopRecording, playVideo, seekVideo, MAX_RECORDING_DURATION]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -203,82 +202,285 @@ export function MobileRecordingInterface({
       setAudioBlob(null);
       return;
     }
-
     if (autoStart && recordingState === "idle") {
       void startRecording();
     }
   }, [isOpen, autoStart, recordingState, startRecording]);
 
   const retakeRecording = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+    if (timerRef.current) clearInterval(timerRef.current);
     setRecordingState("idle");
     setRecordingTime(0);
     setAudioBlob(null);
-    seek(0);
+    if (reviewAudioRef.current) {
+      reviewAudioRef.current.pause();
+      reviewAudioRef.current = null;
+    }
+    setIsReviewPlaying(false);
+    seekVideo(0);
+    addHapticFeedback("medium");
+  };
+
+  const toggleReviewPlayback = () => {
+    if (!audioBlob) return;
+    
+    if (!reviewAudioRef.current) {
+      reviewAudioRef.current = new Audio(URL.createObjectURL(audioBlob));
+      reviewAudioRef.current.onended = () => setIsReviewPlaying(false);
+    }
+
+    if (isReviewPlaying) {
+      reviewAudioRef.current.pause();
+      pauseVideo();
+      setIsReviewPlaying(false);
+    } else {
+      const actualStart = trimStart;
+      seekVideo(actualStart);
+      playVideo();
+      reviewAudioRef.current.currentTime = actualStart;
+      reviewAudioRef.current.play();
+      setIsReviewPlaying(true);
+    }
+    addHapticFeedback("light");
   };
 
   const acceptRecording = () => {
     if (audioBlob) {
-      onComplete(audioBlob);
+      onComplete(audioBlob, { 
+        duration: recordingTime, 
+        trimStart: trimStart, 
+        trimEnd: trimEnd 
+      });
       onClose();
+      addHapticFeedback("heavy");
     }
   };
-  
+
   if (!isOpen) return null;
 
+  const isRecording = recordingState === "recording";
+  const isCompleted = recordingState === "completed";
+
   return (
-    <div className="rounded-xl border border-border/50 bg-background/95 p-4 shadow-sm flex flex-col items-center gap-4">
-      {/* Top Row: Timer and Close */}
-      <div className="w-full flex items-center justify-between">
-         <div className={cn(
-             "rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-widest transition-colors",
-             recordingState === "recording" ? "bg-red-500 text-white animate-pulse" : "bg-muted text-muted-foreground"
-           )}>
-           {RecordingCountdown.formatCountdownTime(countdownState.remaining)}
-         </div>
-         
-         <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground" onClick={onClose}>
-           <X className="h-4 w-4" />
-         </Button>
+    <motion.div 
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        "rounded-2xl border border-border/50 bg-background/95 shadow-2xl flex flex-col items-center overflow-hidden transition-all duration-500",
+        isRecording ? "p-3 gap-2" : "p-5 gap-6"
+      )}
+    >
+      <AnimatePresence mode="wait">
+        {!isRecording && (
+          <motion.div 
+            key="header"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="w-full flex items-center justify-between"
+          >
+            <div className={cn(
+                "rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest bg-muted text-muted-foreground"
+              )}>
+              {isCompleted ? "Step 2: Review & Trim" : "Step 1: Mic Ready"}
+            </div>
+            
+            <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Waveform / Feedback Area */}
+      <div className={cn(
+        "w-full bg-muted/10 rounded-xl overflow-hidden relative border border-border/20 transition-all duration-500",
+        isRecording ? "h-8" : "h-20"
+      )}>
+        <AnimatePresence mode="wait">
+          {isCompleted ? (
+            <motion.div 
+              key="trim-ui"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="absolute inset-0 p-3 flex flex-col justify-center gap-2"
+            >
+              <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-primary/60">
+                <div className="flex items-center gap-1">
+                  <Scissors className="h-3 w-3" />
+                  <span>Trim Audio</span>
+                </div>
+                <span>{recordingTime.toFixed(1)}s total</span>
+              </div>
+              
+              <div className="relative h-6 bg-muted/30 rounded-md overflow-hidden border border-white/5">
+                {/* Visual Trim Area */}
+                <div 
+                  className="absolute inset-y-0 bg-primary/20 border-x border-primary/40"
+                  style={{
+                    left: `${(trimStart / recordingTime) * 100}%`,
+                    right: `${(trimEnd / recordingTime) * 100}%`
+                  }}
+                />
+                
+                {/* Simplified Seek Bar */}
+                {isReviewPlaying && (
+                  <motion.div 
+                    className="absolute inset-y-0 w-0.5 bg-white z-10"
+                    animate={{ left: `${(reviewAudioRef.current?.currentTime || 0) / recordingTime * 100}%` }}
+                    transition={{ duration: 0.1, ease: "linear" }}
+                  />
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[8px] font-bold text-muted-foreground uppercase">
+                    <span>Start</span>
+                    <span>{trimStart.toFixed(1)}s</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min={0} 
+                    max={recordingTime - 0.5} 
+                    step={0.1}
+                    value={trimStart}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      setTrimStart(val);
+                      if (reviewAudioRef.current) reviewAudioRef.current.currentTime = val;
+                      seekVideo(val);
+                    }}
+                    className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[8px] font-bold text-muted-foreground uppercase">
+                    <span>End Offset</span>
+                    <span>{trimEnd.toFixed(1)}s</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min={0} 
+                    max={recordingTime - trimStart - 0.5} 
+                    step={0.1}
+                    value={trimEnd}
+                    onChange={(e) => setTrimEnd(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <canvas ref={canvasRef} width={300} height={80} className="w-full h-full" />
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Waveform - Clean, no text */}
-      <div className="w-full h-12 bg-muted/20 rounded-lg overflow-hidden relative border border-border/30">
-         <canvas ref={canvasRef} width={300} height={48} className="w-full h-full" />
+      {/* Controls Area */}
+      <div className={cn(
+        "flex items-center gap-8 transition-all duration-500",
+        isRecording ? "scale-90" : "scale-100"
+      )}>
+        {isCompleted && (
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={toggleReviewPlayback} 
+            className="h-12 w-12 rounded-full border-primary/20 bg-primary/5 text-primary"
+          >
+            {isReviewPlaying ? <PauseIcon className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
+          </Button>
+        )}
+
+        <div className="relative">
+          {/* Countdown Ring */}
+          {isRecording && (
+            <svg className="absolute -inset-2 w-20 h-20 -rotate-90">
+              <circle
+                cx="40"
+                cy="40"
+                r="36"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="transparent"
+                className="text-primary/10"
+              />
+              <motion.circle
+                cx="40"
+                cy="40"
+                r="36"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="transparent"
+                strokeDasharray="226.2"
+                animate={{ strokeDashoffset: (recordingTime / MAX_RECORDING_DURATION) * 226.2 }}
+                transition={{ duration: 1, ease: "linear" }}
+                className="text-primary"
+              />
+            </svg>
+          )}
+
+          <Button
+            size="lg"
+            className={cn(
+              "h-16 w-16 rounded-full transition-all shadow-xl flex items-center justify-center z-10",
+              !isRecording && !isCompleted && "bg-red-500 hover:bg-red-600 shadow-red-500/20",
+              isRecording && "bg-red-600 hover:bg-red-700 ring-offset-4 ring-offset-background ring-4 ring-red-500/30",
+              isCompleted && "bg-green-500 hover:bg-green-600 shadow-green-500/20"
+            )}
+            onClick={
+              !isRecording && !isCompleted
+                ? startRecording
+                : isRecording
+                  ? stopRecording
+                  : acceptRecording
+            }
+          >
+            {!isRecording && !isCompleted && <Mic className="h-7 w-7" />}
+            {isRecording && <Square className="h-6 w-6 fill-white" />}
+            {isCompleted && <Check className="h-7 w-7" />}
+          </Button>
+
+          {/* Mini Timer Overlay when recording */}
+          {isRecording && (
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-xl px-2 py-0.5 rounded-full border border-white/10">
+              <span className={cn(
+                "text-[10px] font-black tabular-nums",
+                countdownState.isCritical ? "text-red-500" : "text-white"
+              )}>
+                {RecordingCountdown.formatCountdownTime(countdownState.remaining)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {isCompleted && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={retakeRecording} 
+            className="h-12 w-12 rounded-full text-muted-foreground hover:text-foreground"
+          >
+            <RotateCcw className="h-5 w-5" />
+          </Button>
+        )}
       </div>
 
-      {/* Controls - Centered and Big */}
-      <div className="flex items-center gap-6">
-         {recordingState === "completed" && (
-           <Button variant="ghost" size="icon" onClick={retakeRecording} className="h-10 w-10 text-muted-foreground hover:text-foreground">
-              <RotateCcw className="h-5 w-5" />
-           </Button>
-         )}
-
-         <Button
-           size="lg"
-           className={cn(
-             "h-16 w-16 rounded-full transition-all shadow-lg scale-100 active:scale-95 flex items-center justify-center",
-             recordingState === "idle" && "bg-red-500 hover:bg-red-600 shadow-red-500/20",
-             recordingState === "recording" && "bg-red-600 hover:bg-red-700 ring-4 ring-red-500/30",
-             recordingState === "completed" && "bg-green-500 hover:bg-green-600 shadow-green-500/20"
-           )}
-           onClick={
-             recordingState === "idle"
-               ? startRecording
-               : recordingState === "recording"
-                 ? stopRecording
-                 : acceptRecording
-           }
-         >
-           {recordingState === "idle" && <Mic className="h-7 w-7" />}
-           {recordingState === "recording" && <Square className="h-6 w-6 fill-white" />}
-           {recordingState === "completed" && <Check className="h-7 w-7" />}
-         </Button>
-      </div>
-    </div>
+      <AnimatePresence>
+        {!isRecording && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            className="text-center"
+          >
+            <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+              {isCompleted ? "Step 3: Save to Project" : "Tap to Start Commentary"}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

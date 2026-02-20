@@ -79,6 +79,9 @@ const nextConfig = {
       ...config.resolve.alias,
       bs58: path.resolve(__dirname, "node_modules/bs58/src/esm/index.js"),
       "@react-native-async-storage/async-storage": false,
+      // Fix for @huggingface/transformers trying to load node-specific binaries
+      "sharp$": false,
+      "onnxruntime-node$": false,
     };
 
     // Support WASM files (used by @huggingface/transformers)
@@ -86,6 +89,13 @@ const nextConfig = {
       ...config.experiments,
       asyncWebAssembly: true,
     };
+
+    // Fix for ESM modules in dependencies
+    config.module.rules.push({
+      test: /\.mjs$/,
+      include: /node_modules/,
+      type: "javascript/auto",
+    });
 
     return config;
   },

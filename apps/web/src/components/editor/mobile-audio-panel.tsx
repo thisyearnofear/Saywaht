@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -84,7 +84,10 @@ export function MobileAudioPanel({
     }
   };
 
-  const handleRecordingComplete = (audioBlob: Blob) => {
+  const handleRecordingComplete = (
+    audioBlob: Blob, 
+    options: { duration: number; trimStart: number; trimEnd: number }
+  ) => {
     const audioFile = new File([audioBlob], `voiceover-${Date.now()}.webm`, {
       type: "audio/webm",
     });
@@ -95,7 +98,7 @@ export function MobileAudioPanel({
       type: "audio" as const,
       file: audioFile,
       url: URL.createObjectURL(audioFile),
-      duration: 0,
+      duration: options.duration,
       aspectRatio: 1,
       isLocal: true,
     };
@@ -109,12 +112,12 @@ export function MobileAudioPanel({
       mediaId: audioItem.id,
       name: audioItem.name,
       startTime: 0,
-      duration: 10,
-      trimStart: 0,
-      trimEnd: 0,
+      duration: options.duration,
+      trimStart: options.trimStart,
+      trimEnd: options.trimEnd,
     });
     
-    toast.success("Added to timeline");
+    toast.success("Added to project");
     generateCaptions(audioBlob);
   };
 
