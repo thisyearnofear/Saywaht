@@ -261,28 +261,34 @@ export function VideoPlayer({
         </div>
       )}
 
-      {/* Error state */}
+      {/* Error state - Non-blocking overlay */}
       {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20 p-4 text-center">
-          <div className="flex flex-col items-center gap-2">
-            <div className="text-red-500 text-2xl">⚠️</div>
-            <div className="text-white text-xs font-bold uppercase tracking-widest">Playback Error</div>
-            {errorMessage && <div className="text-white/60 text-[10px] truncate max-w-[200px]">{errorMessage}</div>}
-            <button
-              onClick={() => {
-                setHasError(false);
-                setIsVideoReady(false);
-                setErrorMessage("");
-                if (videoRef.current) {
-                  armLoadTimeout();
-                  videoRef.current.load();
-                }
-              }}
-              className="mt-2 px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold text-white hover:bg-white/20 transition-colors"
-            >
-              Retry
-            </button>
+        <div className="absolute top-2 right-2 z-20 flex flex-col items-end gap-1 pointer-events-none">
+          <div className="flex items-center gap-1.5 bg-red-500/90 text-white px-2 py-1 rounded-md shadow-lg backdrop-blur-sm">
+            <span className="text-xs">⚠️</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Error</span>
           </div>
+          {errorMessage && (
+            <div className="bg-black/60 text-white/80 px-2 py-1 rounded-md text-[9px] max-w-[150px] truncate backdrop-blur-sm">
+              {errorMessage}
+            </div>
+          )}
+          <button
+            onClick={(e) => {
+              // Enable pointer events just for the button
+              e.stopPropagation(); 
+              setHasError(false);
+              setIsVideoReady(false);
+              setErrorMessage("");
+              if (videoRef.current) {
+                armLoadTimeout();
+                videoRef.current.load();
+              }
+            }}
+            className="pointer-events-auto mt-1 px-2 py-1 bg-white/20 hover:bg-white/30 rounded text-[9px] font-bold text-white transition-colors"
+          >
+            Retry
+          </button>
         </div>
       )}
 
