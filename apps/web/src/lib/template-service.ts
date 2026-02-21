@@ -88,52 +88,50 @@ import { resolveIpfsUrl } from "@/lib/utils";
 
 /**
  * Converts a template media item to an actual MediaItem
- * for use in the application. Keeps original URLs to ensure proper video playback.
+ * for use in the application. Performs eager ingestion (download to blob)
+ * to ensure smooth playback without buffering.
  */
 export async function convertTemplateMediaItem(item: TemplateMediaItem): Promise<MediaItem> {
-  try {
-    // Try to get file size via HEAD request first (much faster than downloading)
-    let size = 0;
-    try {
-      const headResponse = await fetch(resolveIpfsUrl(item.url), { method: 'HEAD' });
-      if (headResponse.ok) {
-        const contentLength = headResponse.headers.get('Content-Length');
-        if (contentLength) {
-          size = parseInt(contentLength, 10);
-        }
-      }
-    } catch (e) {
-      console.warn(`Could not get size via HEAD request for ${item.name}, falling back...`);
-    }
+  const finalUrl = resolveIpfsUrl(item.url);
+  let localUrl = finalUrl;
+  let size = 0;
+  let blob: Blob | null = null;
 
-    // Create a minimal File-like object if we can't get the real file immediately
-    // or if we want to avoid downloading it now.
-    // In most cases, the editor will fetch the file when it needs it.
-    
-    const mimeType = item.type === 'video' ? 'video/mp4' :
-                    item.type === 'audio' ? 'audio/mp3' :
-                    'image/jpeg';
-    
-    // Create a dummy File object - the URL is what matters for playback
-    const file = new File([], item.name, { type: mimeType });
-    
-    const mediaItem: MediaItem = {
-      id: item.id,
-      name: item.name,
-      type: item.type,
-      file,
-      url: resolveIpfsUrl(item.url), 
-      thumbnailUrl: resolveIpfsUrl(item.thumbnailUrl || item.url),
-      duration: item.duration || 0,
-      aspectRatio: item.aspectRatio,
-      size: size || 0
-    };
-    
-    return mediaItem;
-  } catch (error) {
-    console.error('Error converting template media item:', item.name, error);
-    throw error;
+  try {
+    // Eager Ingestion: Download asset to memory for zero-lag editing
+    const response = await fetch(finalUrl);
+    if (response.ok) {
+      blob = await response.blob();
+      localUrl = URL.createObjectURL(blob);
+      size = blob.size;
+    }
+  } catch (e) {
+    console.warn(`Eager ingestion failed for ${item.name}, using remote URL:`, e);
   }
+
+  const mimeType = item.type === 'video' ? 'video/mp4' :
+                  item.type === 'audio' ? 'audio/mp3' :
+                  'image/jpeg';
+  
+  // Create a real File object if we have the blob, otherwise a dummy
+  const file = blob 
+    ? new File([blob], item.name, { type: mimeType })
+    : new File([], item.name, { type: mimeType });
+  
+  const mediaItem: MediaItem = {
+    id: item.id,
+    name: item.name,
+    type: item.type,
+    file,
+    url: localUrl, 
+    thumbnailUrl: resolveIpfsUrl(item.thumbnailUrl || item.url),
+    duration: item.duration || 0,
+    aspectRatio: item.aspectRatio,
+    size: size || 0,
+    isLocal: !!blob
+  };
+  
+  return mediaItem;
 }
 
 /**

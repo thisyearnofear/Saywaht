@@ -227,10 +227,25 @@ export function VideoPlayer({
   }, [volume, speed, muted, muteAudio, finalSpeed, clipAudioGain]);
 
   return (
-    <div className="relative w-full h-full bg-black">
-      {!isVideoReady && !hasError && src && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
-          <div className="h-6 w-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+    <div className="relative w-full h-full bg-black flex items-center justify-center">
+      {/* Branded Loading Overlay */}
+      {(!isVideoReady || hasError) && src && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-20 transition-opacity duration-500">
+          <div className="relative mb-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-2xl font-black text-white shadow-[0_0_30px_rgba(var(--primary),0.3)] animate-pulse">
+              W
+            </div>
+            <div className="absolute -inset-4 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+          </div>
+          
+          <div className="text-center space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80 animate-pulse">
+              {hasError ? "Connection weak..." : "Preparing Clip"}
+            </p>
+            <p className="text-[8px] font-bold uppercase tracking-widest text-white/40">
+              {hasError ? "Retrying download" : "Optimizing for zero-lag"}
+            </p>
+          </div>
         </div>
       )}
 
@@ -238,7 +253,12 @@ export function VideoPlayer({
         ref={videoRef}
         src={src}
         poster={poster}
-        className={`w-full h-full ${objectFit === "contain" ? "object-contain" : "object-cover"} ${className} ${!isVideoReady ? "opacity-0" : "opacity-100"} transition-opacity duration-500`}
+        className={cn(
+          "w-full h-full transition-opacity duration-700",
+          objectFit === "contain" ? "object-contain" : "object-cover",
+          className,
+          !isVideoReady ? "opacity-0" : "opacity-100"
+        )}
         playsInline
         muted
         preload="auto"

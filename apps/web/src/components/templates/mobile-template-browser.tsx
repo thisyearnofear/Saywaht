@@ -229,13 +229,12 @@ export function MobileTemplateBrowser() {
     return () => clearTimeout(timer);
   }, [searchQuery, mainTab]);
 
-  const handleUsePexelsVideo = (video: PexelsVideo) => {
+  const handleUsePexelsVideo = async (video: PexelsVideo) => {
     // 1. Validation
     const bestFile = video.video_files.find(f => f.quality === 'hd') || video.video_files[0];
     
     if (!bestFile || !bestFile.link) {
       toast.error("Video format not supported");
-      console.error("No valid video file found:", video);
       return;
     }
 
@@ -245,47 +244,50 @@ export function MobileTemplateBrowser() {
     const { setCurrentTime, pause } = usePlaybackStore.getState();
 
     const mediaId = `pexels-${video.id}`;
-    
-    console.log("Loading Pexels video:", {
-      id: mediaId,
-      url: bestFile.link,
-      type: bestFile.file_type
+    setIsApplying(mediaId); // Show loading state
+
+    const loadingToast = toast.loading("Optimizing HD clip for editing...", {
+      description: "Bringing this into your local workspace for zero-lag editing."
     });
 
     try {
-      // 2. Initialize project
-      createNewProject(`Pexels: ${video.user.name}`);
+      // 2. Eager Ingestion: Download the file to a local blob
+      // This prevents the "2 seconds then buffer" issue
+      const response = await fetch(bestFile.link);
+      if (!response.ok) throw new Error("Network response was not ok");
+      
+      const blob = await response.blob();
+      const localUrl = URL.createObjectURL(blob);
 
-      // 3. Clear existing state for a fresh start
+      // 3. Initialize project
+      createNewProject(`Pexels: ${video.user.name}`);
       clearAllMedia();
       setTracks([]);
 
-          // 4. Add the media item
-          addMediaItem({
-            id: mediaId,
-            name: `Stock: ${video.user.name}`,
-            type: "video",
-            url: bestFile.link,
-            thumbnailUrl: video.image,
-            duration: Math.min(video.duration, 10), // Cap at 10s for mobile
-            aspectRatio: video.width / video.height,
-          });
-      // 5. Create a track and add the clip so it's visible in the editor
-      const trackId = addTrack("video");
-      if (!trackId) {
-        throw new Error("Failed to create track");
-      }
+      // 4. Add the local media item
+      addMediaItem({
+        id: mediaId,
+        name: `Stock: ${video.user.name}`,
+        type: "video",
+        url: localUrl, // Play from RAM/Disk
+        thumbnailUrl: video.image,
+        duration: Math.min(video.duration, 10),
+        aspectRatio: video.width / video.height,
+        isLocal: true,
+      });
 
+      // 5. Create track and clip
+      const trackId = addTrack("video");
       addClipToTrack(trackId, {
         mediaId: mediaId,
         name: `Stock: ${video.user.name}`,
-        duration: video.duration,
+        duration: Math.min(video.duration, 10),
         startTime: 0,
         trimStart: 0,
         trimEnd: 0,
       });
 
-      // 6. Initialize canvas size based on video aspect ratio
+      // 6. Canvas and Scene initialization
       const videoAspectRatio = video.width / video.height;
       const { setCanvasPreset } = useCanvasStore.getState();
       const preset = canvasPresets.reduce((prev, curr) => {
@@ -293,23 +295,25 @@ export function MobileTemplateBrowser() {
       });
       setCanvasPreset(preset);
 
-      // 7. Initialize scenes immediately
       const { initializeScenes } = useSceneStore.getState();
       const updatedProject = useProjectStore.getState().activeProject;
       if (updatedProject) {
         initializeScenes(updatedProject.scenes || [], updatedProject.currentSceneId);
       }
 
-      // 8. Reset playback state
       pause();
       setCurrentTime(0);
 
+      toast.dismiss(loadingToast);
       toast.success("Ready to edit!");
       router.push("/editor");
 
     } catch (err) {
-      console.error("Failed to load Pexels video:", err);
-      toast.error("Failed to load video");
+      console.error("Failed to ingest Pexels video:", err);
+      toast.dismiss(loadingToast);
+      toast.error("Failed to load clip. Please check your connection.");
+    } finally {
+      setIsApplying(null);
     }
   };
 
