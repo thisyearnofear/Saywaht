@@ -11,10 +11,10 @@ interface VideoPlayerProps {
   trimStart: number;
   trimEnd: number;
   clipDuration: number;
-  muteAudio?: boolean; // New prop to mute video audio when separated
-  clipSpeed?: number; // Per-clip speed override
-  clipReversed?: boolean; // Per-clip reversal
-  objectFit?: "contain" | "cover"; // Display mode for the video
+  muteAudio?: boolean;
+  clipSpeed?: number;
+  clipReversed?: boolean;
+  objectFit?: "contain" | "cover";
   cssFilter?: string;
   clipAudioGain?: number;
 }
@@ -36,7 +36,8 @@ export function VideoPlayer({
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const loadTimeoutRef = useRef<number | null>(null);
-  const { isPlaying, currentTime, volume, speed, muted } = usePlaybackStore();
+  const { isPlaying, currentTime, volume, speed, muted, setStalled } = usePlaybackStore();
+  
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -47,8 +48,7 @@ export function VideoPlayer({
 
   // Calculate if we're within this clip's timeline range
   const clipEndTime = clipStartTime + (clipDuration - trimStart - trimEnd);
-  const isInClipRange =
-    currentTime >= clipStartTime && currentTime < clipEndTime;
+  const isInClipRange = currentTime >= clipStartTime && currentTime < clipEndTime;
 
   const clearLoadTimeout = useCallback(() => {
     if (loadTimeoutRef.current !== null) {
@@ -63,11 +63,12 @@ export function VideoPlayer({
       if ((videoRef.current?.readyState ?? 0) < 2) {
         setHasError(true);
         setErrorMessage("Video load timed out");
+        setStalled(false);
       }
     }, 8000);
-  }, [clearLoadTimeout]);
+  }, [clearLoadTimeout, setStalled]);
 
-  // Handle video ready state
+  // Handle video ready and stalled states
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -77,9 +78,19 @@ export function VideoPlayer({
       setIsVideoReady(true);
       setHasError(false);
       setErrorMessage("");
-      if (process.env.NODE_ENV === "development") {
-        console.log("Video ready:", src);
+      if (isPlaying && isInClipRange) {
+        setStalled(false);
       }
+    };
+
+    const handleWaiting = () => {
+      if (isPlaying && isInClipRange) {
+        setStalled(true);
+      }
+    };
+
+    const handlePlaying = () => {
+      setStalled(false);
     };
 
     const handleLoadStart = () => {
@@ -87,57 +98,45 @@ export function VideoPlayer({
       setHasError(false);
       setErrorMessage("");
       armLoadTimeout();
-      if (process.env.NODE_ENV === "development") {
-        console.log("Video loading:", src);
-      }
     };
 
     const handleError = (e: Event) => {
       clearLoadTimeout();
       setIsVideoReady(false);
       setHasError(true);
+      setStalled(false);
       const mediaError = (e.currentTarget as HTMLVideoElement | null)?.error;
       setErrorMessage(mediaError?.message || "Failed to load video");
-      console.error("Video error:", e, "src:", src);
-    };
-
-    const handleStalled = () => {
-      if ((videoRef.current?.readyState ?? 0) < 2) {
-        setHasError(true);
-        setErrorMessage("Video stalled while loading");
-      }
     };
 
     video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('waiting', handleWaiting);
+    video.addEventListener('playing', handlePlaying);
     video.addEventListener('loadstart', handleLoadStart);
     video.addEventListener('error', handleError);
-    video.addEventListener('stalled', handleStalled);
 
-    // Check if video is already ready
+    // Initial check
     if (video.readyState >= 2) {
-      clearLoadTimeout();
       setIsVideoReady(true);
-      setHasError(false);
-      setErrorMessage("");
-    } else {
-      armLoadTimeout();
     }
 
     return () => {
       clearLoadTimeout();
       video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('waiting', handleWaiting);
+      video.removeEventListener('playing', handlePlaying);
       video.removeEventListener('loadstart', handleLoadStart);
       video.removeEventListener('error', handleError);
-      video.removeEventListener('stalled', handleStalled);
     };
-  }, [src, armLoadTimeout, clearLoadTimeout]);
+  }, [src, isPlaying, isInClipRange, setStalled, armLoadTimeout, clearLoadTimeout]);
 
   useEffect(() => {
-    // Hard reset visual state on source changes.
+    // Hard reset on source changes.
     setIsVideoReady(false);
     setHasError(false);
     setErrorMessage("");
-  }, [src]);
+    setStalled(false);
+  }, [src, setStalled]);
 
   // Sync playback events
   useEffect(() => {
@@ -166,8 +165,7 @@ export function VideoPlayer({
         )
       );
 
-      // Reduce threshold for more precise seeking
-      if (Math.abs(video.currentTime - targetTime) > 0.1) {
+      if (Math.abs(video.currentTime - targetTime) > 0.15) {
         video.currentTime = targetTime;
       }
     };
@@ -176,7 +174,6 @@ export function VideoPlayer({
       video.playbackRate = e.detail.speed;
     };
 
-    // Sync initial time
     if (video) {
       const initialVideoTime = Math.max(
         trimStart,
@@ -189,25 +186,13 @@ export function VideoPlayer({
     }
 
     window.addEventListener("playback-seek", handleSeekEvent as EventListener);
-    window.addEventListener(
-      "playback-update",
-      handleUpdateEvent as EventListener
-    );
+    window.addEventListener("playback-update", handleUpdateEvent as EventListener);
     window.addEventListener("playback-speed", handleSpeed as EventListener);
 
     return () => {
-      window.removeEventListener(
-        "playback-seek",
-        handleSeekEvent as EventListener
-      );
-      window.removeEventListener(
-        "playback-update",
-        handleUpdateEvent as EventListener
-      );
-      window.removeEventListener(
-        "playback-speed",
-        handleSpeed as EventListener
-      );
+      window.removeEventListener("playback-seek", handleSeekEvent as EventListener);
+      window.removeEventListener("playback-update", handleUpdateEvent as EventListener);
+      window.removeEventListener("playback-speed", handleSpeed as EventListener);
     };
   }, [clipStartTime, trimStart, trimEnd, clipDuration, currentTime]);
 
@@ -217,19 +202,11 @@ export function VideoPlayer({
     if (!video) return;
 
     if (isPlaying && isInClipRange) {
-      // Ensure video is ready before playing
-      if (video.readyState >= 2) { // HAVE_CURRENT_DATA
-        video.play().catch((error) => {
-          console.warn("Video play failed:", error);
-        });
+      if (video.readyState >= 2) {
+        video.play().catch(() => {});
       } else {
-        // Wait for video to be ready
         const onCanPlay = () => {
-          if (isPlaying && isInClipRange) {
-            video.play().catch((error) => {
-              console.warn("Video play failed after canplay:", error);
-            });
-          }
+          if (isPlaying && isInClipRange) video.play().catch(() => {});
         };
         video.addEventListener('canplay', onCanPlay, { once: true });
         return () => video.removeEventListener('canplay', onCanPlay);
@@ -251,14 +228,11 @@ export function VideoPlayer({
 
   return (
     <div className="relative w-full h-full bg-black">
-      {/* Loading indicator when video is not ready */}
       {!isVideoReady && !hasError && src && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
           <div className="h-6 w-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
         </div>
       )}
-
-      {/* Error state removed as per request to avoid clutter for ghost clips */}
 
       <video
         ref={videoRef}
@@ -266,50 +240,13 @@ export function VideoPlayer({
         poster={poster}
         className={`w-full h-full ${objectFit === "contain" ? "object-contain" : "object-cover"} ${className} ${!isVideoReady ? "opacity-0" : "opacity-100"} transition-opacity duration-500`}
         playsInline
-        muted // Always start muted to allow autoplay on mobile
+        muted
         preload="auto"
         controls={false}
         disablePictureInPicture
         disableRemotePlayback
         style={{ pointerEvents: "none", ...(cssFilter ? { filter: cssFilter } : {}) }}
         onContextMenu={(e) => e.preventDefault()}
-        onError={(e) => {
-          console.error("Video error event:", e, "src:", src);
-          setHasError(true);
-          const videoElement = e.currentTarget as HTMLVideoElement;
-          setErrorMessage(videoElement.error?.message || "Failed to load video");
-          setIsVideoReady(false);
-        }}
-        onLoadStart={() => {
-          setIsVideoReady(false);
-          setHasError(false);
-          setErrorMessage("");
-          armLoadTimeout();
-        }}
-        onCanPlay={() => {
-          clearLoadTimeout();
-          setIsVideoReady(true);
-          setHasError(false);
-          setErrorMessage("");
-        }}
-        onCanPlayThrough={() => {
-          clearLoadTimeout();
-          setIsVideoReady(true);
-          setHasError(false);
-          setErrorMessage("");
-        }}
-        onPlaying={() => {
-          clearLoadTimeout();
-          setIsVideoReady(true);
-          setHasError(false);
-          setErrorMessage("");
-        }}
-        onStalled={() => {
-          if (!isVideoReady) {
-            setHasError(true);
-            setErrorMessage("Video stalled while loading");
-          }
-        }}
       />
     </div>
   );

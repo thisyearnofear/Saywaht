@@ -4,6 +4,7 @@ import type { PlaybackState, PlaybackControls } from "@/lib/types";
 interface PlaybackStore extends PlaybackState, PlaybackControls {
   setDuration: (duration: number) => void;
   setCurrentTime: (time: number) => void;
+  setStalled: (stalled: boolean) => void;
 }
 
 let playbackTimer: number | null = null;
@@ -14,7 +15,7 @@ const startTimer = (store: any) => {
   // Use requestAnimationFrame for smoother updates
   const updateTime = () => {
     const state = store();
-    if (state.isPlaying && state.currentTime < state.duration) {
+    if (state.isPlaying && !state.isStalled && state.currentTime < state.duration) {
       const now = performance.now();
       const delta = (now - lastUpdate) / 1000; // Convert to seconds
       lastUpdate = now;
@@ -29,6 +30,9 @@ const startTimer = (store: any) => {
           new CustomEvent("playback-update", { detail: { time: newTime } })
         );
       }
+    } else if (state.isStalled) {
+      // Keep lastUpdate current so there's no jump when un-stalling
+      lastUpdate = performance.now();
     }
     playbackTimer = requestAnimationFrame(updateTime);
   };
@@ -46,6 +50,7 @@ const stopTimer = () => {
 
 export const usePlaybackStore = create<PlaybackStore>((set, get) => ({
   isPlaying: false,
+  isStalled: false,
   currentTime: 0,
   duration: 0,
   volume: 1,
@@ -54,12 +59,12 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => ({
   speed: 1.0,
 
   play: () => {
-    set({ isPlaying: true });
+    set({ isPlaying: true, isStalled: false });
     startTimer(get);
   },
 
   pause: () => {
-    set({ isPlaying: false });
+    set({ isPlaying: false, isStalled: false });
     stopTimer();
   },
 
@@ -75,7 +80,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => ({
   seek: (time: number) => {
     const { duration } = get();
     const clampedTime = Math.max(0, Math.min(duration, time));
-    set({ currentTime: clampedTime });
+    set({ currentTime: clampedTime, isStalled: false });
 
     const event = new CustomEvent("playback-seek", {
       detail: { time: clampedTime },
@@ -102,6 +107,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => ({
 
   setDuration: (duration: number) => set({ duration }),
   setCurrentTime: (time: number) => set({ currentTime: time }),
+  setStalled: (stalled: boolean) => set({ isStalled: stalled }),
 
   mute: () => {
     const { volume, previousVolume } = get();

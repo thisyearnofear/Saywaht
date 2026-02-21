@@ -244,6 +244,7 @@ export interface InspirationExample {
 
 export interface PlaybackState {
   isPlaying: boolean;
+  isStalled: boolean;
   currentTime: number;
   duration: number;
   volume: number;
