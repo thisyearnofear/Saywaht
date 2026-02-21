@@ -12,56 +12,42 @@
 
 ## 🛠️ Feature Roadmap
 
-### 🎨 Phase 1: Creator Studio & Core Infrastructure (Current Focus)
+### ✅ Phase 1: Creator Studio & Core Infrastructure
 **Goal:** Deliver a stable, high-performance editing experience on mobile and desktop.
 
 *   ✅ **Advanced Timeline Editor**
     *   Multi-track video/audio support
     *   Frame-perfect seeking and scrubbing
-    *   Client-side compositing (No server costs)
+    *   **Smooth Ingest**: Eager ingestion of templates to local RAM for zero-lag editing.
 *   ✅ **Wallet Architecture**
     *   Robust Wagmi/RainbowKit v2 integration
-    *   Support for Coinbase Smart Wallet & MetaMask
     *   Zora Chain (Base) compatibility
 *   ✅ **Export Engine**
-    *   Browser-native video rendering
-    *   Automatic quality optimization
-    *   FilCDN decentralized storage integration
-*   🚧 **Mobile Experience Polish**
-    *   Gesture-based timeline navigation (pinch/zoom)
-    *   Touch-optimized drag-and-drop
-    *   PWA installation support
+    *   Browser-native video rendering with FFmpeg-lite optimization.
+    *   **Strict 10s Performance Cap**: Optimized for decentralized mobile storage.
+*   ✅ **Mobile Experience Overhaul**
+    *   **Draggable Drawers**: native-feeling tool panels using `vaul`.
+    *   **Sync Start Slider**: Advanced audio/video alignment for commentary.
+    *   **Touch Drag-and-Drop**: Interactive text positioning on preview.
 
-### 📈 Phase 2: The Economy (Zora Integration Deep Dive)
+### 🚀 Phase 2: The Economy (Current Focus)
 **Goal:** Leverage the full power of the `@zoralabs/coins-sdk` for a rich trading experience.
 
 *   🚧 **Advanced Trading Interface**
     *   Real-time price charts and volume metrics
-    *   Slippage protection and transaction simulation
     *   Integration of `tradeCoin` for seamless swaps
 *   **Smart Metadata System**
     *   Strict adherence to `validateMetadataJSON` standards
-    *   Rich media previews for wallets and marketplaces
-    *   On-chain attribution for remixes
-*   **Creator Analytics Dashboard**
-    *   Portfolio tracking via `getProfile`
-    *   Holder distribution and retention metrics
-    *   Revenue and royalty visualization
+    *   On-chain attribution for commentary remixes
 
-### 🔍 Phase 3: Discovery & Social Graph
+### 🔍 Phase 3: Discovery & Social Graph (Current Focus)
 **Goal:** Drive organic growth through social discovery and personalized feeds.
 
-*   **Intelligent Discovery Feed**
-    *   Algorithmic sorting using `getCoinsNew` (Trending, New, Top Volume)
-    *   Topic-based filtering (Crypto, Tech, Politics)
-    *   "Remix This" attribution links
 *   **Farcaster Native Integration**
-    *   One-click "Cast to Mint" functionality
-    *   Interactive Farcaster Frames for trading within feeds
-    *   Social graph import for following favorite creators
-*   **Profile & Identity**
-    *   Unified creator profiles aggregating Zora + Farcaster data
-    *   Reputation scores based on volume and consistency
+    *   **Frame-to-Mint**: Directly mint coins from within a Cast.
+    *   Interactive Farcaster Frames for trading within feeds.
+*   **Intelligent Discovery Feed**
+    *   Algorithmic sorting using `getCoinsNew` (Trending, New, Top Volume).
 
 ### 🔮 Phase 4: Future Horizons
 **Goal:** Scale the platform for enterprise and power users.

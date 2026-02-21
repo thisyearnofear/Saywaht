@@ -55,6 +55,14 @@ This checklist helps validate that our critical bug fixes are working correctly.
 - [ ] **Expected**: Graceful error message, app doesn't crash
 - [ ] **Actual**: _______________
 
+#### Test: FilCDN Connection (Calibration)
+```bash
+cd apps/web
+node scripts/test-filcdn-connection.mjs
+```
+- [ ] **Expected**: "Allowance is SUFFICIENT" and "🎉 FilCDN is ready"
+- [ ] **Actual**: _______________
+
 ### ✅ **Mobile Experience Fixes**
 
 #### Test: Mobile Hook Memory Leaks

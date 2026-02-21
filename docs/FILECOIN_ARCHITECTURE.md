@@ -39,9 +39,17 @@ flowchart LR
 
 ## Storage Policy
 
-- `<= 8MB`: Grove/IPFS remains primary for lightweight uploads.
-- `> 8MB`: FilCDN/Filecoin is preferred to support longer video exports.
-- Captioned exports: archive transcript JSON alongside video on FilCDN.
+- **Strict 10s Cap**: All mobile projects and stock templates are capped at 10 seconds to ensure high reliability on Grove (< 8MB) and fast decentralized processing.
+- **<= 8MB**: Grove/IPFS remains primary for lightweight uploads and ultra-fast retrieval.
+- **> 8MB**: FilCDN/Filecoin is the automatic high-bandwidth fallback for larger exports or when Grove is under heavy load.
+- **Captioned exports**: archive transcript JSON alongside video on FilCDN for permanent on-chain context.
+
+## Integration Status
+
+✅ **Verified Fallback (Feb 2026)**:
+- Connection test script `scripts/test-filcdn-connection.mjs` confirmed successful handshake with Calibration network.
+- Preflight checks validated sufficiency of storage allowance for large project archives.
+- Signer `0x8502d079f93AEcdaC7B0Fe71Fa877721995f1901` is active and configured.
 
 ## Retrieval Model
 
