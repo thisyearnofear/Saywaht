@@ -35,6 +35,10 @@ import { MobileEffectsPanel } from "@/components/editor/mobile-effects-panel";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
+import {
+  Drawer,
+  DrawerContent,
+} from "@/components/ui/drawer";
 
 import dynamic from "next/dynamic";
 
@@ -60,14 +64,6 @@ const MOBILE_TOOL_CONFIG: Array<{ id: MobileTool; label: string; icon: typeof Mi
   { id: "text", label: "Text", icon: Type },
   { id: "effects", label: "Effects", icon: Layers },
 ];
-
-const COACHMARK_STORAGE_KEY = "saywaht-mobile-coachmark-v2";
-const TOOL_SHEET_SIZES: Record<MobileTool, string> = {
-  record: "h-[40vh] min-h-[250px] max-h-[430px]",
-  media: "h-[64vh] min-h-[360px] max-h-[620px]",
-  text: "h-[62vh] min-h-[340px] max-h-[600px]",
-  effects: "h-[56vh] min-h-[300px] max-h-[540px]",
-};
 
 export function MobileEditorLayout({
   children,
@@ -103,7 +99,7 @@ export function MobileEditorLayout({
     if (hideOnboarding || typeof window === "undefined") {
       return;
     }
-    const hasSeenCoachmark = window.localStorage.getItem(COACHMARK_STORAGE_KEY);
+    const hasSeenCoachmark = window.localStorage.getItem("saywaht-mobile-coachmark-v2");
     if (!hasSeenCoachmark) {
       setShowCoachmark(true);
     }
@@ -112,7 +108,7 @@ export function MobileEditorLayout({
   const dismissCoachmark = useCallback(() => {
     setShowCoachmark(false);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(COACHMARK_STORAGE_KEY, "seen");
+      window.localStorage.setItem("saywaht-mobile-coachmark-v2", "seen");
     }
   }, []);
 
@@ -220,7 +216,7 @@ export function MobileEditorLayout({
 
         <div
           className={cn(
-            "relative flex-1 overflow-hidden border-b border-white/10",
+            "relative flex-1 overflow-hidden",
             isRecordingInProgress && "ring-2 ring-red-500 ring-inset"
           )}
         >
@@ -282,40 +278,30 @@ export function MobileEditorLayout({
               Recording
             </div>
           )}
-
         </div>
 
-        <AnimatePresence initial={false}>
-          {activeTool && (
-            <motion.section
-              key={activeTool}
-              initial={{ y: 24, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 24, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className={cn(
-                "z-20 flex flex-col border-t border-white/10 bg-background",
-                TOOL_SHEET_SIZES[activeTool]
-              )}
-            >
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-background/95 px-3 py-2.5 backdrop-blur">
-                <div className="flex items-center gap-2">
-                  <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                    {activeTool === "record" ? "Voiceover" : `Editing • ${activeTool}`}
-                  </div>
+        {/* Tool Drawer */}
+        <Drawer open={!!activeTool} onOpenChange={(open) => !open && setActiveTool(null)}>
+          <DrawerContent className={cn(
+            "bg-background border-white/10 flex flex-col transition-all duration-500",
+            activeTool === "record" ? "h-[45vh]" : "h-[75vh]"
+          )}>
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 shrink-0">
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                  {activeTool === "record" ? "Voiceover" : `Editing • ${activeTool}`}
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 rounded-full"
+                  className="h-8 w-8 rounded-full"
                   onClick={closeToolSheet}
-                  aria-label="Close tool"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
 
-              <div className="min-h-0 flex-1">
+              <div className="flex-1 min-h-0 overflow-hidden">
                 {activeTool === "record" && (
                   <MobileAudioPanel
                     autoStartRecordingNonce={recordAutoStartNonce}
@@ -337,55 +323,27 @@ export function MobileEditorLayout({
                   <MobileEffectsPanel onRequestMedia={() => openToolSheet("media")} />
                 )}
               </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
 
-              <div className="flex items-center justify-end gap-1 border-t border-border/60 px-3 py-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 rounded-full"
-                  onClick={() => {
-                    addHapticFeedback("light");
-                    undo();
-                  }}
-                  disabled={!canUndo()}
-                  aria-label="Undo"
-                >
-                  <Undo2 className={cn("h-4 w-4", !canUndo() && "opacity-25")} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 rounded-full"
-                  onClick={() => {
-                    addHapticFeedback("light");
-                    redo();
-                  }}
-                  disabled={!canRedo()}
-                  aria-label="Redo"
-                >
-                  <Redo2 className={cn("h-4 w-4", !canRedo() && "opacity-25")} />
-                </Button>
-              </div>
-            </motion.section>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence initial={false}>
-          {timelineVisible && (
+        {/* Compact Timeline */}
+        <AnimatePresence>
+          {(activeTool === null || activeTool === "record") && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="z-20 overflow-hidden border-t border-white/10 bg-background/95"
+              className="z-20 overflow-hidden border-t border-white/10 bg-background/95 shrink-0"
             >
               <MobileTimeline compact />
             </motion.div>
           )}
         </AnimatePresence>
 
+        {/* Bottom Navigation */}
         <div
-          className="z-30 border-t border-white/10 bg-black/95 px-3 pb-safe"
+          className="z-30 border-t border-white/10 bg-black/95 px-3 pb-safe shrink-0"
           style={{ paddingBottom: "max(0.75rem, calc(env(safe-area-inset-bottom) + 0.35rem))" }}
         >
           <div className="grid grid-cols-4 gap-1.5 py-1.5">

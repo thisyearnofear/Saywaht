@@ -11,6 +11,7 @@ import {
   Play,
   Pause as PauseIcon,
   Scissors,
+  MoveHorizontal,
 } from "@/lib/icons";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { cn } from "@/lib/utils";
@@ -27,7 +28,7 @@ export type MobileRecorderState = "idle" | "recording" | "completed";
 interface MobileRecordingInterfaceProps {
   isOpen: boolean;
   onClose: () => void;
-  onComplete: (audioBlob: Blob, result: { duration: number; trimStart: number; trimEnd: number }) => void;
+  onComplete: (audioBlob: Blob, result: { duration: number; trimStart: number; trimEnd: number; startTime: number }) => void;
   autoStart?: boolean;
   onRecordingStateChange?: (state: MobileRecorderState) => void;
 }
@@ -53,6 +54,7 @@ export function MobileRecordingInterface({
     play: playVideo,
     pause: pauseVideo,
     seek: seekVideo,
+    duration: videoDuration,
   } = usePlaybackStore();
 
   const [recordingState, setRecordingState] = useState<MobileRecorderState>("idle");
@@ -60,11 +62,11 @@ export function MobileRecordingInterface({
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isReviewPlaying, setIsReviewPlaying] = useState(false);
   
-  // Trim state
+  // Advanced Sync/Trim state
   const [trimStart, setTrimStart] = useState(0);
-  const [trimEnd, setTrimEnd] = useState(0); // Offset from the end
+  const [trimEnd, setTrimEnd] = useState(0); 
+  const [startTime, setStartTime] = useState(0); // Offset on project timeline
 
-  // Explicitly set to 10s to ensure no confusion with 15s templates
   const MAX_RECORDING_DURATION = 10;
 
   // Cleanup on unmount
@@ -79,7 +81,6 @@ export function MobileRecordingInterface({
     };
   }, []);
 
-  // Compute countdown state
   const countdownState = {
     remaining: Math.max(0, MAX_RECORDING_DURATION - recordingTime),
     isWarning: recordingTime >= MAX_RECORDING_DURATION * 0.7 && recordingTime < MAX_RECORDING_DURATION * 0.9,
@@ -98,13 +99,6 @@ export function MobileRecordingInterface({
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      
-      // Explicitly clear canvas
-      if (canvasRef.current) {
-        const ctx = canvasRef.current.getContext("2d");
-        if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      }
-
       pauseVideo();
       addHapticFeedback("medium");
     }
@@ -123,11 +117,7 @@ export function MobileRecordingInterface({
 
     const draw = () => {
       if (!canvasRef.current) return;
-      
-      // Stop animating if completed
-      if (mediaRecorderRef.current?.state === "inactive") {
-        return;
-      }
+      if (mediaRecorderRef.current?.state === "inactive") return;
 
       animationFrameRef.current = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
@@ -137,13 +127,12 @@ export function MobileRecordingInterface({
       if (!ctx) return;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       const barWidth = (canvas.width / bufferLength) * 0.8;
       let x = (canvas.width - (bufferLength * (barWidth + 1))) / 2;
 
       for (let i = 0; i < bufferLength; i++) {
         const barHeight = (dataArray[i] / 255) * canvas.height;
-        ctx.fillStyle = mediaRecorderRef.current?.state === "recording" ? "#ef4444" : "#3b82f6";
+        ctx.fillStyle = "#ef4444";
         ctx.fillRect(x, (canvas.height - barHeight) / 2, barWidth, barHeight);
         x += barWidth + 2;
       }
@@ -185,10 +174,10 @@ export function MobileRecordingInterface({
       setRecordingTime(0);
       setTrimStart(0);
       setTrimEnd(0);
+      setStartTime(0);
       
-      // Sync video playback exactly with recording
       seekVideo(0); 
-      setTimeout(() => playVideo(), 50); // Small buffer for sync
+      setTimeout(() => playVideo(), 50);
 
       timerRef.current = setInterval(() => {
         setRecordingTime((prev) => {
@@ -243,10 +232,10 @@ export function MobileRecordingInterface({
       pauseVideo();
       setIsReviewPlaying(false);
     } else {
-      const actualStart = trimStart;
-      seekVideo(actualStart);
+      const actualVideoStart = startTime + trimStart;
+      seekVideo(actualVideoStart);
       playVideo();
-      reviewAudioRef.current.currentTime = actualStart;
+      reviewAudioRef.current.currentTime = trimStart;
       reviewAudioRef.current.play();
       setIsReviewPlaying(true);
     }
@@ -258,7 +247,8 @@ export function MobileRecordingInterface({
       onComplete(audioBlob, { 
         duration: recordingTime, 
         trimStart: trimStart, 
-        trimEnd: trimEnd 
+        trimEnd: trimEnd,
+        startTime: startTime
       });
       onClose();
       addHapticFeedback("heavy");
@@ -293,7 +283,7 @@ export function MobileRecordingInterface({
                 "rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest",
                 isCompleted ? "bg-green-500/10 text-green-600" : "bg-muted text-muted-foreground"
               )}>
-              {isCompleted ? "✓ Recorded • Review & Trim" : "Step 1: Mic Ready"}
+              {isCompleted ? "Step 2: Sync & Save" : "Step 1: Get Ready (10s Max)"}
             </div>
             
             <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground" onClick={onClose}>
@@ -303,95 +293,81 @@ export function MobileRecordingInterface({
         )}
       </AnimatePresence>
 
-      {/* Main content Area (Waveform or Trim) */}
+      {/* Main content Area */}
       <div className={cn(
         "w-full bg-muted/10 rounded-xl overflow-hidden relative border border-border/20 transition-all duration-500",
-        isRecording ? "h-8" : "h-24"
+        isRecording ? "h-8" : "h-32"
       )}>
         <AnimatePresence mode="wait">
           {isCompleted ? (
             <motion.div 
-              key="trim-timeline"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="absolute inset-0 p-4 flex flex-col justify-center gap-3 bg-primary/[0.02]"
+              key="trim-sync-ui"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="absolute inset-0 p-4 flex flex-col justify-center gap-4 bg-primary/[0.02]"
             >
-              <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.2em] text-primary">
-                <div className="flex items-center gap-1.5">
-                  <Scissors className="h-3 w-3" />
-                  <span>Audio Timeline</span>
-                </div>
-                <span className="opacity-60 tabular-nums">{(recordingTime - trimStart - trimEnd).toFixed(1)}s active</span>
-              </div>
-              
-              {/* Mini Timeline UI */}
-              <div className="relative h-8 bg-muted/40 rounded-lg overflow-hidden border border-white/5 group">
-                {/* Visual Audio Representation (Placeholder bars) */}
-                <div className="absolute inset-0 flex items-center justify-around px-2 opacity-20">
-                  {Array.from({ length: 20 }).map((_, i) => (
-                    <div key={i} className="w-0.5 bg-foreground" style={{ height: `${20 + Math.random() * 60}%` }} />
-                  ))}
+              <div className="space-y-3">
+                {/* Visual Timeline */}
+                <div className="relative h-10 bg-muted/40 rounded-lg overflow-hidden border border-white/5 shadow-inner">
+                  <div className="absolute inset-0 flex items-center justify-around px-2 opacity-10">
+                    {Array.from({ length: 30 }).map((_, i) => (
+                      <div key={i} className="w-0.5 bg-foreground" style={{ height: `${20 + Math.random() * 60}%` }} />
+                    ))}
+                  </div>
+                  <div 
+                    className="absolute inset-y-0 bg-primary/20 border-x-2 border-primary/50"
+                    style={{
+                      left: `${(trimStart / recordingTime) * 100}%`,
+                      right: `${(trimEnd / recordingTime) * 100}%`
+                    }}
+                  />
+                  {isReviewPlaying && (
+                    <motion.div 
+                      className="absolute inset-y-0 w-0.5 bg-white z-10 shadow-[0_0_8px_white]"
+                      animate={{ left: `${(reviewAudioRef.current?.currentTime || 0) / recordingTime * 100}%` }}
+                      transition={{ duration: 0.1, ease: "linear" }}
+                    />
+                  )}
                 </div>
 
-                {/* Visual Trim Region */}
-                <div 
-                  className="absolute inset-y-0 bg-primary/20 border-x-2 border-primary/50"
-                  style={{
-                    left: `${(trimStart / recordingTime) * 100}%`,
-                    right: `${(trimEnd / recordingTime) * 100}%`
-                  }}
-                />
-                
-                {/* Playhead for Review */}
-                {isReviewPlaying && (
-                  <motion.div 
-                    className="absolute inset-y-0 w-0.5 bg-white z-10 shadow-[0_0_8px_white]"
-                    animate={{ left: `${(reviewAudioRef.current?.currentTime || 0) / recordingTime * 100}%` }}
-                    transition={{ duration: 0.1, ease: "linear" }}
-                  />
-                )}
-              </div>
-
-              {/* Precise Sliders */}
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-[8px] font-black text-muted-foreground/80 uppercase tracking-widest">
-                    <span>Start Crop</span>
-                    <span className="text-primary font-black tabular-nums">{trimStart.toFixed(1)}s</span>
+                {/* Sync & Trim Controls */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[8px] font-black text-muted-foreground uppercase">
+                        <span className="flex items-center gap-1"><Scissors className="h-2 w-2" /> Start Trim</span>
+                        <span className="text-primary font-black">{trimStart.toFixed(1)}s</span>
+                      </div>
+                      <input 
+                        type="range" min={0} max={Math.max(0, recordingTime - 0.5)} step={0.1} value={trimStart}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          setTrimStart(val);
+                          if (reviewAudioRef.current) reviewAudioRef.current.currentTime = val;
+                          seekVideo(startTime + val);
+                        }}
+                        className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[8px] font-black text-muted-foreground uppercase">
+                        <span className="flex items-center gap-1"><MoveHorizontal className="h-2 w-2" /> Sync Start</span>
+                        <span className="text-primary font-black">{startTime.toFixed(1)}s</span>
+                      </div>
+                      <input 
+                        type="range" min={0} max={Math.max(0, videoDuration - 1)} step={0.1} value={startTime}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          setStartTime(val);
+                          seekVideo(val + trimStart);
+                        }}
+                        className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                      />
+                    </div>
                   </div>
-                  <input 
-                    type="range" 
-                    min={0} 
-                    max={Math.max(0, recordingTime - 0.5)} 
-                    step={0.1}
-                    value={trimStart}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value);
-                      setTrimStart(val);
-                      if (reviewAudioRef.current) reviewAudioRef.current.currentTime = val;
-                      seekVideo(val);
-                    }}
-                    className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-[8px] font-black text-muted-foreground/80 uppercase tracking-widest">
-                    <span>End Crop</span>
-                    <span className="text-primary font-black tabular-nums">{trimEnd.toFixed(1)}s</span>
+                  <div className="text-center">
+                    <p className="text-[8px] font-black uppercase tracking-[0.3em] text-primary/40">Slide to sync commentary</p>
                   </div>
-                  <input 
-                    type="range" 
-                    min={0} 
-                    max={Math.max(0, recordingTime - trimStart - 0.5)} 
-                    step={0.1}
-                    value={trimEnd}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value);
-                      setTrimEnd(val);
-                      // Preview end of trim?
-                    }}
-                    className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                  />
                 </div>
               </div>
             </motion.div>
@@ -403,8 +379,8 @@ export function MobileRecordingInterface({
               exit={{ opacity: 0 }}
               ref={canvasRef} 
               width={300} 
-              height={96} 
-              className="w-full h-full" 
+              height={128} 
+              className="w-full h-full opacity-80" 
             />
           )}
         </AnimatePresence>
@@ -430,23 +406,9 @@ export function MobileRecordingInterface({
           {/* Countdown Ring */}
           {isRecording && (
             <svg className="absolute -inset-3 w-22 h-22 -rotate-90">
-              <circle
-                cx="44"
-                cy="44"
-                r="38"
-                stroke="currentColor"
-                strokeWidth="4"
-                fill="transparent"
-                className="text-red-500/10"
-              />
+              <circle cx="44" cy="44" r="38" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-red-500/10" />
               <motion.circle
-                cx="44"
-                cy="44"
-                r="38"
-                stroke="currentColor"
-                strokeWidth="4"
-                fill="transparent"
-                strokeDasharray="238.7"
+                cx="44" cy="44" r="38" stroke="currentColor" strokeWidth="4" fill="transparent" strokeDasharray="238.7"
                 animate={{ strokeDashoffset: (recordingTime / MAX_RECORDING_DURATION) * 238.7 }}
                 transition={{ duration: 1, ease: "linear" }}
                 className="text-red-500"
@@ -459,7 +421,7 @@ export function MobileRecordingInterface({
             className={cn(
               "h-16 w-16 rounded-full transition-all shadow-xl flex items-center justify-center z-10",
               !isRecording && !isCompleted && "bg-red-500 hover:bg-red-600 shadow-red-500/20",
-              isRecording && "bg-red-600 hover:bg-red-700 ring-offset-4 ring-offset-background ring-4 ring-red-500/30 animate-pulse",
+              isRecording && "bg-red-600 hover:bg-red-700 ring-offset-4 ring-offset-background ring-4 ring-red-500/30",
               isCompleted && "bg-green-500 hover:bg-green-600 shadow-green-500/20"
             )}
             onClick={
@@ -475,13 +437,9 @@ export function MobileRecordingInterface({
             {isCompleted && <Check className="h-7 w-7" />}
           </Button>
 
-          {/* Mini Timer Overlay when recording */}
           {isRecording && (
             <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-black/90 backdrop-blur-xl px-2.5 py-1 rounded-full border border-white/10 shadow-2xl">
-              <span className={cn(
-                "text-[11px] font-black tabular-nums",
-                countdownState.isCritical ? "text-red-500" : "text-white"
-              )}>
+              <span className={cn("text-[11px] font-black tabular-nums", countdownState.isCritical ? "text-red-500" : "text-white")}>
                 {RecordingCountdown.formatCountdownTime(countdownState.remaining)}
               </span>
             </div>
@@ -502,13 +460,9 @@ export function MobileRecordingInterface({
 
       <AnimatePresence>
         {!isRecording && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            className="text-center"
-          >
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="text-center">
             <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.25em]">
-              {isCompleted ? "Step 3: Save to project" : "Ready to commentate"}
+              {isCompleted ? "Step 3: Add to Timeline" : "Tap to Commentate"}
             </p>
           </motion.div>
         )}

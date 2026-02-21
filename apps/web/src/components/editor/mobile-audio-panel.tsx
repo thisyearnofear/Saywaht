@@ -86,7 +86,7 @@ export function MobileAudioPanel({
 
   const handleRecordingComplete = (
     audioBlob: Blob, 
-    options: { duration: number; trimStart: number; trimEnd: number }
+    options: { duration: number; trimStart: number; trimEnd: number; startTime: number }
   ) => {
     const audioFile = new File([audioBlob], `voiceover-${Date.now()}.webm`, {
       type: "audio/webm",
@@ -111,7 +111,7 @@ export function MobileAudioPanel({
     addClipToTrack(trackId, {
       mediaId: audioItem.id,
       name: audioItem.name,
-      startTime: 0,
+      startTime: options.startTime, // Use the synced start time
       duration: options.duration,
       trimStart: options.trimStart,
       trimEnd: options.trimEnd,
