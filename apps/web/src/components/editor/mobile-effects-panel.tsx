@@ -64,11 +64,12 @@ export function MobileEffectsPanel({ className, onRequestMedia }: MobileEffectsP
   const hasTimelineContent = tracks.some((track) => track.clips.length > 0);
 
   const activeClipRefs = useMemo<ActiveClipRef[]>(() => {
-    return tracks.flatMap((track) =>
+    const refs = tracks.flatMap((track) =>
       track.clips
         .filter((clip) => {
           const clipEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
-          return currentTime >= clip.startTime && currentTime < clipEnd;
+          // Add 0.1s buffer for better mobile precision
+          return currentTime >= clip.startTime - 0.1 && currentTime < clipEnd + 0.1;
         })
         .map((clip) => {
           const media = mediaItems.find((item) => item.id === clip.mediaId);
@@ -79,6 +80,12 @@ export function MobileEffectsPanel({ className, onRequestMedia }: MobileEffectsP
           };
         })
     );
+    
+    if (refs.length === 0 && tracks.some(t => t.clips.length > 0)) {
+      console.log('[Effects] No active clips found at', currentTime, 'Tracks:', tracks.length);
+    }
+    
+    return refs;
   }, [tracks, mediaItems, currentTime]);
 
   const applyVideoEffect = (effectId: string) => {

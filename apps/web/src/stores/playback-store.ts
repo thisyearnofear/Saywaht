@@ -59,6 +59,12 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => ({
   speed: 1.0,
 
   play: () => {
+    const { currentTime, duration } = get();
+    // Restart if at the end
+    if (currentTime >= duration - 0.05) {
+      set({ currentTime: 0 });
+      window.dispatchEvent(new CustomEvent("playback-seek", { detail: { time: 0 } }));
+    }
     set({ isPlaying: true, isStalled: false });
     startTimer(get);
   },
@@ -69,10 +75,15 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => ({
   },
 
   toggle: () => {
-    const { isPlaying } = get();
+    const { isPlaying, currentTime, duration } = get();
     if (isPlaying) {
       get().pause();
     } else {
+      // Restart if at the end
+      if (currentTime >= duration - 0.05) {
+        set({ currentTime: 0 });
+        window.dispatchEvent(new CustomEvent("playback-seek", { detail: { time: 0 } }));
+      }
       get().play();
     }
   },

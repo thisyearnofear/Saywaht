@@ -11,7 +11,7 @@ import {
   Play,
   Pause as PauseIcon,
   Scissors,
-  MoveHorizontal,
+  Plus,
 } from "@/lib/icons";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { cn } from "@/lib/utils";
@@ -67,6 +67,7 @@ export function MobileRecordingInterface({
   const [trimEnd, setTrimEnd] = useState(0); 
   const [startTime, setStartTime] = useState(0); // Offset on project timeline
 
+  // Explicitly set to 10s to ensure no confusion with 15s templates
   const MAX_RECORDING_DURATION = 10;
 
   // Cleanup on unmount
@@ -81,6 +82,7 @@ export function MobileRecordingInterface({
     };
   }, []);
 
+  // Compute countdown state
   const countdownState = {
     remaining: Math.max(0, MAX_RECORDING_DURATION - recordingTime),
     isWarning: recordingTime >= MAX_RECORDING_DURATION * 0.7 && recordingTime < MAX_RECORDING_DURATION * 0.9,
@@ -99,6 +101,13 @@ export function MobileRecordingInterface({
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      
+      // Explicitly clear canvas
+      if (canvasRef.current) {
+        const ctx = canvasRef.current.getContext("2d");
+        if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      }
+
       pauseVideo();
       addHapticFeedback("medium");
     }
@@ -108,7 +117,7 @@ export function MobileRecordingInterface({
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const source = audioContext.createMediaStreamSource(stream);
     const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 64;
+    analyser.fftSize = 64; // Smaller for minimal visualizer
     source.connect(analyser);
     analyserRef.current = analyser;
 
@@ -117,7 +126,11 @@ export function MobileRecordingInterface({
 
     const draw = () => {
       if (!canvasRef.current) return;
-      if (mediaRecorderRef.current?.state === "inactive") return;
+      
+      // Stop animating if completed
+      if (mediaRecorderRef.current?.state === "inactive") {
+        return;
+      }
 
       animationFrameRef.current = requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
@@ -127,13 +140,16 @@ export function MobileRecordingInterface({
       if (!ctx) return;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       const barWidth = (canvas.width / bufferLength) * 0.8;
       let x = (canvas.width - (bufferLength * (barWidth + 1))) / 2;
 
       for (let i = 0; i < bufferLength; i++) {
         const barHeight = (dataArray[i] / 255) * canvas.height;
-        ctx.fillStyle = "#ef4444";
+        
+        ctx.fillStyle = recordingState === "recording" ? "#ef4444" : "#3b82f6";
         ctx.fillRect(x, (canvas.height - barHeight) / 2, barWidth, barHeight);
+
         x += barWidth + 2;
       }
     };
@@ -144,7 +160,7 @@ export function MobileRecordingInterface({
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       audioContext.close();
     };
-  }, []);
+  }, [recordingState]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -176,8 +192,9 @@ export function MobileRecordingInterface({
       setTrimEnd(0);
       setStartTime(0);
       
+      // Sync video playback exactly with recording
       seekVideo(0); 
-      setTimeout(() => playVideo(), 50);
+      setTimeout(() => playVideo(), 50); // Small buffer for sync
 
       timerRef.current = setInterval(() => {
         setRecordingTime((prev) => {
@@ -263,8 +280,8 @@ export function MobileRecordingInterface({
   return (
     <motion.div 
       layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
       className={cn(
         "rounded-2xl border bg-background/95 shadow-2xl flex flex-col items-center overflow-hidden transition-all duration-500",
         isRecording ? "p-3 gap-2 border-red-500/30" : "p-5 gap-6 border-border/50"
@@ -283,7 +300,7 @@ export function MobileRecordingInterface({
                 "rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest",
                 isCompleted ? "bg-green-500/10 text-green-600" : "bg-muted text-muted-foreground"
               )}>
-              {isCompleted ? "Step 2: Sync & Save" : "Step 1: Get Ready (10s Max)"}
+              {isCompleted ? "✓ Recorded • Review & Sync" : "Step 1: Mic Ready"}
             </div>
             
             <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground" onClick={onClose}>
@@ -293,7 +310,7 @@ export function MobileRecordingInterface({
         )}
       </AnimatePresence>
 
-      {/* Main content Area */}
+      {/* Main content Area (Waveform or Trim/Sync) */}
       <div className={cn(
         "w-full bg-muted/10 rounded-xl overflow-hidden relative border border-border/20 transition-all duration-500",
         isRecording ? "h-8" : "h-32"
@@ -302,18 +319,21 @@ export function MobileRecordingInterface({
           {isCompleted ? (
             <motion.div 
               key="trim-sync-ui"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               className="absolute inset-0 p-4 flex flex-col justify-center gap-4 bg-primary/[0.02]"
             >
               <div className="space-y-3">
-                {/* Visual Timeline */}
-                <div className="relative h-10 bg-muted/40 rounded-lg overflow-hidden border border-white/5 shadow-inner">
+                {/* Visual Timeline Overlay */}
+                <div className="relative h-10 bg-muted/40 rounded-lg overflow-hidden border border-white/5">
+                  {/* Visual Audio Representation (Placeholder bars) */}
                   <div className="absolute inset-0 flex items-center justify-around px-2 opacity-10">
                     {Array.from({ length: 30 }).map((_, i) => (
                       <div key={i} className="w-0.5 bg-foreground" style={{ height: `${20 + Math.random() * 60}%` }} />
                     ))}
                   </div>
+
+                  {/* Visual Trim Region */}
                   <div 
                     className="absolute inset-y-0 bg-primary/20 border-x-2 border-primary/50"
                     style={{
@@ -321,6 +341,8 @@ export function MobileRecordingInterface({
                       right: `${(trimEnd / recordingTime) * 100}%`
                     }}
                   />
+                  
+                  {/* Playhead for Review */}
                   {isReviewPlaying && (
                     <motion.div 
                       className="absolute inset-y-0 w-0.5 bg-white z-10 shadow-[0_0_8px_white]"
@@ -336,10 +358,14 @@ export function MobileRecordingInterface({
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-[8px] font-black text-muted-foreground uppercase">
                         <span className="flex items-center gap-1"><Scissors className="h-2 w-2" /> Start Trim</span>
-                        <span className="text-primary font-black">{trimStart.toFixed(1)}s</span>
+                        <span className="text-primary">{trimStart.toFixed(1)}s</span>
                       </div>
                       <input 
-                        type="range" min={0} max={Math.max(0, recordingTime - 0.5)} step={0.1} value={trimStart}
+                        type="range" 
+                        min={0} 
+                        max={Math.max(0, recordingTime - 0.5)} 
+                        step={0.1}
+                        value={trimStart}
                         onChange={(e) => {
                           const val = parseFloat(e.target.value);
                           setTrimStart(val);
@@ -351,11 +377,15 @@ export function MobileRecordingInterface({
                     </div>
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-[8px] font-black text-muted-foreground uppercase">
-                        <span className="flex items-center gap-1"><MoveHorizontal className="h-2 w-2" /> Sync Start</span>
-                        <span className="text-primary font-black">{startTime.toFixed(1)}s</span>
+                        <span className="flex items-center gap-1">Sync Start</span>
+                        <span className="text-primary">{startTime.toFixed(1)}s</span>
                       </div>
                       <input 
-                        type="range" min={0} max={Math.max(0, videoDuration - 1)} step={0.1} value={startTime}
+                        type="range" 
+                        min={0} 
+                        max={Math.max(0, videoDuration - 1)} 
+                        step={0.1}
+                        value={startTime}
                         onChange={(e) => {
                           const val = parseFloat(e.target.value);
                           setStartTime(val);
@@ -365,30 +395,18 @@ export function MobileRecordingInterface({
                       />
                     </div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-[8px] font-black uppercase tracking-[0.3em] text-primary/40">Slide to sync commentary</p>
-                  </div>
                 </div>
               </div>
             </motion.div>
           ) : (
-            <motion.canvas 
-              key="active-mic"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              ref={canvasRef} 
-              width={300} 
-              height={128} 
-              className="w-full h-full opacity-80" 
-            />
+            <canvas ref={canvasRef} width={300} height={80} className="w-full h-full" />
           )}
         </AnimatePresence>
       </div>
 
       {/* Controls Area */}
       <div className={cn(
-        "flex items-center gap-10 transition-all duration-500",
+        "flex items-center gap-8 transition-all duration-500",
         isRecording ? "scale-90" : "scale-100"
       )}>
         {isCompleted && (
@@ -405,13 +423,27 @@ export function MobileRecordingInterface({
         <div className="relative">
           {/* Countdown Ring */}
           {isRecording && (
-            <svg className="absolute -inset-3 w-22 h-22 -rotate-90">
-              <circle cx="44" cy="44" r="38" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-red-500/10" />
+            <svg className="absolute -inset-2 w-20 h-20 -rotate-90">
+              <circle
+                cx="40"
+                cy="40"
+                r="36"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="transparent"
+                className="text-primary/10"
+              />
               <motion.circle
-                cx="44" cy="44" r="38" stroke="currentColor" strokeWidth="4" fill="transparent" strokeDasharray="238.7"
-                animate={{ strokeDashoffset: (recordingTime / MAX_RECORDING_DURATION) * 238.7 }}
+                cx="40"
+                cy="40"
+                r="36"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="transparent"
+                strokeDasharray="226.2"
+                animate={{ strokeDashoffset: (recordingTime / MAX_RECORDING_DURATION) * 226.2 }}
                 transition={{ duration: 1, ease: "linear" }}
-                className="text-red-500"
+                className="text-primary"
               />
             </svg>
           )}
@@ -437,9 +469,13 @@ export function MobileRecordingInterface({
             {isCompleted && <Check className="h-7 w-7" />}
           </Button>
 
+          {/* Mini Timer Overlay when recording */}
           {isRecording && (
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-black/90 backdrop-blur-xl px-2.5 py-1 rounded-full border border-white/10 shadow-2xl">
-              <span className={cn("text-[11px] font-black tabular-nums", countdownState.isCritical ? "text-red-500" : "text-white")}>
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-xl px-2 py-0.5 rounded-full border border-white/10 shadow-2xl">
+              <span className={cn(
+                "text-[10px] font-black tabular-nums",
+                countdownState.isCritical ? "text-red-500" : "text-white"
+              )}>
                 {RecordingCountdown.formatCountdownTime(countdownState.remaining)}
               </span>
             </div>
@@ -451,7 +487,7 @@ export function MobileRecordingInterface({
             variant="ghost" 
             size="icon" 
             onClick={retakeRecording} 
-            className="h-12 w-12 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="h-12 w-12 rounded-full text-muted-foreground hover:text-foreground"
           >
             <RotateCcw className="h-5 w-5" />
           </Button>
@@ -460,9 +496,13 @@ export function MobileRecordingInterface({
 
       <AnimatePresence>
         {!isRecording && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="text-center">
-            <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.25em]">
-              {isCompleted ? "Step 3: Add to Timeline" : "Tap to Commentate"}
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            className="text-center"
+          >
+            <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+              {isCompleted ? "Step 3: Save to Project" : "Tap to Start Commentary"}
             </p>
           </motion.div>
         )}

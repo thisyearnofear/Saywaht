@@ -253,10 +253,16 @@ export function PreviewPanel({
 
   // Render text element
   const renderTextElement = (text: any) => {
+    const isEditing = text.id === useTextStore.getState().selectedTextId;
+    
     return (
       <div
         key={text.id}
-        className={cn("absolute", onTextElementTap ? "pointer-events-auto cursor-pointer" : "pointer-events-none")}
+        className={cn(
+          "absolute cursor-move select-none touch-none",
+          onTextElementTap ? "pointer-events-auto" : "pointer-events-none",
+          isEditing && "ring-2 ring-primary ring-offset-2 ring-offset-black rounded-sm"
+        )}
         style={{
           left: `${text.x * 100}%`,
           top: `${text.y * 100}%`,
@@ -270,11 +276,32 @@ export function PreviewPanel({
           whiteSpace: "pre-wrap",
           maxWidth: "90%",
           textShadow: "2px 2px 4px rgba(0, 0, 0, 0.8)",
+          zIndex: 50,
         }}
-        onClick={(e) => {
+        onPointerDown={(e) => {
           if (!onTextElementTap) return;
           e.stopPropagation();
-          onTextElementTap(text.id);
+          const target = e.currentTarget;
+          const rect = previewRef.current?.getBoundingClientRect();
+          if (!rect) return;
+
+          const handlePointerMove = (moveEvent: PointerEvent) => {
+            const x = (moveEvent.clientX - rect.left) / rect.width;
+            const y = (moveEvent.clientY - rect.top) / rect.height;
+            useTextStore.getState().updateTextElement(text.id, { 
+              x: Math.max(0, Math.min(1, x)), 
+              y: Math.max(0, Math.min(1, y)) 
+            });
+          };
+
+          const handlePointerUp = () => {
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+            onTextElementTap(text.id); // Also select it
+          };
+
+          window.addEventListener('pointermove', handlePointerMove);
+          window.addEventListener('pointerup', handlePointerUp);
         }}
       >
         {text.content}

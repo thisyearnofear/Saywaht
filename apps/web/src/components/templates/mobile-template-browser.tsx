@@ -260,17 +260,16 @@ export function MobileTemplateBrowser() {
       clearAllMedia();
       setTracks([]);
 
-      // 4. Add the media item
-      addMediaItem({
-        id: mediaId,
-        name: `Stock: ${video.user.name}`,
-        type: "video",
-        url: bestFile.link,
-        thumbnailUrl: video.image,
-        duration: video.duration,
-        aspectRatio: video.width / video.height,
-      });
-
+          // 4. Add the media item
+          addMediaItem({
+            id: mediaId,
+            name: `Stock: ${video.user.name}`,
+            type: "video",
+            url: bestFile.link,
+            thumbnailUrl: video.image,
+            duration: Math.min(video.duration, 10), // Cap at 10s for mobile
+            aspectRatio: video.width / video.height,
+          });
       // 5. Create a track and add the clip so it's visible in the editor
       const trackId = addTrack("video");
       if (!trackId) {
