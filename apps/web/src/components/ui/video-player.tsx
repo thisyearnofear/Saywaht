@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { usePlaybackStore } from "@/stores/playback-store";
+import { cn } from "@/lib/utils";
 
 interface VideoPlayerProps {
   src: string;
@@ -109,11 +110,21 @@ export function VideoPlayer({
       setErrorMessage(mediaError?.message || "Failed to load video");
     };
 
+    // Detect browser-forced pause (e.g. autoplay policy) and recover
+    const handlePause = () => {
+      if (isPlaying && isInClipRange && !video.ended) {
+        // Browser forced a pause — retry muted
+        video.muted = true;
+        video.play().catch(() => {});
+      }
+    };
+
     video.addEventListener('canplay', handleCanPlay);
     video.addEventListener('waiting', handleWaiting);
     video.addEventListener('playing', handlePlaying);
     video.addEventListener('loadstart', handleLoadStart);
     video.addEventListener('error', handleError);
+    video.addEventListener('pause', handlePause);
 
     // Initial check
     if (video.readyState >= 2) {
@@ -127,6 +138,7 @@ export function VideoPlayer({
       video.removeEventListener('playing', handlePlaying);
       video.removeEventListener('loadstart', handleLoadStart);
       video.removeEventListener('error', handleError);
+      video.removeEventListener('pause', handlePause);
     };
   }, [src, isPlaying, isInClipRange, setStalled, armLoadTimeout, clearLoadTimeout]);
 
@@ -202,11 +214,21 @@ export function VideoPlayer({
     if (!video) return;
 
     if (isPlaying && isInClipRange) {
+      const attemptPlay = () => {
+        video.play().catch((err) => {
+          // Autoplay was blocked (likely unmuted on mobile) — retry muted
+          if (err.name === "NotAllowedError" && !video.muted) {
+            video.muted = true;
+            video.play().catch(() => {});
+          }
+        });
+      };
+
       if (video.readyState >= 2) {
-        video.play().catch(() => {});
+        attemptPlay();
       } else {
         const onCanPlay = () => {
-          if (isPlaying && isInClipRange) video.play().catch(() => {});
+          if (isPlaying && isInClipRange) attemptPlay();
         };
         video.addEventListener('canplay', onCanPlay, { once: true });
         return () => video.removeEventListener('canplay', onCanPlay);

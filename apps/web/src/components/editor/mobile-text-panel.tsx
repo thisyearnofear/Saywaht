@@ -78,16 +78,17 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
     if (!newText.trim()) return;
 
     addHapticFeedback("medium");
+    const effectiveDuration = duration > 0 ? duration : 10;
     const id = addTextElement({
       content: newText,
       x: 0.5,
       y: 0.5,
-      fontSize: 24,
+      fontSize: 32,
       fontFamily: "Inter",
       color: "#ffffff",
       textAlign: "center",
       startTime: currentTime,
-      endTime: Math.min(currentTime + 3, duration),
+      endTime: Math.min(currentTime + 3, effectiveDuration),
     });
 
     setNewText("");
@@ -544,16 +545,17 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
                   className="h-8 flex-1 text-[10px]"
                   onClick={() => {
                     addHapticFeedback("light");
+                    const effectiveDur = duration > 0 ? duration : 10;
                     const id = addTextElement({
                       content: "New text",
                       x: 0.5,
                       y: 0.5,
-                      fontSize: 24,
+                      fontSize: 32,
                       fontFamily: "Inter",
                       color: "#ffffff",
                       textAlign: "center",
                       startTime: currentTime,
-                      endTime: Math.min(currentTime + 3, duration),
+                      endTime: Math.min(currentTime + 3, effectiveDur),
                     });
                     setEditingId(id);
                   }}

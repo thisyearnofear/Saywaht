@@ -94,8 +94,9 @@ export function MobileRecordingInterface({
   }, [recordingState, onRecordingStateChange]);
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && recordingState === "recording") {
-      mediaRecorderRef.current.stop();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state === "recording") {
+      recorder.stop();
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -111,7 +112,11 @@ export function MobileRecordingInterface({
       pauseVideo();
       addHapticFeedback("medium");
     }
-  }, [recordingState, pauseVideo]);
+  }, [pauseVideo]);
+
+  // Keep a stable ref so the interval timer always has the latest stopRecording
+  const stopRecordingRef = useRef(stopRecording);
+  useEffect(() => { stopRecordingRef.current = stopRecording; }, [stopRecording]);
 
   const visualizeAudio = useCallback((stream: MediaStream) => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -199,7 +204,7 @@ export function MobileRecordingInterface({
       timerRef.current = setInterval(() => {
         setRecordingTime((prev) => {
           const newTime = prev + 1;
-          if (newTime >= MAX_RECORDING_DURATION) stopRecording();
+          if (newTime >= MAX_RECORDING_DURATION) stopRecordingRef.current();
           return newTime;
         });
       }, 1000);
@@ -208,7 +213,7 @@ export function MobileRecordingInterface({
     } catch (error) {
       console.error("Failed to start recording:", error);
     }
-  }, [visualizeAudio, stopRecording, playVideo, seekVideo, MAX_RECORDING_DURATION]);
+  }, [visualizeAudio, playVideo, seekVideo, MAX_RECORDING_DURATION]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -300,7 +305,7 @@ export function MobileRecordingInterface({
                 "rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest",
                 isCompleted ? "bg-green-500/10 text-green-600" : "bg-muted text-muted-foreground"
               )}>
-              {isCompleted ? "✓ Recorded • Review & Sync" : "Step 1: Mic Ready"}
+              {isCompleted ? "✓ Recorded • Review & Sync" : "🎙 Ready • 10s Max"}
             </div>
             
             <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground" onClick={onClose}>
@@ -502,7 +507,7 @@ export function MobileRecordingInterface({
             className="text-center"
           >
             <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-              {isCompleted ? "Step 3: Save to Project" : "Tap to Start Commentary"}
+              {isCompleted ? "Step 3: Save to Project" : "Tap to Start • 10s Max"}
             </p>
           </motion.div>
         )}

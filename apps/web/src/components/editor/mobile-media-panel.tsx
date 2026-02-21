@@ -213,29 +213,23 @@ function ProjectMediaList({ onFileSelect, isProcessing }: ProjectMediaListProps)
                     </div>
                   )}
                   
-                  {/* Action Overlays */}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <button
-                      className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center shadow-lg"
-                      onClick={() => handleAddToTimeline(item)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                    <button
-                      className="h-8 w-8 rounded-full bg-destructive text-white flex items-center justify-center shadow-lg"
-                      onClick={() => handleRemove(item.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+                  {/* Delete button - top right */}
+                  <button
+                    className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 text-white/70 flex items-center justify-center backdrop-blur-sm z-10 active:bg-destructive active:text-white"
+                    onClick={(e) => { e.stopPropagation(); handleRemove(item.id); }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
 
                   <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-md px-2 py-1 flex items-center justify-between">
                     <p className="text-[8px] font-bold truncate text-white uppercase">{item.name}</p>
-                    {item.duration && (
-                      <span className="text-[8px] font-black text-white/70">
-                        {Math.floor(item.duration)}s
-                      </span>
-                    )}
+                    <button
+                      className="flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[8px] font-black text-white uppercase tracking-wide active:scale-95 shrink-0 ml-1"
+                      onClick={(e) => { e.stopPropagation(); handleAddToTimeline(item); }}
+                    >
+                      <Plus className="h-2.5 w-2.5" />
+                      Add
+                    </button>
                   </div>
                 </div>
               ))}
