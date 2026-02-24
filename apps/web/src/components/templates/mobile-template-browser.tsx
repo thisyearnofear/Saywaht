@@ -159,7 +159,7 @@ function RotatingCategoryCard({
 }
 
 export function MobileTemplateBrowser() {
-  const { categories, isLoading, selectTemplate, applySelectedTemplate } = useTemplateStore();
+  const { categories, isLoading, selectTemplate, applySelectedTemplate, clearSelectedTemplate } = useTemplateStore();
   const [mainTab, setMainTab] = useState<"packs" | "stock">("stock");
   
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
@@ -323,6 +323,7 @@ export function MobileTemplateBrowser() {
       await selectTemplate(template.id);
       const success = await applySelectedTemplate();
       if (success) {
+        clearSelectedTemplate();
         router.push("/editor");
       }
     } catch (error) {

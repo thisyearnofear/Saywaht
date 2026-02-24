@@ -161,8 +161,9 @@ export const useTimelineStore = create<TimelineStore>()(
           ...clipData,
           id: crypto.randomUUID(),
           startTime: clipData.startTime || 0,
-          trimStart: 0,
-          trimEnd: 0,
+          duration: clipData.duration > 0 ? clipData.duration : 5,
+          trimStart: clipData.trimStart ?? 0,
+          trimEnd: clipData.trimEnd ?? 0,
         };
 
         set((state: TimelineStore) => ({

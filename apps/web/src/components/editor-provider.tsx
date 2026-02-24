@@ -36,16 +36,17 @@ export function EditorProvider({ children }: EditorProviderProps) {
     }
   }, [activeProject, isPanelsReady, initializeScenes]);
 
-  // Safety-net: apply stale template
+  // Safety-net: apply stale template only if editor is empty
+  const hasContent = tracks.some(t => t.clips.length > 0);
   useEffect(() => {
-    if (isPanelsReady && selectedTemplate) {
+    if (isPanelsReady && selectedTemplate && !hasContent) {
       applySelectedTemplate().then((success) => {
         if (success) {
           clearSelectedTemplate();
         }
       });
     }
-  }, [isPanelsReady, selectedTemplate, applySelectedTemplate, clearSelectedTemplate]);
+  }, [isPanelsReady, selectedTemplate, hasContent, applySelectedTemplate, clearSelectedTemplate]);
 
   // Sync timeline duration to playback store
   useEffect(() => {

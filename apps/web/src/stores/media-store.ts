@@ -13,6 +13,7 @@ export interface MediaItem {
   aspectRatio: number; // width / height
   
   // Storage provider flags
+  isLocal?: boolean; // Flag to identify locally-added content
   isFilCDN?: boolean; // Flag to identify FilCDN content
   isGrove?: boolean; // Flag to identify Grove/IPFS content
   cid?: string; // Content identifier for FilCDN or Grove storage key

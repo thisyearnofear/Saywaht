@@ -137,15 +137,15 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
         createNewProject(newProjectName);
       }
 
-      // Handle media based on merge strategy
+      // Load template media and tracks FIRST (before clearing)
+      const { mediaItems, tracks: templateTracks } = await applyTemplate(selectedTemplate);
+
+      // Only clear after successful download
       if (mergeStrategy === 'replace') {
         clearAllMedia();
         const currentTracks = useTimelineStore.getState().tracks;
         currentTracks.forEach(track => removeTrack(track.id));
       }
-
-      // Load template media and tracks
-      const { mediaItems, tracks: templateTracks } = await applyTemplate(selectedTemplate);
 
       // Add media items to the store
       mediaItems.forEach(item => addMediaItem(item));
@@ -184,9 +184,12 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
         initializeScenes(updatedProject.scenes || [], updatedProject.currentSceneId);
       }
 
-      // Reset playhead and pause playback
-      pause();
+      // Reset playhead to start; sync duration so playback works immediately
       setCurrentTime(0);
+      const totalDuration = useTimelineStore.getState().getTotalDuration();
+      if (totalDuration > 0) {
+        usePlaybackStore.getState().setDuration(totalDuration);
+      }
 
       // Default to cover mode so video fills the fullscreen preview
       useEditorStore.getState().setVideoObjectFit("cover");
