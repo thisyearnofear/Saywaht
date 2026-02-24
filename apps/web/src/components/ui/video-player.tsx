@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { cn } from "@/lib/utils";
+import { Loader2 } from "@/lib/icons";
 
 interface VideoPlayerProps {
   src: string;
@@ -98,6 +99,9 @@ export function VideoPlayer({
       setIsVideoReady(false);
       setHasError(false);
       setErrorMessage("");
+      if (isPlaying && isInClipRange) {
+        setStalled(true);
+      }
       armLoadTimeout();
     };
 
@@ -229,24 +233,21 @@ export function VideoPlayer({
 
   return (
     <div className="relative w-full h-full bg-black flex items-center justify-center">
-      {/* Branded Loading Overlay */}
+      {/* Loading Overlay — hides unready video, error state shows retry hint */}
       {(!isVideoReady || hasError) && src && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-20 transition-opacity duration-500">
-          <div className="relative mb-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-2xl font-black text-white shadow-[0_0_30px_rgba(var(--primary),0.3)] animate-pulse">
-              W
+          {hasError ? (
+            <div className="text-center space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">
+                Connection weak
+              </p>
+              <p className="text-[8px] font-bold uppercase tracking-widest text-white/30">
+                Retrying download
+              </p>
             </div>
-            <div className="absolute -inset-4 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
-          </div>
-          
-          <div className="text-center space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80 animate-pulse">
-              {hasError ? "Connection weak..." : "Preparing Clip"}
-            </p>
-            <p className="text-[8px] font-bold uppercase tracking-widest text-white/40">
-              {hasError ? "Retrying download" : "Optimizing for zero-lag"}
-            </p>
-          </div>
+          ) : (
+            <Loader2 className="h-6 w-6 animate-spin text-white/40" />
+          )}
         </div>
       )}
 

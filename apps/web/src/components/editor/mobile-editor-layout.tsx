@@ -73,7 +73,7 @@ export function MobileEditorLayout({
   hideOnboarding = false,
 }: MobileEditorLayoutProps) {
   const router = useRouter();
-  const { isPlaying, toggle, play } = usePlaybackStore();
+  const { isPlaying, isStalled, toggle, play } = usePlaybackStore();
   const { mediaItems } = useMediaStore();
   const { activeProject } = useProjectStore();
   const { tracks } = useTimelineStore();
@@ -316,11 +316,15 @@ export function MobileEditorLayout({
                 }}
                 aria-label={isPlaying ? "Pause preview" : "Play preview"}
               >
-                {!isPlaying && (
+                {isPlaying && isStalled ? (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-black/35 backdrop-blur-xl">
+                    <Loader2 className="h-7 w-7 animate-spin text-white" />
+                  </div>
+                ) : !isPlaying ? (
                   <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-black/35 backdrop-blur-xl">
                     <Play className="ml-0.5 h-8 w-8 fill-white text-white" />
                   </div>
-                )}
+                ) : null}
               </button>
             </>
           ) : (
