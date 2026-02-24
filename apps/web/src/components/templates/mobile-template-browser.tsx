@@ -301,8 +301,12 @@ export function MobileTemplateBrowser() {
         initializeScenes(updatedProject.scenes || [], updatedProject.currentSceneId);
       }
 
-      pause();
       setCurrentTime(0);
+      // Sync duration so playback works immediately in the editor
+      const totalDuration = useTimelineStore.getState().getTotalDuration();
+      if (totalDuration > 0) {
+        usePlaybackStore.getState().setDuration(totalDuration);
+      }
 
       toast.dismiss(loadingToast);
       toast.success("Ready to edit!");
