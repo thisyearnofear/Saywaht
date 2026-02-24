@@ -222,7 +222,14 @@ function ProjectMediaList({ onFileSelect, isProcessing }: ProjectMediaListProps)
                   </button>
 
                   <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-md px-2 py-1 flex items-center justify-between">
-                    <p className="text-[8px] font-bold truncate text-white uppercase">{item.name}</p>
+                    <div className="flex items-center gap-1 min-w-0">
+                      <p className="text-[8px] font-bold truncate text-white uppercase">{item.name}</p>
+                      {item.duration && (
+                        <span className="text-[8px] font-black text-white/70 shrink-0">
+                          {Math.floor(item.duration)}s
+                        </span>
+                      )}
+                    </div>
                     <button
                       className="flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[8px] font-black text-white uppercase tracking-wide active:scale-95 shrink-0 ml-1"
                       onClick={(e) => { e.stopPropagation(); handleAddToTimeline(item); }}

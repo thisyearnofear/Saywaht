@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import "@/app/editor/mobile-editor.css";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Mic,
@@ -15,6 +16,7 @@ import {
   Redo2,
   Play,
   X,
+  Check,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
@@ -70,11 +72,12 @@ export function MobileEditorLayout({
   className,
   hideOnboarding = false,
 }: MobileEditorLayoutProps) {
+  const router = useRouter();
   const { isPlaying, toggle, play } = usePlaybackStore();
   const { mediaItems } = useMediaStore();
   const { activeProject } = useProjectStore();
   const { tracks } = useTimelineStore();
-  const { selectText } = useTextStore();
+  const { selectText, textElements } = useTextStore();
   const { isFarcasterMiniApp } = useFarcasterContext();
   const { shareToFarcaster, isSharing } = useFarcasterShare();
   const { undo, redo, canUndo, canRedo } = useEditorHistory();
@@ -86,6 +89,15 @@ export function MobileEditorLayout({
   const [preferredCaptionGroupId, setPreferredCaptionGroupId] = useState<string | null>(null);
   const timelineVisible = activeTool === null || activeTool === "record";
   const hasTimelineClips = tracks.some((track) => track.clips.length > 0);
+  const hasVoiceover = tracks.some((t) => t.type === "audio" && t.clips.length > 0);
+  const hasText = textElements.length > 0;
+
+  // Track which workflow steps are completed
+  const completedSteps = useMemo(() => ({
+    media: hasTimelineClips,
+    voice: hasVoiceover,
+    text: hasText,
+  }), [hasTimelineClips, hasVoiceover, hasText]);
 
   usePlaybackControls();
 
@@ -112,22 +124,6 @@ export function MobileEditorLayout({
     }
   }, []);
 
-  const handleFinish = useCallback(async () => {
-    addHapticFeedback("heavy");
-    if (!activeProject || !hasTimelineClips) {
-      toast.error("Add some content first!");
-      return;
-    }
-
-    if (isFarcasterMiniApp) {
-      await shareToFarcaster();
-      return;
-    }
-
-    toast.info("Preparing to launch...");
-    window.location.href = `/mint/${activeProject.id}`;
-  }, [activeProject, hasTimelineClips, isFarcasterMiniApp, shareToFarcaster]);
-
   const openToolSheet = useCallback((tool: MobileTool, options?: { autoStartRecording?: boolean }) => {
     addHapticFeedback("medium");
     setActiveTool(tool);
@@ -140,6 +136,41 @@ export function MobileEditorLayout({
     addHapticFeedback("light");
     setActiveTool(null);
   }, []);
+
+  // Tool-to-tool handoff: suggest next step when timeline gets first clip
+  const prevHasClips = useRef(hasTimelineClips);
+  useEffect(() => {
+    if (!prevHasClips.current && hasTimelineClips && activeTool === "media") {
+      toast.success("Clip added! Record a voiceover next?", {
+        action: {
+          label: "Record",
+          onClick: () => openToolSheet("record", { autoStartRecording: true }),
+        },
+        duration: 4000,
+      });
+    }
+    prevHasClips.current = hasTimelineClips;
+  }, [hasTimelineClips, activeTool, openToolSheet]);
+
+  const handleFinish = useCallback(async () => {
+    addHapticFeedback("heavy");
+    if (!activeProject || !hasTimelineClips) {
+      toast.error("Add a clip to your timeline first", {
+        action: {
+          label: "Open Media",
+          onClick: () => openToolSheet("media"),
+        },
+      });
+      return;
+    }
+
+    if (isFarcasterMiniApp) {
+      await shareToFarcaster();
+      return;
+    }
+
+    router.push(`/mint/${activeProject.id}`);
+  }, [activeProject, hasTimelineClips, isFarcasterMiniApp, shareToFarcaster, router, openToolSheet]);
 
   return (
     <motion.div
@@ -193,7 +224,12 @@ export function MobileEditorLayout({
             <Button
               variant="default"
               size="sm"
-              className="h-9 rounded-full bg-primary px-4 text-[10px] font-black uppercase tracking-widest text-white"
+              className={cn(
+                "h-9 rounded-full px-4 text-[10px] font-black uppercase tracking-widest text-white transition-all",
+                hasTimelineClips
+                  ? "bg-primary shadow-[0_0_12px_rgba(var(--primary),0.4)]"
+                  : "bg-muted-foreground/30"
+              )}
               onClick={handleFinish}
               disabled={isSharing}
             >
@@ -206,12 +242,46 @@ export function MobileEditorLayout({
                 </>
               ) : (
                 <>
-                  <Zap className="mr-1.5 h-3.5 w-3.5 fill-white" />
+                  <Zap className={cn("mr-1.5 h-3.5 w-3.5", hasTimelineClips && "fill-white")} />
                   Finish
                 </>
               )}
             </Button>
           </div>
+        </div>
+
+        {/* Workflow Progress Bar */}
+        <div className="z-30 flex items-center justify-center gap-3 border-b border-white/5 bg-black/60 px-4 py-1.5 backdrop-blur-sm">
+          {[
+            { key: "media", label: "Media", done: completedSteps.media },
+            { key: "voice", label: "Voice", done: completedSteps.voice },
+            { key: "text", label: "Text", done: completedSteps.text },
+          ].map((step, i) => (
+            <button
+              key={step.key}
+              className="flex items-center gap-1.5"
+              onClick={() => {
+                const toolMap: Record<string, MobileTool> = { media: "media", voice: "record", text: "text" };
+                openToolSheet(toolMap[step.key]);
+              }}
+            >
+              <div className={cn(
+                "flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-black transition-colors",
+                step.done
+                  ? "bg-primary text-white"
+                  : "border border-white/20 text-white/40"
+              )}>
+                {step.done ? <Check className="h-2.5 w-2.5" /> : i + 1}
+              </div>
+              <span className={cn(
+                "text-[9px] font-bold uppercase tracking-wider transition-colors",
+                step.done ? "text-white/80" : "text-white/30"
+              )}>
+                {step.label}
+              </span>
+              {i < 2 && <span className="ml-1.5 text-[8px] text-white/15">›</span>}
+            </button>
+          ))}
         </div>
 
         <div
@@ -255,18 +325,22 @@ export function MobileEditorLayout({
             </>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-neutral-950 via-black to-neutral-950">
-              <div className="mx-5 rounded-2xl border border-white/15 bg-black/55 p-4 text-center backdrop-blur">
-                <p className="text-xs font-black uppercase tracking-[0.12em] text-white">
-                  Your preview starts after add
+              <div className="mx-5 rounded-2xl border border-white/15 bg-black/55 p-5 text-center backdrop-blur">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/15">
+                  <Video className="h-6 w-6 text-primary" />
+                </div>
+                <p className="text-sm font-black uppercase tracking-tight text-white">
+                  Add your first clip
                 </p>
-                <p className="mt-2 text-[11px] text-white/70">
-                  Open Media, choose a clip, then tap Add to timeline.
+                <p className="mt-1.5 text-[11px] leading-relaxed text-white/60">
+                  Pick a clip from Media, then tap <span className="font-bold text-white/80">Add</span> to place it on the timeline.
                 </p>
                 <Button
                   size="sm"
-                  className="mt-3 h-8 rounded-full px-3 text-[10px] font-black uppercase tracking-widest"
+                  className="mt-4 h-10 w-full rounded-full text-[10px] font-black uppercase tracking-widest"
                   onClick={() => openToolSheet("media")}
                 >
+                  <Video className="mr-1.5 h-3.5 w-3.5" />
                   Open Media
                 </Button>
               </div>
@@ -390,9 +464,19 @@ export function MobileEditorLayout({
             <div className="flex items-start gap-3">
               <div className="mt-0.5 h-2.5 w-2.5 rounded-full bg-primary" />
               <div className="flex-1">
-                <p className="text-xs font-semibold text-foreground">Tap Record to start instantly.</p>
+                <p className="text-xs font-semibold text-foreground">
+                  {!hasTimelineClips
+                    ? "Start by adding media to your timeline."
+                    : !hasVoiceover
+                      ? "Nice! Now tap Record to add your voiceover."
+                      : "Looking good! Add text or tap Finish when ready."}
+                </p>
                 <p className="mt-1 text-[11px] text-muted-foreground">
-                  Editing tools open as a bottom sheet while your preview stays visible.
+                  {!hasTimelineClips
+                    ? "Open Media → choose a clip → tap Add."
+                    : !hasVoiceover
+                      ? "Your voice is recorded over the video preview."
+                      : "Captions were auto-generated from your recording."}
                 </p>
               </div>
               <Button

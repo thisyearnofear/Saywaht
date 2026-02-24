@@ -118,18 +118,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => ({
 
   setDuration: (duration: number) => set({ duration }),
   setCurrentTime: (time: number) => set({ currentTime: time }),
-  setStalled: (stalled: boolean) => {
-    set({ isStalled: stalled });
-    // Auto-recover from stall after 3 seconds to prevent permanent freeze
-    if (stalled) {
-      setTimeout(() => {
-        const current = get();
-        if (current.isStalled && current.isPlaying) {
-          set({ isStalled: false });
-        }
-      }, 3000);
-    }
-  },
+  setStalled: (stalled: boolean) => set({ isStalled: stalled }),
 
   mute: () => {
     const { volume, previousVolume } = get();
