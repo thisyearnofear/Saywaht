@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { useProjectStore } from "@/stores/project-store";
 import { useTemplateStore } from "@/stores/template-store";
-import { useRouter } from "next/navigation";
+import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import { Template } from "@/lib/types";
 import { HoverVideoPreview } from "@/components/templates/hover-video-preview";
 import Image from "next/image";
@@ -26,7 +26,7 @@ interface FeaturedTemplate extends Template {
 
 export function WelcomeScreen() {
   const { createNewProject } = useProjectStore();
-  const router = useRouter();
+  const { navigateToTemplate, navigateToTemplates } = useSmartNavigation();
   const { fetchCategories, categories, isLoading } = useTemplateStore();
 
   useEffect(() => {
@@ -121,7 +121,7 @@ export function WelcomeScreen() {
                             key={template.id}
                             className="overflow-hidden bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-300 transform hover:scale-[1.03] cursor-pointer group rounded-2xl"
                             onClick={() =>
-                              router.push(`/templates/${template.id}`)
+                              navigateToTemplate(template.id)
                             }
                           >
                             <div className="aspect-[3/4] relative overflow-hidden">
@@ -152,7 +152,7 @@ export function WelcomeScreen() {
 
                   <div className="flex justify-center lg:justify-start pt-2">
                     <Button
-                      onClick={() => router.push("/templates")}
+                      onClick={() => navigateToTemplates()}
                       className="w-full h-16 bg-white text-blue-900 hover:bg-white/90 font-black uppercase tracking-widest rounded-2xl shadow-[0_20px_40px_rgba(255,255,255,0.1)] transition-all active:scale-95 text-lg"
                     >
                       Explore All Packs

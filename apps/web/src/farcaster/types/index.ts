@@ -60,7 +60,9 @@ export interface FarcasterFrameState {
   videoUrl?: string;
   castHash?: string;
   user?: FarcasterUser;
-  step: "welcome" | "recording" | "minting" | "complete";
+  step: "welcome" | "recording" | "minting" | "complete" | "templates" | "trade";
   recordingTime?: number;
   source?: "miniapp" | "cast" | "direct";
+  projectId?: string;
+  templateId?: string;
 }

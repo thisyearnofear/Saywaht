@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { MobileEditorLayout } from "@/components/editor/mobile-editor-layout";
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 import { useFarcasterFrame } from "@/farcaster/hooks/use-farcaster-frame";
+import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import { MobileOnboardingOverlay } from "@/components/editor/mobile-onboarding-overlay";
 import { FarcasterSplashScreen } from "./farcaster-splash-screen";
 import { useMobileOnboarding } from "@/components/editor/mobile-onboarding-overlay";
@@ -24,8 +25,9 @@ export function FarcasterMobileEditorLayout({
 }: {
   children?: React.ReactNode;
 }) {
-  const { isFarcasterMiniApp, frameState, isInitializing, isReady } = useFarcasterContext();
+  const { isFarcasterMiniApp, frameState, setFrameState, isInitializing, isReady } = useFarcasterContext();
   const { handleMiniAppNavigation, handleCastIntegration } = useFarcasterFrame();
+  const { navigateToTemplates } = useSmartNavigation();
   const { showOnboarding, completeOnboarding, skipOnboarding } =
     useMobileOnboarding();
   const [showFarcasterOnboarding, setShowFarcasterOnboarding] = useState(false);
@@ -85,6 +87,33 @@ export function FarcasterMobileEditorLayout({
     };
   }, [isFarcasterMiniApp, isReady, isInitializing, showOnboarding]);
 
+  // Listen for hash changes to update frame state (for hash-based navigation)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1); // Remove the #
+      
+      if (hash.startsWith('templates')) {
+        setFrameState({ step: 'templates' });
+      } else if (hash.startsWith('mint')) {
+        setFrameState({ step: 'minting' });
+      } else if (hash.startsWith('trade')) {
+        setFrameState({ step: 'trade' });
+      } else if (hash.startsWith('editor')) {
+        setFrameState({ step: 'recording' });
+      } else if (hash === '' || hash === 'welcome') {
+        setFrameState({ step: 'welcome' });
+      }
+    };
+
+    // Handle initial hash
+    handleHashChange();
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [setFrameState]);
+
   // Handle Mini App navigation actions
   const handleMiniAppAction = (action: string) => {
     switch (action) {
@@ -98,8 +127,8 @@ export function FarcasterMobileEditorLayout({
         }
         break;
       case "templates":
-        // Direct navigation to templates page
-        window.location.href = '/templates';
+        // Navigate to templates using smart navigation (hash-based in Mini App)
+        navigateToTemplates();
         break;
       case "create_coin":
         handleMiniAppNavigation('mint');
@@ -113,6 +142,234 @@ export function FarcasterMobileEditorLayout({
   // Determine if we should show the splash screen
   // Show if not mounted yet OR if initializing and animation hasn't finished
   const showSplash = !isMounted || (isFarcasterMiniApp && (!isReady || !isSplashAnimationComplete));
+
+  /**
+   * Render the appropriate content based on frame state step
+   * This handles hash-based navigation within the Mini App
+   */
+  const renderContent = () => {
+    // Show splash screen during initialization
+    if (showSplash) {
+      return (
+        <FarcasterSplashScreen
+          isVisible={showSplash}
+          onComplete={handleSplashComplete}
+        />
+      );
+    }
+
+    // Render based on current step
+    switch (frameState.step) {
+      case 'welcome':
+        return renderWelcomePage();
+      
+      case 'templates':
+        return renderTemplatesPage();
+      
+      case 'minting':
+        return renderMintingPage();
+      
+      case 'trade':
+        return renderTradePage();
+      
+      case 'recording':
+      default:
+        return renderEditorPage();
+    }
+  };
+
+  /**
+   * Render the welcome/landing page
+   */
+  const renderWelcomePage = () => {
+    return (
+      <div className={cn(
+        "flex-1 min-h-0 overflow-y-auto scrollable flex flex-col transition-opacity duration-500",
+        "opacity-100 visible"
+      )}>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-10 bg-background relative overflow-hidden">
+          {/* Edge decoration */}
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+
+          <div className="relative group">
+            <div className="absolute inset-0 bg-primary blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
+            <div className="w-24 h-24 rounded-[2rem] bg-primary flex items-center justify-center text-5xl font-black text-white shadow-2xl -rotate-3 transition-transform group-hover:rotate-0 duration-500">
+              W
+            </div>
+          </div>
+
+          <div className="space-y-3 relative">
+            <h1 className="text-6xl font-black tracking-tighter italic uppercase leading-none">
+              SayWAHT<span className="text-primary">!</span>
+            </h1>
+            <p className="text-xl font-bold text-muted-foreground uppercase tracking-tight">See it. Say it. Coin it.</p>
+          </div>
+
+          <div className="w-full max-w-xs space-y-4 pt-2 relative">
+            <Button
+              size="lg"
+              className="w-full h-16 text-lg font-black uppercase tracking-widest rounded-2xl shadow-xl bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95 transition-all border-none"
+              onClick={() => handleMiniAppAction('start_recording')}
+            >
+              Coin Commentary
+            </Button>
+
+            <Button
+              size="lg"
+              variant="secondary"
+              className="w-full h-16 text-lg font-black uppercase tracking-widest rounded-2xl shadow-lg bg-white text-black hover:bg-white/90 active:scale-95 transition-all"
+              onClick={() => handleMiniAppAction('templates')}
+            >
+              Browse Templates
+            </Button>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="h-12 text-[10px] font-black uppercase tracking-wider border-2 rounded-xl hover:bg-primary/5 transition-colors"
+                onClick={() => handleMiniAppAction('browse_coins')}
+              >
+                Market
+              </Button>
+              <Button
+                variant="outline"
+                className="h-12 text-[10px] font-black uppercase tracking-wider border-2 rounded-xl hover:bg-primary/5 transition-colors"
+                onClick={() => handleMiniAppAction('create_coin')}
+              >
+                Trending
+              </Button>
+            </div>
+          </div>
+
+          <div className="pt-6 space-y-2 opacity-60">
+            <p className="text-[9px] text-muted-foreground uppercase tracking-[0.5em] font-black">
+              No Permissions • No Watermarks
+            </p>
+            <p className="text-[9px] text-primary uppercase tracking-[0.3em] font-black">
+              Decentralized & Uncensored
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * Render the templates page
+   */
+  const renderTemplatesPage = () => {
+    return (
+      <div className={cn(
+        "flex-1 min-h-0 overflow-y-auto scrollable flex flex-col transition-opacity duration-500",
+        "opacity-100 visible"
+      )}>
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.history.back()}
+            className="text-white"
+          >
+            ← Back
+          </Button>
+          <h2 className="text-lg font-black uppercase tracking-widest">Templates</h2>
+          <div className="w-16" />{/* Spacer for centering */}
+        </div>
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center space-y-4">
+            <p className="text-white/60">Templates coming soon...</p>
+            <Button onClick={() => handleMiniAppAction('start_recording')}>
+              Start Recording
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * Render the minting page
+   */
+  const renderMintingPage = () => {
+    return (
+      <div className={cn(
+        "flex-1 min-h-0 overflow-y-auto scrollable flex flex-col transition-opacity duration-500",
+        "opacity-100 visible"
+      )}>
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.history.back()}
+            className="text-white"
+          >
+            ← Back
+          </Button>
+          <h2 className="text-lg font-black uppercase tracking-widest">Mint</h2>
+          <div className="w-16" />{/* Spacer for centering */}
+        </div>
+        <div className="flex-1">
+          <MobileEditorLayout hideOnboarding={isFarcasterMiniApp}>
+            {children}
+          </MobileEditorLayout>
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * Render the trade/market page
+   */
+  const renderTradePage = () => {
+    return (
+      <div className={cn(
+        "flex-1 min-h-0 overflow-y-auto scrollable flex flex-col transition-opacity duration-500",
+        "opacity-100 visible"
+      )}>
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.history.back()}
+            className="text-white"
+          >
+            ← Back
+          </Button>
+          <h2 className="text-lg font-black uppercase tracking-widest">Market</h2>
+          <div className="w-16" />{/* Spacer for centering */}
+        </div>
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center space-y-4">
+            <p className="text-white/60">Market data coming soon...</p>
+            <Button onClick={() => handleMiniAppAction('start_recording')}>
+              Start Recording
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * Render the main editor page
+   */
+  const renderEditorPage = () => {
+    return (
+      <div className={cn(
+        "flex-1 min-h-0 overflow-y-auto scrollable flex flex-col transition-opacity duration-500",
+        "opacity-100 visible"
+      )}>
+        {/* Show Cast Context if available */}
+        {isMounted && frameState.castHash && (
+          <CastContextPanel castHash={frameState.castHash} />
+        )}
+        <MobileEditorLayout hideOnboarding={isFarcasterMiniApp}>
+          {children}
+        </MobileEditorLayout>
+      </div>
+    );
+  };
 
   return (
     <div
@@ -141,95 +398,8 @@ export function FarcasterMobileEditorLayout({
         <FarcasterClientLogic />
       </Suspense>
 
-      {/* Farcaster Mini App Splash Screen */}
-      <FarcasterSplashScreen
-        isVisible={showSplash}
-        onComplete={handleSplashComplete}
-      />
-
-      {/* Enhanced mobile editor layout with Farcaster features */}
-      <div className={cn(
-        "flex-1 min-h-0 overflow-y-auto scrollable flex flex-col transition-opacity duration-500",
-        showSplash ? "opacity-0 invisible" : "opacity-100 visible"
-      )}>
-        {/* LANDING PAGE: Show if we're in 'welcome' step and no cast is provided */}
-        {isFarcasterMiniApp && frameState.step === 'welcome' && !frameState.castHash ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-10 bg-background relative overflow-hidden">
-            {/* Edge decoration */}
-            <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
-
-            <div className="relative group">
-              <div className="absolute inset-0 bg-primary blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
-              <div className="w-24 h-24 rounded-[2rem] bg-primary flex items-center justify-center text-5xl font-black text-white shadow-2xl -rotate-3 transition-transform group-hover:rotate-0 duration-500">
-                W
-              </div>
-            </div>
-
-            <div className="space-y-3 relative">
-              <h1 className="text-6xl font-black tracking-tighter italic uppercase leading-none">
-                SayWAHT<span className="text-primary">!</span>
-              </h1>
-              <p className="text-xl font-bold text-muted-foreground uppercase tracking-tight">See it. Say it. Coin it.</p>
-            </div>
-
-            <div className="w-full max-w-xs space-y-4 pt-2 relative">
-              <Button
-                size="lg"
-                className="w-full h-16 text-lg font-black uppercase tracking-widest rounded-2xl shadow-xl bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95 transition-all border-none"
-                onClick={() => handleMiniAppAction('start_recording')}
-              >
-                Coin Commentary
-              </Button>
-
-              <Button
-                size="lg"
-                variant="secondary"
-                className="w-full h-16 text-lg font-black uppercase tracking-widest rounded-2xl shadow-lg bg-white text-black hover:bg-white/90 active:scale-95 transition-all"
-                onClick={() => handleMiniAppAction('templates')}
-              >
-                Browse Templates
-              </Button>
-
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  className="h-12 text-[10px] font-black uppercase tracking-wider border-2 rounded-xl hover:bg-primary/5 transition-colors"
-                  onClick={() => handleMiniAppAction('browse_coins')}
-                >
-                  Market
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-12 text-[10px] font-black uppercase tracking-wider border-2 rounded-xl hover:bg-primary/5 transition-colors"
-                  onClick={() => handleMiniAppAction('create_coin')}
-                >
-                  Trending
-                </Button>
-              </div>
-            </div>
-
-            <div className="pt-6 space-y-2 opacity-60">
-              <p className="text-[9px] text-muted-foreground uppercase tracking-[0.5em] font-black">
-                No Permissions • No Watermarks
-              </p>
-              <p className="text-[9px] text-primary uppercase tracking-[0.3em] font-black">
-                Decentralized & Uncensored
-              </p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Show Cast Context if available */}
-            {isMounted && frameState.castHash && (
-              <CastContextPanel castHash={frameState.castHash} />
-            )}
-            <MobileEditorLayout hideOnboarding={isFarcasterMiniApp}>
-              {children}
-            </MobileEditorLayout>
-          </>
-        )}
-      </div>
+      {/* Main content based on current step */}
+      {renderContent()}
 
       {/* Farcaster-specific onboarding */}
       {showFarcasterOnboarding && isFarcasterMiniApp && (isReady || !isInitializing) && (
@@ -247,4 +417,3 @@ export function FarcasterMobileEditorLayout({
     </div>
   );
 }
-

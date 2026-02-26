@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import "@/app/editor/mobile-editor.css";
 import { useRouter } from "next/navigation";
+import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import { Button } from "@/components/ui/button";
 import {
   Mic,
@@ -74,6 +75,7 @@ export function MobileEditorLayout({
   hideOnboarding = false,
 }: MobileEditorLayoutProps) {
   const router = useRouter();
+  const { navigateToMint } = useSmartNavigation();
   const { isPlaying, isStalled, toggle, play } = usePlaybackStore();
   const { mediaItems } = useMediaStore();
   const { activeProject } = useProjectStore();
@@ -178,8 +180,8 @@ export function MobileEditorLayout({
       return;
     }
 
-    router.push(`/mint/${activeProject.id}`);
-  }, [activeProject, hasTimelineClips, isFarcasterMiniApp, shareToFarcaster, router, openToolSheet]);
+    navigateToMint(activeProject.id);
+  }, [activeProject, hasTimelineClips, isFarcasterMiniApp, shareToFarcaster, navigateToMint, openToolSheet]);
 
   return (
     <div

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, ChangeEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useMediaStore, MediaItem } from "@/stores/media-store";
@@ -26,7 +26,7 @@ interface MobileMediaPanelProps {
 }
 
 export function MobileMediaPanel({ className, onMediaAdded }: MobileMediaPanelProps) {
-  const router = useRouter();
+  const { navigateToTemplates } = useSmartNavigation();
   const { mediaItems, addMediaItem } = useMediaStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -60,7 +60,7 @@ export function MobileMediaPanel({ className, onMediaAdded }: MobileMediaPanelPr
 
   const handleBrowseTemplates = () => {
     addHapticFeedback("medium");
-    router.push("/templates");
+    navigateToTemplates();
   };
 
   return (
