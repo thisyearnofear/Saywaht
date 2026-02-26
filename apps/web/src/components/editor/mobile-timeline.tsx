@@ -5,7 +5,7 @@
 
 "use client";
 
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTimelineStore } from "@/stores/timeline-store";
@@ -31,7 +31,7 @@ interface MobileTimelineProps {
   compact?: boolean;
 }
 
-export function MobileTimeline({
+export const MobileTimeline = React.memo(function MobileTimeline({
   expanded = false,
   onToggleExpand,
   compact = false,
@@ -52,6 +52,7 @@ export function MobileTimeline({
   const timelineRef = useRef<HTMLDivElement>(null);
   const scrubbingRef = useRef<boolean>(false);
   const lastSnappedTimeRef = useRef<number | null>(null);
+  const lastSeekTimeRef = useRef<number>(0); // For throttling seeks
 
   const SNAP_THRESHOLD = 0.2; // Seconds
 
@@ -125,6 +126,16 @@ export function MobileTimeline({
     const touch = e.touches[0];
     const rawTime = getTimeFromPosition(touch.clientX);
     const snappedTime = getSnappedTime(rawTime);
+    
+    // Throttle seek calls to ~30fps for better performance
+    const now = Date.now();
+    if (now - (lastSeekTimeRef.current || 0) < 33) {
+      // Update tooltip but skip seek
+      setTooltipTime(snappedTime);
+      setTooltipPosition((snappedTime / duration) * 100);
+      return;
+    }
+    lastSeekTimeRef.current = now;
     
     // Haptic feedback on snap
     if (snappedTime !== rawTime && snappedTime !== lastSnappedTimeRef.current) {
@@ -230,10 +241,15 @@ export function MobileTimeline({
   const actualExpanded = onToggleExpand ? expanded : isExpanded;
   const timelineProgress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // Calculate visible time range based on zoom
-  const visibleDuration = duration / zoomLevel;
-  const startTime = Math.max(0, currentTime - visibleDuration / 2);
-  const endTime = Math.min(duration, startTime + visibleDuration);
+  // Memoize expensive calculations
+  const visibleTimeRange = useMemo(() => {
+    const visibleDuration = duration / zoomLevel;
+    const startTime = Math.max(0, currentTime - visibleDuration / 2);
+    const endTime = Math.min(duration, startTime + visibleDuration);
+    return { visibleDuration, startTime, endTime };
+  }, [duration, zoomLevel, currentTime]);
+
+  const { visibleDuration, startTime, endTime } = visibleTimeRange;
 
   if (compact) {
     return (
@@ -530,4 +546,4 @@ export function MobileTimeline({
       )}
     </div>
   );
-}
+});

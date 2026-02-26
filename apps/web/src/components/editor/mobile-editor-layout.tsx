@@ -25,13 +25,11 @@ import { useMediaStore } from "@/stores/media-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useTextStore } from "@/stores/text-store";
-import { useTemplateStore } from "@/stores/template-store"; // NEW: Import template store
+import { useTemplateStore } from "@/stores/template-store";
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 import { useFarcasterShare } from "@/farcaster/hooks/use-farcaster-share";
 import { useEditorHistory } from "@/hooks/use-editor-history";
-import { useMobilePlaybackGate } from "@/hooks/use-mobile-playback-gate"; // NEW
-import { useVisibilitySync } from "@/hooks/use-visibility-sync"; // NEW
-import { useNetworkStatus } from "@/hooks/use-network-status"; // NEW
+import { useMobilePlaybackGate } from "@/hooks/use-mobile-playback-gate";
 import { MobileTimeline } from "@/components/editor/mobile-timeline";
 import { MobileMediaPanel } from "@/components/editor/mobile-media-panel";
 import { MobileAudioPanel } from "@/components/editor/mobile-audio-panel";
@@ -39,7 +37,6 @@ import { MobilePreviewPanel } from "@/components/editor/mobile-preview-panel";
 import { MobileTextPanel } from "@/components/editor/mobile-text-panel";
 import { MobileEffectsPanel } from "@/components/editor/mobile-effects-panel";
 import { addHapticFeedback } from "@/lib/mobile-utils";
-import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import {
   Drawer,
@@ -85,32 +82,19 @@ export function MobileEditorLayout({
   const { isFarcasterMiniApp } = useFarcasterContext();
   const { shareToFarcaster, isSharing } = useFarcasterShare();
   const { undo, redo, canUndo, canRedo } = useEditorHistory();
-  const { isApplying: isApplyingTemplate } = useTemplateStore(); // NEW: Track template loading
-  const { gatedPlay } = useMobilePlaybackGate(); // NEW: Mobile playback gate
-  const { isOnline, isSlowConnection } = useNetworkStatus(); // NEW: Network status
+  const { isApplying: isApplyingTemplate } = useTemplateStore();
+  const { gatedPlay } = useMobilePlaybackGate();
   
-  // NEW: Sync playback with visibility changes
-  useVisibilitySync();
-
-  // NEW: Show network status warning
-  useEffect(() => {
-    if (!isOnline) {
-      toast.error("No internet connection", {
-        description: "Some features may not work offline",
-        duration: 5000,
-      });
-    } else if (isSlowConnection) {
-      toast.warning("Slow connection detected", {
-        description: "Videos may take longer to load",
-        duration: 3000,
-      });
-    }
-  }, [isOnline, isSlowConnection]);
+  // Check for reduced motion preference
+  const prefersReducedMotion = useRef(
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ).current;
 
   const [activeTool, setActiveTool] = useState<MobileTool | null>("media");
   const [recordAutoStartNonce, setRecordAutoStartNonce] = useState(0);
   const [isRecordingInProgress, setIsRecordingInProgress] = useState(false);
   const [showCoachmark, setShowCoachmark] = useState(false);
+  const [showWorkflowBar, setShowWorkflowBar] = useState(true); // Allow dismissing workflow bar
   const [preferredCaptionGroupId, setPreferredCaptionGroupId] = useState<string | null>(null);
   const timelineVisible = activeTool === null || activeTool === "record";
   const hasTimelineClips = tracks.some((track) => track.clips.length > 0);
@@ -198,14 +182,12 @@ export function MobileEditorLayout({
   }, [activeProject, hasTimelineClips, isFarcasterMiniApp, shareToFarcaster, router, openToolSheet]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.35 }}
+    <div
       className={cn(
         "relative h-full w-full overflow-hidden bg-black text-white mobile-editor",
         className
       )}
+      style={{ opacity: 1 }} // Remove motion animation for better performance
     >
       <div className="absolute inset-0 flex flex-col">
         <div
@@ -275,39 +257,52 @@ export function MobileEditorLayout({
           </div>
         </div>
 
-        {/* Workflow Progress Bar */}
-        <div className="z-30 flex items-center justify-center gap-3 border-b border-white/5 bg-black/60 px-4 py-1.5 backdrop-blur-sm">
-          {[
-            { key: "media", label: "Media", done: completedSteps.media },
-            { key: "voice", label: "Voice", done: completedSteps.voice },
-            { key: "text", label: "Text", done: completedSteps.text },
-          ].map((step, i) => (
-            <button
-              key={step.key}
-              className="flex items-center gap-1.5"
-              onClick={() => {
-                const toolMap: Record<string, MobileTool> = { media: "media", voice: "record", text: "text" };
-                openToolSheet(toolMap[step.key]);
-              }}
+        {/* Workflow Progress Bar - Dismissible */}
+        {showWorkflowBar && (
+          <div className="z-30 flex items-center justify-between gap-2 border-b border-white/5 bg-black/60 px-4 py-1.5 backdrop-blur-sm">
+            <div className="flex items-center justify-center gap-3 flex-1">
+              {[
+                { key: "media", label: "Media", done: completedSteps.media },
+                { key: "voice", label: "Voice", done: completedSteps.voice },
+                { key: "text", label: "Text", done: completedSteps.text },
+              ].map((step, i) => (
+                <button
+                  key={step.key}
+                  className="flex items-center gap-1.5"
+                  onClick={() => {
+                    const toolMap: Record<string, MobileTool> = { media: "media", voice: "record", text: "text" };
+                    openToolSheet(toolMap[step.key]);
+                  }}
+                >
+                  <div className={cn(
+                    "flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-black transition-colors",
+                    step.done
+                      ? "bg-primary text-white"
+                      : "border border-white/20 text-white/40"
+                  )}>
+                    {step.done ? <Check className="h-2.5 w-2.5" /> : i + 1}
+                  </div>
+                  <span className={cn(
+                    "text-[9px] font-bold uppercase tracking-wider transition-colors",
+                    step.done ? "text-white/80" : "text-white/30"
+                  )}>
+                    {step.label}
+                  </span>
+                  {i < 2 && <span className="ml-1.5 text-[8px] text-white/15">›</span>}
+                </button>
+              ))}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 rounded-full shrink-0"
+              onClick={() => setShowWorkflowBar(false)}
+              aria-label="Hide workflow"
             >
-              <div className={cn(
-                "flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-black transition-colors",
-                step.done
-                  ? "bg-primary text-white"
-                  : "border border-white/20 text-white/40"
-              )}>
-                {step.done ? <Check className="h-2.5 w-2.5" /> : i + 1}
-              </div>
-              <span className={cn(
-                "text-[9px] font-bold uppercase tracking-wider transition-colors",
-                step.done ? "text-white/80" : "text-white/30"
-              )}>
-                {step.label}
-              </span>
-              {i < 2 && <span className="ml-1.5 text-[8px] text-white/15">›</span>}
-            </button>
-          ))}
-        </div>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
 
         <div
           className={cn(
@@ -405,32 +400,37 @@ export function MobileEditorLayout({
               </div>
 
               <div className="flex-1 min-h-0 overflow-hidden">
-                {activeTool === "record" && (
-                  <MobileAudioPanel
-                    autoStartRecordingNonce={recordAutoStartNonce}
-                    onRecordingStateChange={(state) => {
-                      setIsRecordingInProgress(state === "recording");
-                    }}
-                    onCaptionsGenerated={({ groupId, count }) => {
-                      setPreferredCaptionGroupId(groupId);
-                      setActiveTool("text");
-                      toast.success(`Generated ${count} captions. Edit them in Text.`);
-                    }}
-                  />
-                )}
-                {activeTool === "media" && (
-                  <MobileMediaPanel 
-                    onMediaAdded={() => {
-                      // Auto-close drawer after media is added
-                      closeToolSheet();
-                    }}
-                  />
-                )}
-                {activeTool === "text" && (
-                  <MobileTextPanel preferredCaptionGroupId={preferredCaptionGroupId} />
-                )}
-                {activeTool === "effects" && (
-                  <MobileEffectsPanel onRequestMedia={() => openToolSheet("media")} />
+                {/* Lazy load only the active tool panel for better performance */}
+                {activeTool && (
+                  <>
+                    {activeTool === "record" && (
+                      <MobileAudioPanel
+                        autoStartRecordingNonce={recordAutoStartNonce}
+                        onRecordingStateChange={(state) => {
+                          setIsRecordingInProgress(state === "recording");
+                        }}
+                        onCaptionsGenerated={({ groupId, count }) => {
+                          setPreferredCaptionGroupId(groupId);
+                          setActiveTool("text");
+                          toast.success(`Generated ${count} captions. Edit them in Text.`);
+                        }}
+                      />
+                    )}
+                    {activeTool === "media" && (
+                      <MobileMediaPanel 
+                        onMediaAdded={() => {
+                          // Auto-close drawer after media is added
+                          closeToolSheet();
+                        }}
+                      />
+                    )}
+                    {activeTool === "text" && (
+                      <MobileTextPanel preferredCaptionGroupId={preferredCaptionGroupId} />
+                    )}
+                    {activeTool === "effects" && (
+                      <MobileEffectsPanel onRequestMedia={() => openToolSheet("media")} />
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -438,18 +438,11 @@ export function MobileEditorLayout({
         </Drawer>
 
         {/* Compact Timeline */}
-        <AnimatePresence>
-          {(activeTool === null || activeTool === "record") && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="z-20 overflow-hidden border-t border-white/10 bg-background/95 shrink-0"
-            >
-              <MobileTimeline compact />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {(activeTool === null || activeTool === "record") && (
+          <div className="z-20 overflow-hidden border-t border-white/10 bg-background/95 shrink-0">
+            <MobileTimeline compact />
+          </div>
+        )}
 
         {/* Bottom Navigation */}
         <div
@@ -489,15 +482,9 @@ export function MobileEditorLayout({
         </div>
       </div>
 
-      <AnimatePresence>
-        {showCoachmark && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            className="absolute bottom-24 left-3 right-3 z-40 rounded-2xl border border-primary/20 bg-background/95 p-3 shadow-2xl"
-          >
-            <div className="flex items-start gap-3">
+      {showCoachmark && (
+        <div className="absolute bottom-24 left-3 right-3 z-40 rounded-2xl border border-primary/20 bg-background/95 p-3 shadow-2xl">
+          <div className="flex items-start gap-3">
               <div className="mt-0.5 h-2.5 w-2.5 rounded-full bg-primary" />
               <div className="flex-1">
                 <p className="text-xs font-semibold text-foreground">
@@ -525,9 +512,9 @@ export function MobileEditorLayout({
                 <X className="h-4 w-4" />
               </Button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
+      )}
 
       <div className="hidden md:block">
         <QuickActions />
@@ -535,28 +522,21 @@ export function MobileEditorLayout({
       {children}
 
       {/* Template Loading Overlay */}
-      <AnimatePresence>
-        {isApplyingTemplate && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
-          >
-            <div className="flex flex-col items-center gap-4">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <div className="text-center">
-                <p className="text-sm font-black uppercase tracking-widest text-white">
-                  Loading Template
-                </p>
-                <p className="mt-1 text-xs text-white/60">
-                  Preparing your video...
-                </p>
-              </div>
+      {isApplyingTemplate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <div className="text-center">
+              <p className="text-sm font-black uppercase tracking-widest text-white">
+                Loading Template
+              </p>
+              <p className="mt-1 text-xs text-white/60">
+                Preparing your video...
+              </p>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

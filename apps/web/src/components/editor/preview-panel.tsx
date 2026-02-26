@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useMediaStore } from "@/stores/media-store";
@@ -54,9 +54,9 @@ export function PreviewPanel({
   const previewRef = useRef<HTMLDivElement>(null);
   const controlsAreOverlay = controlsVariant === "overlay";
 
-  // Get active clips at current time with debug info
-  const getActiveClips = () => {
-    const activeClips: Array<{
+  // Memoize active clips calculation to prevent unnecessary re-renders
+  const activeClips = useMemo(() => {
+    const clips: Array<{
       clip: any;
       track: any;
       mediaItem: any;
@@ -75,27 +75,17 @@ export function PreviewPanel({
               : mediaItems.find((item) => item.id === clip.mediaId);
 
           if (mediaItem || clip.mediaId === "test") {
-            activeClips.push({ clip, track, mediaItem });
-
-            // Debug logging for video clips
-            if (mediaItem?.type === "video" && SHOW_DEBUG_INFO) {
-              console.log(`Active video clip: ${clip.name}`, {
-                clipStart,
-                clipEnd,
-                currentTime,
-                videoTime: currentTime - clipStart + clip.trimStart,
-                mediaUrl: mediaItem.url,
-                trackType: track.type,
-                isInRange: true
-              });
-            }
+            clips.push({ clip, track, mediaItem });
           }
         }
       });
     });
 
-    return activeClips;
-  };
+    return clips;
+  }, [tracks, mediaItems, currentTime]);
+
+  // Get active clips at current time with debug info
+  const getActiveClips = () => activeClips;
 
   // Check if there are separated audio tracks for any video
   const hasSeparatedAudio = (videoMediaId: string) => {
@@ -106,15 +96,16 @@ export function PreviewPanel({
     );
   };
 
-  // Get active text elements at current time
-  const getActiveTextElements = () => {
+  // Get active text elements at current time - memoized
+  const activeTextElements = useMemo(() => {
     return textElements.filter(
       (text) => currentTime >= text.startTime && currentTime < text.endTime
     );
-  };
+  }, [textElements, currentTime]);
 
-  const activeClips = getActiveClips();
-  const activeTextElements = getActiveTextElements();
+  // Memoize getActiveTextElements for compatibility
+  const getActiveTextElements = () => activeTextElements;
+
   const aspectRatio = getAspectRatio();
 
   // Debug logging - refined to be less noisy
