@@ -44,6 +44,13 @@ export function VideoPlayer({
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Refs to read latest values in effects without triggering re-runs
+  const currentTimeRef = useRef(currentTime);
+  currentTimeRef.current = currentTime;
+  const muteStateRef = useRef(muteAudio || muted);
+  muteStateRef.current = muteAudio || muted;
+  const retryCountRef = useRef(0);
+
   // Calculate effective speed (per-clip override or global)
   const effectiveSpeed = clipSpeed ?? speed;
   const finalSpeed = clipReversed ? -Math.abs(effectiveSpeed) : effectiveSpeed;
@@ -107,11 +114,21 @@ export function VideoPlayer({
 
     const handleError = (e: Event) => {
       clearLoadTimeout();
+      const mediaError = (e.currentTarget as HTMLVideoElement | null)?.error;
+      const msg = mediaError?.message || "Failed to load video";
+      console.error("[VideoPlayer] error:", msg, { code: mediaError?.code, src });
+
+      // Auto-retry once before surfacing the error
+      if (retryCountRef.current < 1) {
+        retryCountRef.current += 1;
+        videoRef.current?.load();
+        return;
+      }
+
       setIsVideoReady(false);
       setHasError(true);
       setStalled(false);
-      const mediaError = (e.currentTarget as HTMLVideoElement | null)?.error;
-      setErrorMessage(mediaError?.message || "Failed to load video");
+      setErrorMessage(msg);
     };
 
     video.addEventListener('canplay', handleCanPlay);
@@ -137,6 +154,7 @@ export function VideoPlayer({
 
   useEffect(() => {
     // Hard reset on source changes.
+    retryCountRef.current = 0;
     setIsVideoReady(false);
     setHasError(false);
     setErrorMessage("");
@@ -184,7 +202,7 @@ export function VideoPlayer({
         trimStart,
         Math.min(
           clipDuration - trimEnd,
-          currentTime - clipStartTime + trimStart
+          currentTimeRef.current - clipStartTime + trimStart
         )
       );
       video.currentTime = initialVideoTime;
@@ -199,7 +217,12 @@ export function VideoPlayer({
       window.removeEventListener("playback-update", handleUpdateEvent as EventListener);
       window.removeEventListener("playback-speed", handleSpeed as EventListener);
     };
-  }, [clipStartTime, trimStart, trimEnd, clipDuration, currentTime]);
+    // NOTE: currentTime intentionally excluded — ongoing sync is handled by the
+    // playback-update event (with 0.15s tolerance).  Including it here caused
+    // the effect to re-run every animation frame, force-seeking the video ~60fps
+    // and preventing smooth playback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clipStartTime, trimStart, trimEnd, clipDuration]);
 
   // Sync playback state
   useEffect(() => {
@@ -207,11 +230,17 @@ export function VideoPlayer({
     if (!video) return;
 
     if (isPlaying && isInClipRange) {
+      // Sync muted state BEFORE play() so WebView autoplay policy sees the
+      // correct value at evaluation time (avoids muted→unmuted race).
+      video.muted = muteStateRef.current;
       if (video.readyState >= 2) {
         video.play().catch(() => {});
       } else {
         const onCanPlay = () => {
-          if (isPlaying && isInClipRange) video.play().catch(() => {});
+          if (isPlaying && isInClipRange) {
+            video.muted = muteStateRef.current;
+            video.play().catch(() => {});
+          }
         };
         video.addEventListener('canplay', onCanPlay, { once: true });
         return () => video.removeEventListener('canplay', onCanPlay);
@@ -237,13 +266,22 @@ export function VideoPlayer({
       {(!isVideoReady || hasError) && src && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-20 transition-opacity duration-500">
           {hasError ? (
-            <div className="text-center space-y-1">
+            <div className="text-center space-y-2">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">
-                Connection weak
+                {errorMessage || "Failed to load video"}
               </p>
-              <p className="text-[8px] font-bold uppercase tracking-widest text-white/30">
-                Retrying download
-              </p>
+              <button
+                onClick={() => {
+                  retryCountRef.current = 0;
+                  setHasError(false);
+                  setErrorMessage("");
+                  setIsVideoReady(false);
+                  videoRef.current?.load();
+                }}
+                className="text-[9px] font-bold uppercase tracking-widest text-white/40 hover:text-white/60 transition-colors"
+              >
+                Tap to retry
+              </button>
             </div>
           ) : (
             <Loader2 className="h-6 w-6 animate-spin text-white/40" />
