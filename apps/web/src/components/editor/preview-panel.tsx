@@ -21,6 +21,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { VideoInitializationTest } from "./video-initialization-test";
+import { PreviewErrorBoundary } from "./preview-error-boundary";
 
 // Debug flag - set to false to hide active clips info
 const SHOW_DEBUG_INFO = false;
@@ -163,6 +164,10 @@ export function PreviewPanel({
     const saturation = clip.saturation ?? 1;
     const cssFilter = `brightness(${brightness}) contrast(${contrast}) saturate(${saturation})`;
     const clipAudioGain = clip.audioGain ?? 1;
+    
+    // NEW: Calculate z-index based on track order (video tracks on top, audio below)
+    const baseZIndex = track.type === "video" ? 10 : 5;
+    const clipZIndex = baseZIndex + index;
 
     // Test clips
     if (!mediaItem || clip.mediaId === "test") {
@@ -170,6 +175,7 @@ export function PreviewPanel({
         <div
           key={clip.id}
           className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center"
+          style={{ zIndex: clipZIndex }}
         >
           <div className="text-center">
             <div className="text-2xl mb-2">🎬</div>
@@ -199,7 +205,7 @@ export function PreviewPanel({
       // If video is on a video track, show video (mute audio if separated or explicitly muted)
       const shouldMuteAudio = clip.audioMuted || hasSeparatedAudio(clip.mediaId);
       return (
-        <div key={clip.id} className="absolute inset-0">
+        <div key={clip.id} className="absolute inset-0" style={{ zIndex: clipZIndex }}>
           <VideoPlayer
             src={mediaItem.url}
             poster={mediaItem.thumbnailUrl}
@@ -221,7 +227,7 @@ export function PreviewPanel({
     // Image clips
     if (mediaItem.type === "image") {
       return (
-        <div key={clip.id} className="absolute inset-0">
+        <div key={clip.id} className="absolute inset-0" style={{ zIndex: clipZIndex }}>
           <Image
             src={mediaItem.url}
             alt={mediaItem.name}
@@ -392,12 +398,13 @@ export function PreviewPanel({
   );
 
   return (
-    <div className="h-full w-full flex flex-col min-h-0 min-w-0">
-      {controlsVariant === "topbar" && showPlaybackControls && (
-        <div className="border-b p-2 flex items-center justify-center gap-2 text-xs flex-shrink-0">
-          {renderPlaybackControls()}
-        </div>
-      )}
+    <PreviewErrorBoundary>
+      <div className="h-full w-full flex flex-col min-h-0 min-w-0">
+        {controlsVariant === "topbar" && showPlaybackControls && (
+          <div className="border-b p-2 flex items-center justify-center gap-2 text-xs flex-shrink-0">
+            {renderPlaybackControls()}
+          </div>
+        )}
 
       {/* Preview Area - Edge-to-edge in overlay mode */}
       <div
@@ -446,6 +453,9 @@ export function PreviewPanel({
               </div>
             ) : (
               <>
+                {/* Black background layer to prevent transparency glitches */}
+                <div className="absolute inset-0 bg-black" style={{ zIndex: 0 }} />
+                
                 {/* Debug info for active clips */}
                 {SHOW_DEBUG_INFO && (
                   <div className="absolute top-2 left-2 z-20 bg-black/80 text-white text-xs p-2 rounded">
@@ -508,5 +518,6 @@ export function PreviewPanel({
         {SHOW_DEBUG_INFO && <VideoInitializationTest />}
       </div>
     </div>
+    </PreviewErrorBoundary>
   );
 }

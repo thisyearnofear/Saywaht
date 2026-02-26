@@ -16,7 +16,7 @@ interface EditorProviderProps {
 
 export function EditorProvider({ children }: EditorProviderProps) {
   const { isInitializing, isPanelsReady, initializeApp } = useEditorStore();
-  const { selectedTemplate, applySelectedTemplate, clearSelectedTemplate } = useTemplateStore();
+  const { selectedTemplate, applySelectedTemplate, clearSelectedTemplate, cleanupBlobUrls } = useTemplateStore();
   const { initializeScenes } = useSceneStore();
   const { activeProject } = useProjectStore();
   const { copySelectedClip, pasteClipAtPlayhead, selectedClips, removeClipFromTrack, tracks, getTotalDuration } = useTimelineStore();
@@ -26,6 +26,14 @@ export function EditorProvider({ children }: EditorProviderProps) {
   useEffect(() => {
     initializeApp();
   }, [initializeApp]);
+
+  // NEW: Cleanup blob URLs on unmount
+  useEffect(() => {
+    return () => {
+      console.log('🧹 EditorProvider unmounting, cleaning up blob URLs');
+      cleanupBlobUrls();
+    };
+  }, [cleanupBlobUrls]);
 
   // Initialize scenes when project loads
   useEffect(() => {

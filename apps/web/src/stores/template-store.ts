@@ -14,9 +14,12 @@ interface TemplateStore {
   // State
   categories: TemplateCategory[];
   isLoading: boolean;
+  isApplying: boolean; // NEW: Track template application progress
   error: string | null;
   selectedTemplate: Template | null;
   recentTemplates: Template[]; // Track recently used templates
+  templateBlobUrls: string[]; // NEW: Track blob URLs for cleanup
+  abortController: AbortController | null; // NEW: For cancelling in-flight requests
 
   // Actions
   fetchCategories: () => Promise<void>;
@@ -26,14 +29,19 @@ interface TemplateStore {
   mergeTemplateToProject: () => Promise<boolean>;
   addToRecentTemplates: (template: Template) => void;
   clearRecentTemplates: () => void;
+  cleanupBlobUrls: () => void; // NEW: Cleanup blob URLs
+  cancelPendingLoad: () => void; // NEW: Cancel in-flight template load
 }
 
 export const useTemplateStore = create<TemplateStore>((set, get) => ({
   categories: [],
   isLoading: false,
+  isApplying: false,
   error: null,
   selectedTemplate: null,
   recentTemplates: [],
+  templateBlobUrls: [], // NEW: Initialize blob URL tracking
+  abortController: null, // NEW: Initialize abort controller
 
   /**
    * Fetches all template categories
@@ -56,15 +64,35 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
    * Selects a template by ID
    */
   selectTemplate: async (templateId: string) => {
-    set({ isLoading: true, error: null });
+    // Cancel any pending template load
+    get().cancelPendingLoad();
+    
+    // Create new abort controller for this load
+    const abortController = new AbortController();
+    set({ isLoading: true, error: null, abortController });
+    
     try {
-      const template = await fetchTemplateById(templateId);
-      set({ selectedTemplate: template, isLoading: false });
+      const template = await fetchTemplateById(templateId, abortController.signal);
+      
+      // Check if this request was aborted
+      if (abortController.signal.aborted) {
+        console.log('Template selection was cancelled');
+        return;
+      }
+      
+      set({ selectedTemplate: template, isLoading: false, abortController: null });
     } catch (error) {
+      // Don't show error if request was aborted
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Template selection was cancelled');
+        return;
+      }
+      
       console.error('Failed to select template:', error);
       set({
         error: error instanceof Error ? error.message : 'Failed to select template',
-        isLoading: false
+        isLoading: false,
+        abortController: null
       });
     }
   },
@@ -103,6 +131,36 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
   },
 
   /**
+   * Cleanup blob URLs to prevent memory leaks
+   */
+  cleanupBlobUrls: () => {
+    const { templateBlobUrls } = get();
+    console.log(`🧹 Cleaning up ${templateBlobUrls.length} blob URLs`);
+    
+    templateBlobUrls.forEach(url => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.warn('Failed to revoke blob URL:', url, error);
+      }
+    });
+    
+    set({ templateBlobUrls: [] });
+  },
+
+  /**
+   * Cancel any pending template load
+   */
+  cancelPendingLoad: () => {
+    const { abortController } = get();
+    if (abortController) {
+      console.log('🛑 Cancelling pending template load');
+      abortController.abort();
+      set({ abortController: null, isLoading: false });
+    }
+  },
+
+  /**
    * Applies the selected template to the current project
    * @param projectName Optional project name for new projects
    * @param mergeStrategy Strategy for merging with existing content: 'replace' (default) or 'merge'
@@ -115,7 +173,17 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       return false;
     }
 
-    set({ isLoading: true });
+    // Cancel any pending loads
+    get().cancelPendingLoad();
+
+    // Cleanup old blob URLs before loading new template
+    if (mergeStrategy === 'replace') {
+      get().cleanupBlobUrls();
+    }
+
+    // Create abort controller for this template application
+    const abortController = new AbortController();
+    set({ isLoading: true, isApplying: true, abortController });
 
     try {
       // Get required stores
@@ -138,7 +206,21 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       }
 
       // Load template media and tracks FIRST (before clearing)
-      const { mediaItems, tracks: templateTracks } = await applyTemplate(selectedTemplate);
+      const { mediaItems, tracks: templateTracks, blobUrls } = await applyTemplate(
+        selectedTemplate, 
+        abortController.signal
+      );
+
+      // Check if aborted
+      if (abortController.signal.aborted) {
+        console.log('Template application was cancelled');
+        return false;
+      }
+
+      // Track blob URLs for cleanup
+      set((state) => ({ 
+        templateBlobUrls: [...state.templateBlobUrls, ...blobUrls] 
+      }));
 
       // Only clear after successful download
       if (mergeStrategy === 'replace') {
@@ -194,19 +276,30 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       // Default to cover mode so video fills the fullscreen preview
       useEditorStore.getState().setVideoObjectFit("cover");
 
-      toast.success(`Template "${selectedTemplate.name}" applied successfully!`);
-
       // Track this template as recently used
       get().addToRecentTemplates(selectedTemplate);
 
-      set({ isLoading: false });
+      // Wait a brief moment for video elements to initialize before clearing loading state
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      set({ isLoading: false, isApplying: false, abortController: null });
+      
+      toast.success(`Template "${selectedTemplate.name}" applied successfully!`);
       return true;
     } catch (error) {
+      // Don't show error if request was aborted
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Template application was cancelled');
+        return false;
+      }
+      
       console.error('❌ Failed to apply template:', error);
       toast.error('Failed to apply template');
       set({
         error: error instanceof Error ? error.message : 'Failed to apply template',
-        isLoading: false
+        isLoading: false,
+        isApplying: false,
+        abortController: null
       });
       return false;
     }

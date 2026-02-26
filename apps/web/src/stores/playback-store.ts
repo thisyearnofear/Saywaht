@@ -5,6 +5,9 @@ interface PlaybackStore extends PlaybackState, PlaybackControls {
   setDuration: (duration: number) => void;
   setCurrentTime: (time: number) => void;
   setStalled: (stalled: boolean) => void;
+  videoReadyCount: number; // NEW: Track how many videos are ready
+  incrementVideoReady: () => void;
+  resetVideoReady: () => void;
 }
 
 let playbackTimer: number | null = null;
@@ -57,9 +60,21 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => ({
   muted: false,
   previousVolume: 1,
   speed: 1.0,
+  videoReadyCount: 0, // NEW: Initialize ready count
+
+  incrementVideoReady: () => set((state) => ({ videoReadyCount: state.videoReadyCount + 1 })),
+  resetVideoReady: () => set({ videoReadyCount: 0 }),
 
   play: () => {
-    const { currentTime, duration } = get();
+    const { currentTime, duration, videoReadyCount } = get();
+    
+    // NEW: Don't play if no videos are ready yet (prevents timer running without video)
+    if (videoReadyCount === 0 && duration > 0) {
+      console.log("⏸ Waiting for videos to load before playing");
+      set({ isStalled: true });
+      return;
+    }
+    
     // Restart if at the end
     if (currentTime >= duration - 0.05) {
       set({ currentTime: 0 });

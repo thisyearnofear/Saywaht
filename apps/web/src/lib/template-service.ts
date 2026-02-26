@@ -22,7 +22,7 @@ export async function fetchTemplateCategories(): Promise<TemplateCategory[]> {
 /**
  * Fetches a specific template by ID
  */
-export async function fetchTemplateById(id: string): Promise<Template | null> {
+export async function fetchTemplateById(id: string, signal?: AbortSignal): Promise<Template | null> {
   try {
     // First find the basic template info to get the category
     const categories = await fetchTemplateCategories();
@@ -52,10 +52,10 @@ export async function fetchTemplateById(id: string): Promise<Template | null> {
       let detailResponse;
       
       if (subcategory) {
-        detailResponse = await fetch(`/templates/${categoryId}/${subcategory}/${id}.json`);
+        detailResponse = await fetch(`/templates/${categoryId}/${subcategory}/${id}.json`, { signal });
       } else {
         // Try both new format and legacy format
-        detailResponse = await fetch(`/templates/${categoryId}/${id}.json`);
+        detailResponse = await fetch(`/templates/${categoryId}/${id}.json`, { signal });
       }
       
       // If either of the new formats work, return that
@@ -64,7 +64,7 @@ export async function fetchTemplateById(id: string): Promise<Template | null> {
       }
       
       // Try legacy format as fallback
-      const legacyResponse = await fetch(`/templates/${categoryId}/${id}/template.json`);
+      const legacyResponse = await fetch(`/templates/${categoryId}/${id}/template.json`, { signal });
       if (legacyResponse.ok) {
         return await legacyResponse.json();
       }
@@ -74,11 +74,19 @@ export async function fetchTemplateById(id: string): Promise<Template | null> {
       return basicTemplate;
       
     } catch (detailError) {
+      // Re-throw abort errors
+      if (detailError instanceof Error && detailError.name === 'AbortError') {
+        throw detailError;
+      }
       console.warn(`Error fetching detailed template: ${detailError}`);
       // Fall back to basic template info
       return basicTemplate;
     }
   } catch (error) {
+    // Re-throw abort errors
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw error;
+    }
     console.error('Error fetching template:', error);
     return null;
   }
@@ -87,26 +95,84 @@ export async function fetchTemplateById(id: string): Promise<Template | null> {
 import { resolveIpfsUrl } from "@/lib/utils";
 
 /**
+ * Retry helper with exponential backoff
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      
+      // Don't retry on abort
+      if (lastError.name === 'AbortError') {
+        throw lastError;
+      }
+      
+      // Don't retry on last attempt
+      if (attempt === maxRetries - 1) {
+        break;
+      }
+      
+      // Exponential backoff: 1s, 2s, 4s
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.log(`⏳ Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError;
+}
+
+/**
  * Converts a template media item to an actual MediaItem
  * for use in the application. Performs eager ingestion (download to blob)
  * to ensure smooth playback without buffering.
  */
-export async function convertTemplateMediaItem(item: TemplateMediaItem): Promise<MediaItem> {
+export async function convertTemplateMediaItem(
+  item: TemplateMediaItem, 
+  signal?: AbortSignal
+): Promise<{ mediaItem: MediaItem; blobUrl: string | null }> {
   const finalUrl = resolveIpfsUrl(item.url);
   let localUrl = finalUrl;
   let size = 0;
   let blob: Blob | null = null;
+  let blobUrl: string | null = null;
 
   try {
-    // Eager Ingestion: Download asset to memory for zero-lag editing
-    const response = await fetch(finalUrl);
-    if (response.ok) {
-      blob = await response.blob();
-      localUrl = URL.createObjectURL(blob);
-      size = blob.size;
-    }
+    // Eager Ingestion with retry logic
+    const downloadWithRetry = async () => {
+      const response = await fetch(finalUrl, { signal });
+      
+      // Check if aborted
+      if (signal?.aborted) {
+        throw new Error('AbortError');
+      }
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return await response.blob();
+    };
+    
+    blob = await retryWithBackoff(downloadWithRetry, 3, 1000);
+    blobUrl = URL.createObjectURL(blob);
+    localUrl = blobUrl;
+    size = blob.size;
+    console.log(`✅ Downloaded ${item.name} (${(size / 1024 / 1024).toFixed(2)}MB)`);
   } catch (e) {
-    console.warn(`Eager ingestion failed for ${item.name}, using remote URL:`, e);
+    // Re-throw abort errors
+    if (e instanceof Error && (e.name === 'AbortError' || e.message === 'AbortError')) {
+      throw e;
+    }
+    console.warn(`⚠️ Download failed for ${item.name}, using remote URL:`, e);
   }
 
   const mimeType = item.type === 'video' ? 'video/mp4' :
@@ -131,15 +197,24 @@ export async function convertTemplateMediaItem(item: TemplateMediaItem): Promise
     isLocal: !!blob
   };
   
-  return mediaItem;
+  return { mediaItem, blobUrl };
 }
 
 /**
  * Loads all media items from a template
  */
-export async function loadTemplateMediaItems(template: Template): Promise<MediaItem[]> {
-  const mediaItemPromises = template.mediaItems.map(item => convertTemplateMediaItem(item));
-  return Promise.all(mediaItemPromises);
+export async function loadTemplateMediaItems(
+  template: Template, 
+  signal?: AbortSignal
+): Promise<{ mediaItems: MediaItem[]; blobUrls: string[] }> {
+  const results = await Promise.all(
+    template.mediaItems.map(item => convertTemplateMediaItem(item, signal))
+  );
+  
+  const mediaItems = results.map(r => r.mediaItem);
+  const blobUrls = results.map(r => r.blobUrl).filter((url): url is string => url !== null);
+  
+  return { mediaItems, blobUrls };
 }
 
 /**
@@ -174,12 +249,25 @@ export function convertTemplateTracks(template: Template): TimelineTrack[] {
  * Applies a template to the current project
  * This function loads all media items and creates timeline tracks from the template
  */
-export async function applyTemplate(template: Template): Promise<{
+export async function applyTemplate(
+  template: Template, 
+  signal?: AbortSignal
+): Promise<{
   mediaItems: MediaItem[];
   tracks: TimelineTrack[];
+  blobUrls: string[];
 }> {
-  // Load all media items
-  const mediaItems = await loadTemplateMediaItems(template);
+  console.log(`📦 Applying template: ${template.name}`);
+  
+  // Load all media items with abort support
+  const { mediaItems, blobUrls } = await loadTemplateMediaItems(template, signal);
+  
+  // Check if aborted
+  if (signal?.aborted) {
+    // Cleanup any blob URLs we created before aborting
+    blobUrls.forEach(url => URL.revokeObjectURL(url));
+    throw new Error('AbortError');
+  }
   
   // Convert template tracks to timeline tracks
   let tracks: TimelineTrack[] = [];
@@ -239,5 +327,7 @@ export async function applyTemplate(template: Template): Promise<{
     if (audioTrack.clips.length > 0) tracks.push(audioTrack);
   }
   
-  return { mediaItems, tracks };
+  console.log(`✅ Template applied: ${mediaItems.length} media items, ${tracks.length} tracks`);
+  
+  return { mediaItems, tracks, blobUrls };
 }

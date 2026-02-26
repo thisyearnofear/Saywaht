@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { usePlaybackStore } from "@/stores/playback-store";
+import { useLazyVideoLoading } from "@/hooks/use-lazy-video-loading";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "@/lib/icons";
 
@@ -38,6 +39,7 @@ export function VideoPlayer({
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const loadTimeoutRef = useRef<number | null>(null);
+  const isUnmountingRef = useRef(false); // NEW: Track unmounting state
   const { isPlaying, currentTime, volume, speed, muted, setStalled } = usePlaybackStore();
   
   const [isVideoReady, setIsVideoReady] = useState(false);
@@ -59,6 +61,14 @@ export function VideoPlayer({
   const clipEndTime = clipStartTime + (clipDuration - trimStart - trimEnd);
   const isInClipRange = currentTime >= clipStartTime && currentTime < clipEndTime;
 
+  // NEW: Lazy loading - only load video when it's about to be visible
+  const shouldLoadVideo = useLazyVideoLoading(
+    clipStartTime,
+    clipEndTime,
+    currentTime,
+    3 // Start loading 3 seconds before clip
+  );
+
   const clearLoadTimeout = useCallback(() => {
     if (loadTimeoutRef.current !== null) {
       window.clearTimeout(loadTimeoutRef.current);
@@ -69,7 +79,7 @@ export function VideoPlayer({
   const armLoadTimeout = useCallback(() => {
     clearLoadTimeout();
     loadTimeoutRef.current = window.setTimeout(() => {
-      if ((videoRef.current?.readyState ?? 0) < 2) {
+      if ((videoRef.current?.readyState ?? 0) < 2 && !isUnmountingRef.current) {
         setHasError(true);
         setErrorMessage("Video load timed out");
         setStalled(false);
@@ -77,32 +87,61 @@ export function VideoPlayer({
     }, 8000);
   }, [clearLoadTimeout, setStalled]);
 
+  // NEW: Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isUnmountingRef.current = true;
+      const video = videoRef.current;
+      
+      if (video) {
+        // Pause and clear source to stop loading
+        video.pause();
+        video.src = '';
+        video.load();
+      }
+      
+      clearLoadTimeout();
+      setStalled(false);
+    };
+  }, [clearLoadTimeout, setStalled]);
+
   // Handle video ready and stalled states
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || isUnmountingRef.current) return;
 
     const handleCanPlay = () => {
+      if (isUnmountingRef.current) return;
+      
       clearLoadTimeout();
       setIsVideoReady(true);
       setHasError(false);
       setErrorMessage("");
+      
+      // NEW: Notify playback store that this video is ready
+      usePlaybackStore.getState().incrementVideoReady();
+      
       if (isPlaying && isInClipRange) {
         setStalled(false);
       }
     };
 
     const handleWaiting = () => {
+      if (isUnmountingRef.current) return;
+      
       if (isPlaying && isInClipRange) {
         setStalled(true);
       }
     };
 
     const handlePlaying = () => {
+      if (isUnmountingRef.current) return;
       setStalled(false);
     };
 
     const handleLoadStart = () => {
+      if (isUnmountingRef.current) return;
+      
       setIsVideoReady(false);
       setHasError(false);
       setErrorMessage("");
@@ -113,6 +152,8 @@ export function VideoPlayer({
     };
 
     const handleError = (e: Event) => {
+      if (isUnmountingRef.current) return;
+      
       clearLoadTimeout();
       const mediaError = (e.currentTarget as HTMLVideoElement | null)?.error;
       const msg = mediaError?.message || "Failed to load video";
@@ -154,11 +195,15 @@ export function VideoPlayer({
 
   useEffect(() => {
     // Hard reset on source changes.
+    isUnmountingRef.current = false; // Reset unmounting flag
     retryCountRef.current = 0;
     setIsVideoReady(false);
     setHasError(false);
     setErrorMessage("");
     setStalled(false);
+    
+    // NEW: Reset ready count when source changes (new template loaded)
+    usePlaybackStore.getState().resetVideoReady();
   }, [src, setStalled]);
 
   // Sync playback events
@@ -291,7 +336,7 @@ export function VideoPlayer({
 
       <video
         ref={videoRef}
-        src={src}
+        src={shouldLoadVideo ? src : undefined}
         poster={poster}
         className={cn(
           "w-full h-full transition-opacity duration-700",
@@ -301,11 +346,15 @@ export function VideoPlayer({
         )}
         playsInline
         muted
-        preload="auto"
+        preload="metadata"
         controls={false}
         disablePictureInPicture
         disableRemotePlayback
-        style={{ pointerEvents: "none", ...(cssFilter ? { filter: cssFilter } : {}) }}
+        style={{ 
+          pointerEvents: "none", 
+          willChange: "transform",
+          ...(cssFilter ? { filter: cssFilter } : {}) 
+        }}
         onContextMenu={(e) => e.preventDefault()}
       />
     </div>

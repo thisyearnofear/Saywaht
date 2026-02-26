@@ -75,7 +75,13 @@ export function MobileRecordingInterface({
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       if (timerRef.current) clearInterval(timerRef.current);
+      
+      // NEW: Cleanup audio blob URL on unmount
       if (reviewAudioRef.current) {
+        const audioSrc = reviewAudioRef.current.src;
+        if (audioSrc && audioSrc.startsWith('blob:')) {
+          URL.revokeObjectURL(audioSrc);
+        }
         reviewAudioRef.current.pause();
         reviewAudioRef.current = null;
       }
@@ -117,6 +123,18 @@ export function MobileRecordingInterface({
   // Keep a stable ref so the interval timer always has the latest stopRecording
   const stopRecordingRef = useRef(stopRecording);
   useEffect(() => { stopRecordingRef.current = stopRecording; }, [stopRecording]);
+
+  // NEW: Prevent closing while recording
+  const handleClose = useCallback(() => {
+    if (recordingState === "recording") {
+      toast.error("Stop recording first", {
+        description: "Tap the red button to stop recording before closing"
+      });
+      addHapticFeedback("heavy");
+      return;
+    }
+    onClose();
+  }, [recordingState, onClose]);
 
   const visualizeAudio = useCallback((stream: MediaStream) => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -229,13 +247,20 @@ export function MobileRecordingInterface({
 
   const retakeRecording = () => {
     if (timerRef.current) clearInterval(timerRef.current);
-    setRecordingState("idle");
-    setRecordingTime(0);
-    setAudioBlob(null);
+    
+    // NEW: Cleanup audio blob URL
     if (reviewAudioRef.current) {
+      const audioSrc = reviewAudioRef.current.src;
+      if (audioSrc && audioSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(audioSrc);
+      }
       reviewAudioRef.current.pause();
       reviewAudioRef.current = null;
     }
+    
+    setRecordingState("idle");
+    setRecordingTime(0);
+    setAudioBlob(null);
     setIsReviewPlaying(false);
     seekVideo(0);
     addHapticFeedback("medium");
@@ -272,6 +297,15 @@ export function MobileRecordingInterface({
         trimEnd: trimEnd,
         startTime: startTime
       });
+      
+      // NEW: Cleanup audio blob URL after accepting
+      if (reviewAudioRef.current) {
+        const audioSrc = reviewAudioRef.current.src;
+        if (audioSrc && audioSrc.startsWith('blob:')) {
+          URL.revokeObjectURL(audioSrc);
+        }
+      }
+      
       onClose();
       addHapticFeedback("heavy");
     }
@@ -308,7 +342,7 @@ export function MobileRecordingInterface({
               {isCompleted ? "✓ Recorded • Review & Sync" : "🎙 Ready • 10s Max"}
             </div>
             
-            <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground" onClick={onClose}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground" onClick={handleClose}>
               <X className="h-4 w-4" />
             </Button>
           </motion.div>

@@ -25,9 +25,13 @@ import { useMediaStore } from "@/stores/media-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useTextStore } from "@/stores/text-store";
+import { useTemplateStore } from "@/stores/template-store"; // NEW: Import template store
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 import { useFarcasterShare } from "@/farcaster/hooks/use-farcaster-share";
 import { useEditorHistory } from "@/hooks/use-editor-history";
+import { useMobilePlaybackGate } from "@/hooks/use-mobile-playback-gate"; // NEW
+import { useVisibilitySync } from "@/hooks/use-visibility-sync"; // NEW
+import { useNetworkStatus } from "@/hooks/use-network-status"; // NEW
 import { MobileTimeline } from "@/components/editor/mobile-timeline";
 import { MobileMediaPanel } from "@/components/editor/mobile-media-panel";
 import { MobileAudioPanel } from "@/components/editor/mobile-audio-panel";
@@ -81,6 +85,27 @@ export function MobileEditorLayout({
   const { isFarcasterMiniApp } = useFarcasterContext();
   const { shareToFarcaster, isSharing } = useFarcasterShare();
   const { undo, redo, canUndo, canRedo } = useEditorHistory();
+  const { isApplying: isApplyingTemplate } = useTemplateStore(); // NEW: Track template loading
+  const { gatedPlay } = useMobilePlaybackGate(); // NEW: Mobile playback gate
+  const { isOnline, isSlowConnection } = useNetworkStatus(); // NEW: Network status
+  
+  // NEW: Sync playback with visibility changes
+  useVisibilitySync();
+
+  // NEW: Show network status warning
+  useEffect(() => {
+    if (!isOnline) {
+      toast.error("No internet connection", {
+        description: "Some features may not work offline",
+        duration: 5000,
+      });
+    } else if (isSlowConnection) {
+      toast.warning("Slow connection detected", {
+        description: "Videos may take longer to load",
+        duration: 3000,
+      });
+    }
+  }, [isOnline, isSlowConnection]);
 
   const [activeTool, setActiveTool] = useState<MobileTool | null>("media");
   const [recordAutoStartNonce, setRecordAutoStartNonce] = useState(0);
@@ -309,7 +334,7 @@ export function MobileEditorLayout({
                 onClick={() => {
                   addHapticFeedback("light");
                   if (!isPlaying) {
-                    play();
+                    gatedPlay(); // Use gated play for mobile
                     return;
                   }
                   toggle();
@@ -501,6 +526,30 @@ export function MobileEditorLayout({
         <QuickActions />
       </div>
       {children}
+
+      {/* Template Loading Overlay */}
+      <AnimatePresence>
+        {isApplyingTemplate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          >
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <div className="text-center">
+                <p className="text-sm font-black uppercase tracking-widest text-white">
+                  Loading Template
+                </p>
+                <p className="mt-1 text-xs text-white/60">
+                  Preparing your video...
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
