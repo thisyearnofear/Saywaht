@@ -272,19 +272,26 @@ export function VideoPlayer({
   // Sync playback state
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || isUnmountingRef.current) return;
 
     if (isPlaying && isInClipRange) {
       // Sync muted state BEFORE play() so WebView autoplay policy sees the
       // correct value at evaluation time (avoids muted→unmuted race).
       video.muted = muteStateRef.current;
+      
+      // Only attempt play if video is ready
       if (video.readyState >= 2) {
-        video.play().catch(() => {});
+        video.play().catch((err) => {
+          console.warn("[VideoPlayer] Play failed:", err);
+          // Don't set stalled on play failure - it might be a policy issue
+        });
       } else {
         const onCanPlay = () => {
-          if (isPlaying && isInClipRange) {
+          if (isPlaying && isInClipRange && !isUnmountingRef.current) {
             video.muted = muteStateRef.current;
-            video.play().catch(() => {});
+            video.play().catch((err) => {
+              console.warn("[VideoPlayer] Play failed on canplay:", err);
+            });
           }
         };
         video.addEventListener('canplay', onCanPlay, { once: true });
@@ -292,8 +299,10 @@ export function VideoPlayer({
       }
     } else {
       video.pause();
+      // Clear stalled state when pausing
+      setStalled(false);
     }
-  }, [isPlaying, isInClipRange]);
+  }, [isPlaying, isInClipRange, setStalled]);
 
   // Sync volume and speed
   useEffect(() => {
@@ -346,13 +355,13 @@ export function VideoPlayer({
         )}
         playsInline
         muted
-        preload="metadata"
+        preload="auto"
         controls={false}
         disablePictureInPicture
         disableRemotePlayback
         style={{ 
           pointerEvents: "none", 
-          willChange: "transform",
+          willChange: "auto",
           ...(cssFilter ? { filter: cssFilter } : {}) 
         }}
         onContextMenu={(e) => e.preventDefault()}

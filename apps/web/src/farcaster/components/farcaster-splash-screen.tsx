@@ -25,18 +25,18 @@ export function FarcasterSplashScreen({
 
   // Minimum display time so the splash doesn't flash for 0ms
   useEffect(() => {
-    const timer = setTimeout(() => setMinTimeElapsed(true), 800);
+    const timer = setTimeout(() => setMinTimeElapsed(true), 400);
     return () => clearTimeout(timer);
   }, []);
 
-  // Safety: force-complete after 4s max
+  // Safety: force-complete after 2s max
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!hasCompleted.current) {
         hasCompleted.current = true;
         onComplete();
       }
-    }, 4000);
+    }, 2000);
     return () => clearTimeout(timer);
   }, [onComplete]);
 

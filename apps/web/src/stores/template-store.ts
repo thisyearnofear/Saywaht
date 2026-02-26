@@ -132,19 +132,10 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
 
   /**
    * Cleanup blob URLs to prevent memory leaks
+   * NOTE: No longer needed since we stream directly from CDN
    */
   cleanupBlobUrls: () => {
-    const { templateBlobUrls } = get();
-    console.log(`🧹 Cleaning up ${templateBlobUrls.length} blob URLs`);
-    
-    templateBlobUrls.forEach(url => {
-      try {
-        URL.revokeObjectURL(url);
-      } catch (error) {
-        console.warn('Failed to revoke blob URL:', url, error);
-      }
-    });
-    
+    // No-op: We don't create blob URLs anymore
     set({ templateBlobUrls: [] });
   },
 
@@ -205,8 +196,8 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
         createNewProject(newProjectName);
       }
 
-      // Load template media and tracks FIRST (before clearing)
-      const { mediaItems, tracks: templateTracks, blobUrls } = await applyTemplate(
+      // Load template media and tracks
+      const { mediaItems, tracks: templateTracks } = await applyTemplate(
         selectedTemplate, 
         abortController.signal
       );
@@ -217,10 +208,7 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
         return false;
       }
 
-      // Track blob URLs for cleanup
-      set((state) => ({ 
-        templateBlobUrls: [...state.templateBlobUrls, ...blobUrls] 
-      }));
+      // No blob URL tracking needed - streaming directly from CDN
 
       // Only clear after successful download
       if (mergeStrategy === 'replace') {

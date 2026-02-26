@@ -246,37 +246,32 @@ export function MobileTemplateBrowser() {
     const mediaId = `pexels-${video.id}`;
     setIsApplying(mediaId); // Show loading state
 
-    const loadingToast = toast.loading("Optimizing HD clip for editing...", {
-      description: "Bringing this into your local workspace for zero-lag editing."
+    const loadingToast = toast.loading("Preparing video...", {
+      description: "Setting up your project"
     });
 
     try {
-      // 2. Eager Ingestion: Download the file to a local blob
-      // This prevents the "2 seconds then buffer" issue
-      const response = await fetch(bestFile.link);
-      if (!response.ok) throw new Error("Network response was not ok");
-      
-      const blob = await response.blob();
-      const localUrl = URL.createObjectURL(blob);
+      // Stream directly from Pexels CDN - no download needed
+      const streamUrl = bestFile.link;
 
-      // 3. Initialize project
+      // Initialize project
       createNewProject(`Pexels: ${video.user.name}`);
       clearAllMedia();
       setTracks([]);
 
-      // 4. Add the local media item
+      // Add the media item with streaming URL
       addMediaItem({
         id: mediaId,
         name: `Stock: ${video.user.name}`,
         type: "video",
-        url: localUrl, // Play from RAM/Disk
+        url: streamUrl, // Stream from Pexels CDN
         thumbnailUrl: video.image,
         duration: Math.min(video.duration, 10),
         aspectRatio: video.width / video.height,
-        isLocal: true,
+        isLocal: false, // Streaming from CDN
       });
 
-      // 5. Create track and clip
+      // Create track and clip
       const trackId = addTrack("video");
       addClipToTrack(trackId, {
         mediaId: mediaId,
@@ -287,7 +282,7 @@ export function MobileTemplateBrowser() {
         trimEnd: 0,
       });
 
-      // 6. Canvas and Scene initialization
+      // Canvas and Scene initialization
       const videoAspectRatio = video.width / video.height;
       const { setCanvasPreset } = useCanvasStore.getState();
       const preset = canvasPresets.reduce((prev, curr) => {
@@ -313,7 +308,7 @@ export function MobileTemplateBrowser() {
       router.push("/editor");
 
     } catch (err) {
-      console.error("Failed to ingest Pexels video:", err);
+      console.error("Failed to load Pexels video:", err);
       toast.dismiss(loadingToast);
       toast.error("Failed to load clip. Please check your connection.");
     } finally {

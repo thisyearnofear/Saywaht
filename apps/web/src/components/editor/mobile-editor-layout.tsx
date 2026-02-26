@@ -418,7 +418,14 @@ export function MobileEditorLayout({
                     }}
                   />
                 )}
-                {activeTool === "media" && <MobileMediaPanel />}
+                {activeTool === "media" && (
+                  <MobileMediaPanel 
+                    onMediaAdded={() => {
+                      // Auto-close drawer after media is added
+                      closeToolSheet();
+                    }}
+                  />
+                )}
                 {activeTool === "text" && (
                   <MobileTextPanel preferredCaptionGroupId={preferredCaptionGroupId} />
                 )}

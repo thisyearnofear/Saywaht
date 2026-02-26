@@ -94,114 +94,56 @@ export async function fetchTemplateById(id: string, signal?: AbortSignal): Promi
 
 import { resolveIpfsUrl } from "@/lib/utils";
 
-/**
- * Retry helper with exponential backoff
- */
-async function retryWithBackoff<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 3,
-  baseDelay: number = 1000
-): Promise<T> {
-  let lastError: Error | null = null;
-  
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error as Error;
-      
-      // Don't retry on abort
-      if (lastError.name === 'AbortError') {
-        throw lastError;
-      }
-      
-      // Don't retry on last attempt
-      if (attempt === maxRetries - 1) {
-        break;
-      }
-      
-      // Exponential backoff: 1s, 2s, 4s
-      const delay = baseDelay * Math.pow(2, attempt);
-      console.log(`⏳ Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-  
-  throw lastError;
-}
+// Retry helper removed - no longer needed for streaming approach
 
 /**
  * Converts a template media item to an actual MediaItem
- * for use in the application. Performs eager ingestion (download to blob)
- * to ensure smooth playback without buffering.
+ * for use in the application. Uses direct streaming from IPFS/CDN
+ * for optimal mobile performance and memory efficiency.
  */
 export async function convertTemplateMediaItem(
   item: TemplateMediaItem, 
   signal?: AbortSignal
 ): Promise<{ mediaItem: MediaItem; blobUrl: string | null }> {
-  const finalUrl = resolveIpfsUrl(item.url);
-  let localUrl = finalUrl;
-  let size = 0;
-  let blob: Blob | null = null;
-  let blobUrl: string | null = null;
-
-  try {
-    // Eager Ingestion with retry logic
-    const downloadWithRetry = async () => {
-      const response = await fetch(finalUrl, { signal });
-      
-      // Check if aborted
-      if (signal?.aborted) {
-        throw new Error('AbortError');
-      }
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      return await response.blob();
-    };
-    
-    blob = await retryWithBackoff(downloadWithRetry, 3, 1000);
-    blobUrl = URL.createObjectURL(blob);
-    localUrl = blobUrl;
-    size = blob.size;
-    console.log(`✅ Downloaded ${item.name} (${(size / 1024 / 1024).toFixed(2)}MB)`);
-  } catch (e) {
-    // Re-throw abort errors
-    if (e instanceof Error && (e.name === 'AbortError' || e.message === 'AbortError')) {
-      throw e;
-    }
-    console.warn(`⚠️ Download failed for ${item.name}, using remote URL:`, e);
+  // Resolve to CDN URL (Cloudflare IPFS or FilCDN)
+  const streamUrl = resolveIpfsUrl(item.url);
+  
+  console.log(`🎬 Preparing ${item.name} for streaming from ${streamUrl}`);
+  
+  // Check if aborted
+  if (signal?.aborted) {
+    throw new Error('AbortError');
   }
 
   const mimeType = item.type === 'video' ? 'video/mp4' :
                   item.type === 'audio' ? 'audio/mp3' :
                   'image/jpeg';
   
-  // Create a real File object if we have the blob, otherwise a dummy
-  const file = blob 
-    ? new File([blob], item.name, { type: mimeType })
-    : new File([], item.name, { type: mimeType });
+  // Create a minimal File object for compatibility
+  // (some parts of the app expect a file property)
+  const file = new File([], item.name, { type: mimeType });
   
   const mediaItem: MediaItem = {
     id: item.id,
     name: item.name,
     type: item.type,
     file,
-    url: localUrl, 
+    url: streamUrl, // Use CDN URL directly for streaming
     thumbnailUrl: resolveIpfsUrl(item.thumbnailUrl || item.url),
     duration: item.duration || 0,
     aspectRatio: item.aspectRatio,
-    size: size || 0,
-    isLocal: !!blob
+    size: 0, // Size unknown for streaming (not downloaded)
+    isLocal: false // Streaming from CDN, not local
   };
   
-  return { mediaItem, blobUrl };
+  console.log(`✅ ${item.name} ready for streaming`);
+  
+  return { mediaItem, blobUrl: null };
 }
 
 /**
  * Loads all media items from a template
+ * Returns media items configured for direct CDN streaming
  */
 export async function loadTemplateMediaItems(
   template: Template, 
@@ -212,7 +154,8 @@ export async function loadTemplateMediaItems(
   );
   
   const mediaItems = results.map(r => r.mediaItem);
-  const blobUrls = results.map(r => r.blobUrl).filter((url): url is string => url !== null);
+  // No blob URLs since we're streaming directly
+  const blobUrls: string[] = [];
   
   return { mediaItems, blobUrls };
 }

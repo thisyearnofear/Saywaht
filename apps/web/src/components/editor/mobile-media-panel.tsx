@@ -22,9 +22,10 @@ import { toast } from "sonner";
 
 interface MobileMediaPanelProps {
   className?: string;
+  onMediaAdded?: () => void;
 }
 
-export function MobileMediaPanel({ className }: MobileMediaPanelProps) {
+export function MobileMediaPanel({ className, onMediaAdded }: MobileMediaPanelProps) {
   const router = useRouter();
   const { mediaItems, addMediaItem } = useMediaStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -101,6 +102,7 @@ export function MobileMediaPanel({ className }: MobileMediaPanelProps) {
         <ProjectMediaList
           onFileSelect={handleFileSelect}
           isProcessing={isProcessing}
+          onMediaAdded={onMediaAdded}
         />
       </div>
     </div>
@@ -112,9 +114,10 @@ export function MobileMediaPanel({ className }: MobileMediaPanelProps) {
 interface ProjectMediaListProps {
   onFileSelect: () => void;
   isProcessing: boolean;
+  onMediaAdded?: () => void;
 }
 
-function ProjectMediaList({ onFileSelect, isProcessing }: ProjectMediaListProps) {
+function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectMediaListProps) {
   const { mediaItems, removeMediaItem } = useMediaStore();
   const { addTrack, addClipToTrack, tracks } = useTimelineStore();
 
@@ -137,7 +140,19 @@ function ProjectMediaList({ onFileSelect, isProcessing }: ProjectMediaListProps)
       trimStart: 0,
       trimEnd: 0,
     });
-    toast.success("Added to timeline");
+    
+    // Show success message with guidance to close drawer
+    toast.success("Added to timeline", {
+      description: "Tap outside or swipe down to see your video",
+      duration: 2000,
+    });
+    
+    // Notify parent to auto-close drawer after a brief delay
+    if (onMediaAdded) {
+      setTimeout(() => {
+        onMediaAdded();
+      }, 1500);
+    }
   };
 
   const handleRemove = (id: string) => {
@@ -175,27 +190,27 @@ function ProjectMediaList({ onFileSelect, isProcessing }: ProjectMediaListProps)
   return (
     <div className="h-full overflow-y-auto scrollable bg-muted/5 touch-pan-y">
       <div className="p-4 space-y-6 pb-20">
-        {/* Upload Trigger */}
+        {/* Upload Trigger - Larger and more prominent */}
         <button
           onClick={onFileSelect}
           disabled={isProcessing}
-          className="w-full flex items-center justify-center gap-2 rounded-2xl h-14 border-2 border-dashed border-primary/20 bg-primary/5 text-primary text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+          className="w-full flex items-center justify-center gap-2 rounded-2xl h-16 border-2 border-dashed border-primary/20 bg-primary/5 text-primary text-[11px] font-black uppercase tracking-widest transition-all active:scale-95"
         >
           {isProcessing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
-            <Plus className="h-4 w-4" />
+            <Plus className="h-5 w-5" />
           )}
           Upload More Media
         </button>
 
-        {/* Video / image items */}
+        {/* Video / image items - Larger cards with better spacing */}
         {videoItems.length > 0 && (
           <div className="space-y-3">
             <p className="text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground px-1">
               Visuals
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-4">
               {videoItems.map((item) => (
                 <div
                   key={item.id}
@@ -209,32 +224,32 @@ function ProjectMediaList({ onFileSelect, isProcessing }: ProjectMediaListProps)
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-muted/50">
-                      <Video className="h-6 w-6 text-muted-foreground/40" />
+                      <Video className="h-8 w-8 text-muted-foreground/40" />
                     </div>
                   )}
                   
-                  {/* Delete button - top right */}
+                  {/* Delete button - top right, larger touch target */}
                   <button
-                    className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/50 text-white/70 flex items-center justify-center backdrop-blur-sm z-10 active:bg-destructive active:text-white"
+                    className="absolute top-2 right-2 h-9 w-9 rounded-full bg-black/60 text-white/80 flex items-center justify-center backdrop-blur-sm z-10 active:bg-destructive active:text-white transition-colors"
                     onClick={(e) => { e.stopPropagation(); handleRemove(item.id); }}
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
 
-                  <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-md px-2 py-1 flex items-center justify-between">
-                    <div className="flex items-center gap-1 min-w-0">
-                      <p className="text-[8px] font-bold truncate text-white uppercase">{item.name}</p>
+                  <div className="absolute bottom-0 inset-x-0 bg-black/70 backdrop-blur-md px-3 py-2 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <p className="text-[9px] font-bold truncate text-white uppercase">{item.name}</p>
                       {item.duration && (
-                        <span className="text-[8px] font-black text-white/70 shrink-0">
+                        <span className="text-[9px] font-black text-white/70 shrink-0">
                           {Math.floor(item.duration)}s
                         </span>
                       )}
                     </div>
                     <button
-                      className="flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[8px] font-black text-white uppercase tracking-wide active:scale-95 shrink-0 ml-1"
+                      className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-[9px] font-black text-white uppercase tracking-wide active:scale-95 shrink-0 shadow-lg"
                       onClick={(e) => { e.stopPropagation(); handleAddToTimeline(item); }}
                     >
-                      <Plus className="h-2.5 w-2.5" />
+                      <Plus className="h-3.5 w-3.5" />
                       Add
                     </button>
                   </div>
