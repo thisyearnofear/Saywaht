@@ -160,6 +160,12 @@ function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectM
     removeMediaItem(id);
   };
 
+  const handleDeleteButtonClick = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    addHapticFeedback("light");
+    handleRemove(id);
+  };
+
   if (mediaItems.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-8 text-center gap-6">
@@ -188,7 +194,7 @@ function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectM
   }
 
   return (
-    <div className="h-full overflow-y-auto scrollable bg-muted/5 touch-pan-y">
+    <div className="h-full overflow-y-auto scrollable media-panel-scroll bg-muted/5 touch-pan-y">
       <div className="p-4 space-y-6 pb-20">
         {/* Upload Trigger - Larger and more prominent */}
         <button
@@ -231,7 +237,7 @@ function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectM
                   {/* Delete button - top right, larger touch target */}
                   <button
                     className="absolute top-2 right-2 h-9 w-9 rounded-full bg-black/60 text-white/80 flex items-center justify-center backdrop-blur-sm z-10 active:bg-destructive active:text-white transition-colors"
-                    onClick={(e) => { e.stopPropagation(); handleRemove(item.id); }}
+                    onClick={(e) => handleDeleteButtonClick(e, item.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>

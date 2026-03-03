@@ -20,6 +20,7 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
 import { useSceneStore } from "@/stores/scene-store";
+import { addHapticFeedback } from "@/lib/mobile-utils";
 
 // Helper to construct Pexels image URL
 const pexelsImg = (id: string | number) => 
@@ -623,9 +624,3 @@ function EmptyState({ onReset }: { onReset: () => void }) {
     </div>
   );
 }
-
-const addHapticFeedback = (type: "light" | "medium" | "heavy") => {
-  if (typeof window !== "undefined" && (window as any).twa?.hapticFeedback) {
-    (window as any).twa.hapticFeedback.notificationOccurred(type);
-  }
-};

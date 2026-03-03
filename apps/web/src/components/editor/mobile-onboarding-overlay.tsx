@@ -214,9 +214,21 @@ export function useMobileOnboarding() {
     setShowOnboarding(false);
   };
 
+  const resetOnboarding = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("saywaht-mobile-onboarding");
+    }
+  };
+
+  const showOnboardingNow = () => {
+    setShowOnboarding(true);
+  };
+
   return {
     showOnboarding,
     completeOnboarding,
     skipOnboarding,
+    resetOnboarding,
+    showOnboardingNow,
   };
 }

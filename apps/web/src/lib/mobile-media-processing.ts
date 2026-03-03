@@ -168,9 +168,114 @@ async function compressVideoWithWebCodecs(
   options: VideoCompressionOptions,
   onProgress?: (progress: number) => void
 ): Promise<File> {
-  // Implementation would use WebCodecs API
-  // This is a placeholder for the actual implementation
-  throw new Error('WebCodecs compression not yet implemented');
+  try {
+    // Create video element to decode source
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(file);
+    await video.load();
+
+    // Wait for metadata
+    await new Promise<void>((resolve) => {
+      video.onloadedmetadata = () => resolve();
+    });
+
+    const { width, height } = calculateOptimalDimensions(
+      video.videoWidth,
+      video.videoHeight,
+      options.maxWidth!,
+      options.maxHeight!
+    );
+
+    const duration = video.duration;
+    const fps = options.fps || 30;
+    const totalFrames = Math.floor(duration * fps);
+
+    // Create MediaStream from canvas for recording
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { alpha: false });
+
+    if (!ctx) {
+      throw new Error('Failed to get canvas context');
+    }
+
+    // Use WebCodecs for hardware-accelerated encoding
+    const stream = canvas.captureStream(fps);
+    const recorder = new MediaRecorder(stream, {
+      mimeType: 'video/webm;codecs=vp9',
+      videoBitsPerSecond: options.bitrate,
+    });
+
+    const chunks: Blob[] = [];
+
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        chunks.push(event.data);
+      }
+    };
+
+    // Start recording
+    recorder.start(1000); // Collect data every second
+
+    // Create VideoDecoder for hardware-accelerated decoding
+    const frameCount = { current: 0 };
+
+    const decodeAndRender = async () => {
+      const startTime = performance.now();
+      let lastFrameTime = 0;
+
+      video.currentTime = 0;
+      video.play();
+
+      return new Promise<void>((resolve) => {
+        const processFrame = () => {
+          if (video.ended) {
+            resolve();
+            return;
+          }
+
+          const currentTime = performance.now();
+          const elapsed = (currentTime - startTime) / 1000;
+          const expectedFrame = Math.floor(elapsed * fps);
+
+          if (video.currentTime >= lastFrameTime + (1 / fps)) {
+            ctx.drawImage(video, 0, 0, width, height);
+            lastFrameTime = video.currentTime;
+            frameCount.current++;
+
+            onProgress?.(frameCount.current / totalFrames);
+          }
+
+          requestAnimationFrame(processFrame);
+        };
+
+        processFrame();
+      });
+    };
+
+    await decodeAndRender();
+
+    // Stop recording
+    recorder.stop();
+    video.pause();
+    URL.revokeObjectURL(video.src);
+
+    // Wait for final chunk
+    await new Promise<void>((resolve) => {
+      recorder.onstop = () => resolve();
+    });
+
+    const blob = new Blob(chunks, { type: 'video/webm' });
+    return new File([blob], file.name.replace(/\.[^/.]+$/, '.webm'), {
+      type: 'video/webm',
+      lastModified: Date.now(),
+    });
+  } catch (error) {
+    console.error('WebCodecs compression failed, falling back to canvas:', error);
+    // Fallback to canvas-based compression
+    return compressVideoWithCanvas(file, options, onProgress);
+  }
 }
 
 /**
