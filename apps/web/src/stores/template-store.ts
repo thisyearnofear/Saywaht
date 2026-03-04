@@ -20,6 +20,7 @@ interface TemplateStore {
   recentTemplates: Template[]; // Track recently used templates
   templateBlobUrls: string[]; // NEW: Track blob URLs for cleanup
   abortController: AbortController | null; // NEW: For cancelling in-flight requests
+  clipLoadingStatus: Record<string, 'loading' | 'ready' | 'error'>; // Per-clip loading status
 
   // Actions
   fetchCategories: () => Promise<void>;
@@ -31,6 +32,8 @@ interface TemplateStore {
   clearRecentTemplates: () => void;
   cleanupBlobUrls: () => void; // NEW: Cleanup blob URLs
   cancelPendingLoad: () => void; // NEW: Cancel in-flight template load
+  setClipLoadingStatus: (clipId: string, status: 'loading' | 'ready' | 'error') => void;
+  clearClipLoadingStatus: () => void;
 }
 
 export const useTemplateStore = create<TemplateStore>((set, get) => ({
@@ -42,6 +45,7 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
   recentTemplates: [],
   templateBlobUrls: [], // NEW: Initialize blob URL tracking
   abortController: null, // NEW: Initialize abort controller
+  clipLoadingStatus: {}, // Per-clip loading status
 
   /**
    * Fetches all template categories
@@ -220,6 +224,11 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       // Add media items to the store
       mediaItems.forEach(item => addMediaItem(item));
 
+      // Snapshot clip IDs before adding new ones
+      const clipIdsBefore = new Set(
+        useTimelineStore.getState().tracks.flatMap(t => t.clips.map(c => c.id))
+      );
+
       // Add tracks and clips to the timeline
       templateTracks.forEach((track) => {
         const trackId = addTrack(track.type);
@@ -236,6 +245,17 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
           });
         });
       });
+
+      // Collect newly added clip IDs and mark them as loading
+      const newClipLoadingStatus: Record<string, 'loading' | 'ready' | 'error'> = {};
+      useTimelineStore.getState().tracks.forEach(t =>
+        t.clips.forEach(c => {
+          if (!clipIdsBefore.has(c.id)) {
+            newClipLoadingStatus[c.id] = 'loading';
+          }
+        })
+      );
+      set({ clipLoadingStatus: newClipLoadingStatus });
 
       // Initialize canvas size based on template aspect ratio
       const { setCanvasPreset } = useCanvasStore.getState();
@@ -298,5 +318,15 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
    */
   mergeTemplateToProject: async () => {
     return get().applySelectedTemplate(undefined, 'merge');
-  }
+  },
+
+  setClipLoadingStatus: (clipId: string, status: 'loading' | 'ready' | 'error') => {
+    set((state) => ({
+      clipLoadingStatus: { ...state.clipLoadingStatus, [clipId]: status }
+    }));
+  },
+
+  clearClipLoadingStatus: () => {
+    set({ clipLoadingStatus: {} });
+  },
 }));

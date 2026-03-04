@@ -3,13 +3,14 @@
 import { useRef } from "react";
 import { PreviewPanel } from "@/components/editor/preview-panel";
 import { Button } from "@/components/ui/button";
-import { Maximize2, Minimize2, ZoomIn, ZoomOut, Video } from "@/lib/icons";
+import { Maximize2, Minimize2, ZoomIn, ZoomOut, Video, Loader2 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useMobileContext } from "@/contexts/mobile-context";
 import { usePinchZoom } from "@/hooks/use-touch-gestures";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { useCanvasStore } from "@/stores/canvas-store";
 import { useEditorStore } from "@/stores/editor-store";
+import { useTemplateStore } from "@/stores/template-store";
 
 interface MobilePreviewPanelProps {
   className?: string;
@@ -40,6 +41,8 @@ export function MobilePreviewPanel({
   const previewRef = useRef<HTMLDivElement>(null);
   const { canvasSize } = useCanvasStore();
   const { videoObjectFit, toggleVideoObjectFit } = useEditorStore();
+  const { clipLoadingStatus } = useTemplateStore();
+  const hasLoadingClips = Object.values(clipLoadingStatus).some((s) => s === "loading");
 
   const handleZoomChange = (scale: number) => {
     if (previewRef.current) {
@@ -147,6 +150,14 @@ export function MobilePreviewPanel({
               <ZoomOut className="h-3.5 w-3.5" />
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Per-clip loading indicator — shown after template apply while videos buffer */}
+      {hasLoadingClips && (
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white text-[11px] px-3 py-1.5 rounded-full border border-white/10">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>Loading clips…</span>
         </div>
       )}
 

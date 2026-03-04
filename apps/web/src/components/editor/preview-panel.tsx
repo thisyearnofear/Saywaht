@@ -210,6 +210,7 @@ export function PreviewPanel({
             objectFit={videoObjectFit}
             cssFilter={cssFilter}
             clipAudioGain={clipAudioGain}
+            clipId={clip.id}
           />
         </div>
       );

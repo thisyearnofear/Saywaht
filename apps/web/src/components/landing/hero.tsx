@@ -6,9 +6,11 @@ import { ArrowRight, Sparkles, Video, Coins, Zap, LayoutTemplate } from "@/lib/i
 import Link from "next/link";
 import { useAccount } from "wagmi";
 import { MobileWalletConnect } from "@/components/mobile-wallet-connect";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function Hero() {
   const { isConnected } = useAccount();
+  const isMobile = useIsMobile();
 
   return (
     <div className="min-h-[calc(100dvh-4rem)] flex flex-col justify-between items-center text-center px-4 sm:px-6 relative overflow-y-auto scrollable pb-20 md:pb-4">
@@ -130,7 +132,7 @@ export function Hero() {
                   className="w-full sm:w-auto px-6 sm:px-8 h-14 sm:h-12 text-base font-medium bg-primary hover:bg-primary/90 transition-all duration-200 shadow-lg hover:shadow-xl touch-manipulation"
                 >
                   <Video className="mr-2 h-5 w-5" />
-                  Create Video
+                  {isMobile ? "Browse Templates" : "Create Video"}
                 </Button>
               </Link>
               <Link href="/trade" className="w-full sm:w-auto">

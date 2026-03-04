@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { usePlaybackStore } from "@/stores/playback-store";
+import { useTemplateStore } from "@/stores/template-store";
 import { useLazyVideoLoading } from "@/hooks/use-lazy-video-loading";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "@/lib/icons";
@@ -20,6 +21,7 @@ interface VideoPlayerProps {
   objectFit?: "contain" | "cover";
   cssFilter?: string;
   clipAudioGain?: number;
+  clipId?: string;
 }
 
 export function VideoPlayer({
@@ -36,6 +38,7 @@ export function VideoPlayer({
   objectFit = "contain",
   cssFilter,
   clipAudioGain = 1,
+  clipId,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const loadTimeoutRef = useRef<number | null>(null);
@@ -120,6 +123,11 @@ export function VideoPlayer({
       
       // NEW: Notify playback store that this video is ready
       usePlaybackStore.getState().incrementVideoReady();
+
+      // Update per-clip loading status
+      if (clipId) {
+        useTemplateStore.getState().setClipLoadingStatus(clipId, 'ready');
+      }
       
       if (isPlaying && isInClipRange) {
         setStalled(false);
@@ -170,6 +178,11 @@ export function VideoPlayer({
       setHasError(true);
       setStalled(false);
       setErrorMessage(msg);
+
+      // Update per-clip loading status
+      if (clipId) {
+        useTemplateStore.getState().setClipLoadingStatus(clipId, 'error');
+      }
     };
 
     video.addEventListener('canplay', handleCanPlay);

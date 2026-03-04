@@ -18,6 +18,7 @@ import Image from "next/image";
 import { useEffect, useMemo } from "react";
 import { Sparkles, Loader2, Video, Plus } from "@/lib/icons";
 import { resolveIpfsUrl } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Interface for templates with category name
 interface FeaturedTemplate extends Template {
@@ -25,6 +26,7 @@ interface FeaturedTemplate extends Template {
 }
 
 export function WelcomeScreen() {
+  const isMobile = useIsMobile();
   const { createNewProject } = useProjectStore();
   const { navigateToTemplate, navigateToTemplates } = useSmartNavigation();
   const { fetchCategories, categories, isLoading } = useTemplateStore();
@@ -169,40 +171,51 @@ export function WelcomeScreen() {
                     </p>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    onClick={() => createNewProject("My Awesome Project")}
-                    className="w-full bg-white/5 border-white/20 hover:bg-white/10 text-white text-sm py-6 rounded-2xl transition-all"
-                  >
-                    <Plus className="mr-2 h-5 w-5" />
-                    New Empty Project
-                  </Button>
+                  {isMobile ? (
+                    <button
+                      onClick={() => createNewProject("My Awesome Project")}
+                      className="text-white/50 text-sm underline underline-offset-2 hover:text-white/70 transition-colors"
+                    >
+                      New Empty Project
+                    </button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => createNewProject("My Awesome Project")}
+                      className="w-full bg-white/5 border-white/20 hover:bg-white/10 text-white text-sm py-6 rounded-2xl transition-all"
+                    >
+                      <Plus className="mr-2 h-5 w-5" />
+                      New Empty Project
+                    </Button>
+                  )}
 
-                  {/* Stats Bar */}
-                  <div className="grid grid-cols-3 gap-4 mt-6 opacity-60">
-                    <div className="text-center border-r border-white/10">
-                      <div className="text-2xl font-bold text-blue-300">
-                        {isLoading ? "..." : featuredTemplates.length}
+                  {/* Stats Bar — hidden on mobile */}
+                  {!isMobile && (
+                    <div className="grid grid-cols-3 gap-4 mt-6 opacity-60">
+                      <div className="text-center border-r border-white/10">
+                        <div className="text-2xl font-bold text-blue-300">
+                          {isLoading ? "..." : featuredTemplates.length}
+                        </div>
+                        <div className="text-[8px] text-white/60 uppercase tracking-widest">
+                          Templates
+                        </div>
                       </div>
-                      <div className="text-[8px] text-white/60 uppercase tracking-widest">
-                        Templates
+                      <div className="text-center border-r border-white/10">
+                        <div className="text-2xl font-bold text-purple-300">
+                          3
+                        </div>
+                        <div className="text-[8px] text-white/60 uppercase tracking-widest">
+                          Categories
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-pink-300">HD</div>
+                        <div className="text-[8px] text-white/60 uppercase tracking-widest">
+                          Quality
+                        </div>
                       </div>
                     </div>
-                    <div className="text-center border-r border-white/10">
-                      <div className="text-2xl font-bold text-purple-300">
-                        3
-                      </div>
-                      <div className="text-[8px] text-white/60 uppercase tracking-widest">
-                        Categories
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-pink-300">HD</div>
-                      <div className="text-[8px] text-white/60 uppercase tracking-widest">
-                        Quality
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>

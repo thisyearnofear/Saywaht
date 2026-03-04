@@ -226,6 +226,7 @@ export function MobileEditorLayout({
               onClick={() => {
                 addHapticFeedback("light");
                 undo();
+                toast("Undone", { duration: 1500 });
               }}
               disabled={!canUndo()}
               aria-label="Undo"
@@ -239,6 +240,7 @@ export function MobileEditorLayout({
               onClick={() => {
                 addHapticFeedback("light");
                 redo();
+                toast("Redone", { duration: 1500 });
               }}
               disabled={!canRedo()}
               aria-label="Redo"

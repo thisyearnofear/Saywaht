@@ -32,6 +32,8 @@ import { useEffect } from "react";
 import type { VideoFormat } from "@/lib/video-utils";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useCanvasStore } from "@/stores/canvas-store";
 
 export interface MintWizardData {
   // Thumbnail data
@@ -103,6 +105,8 @@ interface MintWizardProps {
 }
 
 export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
+  const isMobile = useIsMobile();
+  const { getFormat: getVideoFormat } = useCanvasStore();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -119,6 +123,15 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
     isDeploying: false,
     deployedCoin: null,
   });
+
+  // Mobile steps: Details → Preview → Deploy (3 steps)
+  const MOBILE_STEPS = [
+    { id: "details", title: "Coin Details", description: "Name your new creation", icon: Layers },
+    { id: "preview", title: "Review", description: "Check your configuration", icon: Zap },
+    { id: "deploy", title: "Deploy", description: "Launch to blockchain", icon: Zap },
+  ];
+
+  const activeSteps = isMobile ? MOBILE_STEPS : STEPS;
 
   // Ensure we're on client side before doing anything
   useEffect(() => {
@@ -163,7 +176,27 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
     }
   }, [wizardData.deployedCoin]);
 
+  // Auto-detect format from canvas on mobile
+  useEffect(() => {
+    if (isMobile && isClient) {
+      const detectedFormat = getVideoFormat();
+      updateWizardData({ videoFormat: detectedFormat, currency: "ETH" });
+    }
+  }, [isMobile, isClient, getVideoFormat, updateWizardData]);
+
   const canProceedToNext = () => {
+    if (isMobile) {
+      switch (currentStep) {
+        case 0: // Details step
+          return wizardData.coinName.trim() !== "" && wizardData.coinSymbol.trim() !== "";
+        case 1: // Preview step
+          return wizardData.metadataUri !== null;
+        case 2: // Deploy step
+          return wizardData.deployedCoin !== null;
+        default:
+          return false;
+      }
+    }
     switch (currentStep) {
       case 0: // Format step
         return wizardData.videoFormat !== undefined;
@@ -186,7 +219,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   };
 
   const nextStep = () => {
-    if (currentStep < STEPS.length - 1 && canProceedToNext()) {
+    if (currentStep < activeSteps.length - 1 && canProceedToNext()) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -197,10 +230,22 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
     }
   };
 
-  const progress = ((currentStep + 1) / STEPS.length) * 100;
-  const isLastStep = currentStep === STEPS.length - 1;
+  const progress = ((currentStep + 1) / activeSteps.length) * 100;
+  const isLastStep = currentStep === activeSteps.length - 1;
 
   const renderStep = () => {
+    if (isMobile) {
+      switch (currentStep) {
+        case 0:
+          return <CoinDetailsStep data={wizardData} updateData={updateWizardData} />;
+        case 1:
+          return <PreviewStep data={wizardData} updateData={updateWizardData} />;
+        case 2:
+          return <DeployStep data={wizardData} updateData={updateWizardData} />;
+        default:
+          return null;
+      }
+    }
     switch (currentStep) {
       case 0:
         return <FormatStep data={wizardData} updateData={updateWizardData} />;
@@ -337,22 +382,22 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
               {(() => {
-                const Icon = STEPS[currentStep].icon;
+                const Icon = activeSteps[currentStep].icon;
                 return <Icon className="w-6 h-6 text-primary" />;
               })()}
             </div>
             <div>
               <h2 className="text-xl font-bold tracking-tight">
-                {STEPS[currentStep].title}
+                {activeSteps[currentStep].title}
               </h2>
               <p className="text-sm text-muted-foreground">
-                {STEPS[currentStep].description}
+                {activeSteps[currentStep].description}
               </p>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            {STEPS.map((_, index) => (
+            {activeSteps.map((_, index) => (
               <div 
                 key={index}
                 className={cn(
@@ -363,7 +408,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
               />
             ))}
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">
-              {currentStep + 1} / {STEPS.length}
+              {currentStep + 1} / {activeSteps.length}
             </span>
           </div>
         </div>
