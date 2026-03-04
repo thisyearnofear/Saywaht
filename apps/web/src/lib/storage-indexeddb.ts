@@ -189,7 +189,7 @@ export async function saveProject(project: ProjectData): Promise<void> {
 }
 
 export async function getProject(id: string): Promise<ProjectData | null> {
-  return dbOperation(STORES.PROJECTS, 'readonly', async (store) => {
+  return dbOperation(STORES.PROJECTS, 'readwrite', async (store) => {
     return new Promise((resolve, reject) => {
       const request = store.get(id);
       request.onsuccess = () => {
@@ -325,7 +325,7 @@ export async function cacheMedia(
 }
 
 export async function getCachedMedia(url: string): Promise<Blob | null> {
-  return dbOperation(STORES.MEDIA_CACHE, 'readonly', async (store) => {
+  return dbOperation(STORES.MEDIA_CACHE, 'readwrite', async (store) => {
     return new Promise((resolve, reject) => {
       const request = store.get(url);
       request.onsuccess = () => {

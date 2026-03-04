@@ -256,15 +256,17 @@ async function compressVideoWithWebCodecs(
 
     await decodeAndRender();
 
-    // Stop recording
+    // Set up stop handler before stopping to avoid race condition
+    const stopPromise = new Promise<void>((resolve) => {
+      recorder.onstop = () => resolve();
+    });
+
     recorder.stop();
     video.pause();
     URL.revokeObjectURL(video.src);
 
-    // Wait for final chunk
-    await new Promise<void>((resolve) => {
-      recorder.onstop = () => resolve();
-    });
+    // Wait for recorder to finish
+    await stopPromise;
 
     const blob = new Blob(chunks, { type: 'video/webm' });
     return new File([blob], file.name.replace(/\.[^/.]+$/, '.webm'), {

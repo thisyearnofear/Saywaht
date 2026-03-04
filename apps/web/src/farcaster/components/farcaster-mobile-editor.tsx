@@ -88,8 +88,9 @@ export function FarcasterMobileEditorLayout({
   }, [isFarcasterMiniApp, isReady, isInitializing, showOnboarding]);
 
   // Listen for hash changes to update frame state (for hash-based navigation)
+  // Only active in Farcaster Mini App — non-Farcaster users use normal routing
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !isFarcasterMiniApp) return;
 
     const handleHashChange = () => {
       const hash = window.location.hash.slice(1); // Remove the #
@@ -112,7 +113,7 @@ export function FarcasterMobileEditorLayout({
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [setFrameState]);
+  }, [setFrameState, isFarcasterMiniApp]);
 
   // Handle Mini App navigation actions
   const handleMiniAppAction = (action: string) => {
@@ -148,14 +149,19 @@ export function FarcasterMobileEditorLayout({
    * This handles hash-based navigation within the Mini App
    */
   const renderContent = () => {
-    // Show splash screen during initialization
-    if (showSplash) {
+    // Show splash screen during initialization (Farcaster Mini App only)
+    if (showSplash && isFarcasterMiniApp) {
       return (
         <FarcasterSplashScreen
           isVisible={showSplash}
           onComplete={handleSplashComplete}
         />
       );
+    }
+
+    // While mounting for non-Farcaster users, render the editor directly
+    if (showSplash) {
+      return renderEditorPage();
     }
 
     // Render based on current step
@@ -274,15 +280,12 @@ export function FarcasterMobileEditorLayout({
             ← Back
           </Button>
           <h2 className="text-lg font-black uppercase tracking-widest">Templates</h2>
-          <div className="w-16" />{/* Spacer for centering */}
+          <div className="w-16" />
         </div>
-        <div className="flex-1 flex items-center justify-center p-8">
-          <div className="text-center space-y-4">
-            <p className="text-white/60">Templates coming soon...</p>
-            <Button onClick={() => handleMiniAppAction('start_recording')}>
-              Start Recording
-            </Button>
-          </div>
+        <div className="flex-1">
+          <MobileEditorLayout hideOnboarding={isFarcasterMiniApp}>
+            {children}
+          </MobileEditorLayout>
         </div>
       </div>
     );

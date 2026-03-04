@@ -18,6 +18,7 @@ import {
   Play,
   X,
   Check,
+  Settings,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
@@ -37,6 +38,7 @@ import { MobileAudioPanel } from "@/components/editor/mobile-audio-panel";
 import { MobilePreviewPanel } from "@/components/editor/mobile-preview-panel";
 import { MobileTextPanel } from "@/components/editor/mobile-text-panel";
 import { MobileEffectsPanel } from "@/components/editor/mobile-effects-panel";
+import { MobileSettingsPanel } from "@/components/editor/mobile-settings-panel";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { toast } from "sonner";
 import {
@@ -97,6 +99,7 @@ export function MobileEditorLayout({
   const [isRecordingInProgress, setIsRecordingInProgress] = useState(false);
   const [showCoachmark, setShowCoachmark] = useState(false);
   const [showWorkflowBar, setShowWorkflowBar] = useState(true); // Allow dismissing workflow bar
+  const [showSettings, setShowSettings] = useState(false);
   const [preferredCaptionGroupId, setPreferredCaptionGroupId] = useState<string | null>(null);
   const timelineVisible = activeTool === null || activeTool === "record";
   const hasTimelineClips = tracks.some((track) => track.clips.length > 0);
@@ -204,6 +207,18 @@ export function MobileEditorLayout({
           </div>
 
           <div className="flex items-center gap-1 py-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full"
+              onClick={() => {
+                addHapticFeedback("light");
+                setShowSettings(true);
+              }}
+              aria-label="Settings"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -538,6 +553,8 @@ export function MobileEditorLayout({
           </div>
         </div>
       )}
+
+      <MobileSettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }
