@@ -6,6 +6,7 @@ import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 import { useFarcasterFrame } from "@/farcaster/hooks/use-farcaster-frame";
 import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import { MobileOnboardingOverlay } from "@/components/editor/mobile-onboarding-overlay";
+import { WelcomeScreen } from "@/components/editor/welcome-screen";
 import { FarcasterSplashScreen } from "./farcaster-splash-screen";
 import { useMobileOnboarding } from "@/components/editor/mobile-onboarding-overlay";
 import { FarcasterClientLogic } from "@/farcaster/components/farcaster-client-logic";
@@ -262,30 +263,25 @@ export function FarcasterMobileEditorLayout({
   };
 
   /**
-   * Render the templates page
+   * Render the templates page — reuses WelcomeScreen which has the full
+   * template grid powered by useTemplateStore and useSmartNavigation.
+   * In Mini App context, useSmartNavigation uses hash-based navigation.
    */
   const renderTemplatesPage = () => {
     return (
-      <div className={cn(
-        "flex-1 min-h-0 overflow-y-auto scrollable flex flex-col transition-opacity duration-500",
-        "opacity-100 visible"
-      )}>
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
+      <div className="flex-1 min-h-0 overflow-y-auto scrollable flex flex-col">
+        <div className="flex items-center p-4 border-b border-white/10">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => window.history.back()}
+            onClick={() => setFrameState({ step: 'welcome' })}
             className="text-white"
           >
             ← Back
           </Button>
-          <h2 className="text-lg font-black uppercase tracking-widest">Templates</h2>
-          <div className="w-16" />
         </div>
         <div className="flex-1">
-          <MobileEditorLayout hideOnboarding={isFarcasterMiniApp}>
-            {children}
-          </MobileEditorLayout>
+          <WelcomeScreen />
         </div>
       </div>
     );
