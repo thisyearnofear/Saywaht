@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { MobileEditorLayout } from "@/components/editor/mobile-editor-layout";
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 import { useFarcasterFrame } from "@/farcaster/hooks/use-farcaster-frame";
 import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import { MobileOnboardingOverlay } from "@/components/editor/mobile-onboarding-overlay";
-import { WelcomeScreen } from "@/components/editor/welcome-screen";
+import { MobileTemplateBrowser } from "@/components/templates/mobile-template-browser";
 import { TradingFeed } from "@/components/trading/trading-feed";
 import { MintWizard } from "@/components/mint/mint-wizard";
 import { FarcasterSplashScreen } from "./farcaster-splash-screen";
@@ -37,6 +37,8 @@ export function FarcasterMobileEditorLayout({
   const [debugMode, setDebugMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [isSplashAnimationComplete, setIsSplashAnimationComplete] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const prevStep = useRef(frameState.step);
 
   // Hydration guard - crucial for WebViews and Next.js
   useEffect(() => {
@@ -142,6 +144,16 @@ export function FarcasterMobileEditorLayout({
     }
   };
 
+  // Animate page transitions when step changes
+  useEffect(() => {
+    if (prevStep.current !== frameState.step) {
+      prevStep.current = frameState.step;
+      setIsTransitioning(true);
+      const t = setTimeout(() => setIsTransitioning(false), 350);
+      return () => clearTimeout(t);
+    }
+  }, [frameState.step]);
+
   // Determine if we should show the splash screen
   // Show if not mounted yet OR if initializing and animation hasn't finished
   const showSplash = !isMounted || (isFarcasterMiniApp && (!isReady || !isSplashAnimationComplete));
@@ -164,6 +176,18 @@ export function FarcasterMobileEditorLayout({
     // While mounting for non-Farcaster users, render the editor directly
     if (showSplash) {
       return renderEditorPage();
+    }
+
+    // Transitioning between pages — show animated skeleton
+    if (isTransitioning) {
+      return (
+        <div className="flex-1 min-h-0 flex flex-col gap-4 p-4 animate-pulse">
+          <div className="h-8 w-32 bg-white/10 rounded-xl" />
+          <div className="h-48 w-full bg-white/10 rounded-3xl" />
+          <div className="h-48 w-full bg-white/8 rounded-3xl" />
+          <div className="h-32 w-full bg-white/5 rounded-3xl" />
+        </div>
+      );
     }
 
     // Render based on current step
@@ -264,27 +288,16 @@ export function FarcasterMobileEditorLayout({
   };
 
   /**
-   * Render the templates page — reuses WelcomeScreen which has the full
-   * template grid powered by useTemplateStore and useSmartNavigation.
-   * In Mini App context, useSmartNavigation uses hash-based navigation.
+   * Render the templates page — uses MobileTemplateBrowser, the purpose-built
+   * mobile-optimised component with haptic feedback, video preloading, and
+   * Pexels stock categories. Navigation callbacks keep us inside the WebView.
    */
   const renderTemplatesPage = () => {
     return (
-      <div className="flex-1 min-h-0 overflow-y-auto scrollable flex flex-col">
-        <div className="flex items-center p-4 border-b border-white/10">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setFrameState({ step: 'welcome' })}
-            className="text-white"
-          >
-            ← Back
-          </Button>
-        </div>
-        <div className="flex-1">
-          <WelcomeScreen />
-        </div>
-      </div>
+      <MobileTemplateBrowser
+        onBack={() => setFrameState({ step: 'welcome' })}
+        onNavigateToEditor={() => setFrameState({ step: 'recording' })}
+      />
     );
   };
 

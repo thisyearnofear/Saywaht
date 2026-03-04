@@ -115,11 +115,17 @@ export function MobileEditorLayout({
 
   usePlaybackControls();
 
+  // Auto-open media panel on first mount only when there's nothing in the timeline.
+  // We intentionally omit activeTool from deps so closing the panel doesn't
+  // immediately re-open it (the previous behaviour that made it impossible to dismiss).
+  const hasAutoOpenedMedia = useRef(false);
   useEffect(() => {
-    if ((mediaItems.length === 0 || !hasTimelineClips) && activeTool === null) {
+    if (!hasAutoOpenedMedia.current && mediaItems.length === 0 && !hasTimelineClips) {
+      hasAutoOpenedMedia.current = true;
       setActiveTool("media");
     }
-  }, [activeTool, mediaItems.length, hasTimelineClips]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (hideOnboarding || typeof window === "undefined") {

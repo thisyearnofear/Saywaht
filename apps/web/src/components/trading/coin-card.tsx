@@ -47,6 +47,7 @@ interface CoinCardProps {
 
 export function CoinCard({ coin, onBuy, onSell, onPlay }: CoinCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [thumbnailError, setThumbnailError] = useState(false);
   const [buyAmount, setBuyAmount] = useState("0.001");
   const [sellAmount, setSellAmount] = useState("100");
   const [isBuyOpen, setIsBuyOpen] = useState(false);
@@ -110,14 +111,17 @@ export function CoinCard({ coin, onBuy, onSell, onPlay }: CoinCardProps) {
           <CardContent className="p-0">
             {/* Visual Section */}
             <div className="relative aspect-video bg-muted overflow-hidden">
-              {coin.thumbnail ? (
+              {coin.thumbnail && !thumbnailError ? (
                 <img
                   src={coin.thumbnail}
                   alt={coin.name}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  onError={() => setThumbnailError(true)}
                 />
               ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 animate-pulse" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                  <span className="text-4xl font-black text-primary/40 select-none">{coin.symbol?.slice(0, 2) || "?"}</span>
+                </div>
               )}
 
               {/* Status Badges */}

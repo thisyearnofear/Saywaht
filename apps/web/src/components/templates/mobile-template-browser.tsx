@@ -159,7 +159,12 @@ function RotatingCategoryCard({
   );
 }
 
-export function MobileTemplateBrowser() {
+interface MobileTemplateBrowserProps {
+  onNavigateToEditor?: () => void;
+  onBack?: () => void;
+}
+
+export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemplateBrowserProps = {}) {
   const { categories, isLoading, selectTemplate, applySelectedTemplate, clearSelectedTemplate } = useTemplateStore();
   const [mainTab, setMainTab] = useState<"packs" | "stock">("stock");
   
@@ -306,7 +311,7 @@ export function MobileTemplateBrowser() {
 
       toast.dismiss(loadingToast);
       toast.success("Ready to edit!");
-      router.push("/editor");
+      if (onNavigateToEditor) onNavigateToEditor(); else router.push("/editor");
 
     } catch (err) {
       console.error("Failed to load Pexels video:", err);
@@ -324,7 +329,7 @@ export function MobileTemplateBrowser() {
       const success = await applySelectedTemplate();
       if (success) {
         clearSelectedTemplate();
-        router.push("/editor");
+        if (onNavigateToEditor) onNavigateToEditor(); else router.push("/editor");
       }
     } catch (error) {
       console.error("Failed to apply template:", error);
@@ -355,7 +360,7 @@ export function MobileTemplateBrowser() {
               variant="ghost"
               size="icon"
               className="rounded-full bg-white/5 h-10 w-10 shrink-0"
-              onClick={() => router.back()}
+              onClick={() => onBack ? onBack() : router.back()}
             >
               <ChevronRight className="h-5 w-5 rotate-180" />
             </Button>
