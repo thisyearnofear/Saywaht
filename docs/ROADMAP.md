@@ -29,24 +29,30 @@
     *   **Draggable Drawers**: native-feeling tool panels using `vaul`.
     *   **Sync Start Slider**: Advanced audio/video alignment for commentary.
     *   **Touch Drag-and-Drop**: Interactive text positioning on preview.
+    *   **Per-clip Loading Indicators**: Real-time feedback for streaming media buffering.
+    *   **Undo/Redo Feedback**: Toast notifications for history actions.
 
-### 🚀 Phase 2: The Economy (Current Focus)
+### ✅ Phase 2: The Economy
 **Goal:** Leverage the full power of the `@zoralabs/coins-sdk` for a rich trading experience.
 
-*   🚧 **Advanced Trading Interface**
-    *   Real-time price charts and volume metrics
-    *   Integration of `tradeCoin` for seamless swaps
+*   ✅ **Advanced Trading Interface**
+    *   Real-time video discovery and creator cards.
+    *   Full `TradingFeed` component with search and algorithmic sorting.
+*   ✅ **Simplified Minting Flow**
+    *   Collapsed 3-step mobile minting (Details → Preview → Deploy).
+    *   Auto-detection of video formats and smart defaults.
 *   **Smart Metadata System**
     *   Strict adherence to `validateMetadataJSON` standards
     *   On-chain attribution for commentary remixes
 
-### 🔍 Phase 3: Discovery & Social Graph (Current Focus)
+### ✅ Phase 3: Discovery & Social Graph
 **Goal:** Drive organic growth through social discovery and personalized feeds.
 
-*   **Farcaster Native Integration**
-    *   **Frame-to-Mint**: Directly mint coins from within a Cast.
-    *   Interactive Farcaster Frames for trading within feeds.
-*   **Intelligent Discovery Feed**
+*   ✅ **Farcaster Native Integration (Mini App)**
+    *   **Full Mini App Experience**: Seamless transition between editor, templates, and trading within Warpcast.
+    *   **Hash-based Navigation**: Pure WebView-compatible routing system.
+    *   **Template-first Entry**: Streamlined funnel for new users to start from curated content.
+*   ✅ **Intelligent Discovery Feed**
     *   Algorithmic sorting using `getCoinsNew` (Trending, New, Top Volume).
 
 ### 🔮 Phase 4: Future Horizons
@@ -72,4 +78,4 @@ To maintain velocity and stability, we adhere to strict engineering principles:
 
 ---
 
-*Last Updated: Current Version*
+*Last Updated: March 2026 (v9/10 Release)

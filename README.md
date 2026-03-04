@@ -228,6 +228,10 @@ The application will be available at [http://localhost:3000](http://localhost:30
 - ✅ **Multi-tier Storage**: Automatic routing between Grove/Filecoin
 - ✅ **Mobile Support**: Responsive design optimized for mobile devices
 - ✅ **TypeScript**: Full type safety with strict mode enabled
+- ✅ **Farcaster Mini App**: Fully native experience within Warpcast with hash-based navigation
+- ✅ **Simplified Mobile Minting**: 3-step streamlined flow for creating and deploying coins
+- ✅ **Real-time Discovery**: Integrated trading feed with video preview and sorting
+- ✅ **Mobile UX Polish**: Per-clip loading, undo/redo toasts, and animated transitions
 
 ## 🌐 Three-Phase App Architecture
 
