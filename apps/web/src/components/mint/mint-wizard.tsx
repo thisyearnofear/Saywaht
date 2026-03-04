@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -107,6 +108,7 @@ interface MintWizardProps {
 export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   const isMobile = useIsMobile();
   const { getFormat: getVideoFormat } = useCanvasStore();
+  const { navigateToEditor } = useSmartNavigation();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -444,7 +446,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
           <Button
             variant="outline"
             className="rounded-xl px-6"
-            onClick={() => window.location.href = "/editor"}
+            onClick={() => navigateToEditor()}
           >
             Cancel
           </Button>

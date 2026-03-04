@@ -200,6 +200,14 @@ export function EditorHeader() {
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Draft</span>
           </div>
         </div>
+
+        {/* Prompt new users to browse templates when timeline is empty */}
+        {tracks.length === 0 && (
+          <Link href="/templates" className="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-xl bg-primary/10 hover:bg-primary/20 transition-all text-primary text-[10px] font-black uppercase tracking-widest">
+            <Video className="h-3 w-3" />
+            Browse Templates
+          </Link>
+        )}
       </div>
 
       {/* Center Section: Main Controls — hidden on mobile (preview has its own play button) */}

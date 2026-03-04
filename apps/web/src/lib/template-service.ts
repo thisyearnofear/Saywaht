@@ -3,11 +3,24 @@ import { MediaItem } from "@/stores/media-store";
 import { TimelineTrack, TimelineClip } from "@/stores/timeline-store";
 
 /**
+ * Resolves a public asset path to an absolute URL.
+ * In Farcaster WebView, relative URLs resolve against the WebView host (Warpcast),
+ * not the app origin — so we always use an absolute URL.
+ */
+function assetUrl(path: string): string {
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}${path}`;
+  }
+  // SSR fallback — relative is fine on the server
+  return path;
+}
+
+/**
  * Fetches all template categories
  */
 export async function fetchTemplateCategories(): Promise<TemplateCategory[]> {
   try {
-    const response = await fetch('/templates/index.json');
+    const response = await fetch(assetUrl('/templates/index.json'));
     if (!response.ok) {
       throw new Error('Failed to load templates');
     }
@@ -52,10 +65,10 @@ export async function fetchTemplateById(id: string, signal?: AbortSignal): Promi
       let detailResponse;
       
       if (subcategory) {
-        detailResponse = await fetch(`/templates/${categoryId}/${subcategory}/${id}.json`, { signal });
+        detailResponse = await fetch(assetUrl(`/templates/${categoryId}/${subcategory}/${id}.json`), { signal });
       } else {
         // Try both new format and legacy format
-        detailResponse = await fetch(`/templates/${categoryId}/${id}.json`, { signal });
+        detailResponse = await fetch(assetUrl(`/templates/${categoryId}/${id}.json`), { signal });
       }
       
       // If either of the new formats work, return that
@@ -64,7 +77,7 @@ export async function fetchTemplateById(id: string, signal?: AbortSignal): Promi
       }
       
       // Try legacy format as fallback
-      const legacyResponse = await fetch(`/templates/${categoryId}/${id}/template.json`, { signal });
+      const legacyResponse = await fetch(assetUrl(`/templates/${categoryId}/${id}/template.json`), { signal });
       if (legacyResponse.ok) {
         return await legacyResponse.json();
       }

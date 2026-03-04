@@ -165,7 +165,7 @@ interface MobileTemplateBrowserProps {
 }
 
 export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemplateBrowserProps = {}) {
-  const { categories, isLoading, selectTemplate, applySelectedTemplate, clearSelectedTemplate } = useTemplateStore();
+  const { categories, isLoading, setSelectedTemplate, applySelectedTemplate, clearSelectedTemplate } = useTemplateStore();
   const [mainTab, setMainTab] = useState<"packs" | "stock">("stock");
   
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
@@ -325,7 +325,9 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
   const handleUseTemplate = async (template: Template) => {
     setIsApplying(template.id);
     try {
-      await selectTemplate(template.id);
+      // Use the already-loaded template object directly — avoids redundant network
+      // fetches that break in Farcaster WebView (relative URLs resolve to wrong host)
+      setSelectedTemplate(template);
       const success = await applySelectedTemplate();
       if (success) {
         clearSelectedTemplate();

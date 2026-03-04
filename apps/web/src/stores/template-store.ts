@@ -25,6 +25,7 @@ interface TemplateStore {
   // Actions
   fetchCategories: () => Promise<void>;
   selectTemplate: (templateId: string) => Promise<void>;
+  setSelectedTemplate: (template: Template) => void;
   clearSelectedTemplate: () => void;
   applySelectedTemplate: (projectName?: string, mergeStrategy?: 'replace' | 'merge') => Promise<boolean>;
   mergeTemplateToProject: () => Promise<boolean>;
@@ -99,6 +100,15 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
         abortController: null
       });
     }
+  },
+
+  /**
+   * Sets the selected template directly (skips network fetch)
+   * Use when the full template object is already available
+   */
+  setSelectedTemplate: (template: Template) => {
+    get().cancelPendingLoad();
+    set({ selectedTemplate: template, isLoading: false, error: null, abortController: null });
   },
 
   /**

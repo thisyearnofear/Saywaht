@@ -107,13 +107,14 @@ export function useSmartNavigation() {
    * Go back - uses history.back() in both contexts
    */
   const goBack = useCallback(() => {
-    if (isFarcasterMiniApp && window.location.hash) {
-      // In Mini App with hash, just remove the hash to go back
-      window.history.back();
+    if (isFarcasterMiniApp) {
+      // In Mini App, always go back to welcome via setFrameState — window.history.back() is unreliable in WebView
+      setFrameState({ step: "welcome" });
+      window.location.hash = "";
     } else {
       router.back();
     }
-  }, [isFarcasterMiniApp, router]);
+  }, [isFarcasterMiniApp, router, setFrameState]);
 
   return {
     navigate,
