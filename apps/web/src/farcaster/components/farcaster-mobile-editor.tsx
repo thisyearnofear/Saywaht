@@ -7,6 +7,8 @@ import { useFarcasterFrame } from "@/farcaster/hooks/use-farcaster-frame";
 import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import { MobileOnboardingOverlay } from "@/components/editor/mobile-onboarding-overlay";
 import { WelcomeScreen } from "@/components/editor/welcome-screen";
+import { TradingFeed } from "@/components/trading/trading-feed";
+import { MintWizard } from "@/components/mint/mint-wizard";
 import { FarcasterSplashScreen } from "./farcaster-splash-screen";
 import { useMobileOnboarding } from "@/components/editor/mobile-onboarding-overlay";
 import { FarcasterClientLogic } from "@/farcaster/components/farcaster-client-logic";
@@ -49,19 +51,18 @@ export function FarcasterMobileEditorLayout({
   // Load SDK safely (returns null during SSR)
   const sdk = useFarcasterSdk();
 
-  // Debug mode toggle (for development) - only in browser
+  // Debug mode toggle (development only)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || process.env.NODE_ENV !== 'development') return;
 
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === 'D' && e.shiftKey && e.ctrlKey) {
         setDebugMode(prev => !prev);
-        console.log("Debug mode:", !debugMode);
       }
     };
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [debugMode]);
+  }, []);
 
   // Initialize Mini App SDK with proper error handling and context detection
   useEffect(() => {
@@ -217,18 +218,18 @@ export function FarcasterMobileEditorLayout({
             <Button
               size="lg"
               className="w-full h-16 text-lg font-black uppercase tracking-widest rounded-2xl shadow-xl bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95 transition-all border-none"
-              onClick={() => handleMiniAppAction('start_recording')}
+              onClick={() => handleMiniAppAction('templates')}
             >
-              Coin Commentary
+              Browse Templates
             </Button>
 
             <Button
               size="lg"
               variant="secondary"
-              className="w-full h-16 text-lg font-black uppercase tracking-widest rounded-2xl shadow-lg bg-white text-black hover:bg-white/90 active:scale-95 transition-all"
-              onClick={() => handleMiniAppAction('templates')}
+              className="w-full h-16 text-lg font-black uppercase tracking-widest rounded-2xl shadow-lg bg-white/10 text-white hover:bg-white/20 active:scale-95 transition-all"
+              onClick={() => handleMiniAppAction('start_recording')}
             >
-              Browse Templates
+              Coin Commentary
             </Button>
 
             <div className="grid grid-cols-2 gap-3 pt-2">
@@ -244,7 +245,7 @@ export function FarcasterMobileEditorLayout({
                 className="h-12 text-[10px] font-black uppercase tracking-wider border-2 rounded-xl hover:bg-primary/5 transition-colors"
                 onClick={() => handleMiniAppAction('create_coin')}
               >
-                Trending
+                Create Coin
               </Button>
             </div>
           </div>
@@ -288,7 +289,8 @@ export function FarcasterMobileEditorLayout({
   };
 
   /**
-   * Render the minting page
+   * Render the minting page — reuses MintWizard which handles the full
+   * mint flow (Details → Preview → Deploy on mobile, 6 steps on desktop).
    */
   const renderMintingPage = () => {
     return (
@@ -300,25 +302,24 @@ export function FarcasterMobileEditorLayout({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => window.history.back()}
+            onClick={() => setFrameState({ step: 'welcome' })}
             className="text-white"
           >
             ← Back
           </Button>
-          <h2 className="text-lg font-black uppercase tracking-widest">Mint</h2>
+          <h2 className="text-lg font-black uppercase tracking-widest">Create Coin</h2>
           <div className="w-16" />{/* Spacer for centering */}
         </div>
-        <div className="flex-1">
-          <MobileEditorLayout hideOnboarding={isFarcasterMiniApp}>
-            {children}
-          </MobileEditorLayout>
+        <div className="flex-1 overflow-y-auto">
+          <MintWizard />
         </div>
       </div>
     );
   };
 
   /**
-   * Render the trade/market page
+   * Render the trade/market page — reuses TradingFeed which has search,
+   * sort, coin cards, and video playback already built.
    */
   const renderTradePage = () => {
     return (
@@ -330,7 +331,7 @@ export function FarcasterMobileEditorLayout({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => window.history.back()}
+            onClick={() => setFrameState({ step: 'welcome' })}
             className="text-white"
           >
             ← Back
@@ -338,13 +339,8 @@ export function FarcasterMobileEditorLayout({
           <h2 className="text-lg font-black uppercase tracking-widest">Market</h2>
           <div className="w-16" />{/* Spacer for centering */}
         </div>
-        <div className="flex-1 flex items-center justify-center p-8">
-          <div className="text-center space-y-4">
-            <p className="text-white/60">Market data coming soon...</p>
-            <Button onClick={() => handleMiniAppAction('start_recording')}>
-              Start Recording
-            </Button>
-          </div>
+        <div className="flex-1 overflow-y-auto">
+          <TradingFeed />
         </div>
       </div>
     );
@@ -375,8 +371,8 @@ export function FarcasterMobileEditorLayout({
       className={`h-screen w-screen flex flex-col bg-background overflow-hidden mobile-editor safe-area ${isFarcasterMiniApp ? 'farcaster-miniapp' : ''}`}
       style={{ backgroundColor: "#000" }}
     >
-      {/* Debug Panel */}
-      {debugMode && (
+      {/* Debug Panel — development only */}
+      {process.env.NODE_ENV === 'development' && debugMode && (
         <div className="fixed top-0 left-0 z-50 bg-black/90 text-white p-2 text-xs max-w-sm">
           <div>isFarcasterMiniApp: {String(isFarcasterMiniApp)}</div>
           <div>isInitializing: {String(isInitializing)}</div>
