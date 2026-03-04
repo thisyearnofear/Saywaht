@@ -332,6 +332,8 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
       if (success) {
         clearSelectedTemplate();
         if (onNavigateToEditor) onNavigateToEditor(); else router.push("/editor");
+      } else {
+        toast.error("Failed to load template. Please try again.");
       }
     } catch (error) {
       console.error("Failed to apply template:", error);

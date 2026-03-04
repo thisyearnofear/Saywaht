@@ -146,10 +146,12 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
 
   /**
    * Cleanup blob URLs to prevent memory leaks
-   * NOTE: No longer needed since we stream directly from CDN
    */
   cleanupBlobUrls: () => {
-    // No-op: We don't create blob URLs anymore
+    const { templateBlobUrls } = get();
+    templateBlobUrls.forEach(url => {
+      try { URL.revokeObjectURL(url); } catch (_) { /* ignore */ }
+    });
     set({ templateBlobUrls: [] });
   },
 
@@ -161,7 +163,7 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
     if (abortController) {
       console.log('🛑 Cancelling pending template load');
       abortController.abort();
-      set({ abortController: null, isLoading: false });
+      set({ abortController: null, isLoading: false, isApplying: false });
     }
   },
 
@@ -219,10 +221,14 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       // Check if aborted
       if (abortController.signal.aborted) {
         console.log('Template application was cancelled');
+        set({ isLoading: false, isApplying: false, abortController: null });
         return false;
       }
 
-      // No blob URL tracking needed - streaming directly from CDN
+      // Track blob URLs for cleanup on next template load
+      if (blobUrls.length > 0) {
+        set((state) => ({ templateBlobUrls: [...state.templateBlobUrls, ...blobUrls] }));
+      }
 
       // Only clear after successful download
       if (mergeStrategy === 'replace') {

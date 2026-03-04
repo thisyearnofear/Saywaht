@@ -87,7 +87,7 @@ export function VideoPlayer({
         setErrorMessage("Video load timed out");
         setStalled(false);
       }
-    }, 8000);
+    }, 20000); // 20s timeout — generous for mobile/IPFS
   }, [clearLoadTimeout, setStalled]);
 
   // NEW: Cleanup on unmount
@@ -167,10 +167,14 @@ export function VideoPlayer({
       const msg = mediaError?.message || "Failed to load video";
       console.error("[VideoPlayer] error:", msg, { code: mediaError?.code, src });
 
-      // Auto-retry once before surfacing the error
-      if (retryCountRef.current < 1) {
+      // Auto-retry up to 3 times with increasing delay before surfacing the error
+      if (retryCountRef.current < 3) {
         retryCountRef.current += 1;
-        videoRef.current?.load();
+        const delay = 500 * Math.pow(2, retryCountRef.current - 1);
+        console.log(`[VideoPlayer] Retry ${retryCountRef.current}/3 after ${delay}ms`);
+        setTimeout(() => {
+          if (!isUnmountingRef.current) videoRef.current?.load();
+        }, delay);
         return;
       }
 

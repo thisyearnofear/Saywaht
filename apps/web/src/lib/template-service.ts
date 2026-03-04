@@ -106,13 +106,82 @@ export async function fetchTemplateById(id: string, signal?: AbortSignal): Promi
 }
 
 import { resolveIpfsUrl } from "@/lib/utils";
-
-// Retry helper removed - no longer needed for streaming approach
+import { getCachedMedia, cacheMedia, initIndexedDB } from "@/lib/storage-indexeddb";
 
 /**
- * Converts a template media item to an actual MediaItem
- * for use in the application. Uses direct streaming from IPFS/CDN
- * for optimal mobile performance and memory efficiency.
+ * IPFS gateway list for fallback resolution.
+ * If the primary gateway (Cloudflare) fails we try alternatives.
+ */
+const IPFS_GATEWAYS = [
+  'https://cloudflare-ipfs.com/ipfs/',
+  'https://dweb.link/ipfs/',
+  'https://w3s.link/ipfs/',
+  'https://ipfs.io/ipfs/',
+];
+
+/**
+ * Fetches a media URL with retry + exponential backoff.
+ * For IPFS URIs it cycles through multiple gateways.
+ */
+async function fetchWithRetry(
+  url: string,
+  originalUri: string,
+  signal?: AbortSignal,
+  maxRetries = 2
+): Promise<Response> {
+  const isIpfs = originalUri.startsWith('ipfs://') || originalUri.startsWith('lens://');
+  const hash = originalUri.startsWith('ipfs://') ? originalUri.replace('ipfs://', '')
+             : originalUri.startsWith('lens://') ? originalUri.replace('lens://', '')
+             : null;
+
+  // Build list of URLs to try
+  const urls: string[] = [url];
+  if (isIpfs && hash) {
+    for (const gw of IPFS_GATEWAYS) {
+      const gwUrl = `${gw}${hash}`;
+      if (gwUrl !== url) urls.push(gwUrl);
+    }
+  }
+
+  let lastError: Error | null = null;
+
+  for (const tryUrl of urls) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      if (signal?.aborted) {
+        const err = new Error('AbortError');
+        err.name = 'AbortError';
+        throw err;
+      }
+      try {
+        const resp = await fetch(tryUrl, { signal });
+        if (resp.ok) return resp;
+        lastError = new Error(`HTTP ${resp.status} from ${tryUrl}`);
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') throw e;
+        lastError = e as Error;
+      }
+      // Exponential backoff before retry (skip on last attempt)
+      if (attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt)));
+      }
+    }
+  }
+
+  throw lastError || new Error(`Failed to fetch ${url}`);
+}
+
+/**
+ * Converts a template media item to an actual MediaItem.
+ *
+ * Strategy (cache-through):
+ * 1. Check IndexedDB media-cache for a previously downloaded blob.
+ * 2. If miss → fetch from CDN (with retry + IPFS gateway fallback),
+ *    store the blob in IndexedDB, and create a blob URL.
+ * 3. Return the blob URL so the <video> element plays from local data
+ *    instead of streaming over the network on every load.
+ *
+ * This makes template loading reliable on flaky mobile connections
+ * (especially inside Farcaster WebView) and instant on repeat use.
  */
 export async function convertTemplateMediaItem(
   item: TemplateMediaItem, 
@@ -121,37 +190,85 @@ export async function convertTemplateMediaItem(
   // Resolve to CDN URL (Cloudflare IPFS or FilCDN)
   const streamUrl = resolveIpfsUrl(item.url);
   
-  console.log(`🎬 Preparing ${item.name} for streaming from ${streamUrl}`);
+  console.log(`🎬 Preparing ${item.name} from ${streamUrl}`);
   
   // Check if aborted
   if (signal?.aborted) {
-    throw new Error('AbortError');
+    const err = new Error('AbortError');
+    err.name = 'AbortError';
+    throw err;
   }
 
   const mimeType = item.type === 'video' ? 'video/mp4' :
                   item.type === 'audio' ? 'audio/mp3' :
                   'image/jpeg';
-  
-  // Create a minimal File object for compatibility
-  // (some parts of the app expect a file property)
-  const file = new File([], item.name, { type: mimeType });
+
+  // --- Cache-through: try IndexedDB first, then fetch & cache ---
+  let blobUrl: string | null = null;
+  let mediaBlob: Blob | null = null;
+  let fileSize = 0;
+
+  try {
+    await initIndexedDB();
+
+    // 1. Check cache
+    const cached = await getCachedMedia(streamUrl);
+    if (cached) {
+      console.log(`📦 Cache hit for ${item.name} (${(cached.size / 1024 / 1024).toFixed(1)}MB)`);
+      mediaBlob = cached;
+    }
+  } catch (cacheErr) {
+    // IndexedDB unavailable (e.g. private browsing) — continue without cache
+    console.warn('IndexedDB cache unavailable:', cacheErr);
+  }
+
+  if (!mediaBlob) {
+    // 2. Fetch with retry + gateway fallback
+    try {
+      console.log(`⬇️ Downloading ${item.name}...`);
+      const response = await fetchWithRetry(streamUrl, item.url, signal);
+      mediaBlob = await response.blob();
+      console.log(`✅ Downloaded ${item.name} (${(mediaBlob.size / 1024 / 1024).toFixed(1)}MB)`);
+
+      // 3. Store in IndexedDB for next time (fire-and-forget)
+      cacheMedia(streamUrl, mediaBlob, mimeType, 7 * 24 * 60 * 60 * 1000) // 7-day TTL
+        .catch(err => console.warn('Failed to cache media:', err));
+    } catch (fetchErr) {
+      if ((fetchErr as Error).name === 'AbortError') throw fetchErr;
+      // If fetch fails, fall back to direct streaming URL
+      console.warn(`⚠️ Download failed for ${item.name}, falling back to streaming:`, fetchErr);
+    }
+  }
+
+  // Create blob URL if we have the data, otherwise fall back to CDN streaming
+  let mediaUrl = streamUrl;
+  if (mediaBlob) {
+    blobUrl = URL.createObjectURL(mediaBlob);
+    mediaUrl = blobUrl;
+    fileSize = mediaBlob.size;
+  }
+
+  // Create File object for compatibility
+  const file = mediaBlob
+    ? new File([mediaBlob], item.name, { type: mimeType })
+    : new File([], item.name, { type: mimeType });
   
   const mediaItem: MediaItem = {
     id: item.id,
     name: item.name,
     type: item.type,
     file,
-    url: streamUrl, // Use CDN URL directly for streaming
+    url: mediaUrl,
     thumbnailUrl: resolveIpfsUrl(item.thumbnailUrl || item.url),
     duration: item.duration || 0,
     aspectRatio: item.aspectRatio,
-    size: 0, // Size unknown for streaming (not downloaded)
-    isLocal: false // Streaming from CDN, not local
+    size: fileSize,
+    isLocal: !!mediaBlob
   };
   
-  console.log(`✅ ${item.name} ready for streaming`);
+  console.log(`✅ ${item.name} ready (${mediaBlob ? 'cached/downloaded' : 'streaming'})`);
   
-  return { mediaItem, blobUrl: null };
+  return { mediaItem, blobUrl };
 }
 
 /**
@@ -167,8 +284,7 @@ export async function loadTemplateMediaItems(
   );
   
   const mediaItems = results.map(r => r.mediaItem);
-  // No blob URLs since we're streaming directly
-  const blobUrls: string[] = [];
+  const blobUrls = results.map(r => r.blobUrl).filter((u): u is string => u !== null);
   
   return { mediaItems, blobUrls };
 }
