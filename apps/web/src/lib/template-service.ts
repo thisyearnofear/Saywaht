@@ -271,6 +271,20 @@ export async function convertTemplateMediaItem(
   return { mediaItem, blobUrl };
 }
 
+export function createTemplateMediaItemStub(item: TemplateMediaItem): MediaItem {
+  return {
+    id: item.id,
+    name: item.name,
+    type: item.type,
+    url: resolveIpfsUrl(item.url),
+    thumbnailUrl: resolveIpfsUrl(item.thumbnailUrl || item.url),
+    duration: item.duration || 0,
+    aspectRatio: item.aspectRatio,
+    size: 0,
+    isLocal: false,
+  };
+}
+
 /**
  * Loads all media items from a template
  * Returns media items configured for direct CDN streaming
@@ -287,6 +301,79 @@ export async function loadTemplateMediaItems(
   const blobUrls = results.map(r => r.blobUrl).filter((u): u is string => u !== null);
   
   return { mediaItems, blobUrls };
+}
+
+export function prepareTemplateMediaItemsForStreaming(
+  template: Template
+): { mediaItems: MediaItem[]; blobUrls: string[] } {
+  return {
+    mediaItems: template.mediaItems.map(createTemplateMediaItemStub),
+    blobUrls: [],
+  };
+}
+
+function getTemplateMediaHydrationOrder(template: Template): TemplateMediaItem[] {
+  if (!template.timelineTracks || template.timelineTracks.length === 0) {
+    return template.mediaItems;
+  }
+
+  const mediaById = new Map(template.mediaItems.map((item) => [item.id, item]));
+  const prioritizedIds = new Set<string>();
+  const ordered: TemplateMediaItem[] = [];
+
+  const clipsByStartTime = template.timelineTracks
+    .flatMap((track) => track.clips)
+    .sort((a, b) => a.startTime - b.startTime);
+
+  clipsByStartTime.forEach((clip) => {
+    if (prioritizedIds.has(clip.mediaId)) return;
+    const mediaItem = mediaById.get(clip.mediaId);
+    if (!mediaItem) return;
+    prioritizedIds.add(clip.mediaId);
+    ordered.push(mediaItem);
+  });
+
+  template.mediaItems.forEach((item) => {
+    if (prioritizedIds.has(item.id)) return;
+    ordered.push(item);
+  });
+
+  return ordered;
+}
+
+export async function hydrateTemplateMediaItemsInBackground(
+  template: Template,
+  callbacks: {
+    onMediaItemHydrated?: (result: { mediaItem: MediaItem; blobUrl: string | null }) => void;
+    onMediaItemError?: (item: TemplateMediaItem, error: unknown) => void;
+  } = {},
+  signal?: AbortSignal
+): Promise<{ blobUrls: string[] }> {
+  const blobUrls: string[] = [];
+  const orderedItems = getTemplateMediaHydrationOrder(template);
+
+  for (const item of orderedItems) {
+    if (signal?.aborted) {
+      const err = new Error("AbortError");
+      err.name = "AbortError";
+      throw err;
+    }
+
+    try {
+      const result = await convertTemplateMediaItem(item, signal);
+      if (result.blobUrl) {
+        blobUrls.push(result.blobUrl);
+      }
+      callbacks.onMediaItemHydrated?.(result);
+    } catch (error) {
+      if ((error as Error).name === "AbortError") {
+        throw error;
+      }
+      callbacks.onMediaItemError?.(item, error);
+    }
+  }
+
+  return { blobUrls };
 }
 
 /**
@@ -317,6 +404,66 @@ export function convertTemplateTracks(template: Template): TimelineTrack[] {
   });
 }
 
+export function buildTemplateTracks(
+  template: Template,
+  mediaItems: MediaItem[]
+): TimelineTrack[] {
+  if (template.timelineTracks) {
+    return convertTemplateTracks(template);
+  }
+
+  const tracks: TimelineTrack[] = [];
+  const videoTrack: TimelineTrack = {
+    id: crypto.randomUUID(),
+    name: "Video Track",
+    type: "video",
+    clips: [],
+    muted: false,
+  };
+
+  const audioTrack: TimelineTrack = {
+    id: crypto.randomUUID(),
+    name: "Audio Track",
+    type: "audio",
+    clips: [],
+    muted: false,
+  };
+
+  let videoPosition = 0;
+  let audioPosition = 0;
+
+  mediaItems.forEach((item) => {
+    if (item.type === "video" || item.type === "image") {
+      videoTrack.clips.push({
+        id: crypto.randomUUID(),
+        mediaId: item.id,
+        name: item.name,
+        duration: item.duration || 5,
+        startTime: videoPosition,
+        trimStart: 0,
+        trimEnd: 0,
+      });
+      videoPosition += item.duration || 5;
+    } else if (item.type === "audio") {
+      audioTrack.clips.push({
+        id: crypto.randomUUID(),
+        mediaId: item.id,
+        name: item.name,
+        duration: item.duration || 5,
+        startTime: audioPosition,
+        trimStart: 0,
+        trimEnd: 0,
+      });
+      audioPosition += item.duration || 5;
+    }
+  });
+
+  if (videoTrack.clips.length > 0) tracks.push(videoTrack);
+  if (audioTrack.clips.length > 0) tracks.push(audioTrack);
+
+  return tracks;
+}
+
 /**
  * Applies a template to the current project
  * This function loads all media items and creates timeline tracks from the template
@@ -341,63 +488,7 @@ export async function applyTemplate(
     throw new Error('AbortError');
   }
   
-  // Convert template tracks to timeline tracks
-  let tracks: TimelineTrack[] = [];
-  
-  if (template.timelineTracks) {
-    tracks = convertTemplateTracks(template);
-  } else {
-    // If no timeline tracks are defined, create default tracks based on media types
-    const videoTrack: TimelineTrack = {
-      id: crypto.randomUUID(),
-      name: 'Video Track',
-      type: 'video',
-      clips: [],
-      muted: false
-    };
-    
-    const audioTrack: TimelineTrack = {
-      id: crypto.randomUUID(),
-      name: 'Audio Track',
-      type: 'audio',
-      clips: [],
-      muted: false
-    };
-    
-    // Add clips to default tracks
-    let videoPosition = 0;
-    let audioPosition = 0;
-    
-    mediaItems.forEach(item => {
-      if (item.type === 'video' || item.type === 'image') {
-        videoTrack.clips.push({
-          id: crypto.randomUUID(),
-          mediaId: item.id,
-          name: item.name,
-          duration: item.duration || 5,
-          startTime: videoPosition,
-          trimStart: 0,
-          trimEnd: 0
-        });
-        videoPosition += (item.duration || 5);
-      } else if (item.type === 'audio') {
-        audioTrack.clips.push({
-          id: crypto.randomUUID(),
-          mediaId: item.id,
-          name: item.name,
-          duration: item.duration || 5,
-          startTime: audioPosition,
-          trimStart: 0,
-          trimEnd: 0
-        });
-        audioPosition += (item.duration || 5);
-      }
-    });
-    
-    // Only add tracks that have clips
-    if (videoTrack.clips.length > 0) tracks.push(videoTrack);
-    if (audioTrack.clips.length > 0) tracks.push(audioTrack);
-  }
+  const tracks = buildTemplateTracks(template, mediaItems);
   
   console.log(`✅ Template applied: ${mediaItems.length} media items, ${tracks.length} tracks`);
   

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useTemplateStore } from "@/stores/template-store";
 import { Template } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { ChevronRight, Loader2, Sparkles, Video as VideoIcon, Search } from "luc
 import { resolveIpfsUrl, cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
-import { pexelsService, PexelsVideo } from "@/services/pexels-service";
+import { pexelsService, PexelsVideo, getPreferredPexelsVideoFile } from "@/services/pexels-service";
 import { useMediaStore } from "@/stores/media-store";
 import { useProjectStore } from "@/stores/project-store";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,8 @@ import { usePlaybackStore } from "@/stores/playback-store";
 import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
 import { useSceneStore } from "@/stores/scene-store";
 import { addHapticFeedback } from "@/lib/mobile-utils";
+import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
+import { startTemplateFlowMeasurement } from "@/lib/template-performance";
 
 // Helper to construct Pexels image URL
 const pexelsImg = (id: string | number) => 
@@ -137,10 +140,12 @@ function RotatingCategoryCard({
               <VideoIcon className="h-7 w-7 text-white/70" />
             </div>
           ) : (
-            <img
+            <Image
               src={currentImage}
               alt={category.name}
-              className="w-full h-full object-cover brightness-75 group-hover:scale-105 transition-transform duration-500"
+              fill
+              sizes="(max-width: 768px) 50vw, 25vw"
+              className="object-cover brightness-75 group-hover:scale-105 transition-transform duration-500"
               onError={() =>
                 setFailedImages((prev) => ({ ...prev, [currentImage]: true }))
               }
@@ -166,6 +171,7 @@ interface MobileTemplateBrowserProps {
 
 export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemplateBrowserProps = {}) {
   const { categories, isLoading, setSelectedTemplate, applySelectedTemplate, clearSelectedTemplate } = useTemplateStore();
+  const { isFarcasterMiniApp } = useFarcasterContext();
   const [mainTab, setMainTab] = useState<"packs" | "stock">("stock");
   
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
@@ -237,7 +243,7 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
 
   const handleUsePexelsVideo = async (video: PexelsVideo) => {
     // 1. Validation
-    const bestFile = video.video_files.find(f => f.quality === 'hd') || video.video_files[0];
+    const bestFile = getPreferredPexelsVideoFile(video);
     
     if (!bestFile || !bestFile.link) {
       toast.error("Video format not supported");
@@ -257,6 +263,12 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
     });
 
     try {
+      startTemplateFlowMeasurement({
+        templateId: mediaId,
+        source: "stock-video",
+        surface: isFarcasterMiniApp ? "farcaster-miniapp" : "mobile-web",
+      });
+
       // Stream directly from Pexels CDN - no download needed
       const streamUrl = bestFile.link;
 
@@ -325,6 +337,12 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
   const handleUseTemplate = async (template: Template) => {
     setIsApplying(template.id);
     try {
+      startTemplateFlowMeasurement({
+        templateId: template.id,
+        source: "template-pack",
+        surface: isFarcasterMiniApp ? "farcaster-miniapp" : "mobile-web",
+      });
+
       // Use the already-loaded template object directly — avoids redundant network
       // fetches that break in Farcaster WebView (relative URLs resolve to wrong host)
       setSelectedTemplate(template);

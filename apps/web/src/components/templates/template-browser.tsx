@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useTemplateStore } from "@/stores/template-store";
 import { TemplateCategoryCard } from "./template-category-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { pexelsService, PexelsVideo } from "@/services/pexels-service";
+import { pexelsService, PexelsVideo, getPreferredPexelsVideoFile } from "@/services/pexels-service";
 import { Loader2, Search, ExternalLink, Image as ImageIcon, Video } from "@/lib/icons";
 import { toast } from "sonner";
 import { useMediaStore } from "@/stores/media-store";
@@ -20,6 +21,7 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
 import { useSceneStore } from "@/stores/scene-store";
+import { startTemplateFlowMeasurement } from "@/lib/template-performance";
 
 export function TemplateBrowser() {
   const { categories, isLoading, error, fetchCategories, recentTemplates } = useTemplateStore();
@@ -87,8 +89,13 @@ export function TemplateBrowser() {
     const { addTrack, addClipToTrack, setTracks } = useTimelineStore.getState();
     const { setCurrentTime, pause } = usePlaybackStore.getState();
 
-    const bestFile = video.video_files.find(f => f.quality === 'hd') || video.video_files[0];
+    const bestFile = getPreferredPexelsVideoFile(video);
     const mediaId = `pexels-${video.id}`;
+    startTemplateFlowMeasurement({
+      templateId: mediaId,
+      source: "stock-video",
+      surface: "desktop-web",
+    });
 
     // 1. Initialize project
     createNewProject(`Pexels: ${video.user.name}`);
@@ -274,10 +281,12 @@ export function TemplateBrowser() {
                   className="group relative aspect-[9/16] rounded-xl overflow-hidden bg-muted cursor-pointer ring-1 ring-border/50 hover:ring-primary transition-all hover:shadow-2xl"
                   onClick={() => handleUsePexelsVideo(video)}
                 >
-                  <img
+                  <Image
                     src={video.image}
                     alt={video.user.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    fill
+                    sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 16vw"
+                    className="object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-all" />
 

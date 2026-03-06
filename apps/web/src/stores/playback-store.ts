@@ -68,10 +68,12 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => ({
   play: () => {
     const { currentTime, duration, videoReadyCount } = get();
     
-    // NEW: Don't play if no videos are ready yet (prevents timer running without video)
+    // If playback is requested before media is ready, keep playback armed so
+    // the first ready event can resume immediately in mobile WebViews.
     if (videoReadyCount === 0 && duration > 0) {
       console.log("⏸ Waiting for videos to load before playing");
-      set({ isStalled: true });
+      set({ isPlaying: true, isStalled: true });
+      startTimer(get);
       return;
     }
     

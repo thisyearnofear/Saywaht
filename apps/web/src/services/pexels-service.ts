@@ -49,6 +49,29 @@ export interface PexelsSearchResponse {
 
 import { getBackendUrl } from "@/lib/backend-export";
 
+export function getPreferredPexelsVideoFile(video: PexelsVideo) {
+  const progressiveMp4s = video.video_files.filter(
+    (file) => file.file_type === "video/mp4" && file.quality !== "hls"
+  );
+
+  if (progressiveMp4s.length === 0) {
+    return video.video_files[0];
+  }
+
+  const sdMatch = progressiveMp4s.find((file) => file.quality === "sd");
+  if (sdMatch) {
+    return sdMatch;
+  }
+
+  return progressiveMp4s.reduce((best, current) => {
+    if (!best.width || !best.height) return current;
+    if (!current.width || !current.height) return best;
+    const bestPixels = best.width * best.height;
+    const currentPixels = current.width * current.height;
+    return currentPixels < bestPixels ? current : best;
+  });
+}
+
 /**
  * Pexels API client (Proxied through backend)
  */

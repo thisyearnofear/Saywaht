@@ -6,6 +6,7 @@ import { useTemplateStore } from "@/stores/template-store";
 import { useLazyVideoLoading } from "@/hooks/use-lazy-video-loading";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "@/lib/icons";
+import { markTemplateFirstFrameReady } from "@/lib/template-performance";
 
 interface VideoPlayerProps {
   src: string;
@@ -92,9 +93,10 @@ export function VideoPlayer({
 
   // NEW: Cleanup on unmount
   useEffect(() => {
+    const video = videoRef.current;
+
     return () => {
       isUnmountingRef.current = true;
-      const video = videoRef.current;
       
       if (video) {
         // Pause and clear source to stop loading
@@ -113,7 +115,7 @@ export function VideoPlayer({
     const video = videoRef.current;
     if (!video || isUnmountingRef.current) return;
 
-    const handleCanPlay = () => {
+    const markReady = () => {
       if (isUnmountingRef.current) return;
       
       clearLoadTimeout();
@@ -132,6 +134,19 @@ export function VideoPlayer({
       if (isPlaying && isInClipRange) {
         setStalled(false);
       }
+
+      markTemplateFirstFrameReady({
+        clipId,
+        srcType: src.startsWith("blob:") ? "blob" : "remote",
+      });
+    };
+
+    const handleCanPlay = () => {
+      markReady();
+    };
+
+    const handleLoadedData = () => {
+      markReady();
     };
 
     const handleWaiting = () => {
@@ -190,6 +205,7 @@ export function VideoPlayer({
     };
 
     video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('loadeddata', handleLoadedData);
     video.addEventListener('waiting', handleWaiting);
     video.addEventListener('playing', handlePlaying);
     video.addEventListener('loadstart', handleLoadStart);
@@ -203,12 +219,13 @@ export function VideoPlayer({
     return () => {
       clearLoadTimeout();
       video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('loadeddata', handleLoadedData);
       video.removeEventListener('waiting', handleWaiting);
       video.removeEventListener('playing', handlePlaying);
       video.removeEventListener('loadstart', handleLoadStart);
       video.removeEventListener('error', handleError);
     };
-  }, [src, isPlaying, isInClipRange, setStalled, armLoadTimeout, clearLoadTimeout]);
+  }, [src, isPlaying, isInClipRange, setStalled, armLoadTimeout, clearLoadTimeout, clipId]);
 
   useEffect(() => {
     // Hard reset on source changes.
@@ -219,8 +236,6 @@ export function VideoPlayer({
     setErrorMessage("");
     setStalled(false);
     
-    // NEW: Reset ready count when source changes (new template loaded)
-    usePlaybackStore.getState().resetVideoReady();
   }, [src, setStalled]);
 
   // Sync playback events

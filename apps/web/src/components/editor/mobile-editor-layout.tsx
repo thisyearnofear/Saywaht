@@ -41,6 +41,7 @@ import { MobileEffectsPanel } from "@/components/editor/mobile-effects-panel";
 import { MobileSettingsPanel } from "@/components/editor/mobile-settings-panel";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { toast } from "sonner";
+import { markTemplateEditorReady } from "@/lib/template-performance";
 import {
   Drawer,
   DrawerContent,
@@ -171,6 +172,17 @@ export function MobileEditorLayout({
     }
     prevHasClips.current = hasTimelineClips;
   }, [hasTimelineClips, activeTool, openToolSheet]);
+
+  useEffect(() => {
+    if (!hasTimelineClips) return;
+
+    markTemplateEditorReady({
+      hasVoiceover,
+      hasText,
+      surface: isFarcasterMiniApp ? "farcaster-miniapp" : "mobile-web",
+      trackCount: tracks.length,
+    });
+  }, [hasTimelineClips, hasText, hasVoiceover, isFarcasterMiniApp, tracks.length]);
 
   const handleFinish = useCallback(async () => {
     addHapticFeedback("heavy");

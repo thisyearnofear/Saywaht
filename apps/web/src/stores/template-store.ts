@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { Template, TemplateCategory } from "@/lib/types";
-import { fetchTemplateCategories, fetchTemplateById, applyTemplate } from "@/lib/template-service";
+import {
+  buildTemplateTracks,
+  fetchTemplateCategories,
+  fetchTemplateById,
+  hydrateTemplateMediaItemsInBackground,
+  prepareTemplateMediaItemsForStreaming,
+} from "@/lib/template-service";
 import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useProjectStore } from "@/stores/project-store";
@@ -194,8 +200,8 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
 
     try {
       // Get required stores
-      const { clearAllMedia, addMediaItem } = useMediaStore.getState();
-      const { tracks, addTrack, addClipToTrack, removeTrack } = useTimelineStore.getState();
+      const { clearAllMedia, addMediaItem, updateMediaItem } = useMediaStore.getState();
+      const { addTrack, addClipToTrack, removeTrack } = useTimelineStore.getState();
       const { createNewProject, activeProject } = useProjectStore.getState();
       const { setCurrentTime, pause } = usePlaybackStore.getState();
 
@@ -212,22 +218,16 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
         createNewProject(newProjectName);
       }
 
-      // Load template media and tracks
-      const { mediaItems, tracks: templateTracks } = await applyTemplate(
-        selectedTemplate, 
-        abortController.signal
-      );
+      // Prepare media for immediate streaming so the editor can open without
+      // waiting for every template asset to finish downloading.
+      const { mediaItems } = prepareTemplateMediaItemsForStreaming(selectedTemplate);
+      const templateTracks = buildTemplateTracks(selectedTemplate, mediaItems);
 
       // Check if aborted
       if (abortController.signal.aborted) {
-        console.log('Template application was cancelled');
+        console.log("Template application was cancelled");
         set({ isLoading: false, isApplying: false, abortController: null });
         return false;
-      }
-
-      // Track blob URLs for cleanup on next template load
-      if (blobUrls.length > 0) {
-        set((state) => ({ templateBlobUrls: [...state.templateBlobUrls, ...blobUrls] }));
       }
 
       // Only clear after successful download
@@ -302,6 +302,42 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
 
       // Track this template as recently used
       get().addToRecentTemplates(selectedTemplate);
+
+      // Kick off cache/download hydration after the editor is already usable.
+      hydrateTemplateMediaItemsInBackground(
+        selectedTemplate,
+        {
+          onMediaItemHydrated: ({ mediaItem, blobUrl }) => {
+            if (abortController.signal.aborted) {
+              if (blobUrl) {
+                try { URL.revokeObjectURL(blobUrl); } catch (_) { /* ignore */ }
+              }
+              return;
+            }
+
+            updateMediaItem(mediaItem.id, {
+              file: mediaItem.file,
+              url: mediaItem.url,
+              size: mediaItem.size,
+              isLocal: mediaItem.isLocal,
+            });
+
+            if (blobUrl) {
+              set((state) => ({ templateBlobUrls: [...state.templateBlobUrls, blobUrl] }));
+            }
+          },
+          onMediaItemError: (item, error) => {
+            console.warn(`Template media hydration failed for ${item.name}:`, error);
+          },
+        },
+        abortController.signal
+      ).catch((error) => {
+        if (error instanceof Error && error.name === "AbortError") {
+          console.log("Background template hydration was cancelled");
+          return;
+        }
+        console.warn("Background template hydration failed:", error);
+      });
 
       // Wait a brief moment for video elements to initialize before clearing loading state
       await new Promise(resolve => setTimeout(resolve, 300));
