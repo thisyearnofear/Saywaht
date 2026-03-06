@@ -14,6 +14,7 @@
     "db:push:prod": "cross-env NODE_ENV=production drizzle-kit push"
   },
   "dependencies": {
+    "@emotion/is-prop-valid": "^1.4.0",
     "@farcaster/miniapp-sdk": "^0.1.9",
     "@filoz/synapse-sdk": "^0.15.0",
     "@hookform/resolvers": "^3.9.1",

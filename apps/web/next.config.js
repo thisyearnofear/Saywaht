@@ -97,6 +97,14 @@ const nextConfig = {
       type: "javascript/auto",
     });
 
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings || []),
+      {
+        module: /onnxruntime-web[\\/]dist[\\/]ort\.bundle\.min\.mjs$/,
+        message: /Critical dependency: require function is used in a way in which dependencies cannot be statically extracted/,
+      },
+    ];
+
     return config;
   },
 
