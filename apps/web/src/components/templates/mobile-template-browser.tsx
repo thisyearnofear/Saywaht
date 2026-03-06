@@ -24,6 +24,7 @@ import { useSceneStore } from "@/stores/scene-store";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 import { startTemplateFlowMeasurement } from "@/lib/template-performance";
+import { recordCustomMetric } from "@/lib/performance-monitor";
 
 // Helper to construct Pexels image URL
 const pexelsImg = (id: string | number) => 
@@ -90,6 +91,8 @@ const STOCK_CATEGORIES = [
     ]
   },
 ];
+
+const PEXELS_PREPARE_TOAST_ID = "mobile-pexels-prepare";
 
 function RotatingCategoryCard({ 
   category, 
@@ -191,6 +194,20 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
 
   const router = useRouter();
 
+  const recordPexelsFlowStep = (
+    startedAt: number,
+    step: string,
+    context: Record<string, unknown> = {}
+  ) => {
+    const elapsedMs = Math.round(performance.now() - startedAt);
+    console.info(`[PexelsFlow] ${step}`, { elapsedMs, ...context });
+    recordCustomMetric("pexels-editor-step", elapsedMs, "ms", {
+      step,
+      surface: isFarcasterMiniApp ? "farcaster-miniapp" : "mobile-web",
+      ...context,
+    });
+  };
+
   const allTemplates = useMemo(() => {
     return categories.flatMap(c => c.templates.map(t => ({ ...t, categoryName: c.name })));
   }, [categories]);
@@ -242,10 +259,20 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
   }, [searchQuery, mainTab]);
 
   const handleUsePexelsVideo = async (video: PexelsVideo) => {
+    const startedAt = performance.now();
+
     // 1. Validation
     const bestFile = getPreferredPexelsVideoFile(video);
+    recordPexelsFlowStep(startedAt, "select-video", {
+      videoId: video.id,
+      bestFileQuality: bestFile?.quality,
+      bestFileType: bestFile?.file_type,
+    });
     
     if (!bestFile || !bestFile.link) {
+      recordPexelsFlowStep(startedAt, "unsupported-video-format", {
+        videoId: video.id,
+      });
       toast.error("Video format not supported");
       return;
     }
@@ -258,9 +285,11 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
     const mediaId = `pexels-${video.id}`;
     setIsApplying(mediaId); // Show loading state
 
-    const loadingToast = toast.loading("Preparing video...", {
+    toast.loading("Preparing video...", {
+      id: PEXELS_PREPARE_TOAST_ID,
       description: "Setting up your project"
     });
+    recordPexelsFlowStep(startedAt, "toast-shown", { mediaId });
 
     try {
       startTemplateFlowMeasurement({
@@ -271,11 +300,20 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
 
       // Stream directly from Pexels CDN - no download needed
       const streamUrl = bestFile.link;
+      recordPexelsFlowStep(startedAt, "stream-url-selected", {
+        mediaId,
+        quality: bestFile.quality,
+      });
 
       // Initialize project
       createNewProject(`Pexels: ${video.user.name}`);
+      recordPexelsFlowStep(startedAt, "project-created", {
+        mediaId,
+        projectName: `Pexels: ${video.user.name}`,
+      });
       clearAllMedia();
       setTracks([]);
+      recordPexelsFlowStep(startedAt, "editor-state-reset", { mediaId });
 
       // Add the media item with streaming URL
       addMediaItem({
@@ -288,6 +326,10 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
         aspectRatio: video.width / video.height,
         isLocal: false, // Streaming from CDN
       });
+      recordPexelsFlowStep(startedAt, "media-added", {
+        mediaId,
+        duration: Math.min(video.duration, 10),
+      });
 
       // Create track and clip
       const trackId = addTrack("video");
@@ -299,6 +341,10 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
         trimStart: 0,
         trimEnd: 0,
       });
+      recordPexelsFlowStep(startedAt, "timeline-clip-added", {
+        mediaId,
+        trackId,
+      });
 
       // Canvas and Scene initialization
       const videoAspectRatio = video.width / video.height;
@@ -307,11 +353,19 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
         return (Math.abs(curr.aspectRatio - videoAspectRatio) < Math.abs(prev.aspectRatio - videoAspectRatio) ? curr : prev);
       });
       setCanvasPreset(preset);
+      recordPexelsFlowStep(startedAt, "canvas-preset-set", {
+        mediaId,
+        preset: preset.name,
+      });
 
       const { initializeScenes } = useSceneStore.getState();
       const updatedProject = useProjectStore.getState().activeProject;
       if (updatedProject) {
         initializeScenes(updatedProject.scenes || [], updatedProject.currentSceneId);
+        recordPexelsFlowStep(startedAt, "scenes-initialized", {
+          mediaId,
+          sceneCount: updatedProject.scenes?.length || 0,
+        });
       }
 
       setCurrentTime(0);
@@ -320,14 +374,29 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
       if (totalDuration > 0) {
         usePlaybackStore.getState().setDuration(totalDuration);
       }
+      recordPexelsFlowStep(startedAt, "playback-primed", {
+        mediaId,
+        totalDuration,
+      });
 
-      toast.dismiss(loadingToast);
+      toast.dismiss(PEXELS_PREPARE_TOAST_ID);
+      recordPexelsFlowStep(startedAt, "toast-dismissed", { mediaId });
       toast.success("Ready to edit!");
-      if (onNavigateToEditor) onNavigateToEditor(); else router.push("/editor");
+      if (onNavigateToEditor) {
+        recordPexelsFlowStep(startedAt, "navigate-to-editor-callback", { mediaId });
+        onNavigateToEditor();
+      } else {
+        recordPexelsFlowStep(startedAt, "router-push-editor", { mediaId });
+        router.push("/editor");
+      }
 
     } catch (err) {
       console.error("Failed to load Pexels video:", err);
-      toast.dismiss(loadingToast);
+      recordPexelsFlowStep(startedAt, "flow-error", {
+        mediaId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      toast.dismiss(PEXELS_PREPARE_TOAST_ID);
       toast.error("Failed to load clip. Please check your connection.");
     } finally {
       setIsApplying(null);

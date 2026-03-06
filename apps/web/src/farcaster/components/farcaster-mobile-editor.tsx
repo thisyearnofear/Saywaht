@@ -17,6 +17,7 @@ import { useFarcasterSdk } from "@/lib/farcaster-sdk";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { recordCustomMetric } from "@/lib/performance-monitor";
 
 /**
  * Farcaster-enhanced mobile editor layout
@@ -147,6 +148,14 @@ export function FarcasterMobileEditorLayout({
   // Animate page transitions when step changes
   useEffect(() => {
     if (prevStep.current !== frameState.step) {
+      console.info("[FarcasterFlow] step-transition", {
+        from: prevStep.current,
+        to: frameState.step,
+      });
+      recordCustomMetric("farcaster-step-transition", 1, "count", {
+        from: prevStep.current,
+        to: frameState.step,
+      });
       prevStep.current = frameState.step;
       setIsTransitioning(true);
       const t = setTimeout(() => setIsTransitioning(false), 350);
@@ -296,7 +305,17 @@ export function FarcasterMobileEditorLayout({
     return (
       <MobileTemplateBrowser
         onBack={() => setFrameState({ step: 'welcome' })}
-        onNavigateToEditor={() => setFrameState({ step: 'recording' })}
+        onNavigateToEditor={() => {
+          console.info("[FarcasterFlow] navigate-to-editor-requested", {
+            from: frameState.step,
+            to: "recording",
+          });
+          recordCustomMetric("farcaster-navigate-to-editor", 1, "count", {
+            from: frameState.step,
+            to: "recording",
+          });
+          setFrameState({ step: 'recording' });
+        }}
       />
     );
   };
