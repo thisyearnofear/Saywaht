@@ -14,7 +14,7 @@ export default function TemplatesPage() {
   const isMobile = useIsMobile();
 
   return (
-    <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden">
+    <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden" style={{ backgroundColor: "#09090b" }}>
       {!isMobile && <Header />}
 
       <main className={cn(
