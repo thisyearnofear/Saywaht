@@ -5,6 +5,7 @@ const path = require("path");
 // Minimal Next.js configuration for build stability
 const nextConfig = {
   reactStrictMode: true,
+  trailingSlash: false,
 
   transpilePackages: [
     "@wagmi/connectors",
