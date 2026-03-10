@@ -16,16 +16,24 @@ function assetUrl(path: string): string {
 }
 
 /**
- * Fetches all template categories
+ * In-memory cache for the template index so we never fetch index.json twice
+ * in the same page session.
+ */
+let _categoriesCache: TemplateCategory[] | null = null;
+
+/**
+ * Fetches all template categories (cached after first successful fetch)
  */
 export async function fetchTemplateCategories(): Promise<TemplateCategory[]> {
+  if (_categoriesCache) return _categoriesCache;
   try {
     const response = await fetch(assetUrl('/templates/index.json'));
     if (!response.ok) {
       throw new Error('Failed to load templates');
     }
     const data = await response.json();
-    return data.categories || [];
+    _categoriesCache = data.categories || [];
+    return _categoriesCache!;
   } catch (error) {
     console.error('Error fetching templates:', error);
     return [];
@@ -341,6 +349,28 @@ function getTemplateMediaHydrationOrder(template: Template): TemplateMediaItem[]
   return ordered;
 }
 
+/**
+ * Runs an array of async tasks with a maximum concurrency limit.
+ */
+async function runWithConcurrency<T>(
+  tasks: (() => Promise<T>)[],
+  concurrency: number
+): Promise<T[]> {
+  const results: T[] = new Array(tasks.length);
+  let index = 0;
+
+  async function worker() {
+    while (index < tasks.length) {
+      const i = index++;
+      results[i] = await tasks[i]();
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(concurrency, tasks.length) }, worker);
+  await Promise.all(workers);
+  return results;
+}
+
 export async function hydrateTemplateMediaItemsInBackground(
   template: Template,
   callbacks: {
@@ -352,13 +382,19 @@ export async function hydrateTemplateMediaItemsInBackground(
   const blobUrls: string[] = [];
   const orderedItems = getTemplateMediaHydrationOrder(template);
 
-  for (const item of orderedItems) {
+  if (signal?.aborted) {
+    const err = new Error("AbortError");
+    err.name = "AbortError";
+    throw err;
+  }
+
+  // Hydrate up to 3 media items in parallel for faster loading
+  const tasks = orderedItems.map((item) => async () => {
     if (signal?.aborted) {
       const err = new Error("AbortError");
       err.name = "AbortError";
       throw err;
     }
-
     try {
       const result = await convertTemplateMediaItem(item, signal);
       if (result.blobUrl) {
@@ -371,7 +407,9 @@ export async function hydrateTemplateMediaItemsInBackground(
       }
       callbacks.onMediaItemError?.(item, error);
     }
-  }
+  });
+
+  await runWithConcurrency(tasks, 3);
 
   return { blobUrls };
 }

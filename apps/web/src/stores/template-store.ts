@@ -326,6 +326,16 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
             if (blobUrl) {
               set((state) => ({ templateBlobUrls: [...state.templateBlobUrls, blobUrl] }));
             }
+
+            // Mark all clips that reference this media item as ready
+            const tracks = useTimelineStore.getState().tracks;
+            tracks.forEach(track => {
+              track.clips.forEach(clip => {
+                if (clip.mediaId === mediaItem.id) {
+                  get().setClipLoadingStatus(clip.id, 'ready');
+                }
+              });
+            });
           },
           onMediaItemError: (item, error) => {
             console.warn(`Template media hydration failed for ${item.name}:`, error);
@@ -339,9 +349,6 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
         }
         console.warn("Background template hydration failed:", error);
       });
-
-      // Wait a brief moment for video elements to initialize before clearing loading state
-      await new Promise(resolve => setTimeout(resolve, 300));
 
       set({ isLoading: false, isApplying: false, abortController: null });
       
