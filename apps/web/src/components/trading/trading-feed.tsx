@@ -55,7 +55,7 @@ export function TradingFeed() {
       setError(null);
 
       // Fetch Saywaht coins from database (not all Zora coins)
-      const response = await fetch('/api/coins');
+      const response = await fetch('https://persidian.com/api/coins');
       const data = await response.json();
       
       // Transform database coins to VideoCoin format
