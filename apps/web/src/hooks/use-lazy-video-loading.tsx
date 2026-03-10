@@ -12,6 +12,14 @@ export function useLazyVideoLoading(
 ) {
   const [shouldLoad, setShouldLoad] = useState(false);
   const hasLoadedRef = useRef(false);
+  const clipIdentityRef = useRef(`${clipStartTime}-${clipEndTime}`);
+
+  // Reset only when clip identity actually changes (not on every render)
+  const currentIdentity = `${clipStartTime}-${clipEndTime}`;
+  if (clipIdentityRef.current !== currentIdentity) {
+    clipIdentityRef.current = currentIdentity;
+    hasLoadedRef.current = false;
+  }
 
   useEffect(() => {
     // Once loaded, stay loaded (don't unload during playback)
@@ -19,21 +27,16 @@ export function useLazyVideoLoading(
       return;
     }
 
-    // Check if we're within the preload window
+    // Check if we're within the preload window or currently in the clip
     const timeUntilClip = clipStartTime - currentTime;
-    const isInPreloadWindow = timeUntilClip <= preloadWindow && timeUntilClip >= -clipEndTime;
+    const isCurrentlyInClip = currentTime >= clipStartTime && currentTime < clipEndTime;
+    const isInPreloadWindow = timeUntilClip <= preloadWindow && timeUntilClip > 0;
     
-    if (isInPreloadWindow) {
+    if (isCurrentlyInClip || isInPreloadWindow) {
       setShouldLoad(true);
       hasLoadedRef.current = true;
     }
   }, [clipStartTime, clipEndTime, currentTime, preloadWindow]);
-
-  // Reset when clip changes
-  useEffect(() => {
-    hasLoadedRef.current = false;
-    setShouldLoad(false);
-  }, [clipStartTime, clipEndTime]);
 
   return shouldLoad;
 }

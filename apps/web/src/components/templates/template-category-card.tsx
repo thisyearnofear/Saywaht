@@ -32,7 +32,7 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
 
   const handleUse = (e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(`/templates/${template.id}/use`);
+    router.push(`/templates/${template.id}`);
   };
 
   // Get aspect ratio info for display

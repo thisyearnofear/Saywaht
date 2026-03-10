@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,6 @@ import { FormatStep } from "./steps/format-step";
 import { PreviewStep } from "./steps/preview-step";
 import { DeployStep } from "./steps/deploy-step";
 import { triggerCelebration } from "@/lib/confetti";
-import { useEffect } from "react";
 import type { VideoFormat } from "@/lib/video-utils";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -100,6 +99,13 @@ const STEPS = [
   },
 ];
 
+// Mobile steps: Details → Preview → Deploy (3 steps)
+const MOBILE_STEPS = [
+  { id: "details", title: "Coin Details", description: "Name your new creation", icon: Layers },
+  { id: "preview", title: "Review", description: "Check your configuration", icon: Zap },
+  { id: "deploy", title: "Deploy", description: "Launch to blockchain", icon: Zap },
+];
+
 interface MintWizardProps {
   projectId?: string;
   dataUrl?: string | null;
@@ -126,14 +132,43 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
     deployedCoin: null,
   });
 
-  // Mobile steps: Details → Preview → Deploy (3 steps)
-  const MOBILE_STEPS = [
-    { id: "details", title: "Coin Details", description: "Name your new creation", icon: Layers },
-    { id: "preview", title: "Review", description: "Check your configuration", icon: Zap },
-    { id: "deploy", title: "Deploy", description: "Launch to blockchain", icon: Zap },
-  ];
-
   const activeSteps = isMobile ? MOBILE_STEPS : STEPS;
+  const prevIsMobileRef = useRef(isMobile);
+
+  // Remap step index when switching between mobile/desktop flows
+  useEffect(() => {
+    if (prevIsMobileRef.current === isMobile) return;
+
+    const previousSteps = prevIsMobileRef.current ? MOBILE_STEPS : STEPS;
+    const nextSteps = isMobile ? MOBILE_STEPS : STEPS;
+    const previousId = previousSteps[currentStep]?.id;
+    const nextIndex = previousId
+      ? nextSteps.findIndex((step) => step.id === previousId)
+      : -1;
+
+    if (nextIndex >= 0 && nextIndex !== currentStep) {
+      setCurrentStep(nextIndex);
+    } else if (nextIndex === -1 && nextSteps.length > 0) {
+      // Default to first step if the previous step doesn't exist in the new flow
+      setCurrentStep(0);
+    }
+
+    prevIsMobileRef.current = isMobile;
+  }, [isMobile, currentStep]);
+
+  // Clamp out-of-range indexes (e.g. during resize)
+  useEffect(() => {
+    if (currentStep >= activeSteps.length && activeSteps.length > 0) {
+      setCurrentStep(activeSteps.length - 1);
+    }
+  }, [currentStep, activeSteps.length]);
+
+  // Guard against transient out-of-range indexes (e.g. during resize)
+  const safeStepIndex =
+    activeSteps.length === 0
+      ? 0
+      : Math.min(currentStep, activeSteps.length - 1);
+  const currentStepConfig = activeSteps[safeStepIndex];
 
   // Ensure we're on client side before doing anything
   useEffect(() => {
@@ -186,9 +221,9 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
     }
   }, [isMobile, isClient, getVideoFormat, updateWizardData]);
 
-  const canProceedToNext = () => {
+  const canProceedToNext = (stepIndex: number = currentStep) => {
     if (isMobile) {
-      switch (currentStep) {
+      switch (stepIndex) {
         case 0: // Details step
           return wizardData.coinName.trim() !== "" && wizardData.coinSymbol.trim() !== "";
         case 1: // Preview step
@@ -199,7 +234,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
           return false;
       }
     }
-    switch (currentStep) {
+    switch (stepIndex) {
       case 0: // Format step
         return wizardData.videoFormat !== undefined;
       case 1: // Thumbnail step
@@ -221,23 +256,27 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   };
 
   const nextStep = () => {
-    if (currentStep < activeSteps.length - 1 && canProceedToNext()) {
-      setCurrentStep(currentStep + 1);
+    if (safeStepIndex < activeSteps.length - 1 && canProceedToNext(safeStepIndex)) {
+      setCurrentStep(safeStepIndex + 1);
     }
   };
 
   const prevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+    if (safeStepIndex > 0) {
+      setCurrentStep(safeStepIndex - 1);
     }
   };
 
-  const progress = ((currentStep + 1) / activeSteps.length) * 100;
-  const isLastStep = currentStep === activeSteps.length - 1;
+  const progress =
+    activeSteps.length > 0
+      ? ((safeStepIndex + 1) / activeSteps.length) * 100
+      : 0;
+  const isLastStep =
+    activeSteps.length > 0 && safeStepIndex === activeSteps.length - 1;
 
   const renderStep = () => {
     if (isMobile) {
-      switch (currentStep) {
+      switch (safeStepIndex) {
         case 0:
           return <CoinDetailsStep data={wizardData} updateData={updateWizardData} />;
         case 1:
@@ -248,7 +287,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
           return null;
       }
     }
-    switch (currentStep) {
+    switch (safeStepIndex) {
       case 0:
         return <FormatStep data={wizardData} updateData={updateWizardData} />;
       case 1:
@@ -384,16 +423,16 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
               {(() => {
-                const Icon = activeSteps[currentStep].icon;
+                const Icon = currentStepConfig?.icon || Zap;
                 return <Icon className="w-6 h-6 text-primary" />;
               })()}
             </div>
             <div>
               <h2 className="text-xl font-bold tracking-tight">
-                {activeSteps[currentStep].title}
+                {currentStepConfig?.title || "Step"}
               </h2>
               <p className="text-sm text-muted-foreground">
-                {activeSteps[currentStep].description}
+                {currentStepConfig?.description || "Continue"}
               </p>
             </div>
           </div>
@@ -410,7 +449,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
               />
             ))}
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">
-              {currentStep + 1} / {activeSteps.length}
+              {safeStepIndex + 1} / {activeSteps.length}
             </span>
           </div>
         </div>
