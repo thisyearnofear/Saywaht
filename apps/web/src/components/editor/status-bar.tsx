@@ -24,7 +24,17 @@ export function StatusBar() {
   const { currentTime, duration } = usePlaybackStore();
   const { isTimelineCollapsed, toggleTimelineCollapse } = usePanelStore();
   const [isOnline, setIsOnline] = useState(true);
-  const lastSaved = activeProject ? new Date(activeProject.updatedAt) : null;
+  const [lastSavedText, setLastSavedText] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeProject?.updatedAt) {
+      setLastSavedText(
+        new Date(activeProject.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      );
+    } else {
+      setLastSavedText(null);
+    }
+  }, [activeProject?.updatedAt]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -106,10 +116,10 @@ export function StatusBar() {
 
       {/* Right Section */}
       <div className="flex items-center gap-4">
-        {lastSaved && (
+        {lastSavedText && (
           <div className="flex items-center gap-1">
             <CheckCircle className="w-3 h-3 text-green-500" />
-            <span>Saved {lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+            <span>Saved {lastSavedText}</span>
           </div>
         )}
 

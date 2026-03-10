@@ -80,7 +80,7 @@ export class ZoraCoinsService {
     
     try {
       const balance = await this.publicClient.readContract({
-        address: '0x7777777F279eba3d3Ad8F4E70E5412100F227974',
+        address: '0x7777777F279eba3d3Ad8F4E708545291A6fDBA8B',
         abi: [{
           inputs: [{ name: 'account', type: 'address' }],
           name: 'balanceOf',
