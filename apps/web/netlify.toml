@@ -1,4 +1,6 @@
-# Standard Netlify Next.js configuration
+# Netlify configuration for Next.js (via @netlify/plugin-nextjs)
+# The plugin handles SSR, correct MIME types for _next/static assets,
+# and routing — no manual redirects or Content-Type headers needed.
 [build]
   command = "cd ../.. && npm install --omit=optional && cd apps/web && npm run build"
   publish = ".next"
@@ -17,30 +19,13 @@
 [build.processing.secrets]
   omit_paths = [".env.example"]
 
-# Explicit redirects to prevent 404s for static assets showing as text/plain
-[[redirects]]
-  from = "/_next/static/*"
-  to = "/_next/static/:splat"
-  status = 200
-  force = true
-
+# Long-lived cache for immutable hashed Next.js static assets.
+# MIME types are set correctly by the plugin so these headers
+# only need to add caching — no Content-Type override required.
 [[headers]]
   for = "/_next/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-    X-Content-Type-Options = "nosniff"
-
-# Ensure CSS is served with correct MIME type
-[[headers]]
-  for = "/_next/static/css/*"
-  [headers.values]
-    Content-Type = "text/css; charset=utf-8"
-
-# Ensure JS is served with correct MIME type
-[[headers]]
-  for = "/_next/static/chunks/*"
-  [headers.values]
-    Content-Type = "application/javascript; charset=utf-8"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

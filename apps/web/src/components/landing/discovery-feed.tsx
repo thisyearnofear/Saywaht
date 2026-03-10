@@ -2,23 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { getZoraCoins, type VideoCoin } from "@/lib/zora-coins";
+import { fetchPlatformCoins } from "@/lib/coins-cache";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { SimpleVideoPlayer } from "../ui/simple-video-player";
 import { Badge } from "../ui/badge";
 import Link from "next/link";
 import { Coins, TrendingUp } from "@/lib/icons";
 
-interface PlatformCoin {
-  id: string;
-  address: string;
-  name: string;
-  symbol: string;
-  creatorAddress: string;
-  txHash?: string;
-  metadataUri?: string;
-  thumbnailUrl?: string;
-  createdAt: string;
-}
 
 export function DiscoveryFeed() {
   const [coins, setCoins] = useState<VideoCoin[]>([]);
@@ -27,10 +17,9 @@ export function DiscoveryFeed() {
   useEffect(() => {
     const fetchCoins = async () => {
       try {
-        // Fetch platform coins first
-        const platformRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || "https://persidian.com"}/api/coins`);
-        const platformData = await platformRes.json();
-        const platformCoins: PlatformCoin[] = platformData.coins || [];
+        // Use shared cache to avoid duplicate requests / 429s when both
+        // DiscoveryFeed and TradingFeed mount at the same time.
+        const platformCoins = await fetchPlatformCoins();
 
         if (platformCoins.length > 0) {
           // Enrich with live Zora data where possible
@@ -40,7 +29,7 @@ export function DiscoveryFeed() {
               try {
                 const liveData = await zoraService.getCoinData(pc.address);
                 if (liveData) return liveData;
-              } catch {}
+              } catch { }
               // Fallback to platform data only
               return {
                 address: pc.address,

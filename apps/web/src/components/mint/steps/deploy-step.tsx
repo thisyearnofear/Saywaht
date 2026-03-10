@@ -3,12 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Loader2, 
-  Check, 
-  X, 
-  Zap, 
-  Share2, 
+import {
+  Loader2,
+  Check,
+  X,
+  Zap,
+  Share2,
   ExternalLink,
   Shield,
   Clock,
@@ -23,6 +23,7 @@ import { base } from "viem/chains";
 import { PLATFORM_ADDRESS } from "@/lib";
 import { triggerCoinCelebration } from "@/lib/confetti";
 import { getZoraCoins } from "@/lib/zora-coins";
+import { invalidateCoinsCache } from "@/lib/coins-cache";
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 
 import {
@@ -147,7 +148,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         try {
           const creationInfo = getCoinCreateFromLogs(receipt);
           coinAddress = creationInfo?.coin;
-        } catch (logErr) {}
+        } catch (logErr) { }
 
         if (!coinAddress && predictedCoinAddress) {
           coinAddress = predictedCoinAddress;
@@ -155,7 +156,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
 
         triggerCoinCelebration();
         toast.success("Coin deployed! 🎉");
-        
+
         updateData({
           deployedCoin: {
             name: data.coinName,
@@ -178,7 +179,12 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
               metadataUri: data.metadataUri || undefined,
               thumbnailUrl: data.thumbnail || undefined,
             }),
-          }).catch(() => {});
+          })
+            .then(() => {
+              // Bust the coins cache so discovery/trading feeds show the new coin
+              invalidateCoinsCache();
+            })
+            .catch(() => { });
         }
 
         setStatus("idle");
@@ -256,11 +262,11 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         <Badge className={cn("rounded-full border-none font-black tracking-widest uppercase text-[10px]", content.labelColor)}>
           {content.label}
         </Badge>
-        
+
         <div className={cn("w-20 h-20 rounded-[2rem] flex items-center justify-center shadow-2xl transition-all duration-500", content.color)}>
           {content.icon}
         </div>
-        
+
         <div className="space-y-2">
           <h2 className="text-2xl font-black tracking-tight">{content.title}</h2>
           <p className="text-sm text-muted-foreground leading-relaxed px-4">
@@ -270,12 +276,12 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
 
         {txHash && (
           <div className="glass rounded-2xl p-3 border-border/40 group">
-             <div className="flex items-center gap-3">
-               <div className="text-[10px] font-black uppercase text-muted-foreground">TX Hash</div>
-               <code className="text-[10px] font-mono opacity-60 group-hover:opacity-100 transition-opacity">
-                 {txHash.slice(0, 12)}...{txHash.slice(-8)}
-               </code>
-             </div>
+            <div className="flex items-center gap-3">
+              <div className="text-[10px] font-black uppercase text-muted-foreground">TX Hash</div>
+              <code className="text-[10px] font-mono opacity-60 group-hover:opacity-100 transition-opacity">
+                {txHash.slice(0, 12)}...{txHash.slice(-8)}
+              </code>
+            </div>
           </div>
         )}
 
@@ -287,30 +293,30 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
             { label: "Blockchain Verification", done: isSuccess }
           ].map((step, i) => (
             <div key={i} className="flex items-center gap-4 group">
-               <div className={cn(
-                 "w-6 h-6 rounded-full flex items-center justify-center transition-all duration-500",
-                 step.done ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"
-               )}>
-                 {step.done ? <Check className="h-3 w-3" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-current opacity-40" />}
-               </div>
-               <span className={cn(
-                 "text-sm font-bold transition-all duration-500",
-                 step.done ? "text-foreground" : "text-muted-foreground opacity-50"
-               )}>
-                 {step.label}
-               </span>
+              <div className={cn(
+                "w-6 h-6 rounded-full flex items-center justify-center transition-all duration-500",
+                step.done ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"
+              )}>
+                {step.done ? <Check className="h-3 w-3" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-current opacity-40" />}
+              </div>
+              <span className={cn(
+                "text-sm font-bold transition-all duration-500",
+                step.done ? "text-foreground" : "text-muted-foreground opacity-50"
+              )}>
+                {step.label}
+              </span>
             </div>
           ))}
         </div>
 
         <div className="glass rounded-3xl p-6 border-border/40 w-full space-y-4">
-           <div className="flex items-center gap-3">
-             <Shield className="h-4 w-4 text-primary" />
-             <span className="text-xs font-bold text-foreground">Secure Launch</span>
-           </div>
-           <p className="text-[11px] text-muted-foreground text-left leading-relaxed">
-             Your coin uses the Zora Protocol v2 on Base. This ensures decentralized ownership, 24/7 liquidity, and seamless trading for your community.
-           </p>
+          <div className="flex items-center gap-3">
+            <Shield className="h-4 w-4 text-primary" />
+            <span className="text-xs font-bold text-foreground">Secure Launch</span>
+          </div>
+          <p className="text-[11px] text-muted-foreground text-left leading-relaxed">
+            Your coin uses the Zora Protocol v2 on Base. This ensures decentralized ownership, 24/7 liquidity, and seamless trading for your community.
+          </p>
         </div>
       </div>
     </div>

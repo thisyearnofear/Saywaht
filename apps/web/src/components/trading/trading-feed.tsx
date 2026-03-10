@@ -17,6 +17,7 @@ import {
   X,
 } from "@/lib/icons";
 import { getZoraCoins, type VideoCoin } from "@/lib/zora-coins";
+import { fetchPlatformCoins, invalidateCoinsCache } from "@/lib/coins-cache";
 import { useWalletAuth } from "@saywaht/auth";
 import { useTrading } from "@/hooks/use-trading";
 import { toast } from "sonner";
@@ -37,7 +38,7 @@ export function TradingFeed() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // Video playback state
   const [selectedCoin, setSelectedCoin] = useState<VideoCoin | null>(null);
   const [isVideoOpen, setIsVideoOpen] = useState(false);
@@ -54,32 +55,30 @@ export function TradingFeed() {
       }
       setError(null);
 
-      // Fetch Saywaht coins from database (not all Zora coins)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || 'https://persidian.com'}/api/coins`);
-      const data = await response.json();
-      
-      // Transform database coins to VideoCoin format
-      const dbCoins = data.coins || [];
-      
+      // Use shared cache to avoid duplicate requests and 429 rate-limit errors.
+      // fetchPlatformCoins() returns cached data if it's < 30s old and
+      // de-duplicates any concurrent callers onto a single in-flight fetch.
+      const dbCoins = await fetchPlatformCoins();
+
       // Enrich with on-chain data from Zora if available
       const enrichedCoins = await Promise.all(
         dbCoins.map(async (dbCoin: any) => {
           try {
             // Try to get current price/volume data from Zora
             const coinData = await getZoraCoins().getCoinData(dbCoin.address);
-            
+
             // If we have coinData from Zora, ensure videoUri is correct
             // Sometimes Zora SDK returns metadata URI in videoUri field
             if (coinData && (coinData.videoUri.includes('.json') || coinData.videoUri.includes('gateway.pinata.cloud/ipfs/'))) {
-               // Try to fetch metadata to find actual video
-               try {
-                 const metaRes = await fetch(coinData.videoUri);
-                 if (metaRes.ok) {
-                   const meta = await metaRes.json();
-                   if (meta.animation_url) coinData.videoUri = meta.animation_url;
-                   else if (meta.content?.uri) coinData.videoUri = meta.content.uri;
-                 }
-               } catch (e) {}
+              // Try to fetch metadata to find actual video
+              try {
+                const metaRes = await fetch(coinData.videoUri);
+                if (metaRes.ok) {
+                  const meta = await metaRes.json();
+                  if (meta.animation_url) coinData.videoUri = meta.animation_url;
+                  else if (meta.content?.uri) coinData.videoUri = meta.content.uri;
+                }
+              } catch (e) { }
             }
 
             return coinData || {
@@ -91,7 +90,7 @@ export function TradingFeed() {
               volume24h: "0",
               priceChange24h: 0,
               thumbnail: dbCoin.thumbnailUrl || "",
-              videoUri: "", 
+              videoUri: "",
               metadataUri: dbCoin.metadataUri || "",
               totalSupply: "0",
               createdAt: dbCoin.createdAt,
@@ -231,6 +230,8 @@ export function TradingFeed() {
   };
 
   const handleRefresh = () => {
+    // Bust the cache so the user always gets a fresh response on explicit refresh
+    invalidateCoinsCache();
     fetchTrendingCoins(true);
   };
 
@@ -432,7 +433,7 @@ export function TradingFeed() {
             >
               <X className="h-6 w-6" />
             </Button>
-            
+
             <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
               <h2 className="text-white text-xl font-bold">{selectedCoin?.name}</h2>
               <p className="text-white/60 text-sm">@{selectedCoin?.symbol}</p>
