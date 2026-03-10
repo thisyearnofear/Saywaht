@@ -109,7 +109,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
       setStatus("pending");
 
       try {
-        const response = await fetch("https://persidian.com/api/zora/create-coin-calldata", {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || "https://persidian.com"}/api/zora/create-coin-calldata`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(contractCallParams),
@@ -166,7 +166,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         });
 
         if (coinAddress) {
-          fetch('https://persidian.com/api/coins', {
+          fetch(`${process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || 'https://persidian.com'}/api/coins`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

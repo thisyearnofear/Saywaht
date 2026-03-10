@@ -106,7 +106,7 @@ export const useMissionStore = create<MissionStore>()(
 
       fetchProgress: async (address: string) => {
         try {
-          const response = await fetch(`https://persidian.com/api/user/progress/${address}`);
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || 'https://persidian.com'}/api/user/progress/${address}`);
           const data = await response.json();
           if (data.progress) {
             const p = data.progress;
@@ -128,7 +128,7 @@ export const useMissionStore = create<MissionStore>()(
       syncProgress: async (address: string) => {
         try {
           const { level, currentXp, nextLevelXp, streakDays, completedMissionIds, totalCommentaries, lastActivityDate } = get();
-          await fetch(`https://persidian.com/api/user/progress/${address}`, {
+          await fetch(`${process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || 'https://persidian.com'}/api/user/progress/${address}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

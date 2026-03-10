@@ -28,7 +28,7 @@ export function DiscoveryFeed() {
     const fetchCoins = async () => {
       try {
         // Fetch platform coins first
-        const platformRes = await fetch("https://persidian.com/api/coins");
+        const platformRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || "https://persidian.com"}/api/coins`);
         const platformData = await platformRes.json();
         const platformCoins: PlatformCoin[] = platformData.coins || [];
 
