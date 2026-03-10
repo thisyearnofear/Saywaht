@@ -205,9 +205,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
         return;
       }
 
-      if (!videoFrame && !fallbackThumbnail) {
-        throw new Error("No media found for thumbnail");
-      }
+      // If no media, we can still try pure AI generation with just the prompt
 
       const BACKEND_URL =
         process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || "https://persidian.com";
@@ -226,7 +224,7 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
               prompt: customPrompt, 
-              videoFrame,
+              videoFrame: videoFrame || undefined,
               aspectRatio: data.videoFormat
             }),
             signal: controller.signal,

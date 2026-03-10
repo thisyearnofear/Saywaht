@@ -114,9 +114,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { prompt, videoFrame, aspectRatio } = body;
 
-    if (!videoFrame) {
+    if (!videoFrame && !prompt) {
       return NextResponse.json(
-        { success: false, error: "No video frame provided" },
+        { success: false, error: "No prompt or video frame provided" },
         { status: 400 }
       );
     }
@@ -161,13 +161,21 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Fallback: return the video frame as-is ──────────────────────
-    return NextResponse.json({
-      success: true,
-      thumbnailUrl: videoFrame,
-      method: "video_frame",
-      message:
-        "Using video frame as thumbnail. Set VENICE_API_KEY for AI generation.",
-    });
+    if (videoFrame) {
+      return NextResponse.json({
+        success: true,
+        thumbnailUrl: videoFrame,
+        method: "video_frame",
+        message:
+          "Using video frame as thumbnail. Set VENICE_API_KEY for AI generation.",
+      });
+    }
+
+    // No video frame and AI failed
+    return NextResponse.json(
+      { success: false, error: "AI generation failed and no video frame fallback available" },
+      { status: 500 }
+    );
   } catch (error) {
     console.error("Thumbnail generation error:", error);
     return NextResponse.json(
