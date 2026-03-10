@@ -30,8 +30,10 @@ export function MobileProvider({ children }: { children: ReactNode }) {
       const savedPreference = localStorage.getItem("editor-mobile-mode");
       if (savedPreference !== null) {
         setIsEditorMobileMode(savedPreference === "true");
+      } else {
+        // No preference saved — default to desktop mode
+        setIsEditorMobileMode(false);
       }
-      // If no preference, default to desktop mode
     }
   }, [isMobile]);
 
