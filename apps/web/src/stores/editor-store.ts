@@ -58,8 +58,6 @@ export const useEditorStore = create<EditorState>()(
 
       initializeApp: async () => {
         console.log("Initializing video editor...");
-        set({ isInitializing: true, isPanelsReady: false });
-
         set({ isPanelsReady: true, isInitializing: false });
         console.log("Video editor ready");
       },
@@ -71,6 +69,14 @@ export const useEditorStore = create<EditorState>()(
       partialize: (state) => ({
         videoObjectFit: state.videoObjectFit,
         previewZoom: state.previewZoom,
+      }),
+      // Prevent rehydration from resetting transient app state
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...(persistedState as Partial<EditorState>),
+        // Always preserve runtime state — never overwrite from storage
+        isInitializing: currentState.isInitializing,
+        isPanelsReady: currentState.isPanelsReady,
       }),
     }
   )

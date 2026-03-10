@@ -5,7 +5,11 @@ import { useState, useEffect } from "react";
 const MOBILE_BREAKPOINT = 768;
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth < MOBILE_BREAKPOINT ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  });
 
   useEffect(() => {
     // ENHANCEMENT: Prevent memory leaks with proper cleanup

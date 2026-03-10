@@ -64,14 +64,17 @@ export function HistorySync() {
       }
     });
 
-    // Initialize the first state
-    const initialState = {
-      tracks: useTimelineStore.getState().tracks,
-      textElements: useTextStore.getState().textElements,
-    };
-    lastStateRef.current = JSON.stringify(initialState);
-    pushState(initialState);
+    // Defer initial state capture to avoid blocking mount
+    const timer = requestAnimationFrame(() => {
+      const initialState = {
+        tracks: useTimelineStore.getState().tracks,
+        textElements: useTextStore.getState().textElements,
+      };
+      lastStateRef.current = JSON.stringify(initialState);
+      pushState(initialState);
+    });
 
+    return () => cancelAnimationFrame(timer);
   }, [pushState]);
 
   return null;

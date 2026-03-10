@@ -32,13 +32,13 @@
 
 # Ensure CSS is served with correct MIME type
 [[headers]]
-  for = "/*.css"
+  for = "/_next/static/css/*"
   [headers.values]
     Content-Type = "text/css; charset=utf-8"
 
 # Ensure JS is served with correct MIME type
 [[headers]]
-  for = "/*.js"
+  for = "/_next/static/chunks/*"
   [headers.values]
     Content-Type = "application/javascript; charset=utf-8"
 

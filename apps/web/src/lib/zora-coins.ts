@@ -2,7 +2,6 @@ import { createPublicClient, http, type Address } from "viem";
 import { base } from "viem/chains";
 import { handleError, withRetry, zoraCircuitBreaker } from "./error-handler";
 import {
-  setApiKey,
   getCoinsNew,
   getCoin,
   getProfile,
@@ -113,19 +112,8 @@ export class ZoraCoinsService {
       transport: http(),
     });
 
-    // CLEAN: Proper API key initialization with error handling
-    try {
-      const apiKey = process.env.ZORA_API_KEY;
-      if (apiKey) {
-        setApiKey(apiKey);
-        console.log("🔑 Zora Coins SDK API key initialized");
-      } else {
-        // API key is server-side only; coin creation uses the API route
-        console.log("ℹ️ Zora API key is server-side only; coin creation uses /api/zora/create-coin-calldata");
-      }
-    } catch (error) {
-      console.warn("Failed to set Zora API key:", error);
-    }
+    // API key is managed server-side on the Hetzner backend (persidian.com)
+    // Coin creation calls go through the backend at /api/zora/create-coin-calldata
 
     this.isInitialized = true;
   }
