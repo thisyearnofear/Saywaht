@@ -1,21 +1,66 @@
 "use client";
 
+console.log("🚀 EditorClient module evaluating...");
+
+
 import nextDynamic from "next/dynamic";
 import "./editor.css";
-import { WelcomeScreen } from "@/components/editor/welcome-screen";
+const WelcomeScreen = nextDynamic(
+  () =>
+    import("@/components/editor/welcome-screen").then((mod) => ({
+      default: mod.WelcomeScreen,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    ),
+  }
+);
 import { useProjectStore } from "@/stores/project-store";
-import { EditorProvider } from "@/components/editor-provider";
+const EditorProvider = nextDynamic(
+  () =>
+    import("@/components/editor-provider").then((mod) => ({
+      default: mod.EditorProvider,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-background">
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+      </div>
+    ),
+  }
+);
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile, useMounted } from "@/hooks/use-mobile";
 import { useEditorShortcuts } from "@/hooks/use-editor-shortcuts";
 import { useMobileContext } from "@/contexts/mobile-context";
 import { Loader2 } from "@/lib/icons";
-import { WalletGuard } from "@/components/wallet-guard";
+const WalletGuard = nextDynamic(
+  () =>
+    import("@/components/wallet-guard").then((mod) => ({
+      default: mod.WalletGuard,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-black">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    ),
+  }
+);
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 
 // Lazy load heavy components
 const DesktopEditorLayout = nextDynamic(
-  () => import("@/components/editor/desktop-editor-layout").then((mod) => mod.DesktopEditorLayout),
+  () =>
+    import("@/components/editor/desktop-editor-layout").then((mod) => ({
+      default: mod.DesktopEditorLayout,
+    })),
   {
     ssr: false,
     loading: () => (
@@ -48,6 +93,7 @@ const MobileEditorLayout = nextDynamic(
 );
 
 export default function Editor() {
+  const mounted = useMounted();
   // Enable keyboard shortcuts
   useEditorShortcuts();
 
@@ -57,6 +103,10 @@ export default function Editor() {
   const { isFarcasterMiniApp } = useFarcasterContext();
 
   usePlaybackControls();
+
+  if (!mounted) {
+    return null;
+  }
 
   if (!activeProject) {
     return (

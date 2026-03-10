@@ -14,7 +14,10 @@ import { Loader2 } from "@/lib/icons";
 
 // Lazy load heavy components
 const EditorHeader = nextDynamic(
-  () => import("@/components/editor-header").then((mod) => mod.EditorHeader),
+  () =>
+    import("@/components/editor-header").then((mod) => ({
+      default: mod.EditorHeader,
+    })),
   {
     ssr: false,
     loading: () => (

@@ -41,13 +41,12 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
   } = useTemplateStore();
 
   useEffect(() => {
-    // Fix #2 / #4: skip the fetch if we already have this template loaded.
-    // This prevents a redundant re-fetch when navigating back to the same
-    // template, and also eliminates the second leg of the double-fetch race
-    // where template-category-card previously fired selectTemplate before
-    // navigating here (now removed from that component entirely).
-    if (templateId && selectedTemplate?.id !== templateId) {
-      selectTemplate(templateId);
+   console.log('[TemplateDetails] Checking template:', templateId);
+   if (templateId && selectedTemplate?.id !== templateId) {
+     console.log('[TemplateDetails] Fetching template:', templateId);
+     selectTemplate(templateId).catch((err) => 
+       console.error('[TemplateDetails] selectTemplate error:', err)
+      );
     }
   }, [templateId, selectTemplate, selectedTemplate?.id]);
 
