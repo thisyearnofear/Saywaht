@@ -5,6 +5,7 @@ import { getZoraCoins, type VideoCoin } from "@/lib/zora-coins";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { SimpleVideoPlayer } from "../ui/simple-video-player";
 import { Badge } from "../ui/badge";
+import Link from "next/link";
 import { Coins, TrendingUp } from "@/lib/icons";
 
 interface PlatformCoin {
@@ -186,12 +187,12 @@ export function DiscoveryFeed() {
           <p className="text-muted-foreground mb-4">
             Be the first to create a commentary coin!
           </p>
-          <a
+          <Link
             href="/templates"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
           >
             🎬 Get Started
-          </a>
+          </Link>
         </div>
       )}
     </div>

@@ -8,11 +8,10 @@ import { cn } from "@/lib/utils";
 import {
   Clock,
   Layers,
-  HardDrive,
+  Video,
   Wifi,
   WifiOff,
   CheckCircle,
-  AlertCircle,
   ChevronUp,
   ChevronDown,
 } from "@/lib/icons";
@@ -25,7 +24,7 @@ export function StatusBar() {
   const { currentTime, duration } = usePlaybackStore();
   const { isTimelineCollapsed, toggleTimelineCollapse } = usePanelStore();
   const [isOnline, setIsOnline] = useState(true);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const lastSaved = activeProject ? new Date(activeProject.updatedAt) : null;
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -87,8 +86,8 @@ export function StatusBar() {
         </div>
 
         <div className="flex items-center gap-1">
-          <HardDrive className="w-3 h-3" />
-          <span>{formatFileSize(0)} used</span>
+          <Video className="w-3 h-3" />
+          <span>{tracks.reduce((sum, t) => sum + (t.clips?.length ?? 0), 0)} clips</span>
         </div>
       </div>
 
@@ -110,7 +109,7 @@ export function StatusBar() {
         {lastSaved && (
           <div className="flex items-center gap-1">
             <CheckCircle className="w-3 h-3 text-green-500" />
-            <span>Saved {lastSaved.toLocaleTimeString()}</span>
+            <span>Saved {lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
           </div>
         )}
 

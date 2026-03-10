@@ -88,6 +88,7 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       // Check if this request was aborted
       if (abortController.signal.aborted) {
         console.log('Template selection was cancelled');
+        set({ isLoading: false, abortController: null });
         return;
       }
       

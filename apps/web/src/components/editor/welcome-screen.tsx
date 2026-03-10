@@ -15,7 +15,7 @@ import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import { Template } from "@/lib/types";
 import { HoverVideoPreview } from "@/components/templates/hover-video-preview";
 import Image from "next/image";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Sparkles, Loader2, Video, Plus } from "@/lib/icons";
 import { resolveIpfsUrl } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -30,6 +30,8 @@ export function WelcomeScreen() {
   const { createNewProject } = useProjectStore();
   const { navigateToTemplate, navigateToTemplates } = useSmartNavigation();
   const { fetchCategories, categories, isLoading } = useTemplateStore();
+  const [projectName, setProjectName] = useState("");
+  const [showNameInput, setShowNameInput] = useState(false);
 
   useEffect(() => {
     // Load template categories when the component mounts
@@ -70,6 +72,25 @@ export function WelcomeScreen() {
       })
       .slice(0, 4); // Get top 4 templates
   }, [categories]);
+
+  const handleCreateProject = () => {
+    if (showNameInput) {
+      const name = projectName.trim() || "My Project";
+      createNewProject(name);
+    } else {
+      setShowNameInput(true);
+    }
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const name = projectName.trim() || "My Project";
+      createNewProject(name);
+    } else if (e.key === "Escape") {
+      setShowNameInput(false);
+      setProjectName("");
+    }
+  };
 
   return (
     <div className="h-full w-full bg-gradient-to-br from-indigo-900 via-purple-800 to-blue-900 text-white overflow-y-auto scrollable">
@@ -117,7 +138,6 @@ export function WelcomeScreen() {
                   ) : featuredTemplates.length > 0 ? (
                     <div className="grid grid-cols-2 gap-4">
                       {featuredTemplates
-                        .slice(0, 2)
                         .map((template: FeaturedTemplate) => (
                           <Card
                             key={template.id}
@@ -171,9 +191,28 @@ export function WelcomeScreen() {
                     </p>
                   </div>
 
-                  {isMobile ? (
+                  {showNameInput ? (
+                    <div className="flex flex-col gap-2">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={projectName}
+                        onChange={(e) => setProjectName(e.target.value)}
+                        onKeyDown={handleNameKeyDown}
+                        placeholder="Project name…"
+                        className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white placeholder-white/40 text-sm focus:outline-none focus:ring-2 focus:ring-white/30"
+                      />
+                      <Button
+                        onClick={handleCreateProject}
+                        className="w-full bg-white/20 hover:bg-white/30 text-white text-sm py-2 rounded-xl transition-all"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Project
+                      </Button>
+                    </div>
+                  ) : isMobile ? (
                     <button
-                      onClick={() => createNewProject("My Awesome Project")}
+                      onClick={handleCreateProject}
                       className="text-white/50 text-sm underline underline-offset-2 hover:text-white/70 transition-colors"
                     >
                       New Empty Project
@@ -181,7 +220,7 @@ export function WelcomeScreen() {
                   ) : (
                     <Button
                       variant="outline"
-                      onClick={() => createNewProject("My Awesome Project")}
+                      onClick={handleCreateProject}
                       className="w-full bg-white/5 border-white/20 hover:bg-white/10 text-white text-sm py-6 rounded-2xl transition-all"
                     >
                       <Plus className="mr-2 h-5 w-5" />
@@ -202,7 +241,7 @@ export function WelcomeScreen() {
                       </div>
                       <div className="text-center border-r border-white/10">
                         <div className="text-2xl font-bold text-purple-300">
-                          3
+                          {isLoading ? "..." : categories.length}
                         </div>
                         <div className="text-[8px] text-white/60 uppercase tracking-widest">
                           Categories
