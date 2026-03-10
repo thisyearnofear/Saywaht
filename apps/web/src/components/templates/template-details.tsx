@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button";
 import { VideoPreview } from "./video-preview";
 import { useState, useEffect } from "react";
 import { resolveIpfsUrl, cn } from "@/lib/utils";
-import { 
-  ArrowLeft, 
-  Play, 
-  Clock, 
-  Layers, 
-  Sparkles, 
-  Smartphone, 
-  Monitor, 
+import {
+  ArrowLeft,
+  Play,
+  Clock,
+  Layers,
+  Sparkles,
+  Smartphone,
+  Monitor,
   Square,
   Mic,
   Video,
@@ -41,10 +41,15 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
   } = useTemplateStore();
 
   useEffect(() => {
-    if (templateId) {
+    // Fix #2 / #4: skip the fetch if we already have this template loaded.
+    // This prevents a redundant re-fetch when navigating back to the same
+    // template, and also eliminates the second leg of the double-fetch race
+    // where template-category-card previously fired selectTemplate before
+    // navigating here (now removed from that component entirely).
+    if (templateId && selectedTemplate?.id !== templateId) {
       selectTemplate(templateId);
     }
-  }, [templateId, selectTemplate]);
+  }, [templateId, selectTemplate, selectedTemplate?.id]);
 
   const resolvedVideoUrl = selectedTemplate?.videoUrl ? resolveIpfsUrl(selectedTemplate.videoUrl) : null;
   const resolvedThumbnailUrl = selectedTemplate?.thumbnailUrl ? resolveIpfsUrl(selectedTemplate.thumbnailUrl) : null;
@@ -149,7 +154,7 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Browse
         </Button>
-        
+
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
@@ -166,7 +171,7 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
               ))}
             </div>
           </div>
-          
+
           <Button
             onClick={handleApplyTemplate}
             disabled={isLoading}
@@ -193,8 +198,8 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
             )}
           >
             {resolvedVideoUrl ||
-            (resolvedThumbnailUrl &&
-              resolvedThumbnailUrl.endsWith(".mp4")) ? (
+              (resolvedThumbnailUrl &&
+                resolvedThumbnailUrl.endsWith(".mp4")) ? (
               <VideoPreview
                 src={resolvedVideoUrl || resolvedThumbnailUrl!}
                 title={selectedTemplate.name}
@@ -336,13 +341,13 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
             <p className="text-foreground/90 leading-relaxed text-sm">
               {selectedTemplate.description}
             </p>
-            
+
             {selectedTemplate.source && (
               <div className="mt-4 pt-4 border-t border-border/40 flex items-center justify-between">
                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Source</span>
-                <a 
-                  href={selectedTemplate.source.url} 
-                  target="_blank" 
+                <a
+                  href={selectedTemplate.source.url}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
                 >

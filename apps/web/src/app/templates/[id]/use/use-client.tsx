@@ -26,10 +26,14 @@ export default function TemplateUseClient({ id }: TemplateUseClientProps) {
   } = useTemplateStore();
 
   useEffect(() => {
-    if (id) {
+    // Fix #2 / #4: only fetch if the template isn't already loaded.
+    // Prevents a duplicate fetch when the user arrived via "Use Now" which
+    // already had the template selected, and prevents infinite re-fetch loops
+    // when navigating back and forth.
+    if (id && selectedTemplate?.id !== id) {
       selectTemplate(id);
     }
-  }, [id, selectTemplate]);
+  }, [id, selectTemplate, selectedTemplate?.id]);
 
   useEffect(() => {
     if (selectedTemplate) {

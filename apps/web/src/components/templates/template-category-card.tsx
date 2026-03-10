@@ -7,7 +7,6 @@ import { Template } from "@/lib/types";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useTemplateStore } from "@/stores/template-store";
 import { HoverVideoPreview } from "./hover-video-preview";
 import { LuSmartphone, LuSquare, LuMonitor } from "react-icons/lu";
 import { resolveIpfsUrl } from "@/lib/utils";
@@ -19,18 +18,20 @@ interface TemplateCategoryCardProps {
 
 export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCategoryCardProps) {
   const router = useRouter();
-  const { selectTemplate } = useTemplateStore();
+  // NOTE: selectTemplate is intentionally NOT called here before navigation.
+  // The destination pages (template-details, use-client) call selectTemplate
+  // on mount with a re-fetch guard, so pre-fetching here only wastes a request
+  // that immediately gets cancelled by the destination's own call.
+  // (Fix #1: eliminate double-fetch race condition)
 
   const resolvedThumbnailUrl = template.thumbnailUrl ? resolveIpfsUrl(template.thumbnailUrl) : null;
 
   const handleSelect = () => {
-    selectTemplate(template.id);
     router.push(`/templates/${template.id}`);
   };
 
   const handleUse = (e: React.MouseEvent) => {
     e.stopPropagation();
-    selectTemplate(template.id);
     router.push(`/templates/${template.id}/use`);
   };
 
@@ -127,9 +128,9 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
 
         {/* Overlay on hover */}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-           <Button variant="secondary" size="sm" onClick={handleUse} className="rounded-full shadow-lg scale-90 group-hover:scale-100 transition-transform">
-             Use Now
-           </Button>
+          <Button variant="secondary" size="sm" onClick={handleUse} className="rounded-full shadow-lg scale-90 group-hover:scale-100 transition-transform">
+            Use Now
+          </Button>
         </div>
       </div>
 

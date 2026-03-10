@@ -52,7 +52,15 @@ export function TemplateBrowser() {
   }, [fetchCategories]);
 
   // Handle Pexels search
+  // Fix #3: gate on mainTab so we don't fire a Pexels request when the user
+  // is on the "packs" tab. Also add mainTab to deps so switching tabs with an
+  // empty query still loads the default stock reel.
   useEffect(() => {
+    if (mainTab !== 'stock') {
+      // Not on stock tab — don't touch Pexels at all.
+      return;
+    }
+
     const timer = setTimeout(async () => {
       if (searchQuery.length >= 3) {
         setIsPexelsLoading(true);
@@ -81,7 +89,8 @@ export function TemplateBrowser() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, mainTab]);
+
 
   const handleUsePexelsVideo = (video: PexelsVideo) => {
     const { addMediaItem, clearAllMedia } = useMediaStore.getState();
