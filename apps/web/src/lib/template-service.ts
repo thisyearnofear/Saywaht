@@ -58,9 +58,29 @@ function timeoutPromise(ms: number, signal?: AbortSignal): Promise<never> {
 }
 
 /**
+ * In-memory cache for individual template detail JSON, keyed by template ID.
+ * Populated by both `fetchTemplateById` and `prefetchTemplateById`.
+ */
+const _templateDetailCache = new Map<string, Template>();
+
+/**
+ * Fire-and-forget prefetch of a template's detail JSON.
+ * Called on hover/touch so that by the time the user clicks,
+ * `fetchTemplateById` returns instantly from cache.
+ */
+export function prefetchTemplateById(id: string): void {
+  if (_templateDetailCache.has(id)) return;
+  // Fire and forget — errors are silently swallowed
+  fetchTemplateById(id).catch(() => {});
+}
+
+/**
  * Fetches a specific template by ID
  */
 export async function fetchTemplateById(id: string, signal?: AbortSignal): Promise<Template | null> {
+  // Return from cache if already fetched
+  const cached = _templateDetailCache.get(id);
+  if (cached) return cached;
   const FETCH_TIMEOUT_MS = 10_000; // Fix #5: 10-second safety timeout
 
   try {
@@ -109,7 +129,9 @@ export async function fetchTemplateById(id: string, signal?: AbortSignal): Promi
 
       // If either of the new formats work, return that
       if (detailResponse.ok) {
-        return await detailResponse.json();
+        const result = await detailResponse.json();
+        _templateDetailCache.set(id, result);
+        return result;
       }
 
       // Try legacy format as fallback
@@ -118,11 +140,13 @@ export async function fetchTemplateById(id: string, signal?: AbortSignal): Promi
         timeoutPromise(FETCH_TIMEOUT_MS, signal),
       ]);
       if (legacyResponse.ok) {
-        return await legacyResponse.json();
+        const result = await legacyResponse.json();
+        _templateDetailCache.set(id, result);
+        return result;
       }
 
       // Fall back to basic template info if no detailed info is available
-      console.warn(`Detailed template data not found for ${id}, using basic template info`);
+      _templateDetailCache.set(id, basicTemplate);
       return basicTemplate;
 
     } catch (detailError) {
@@ -130,8 +154,8 @@ export async function fetchTemplateById(id: string, signal?: AbortSignal): Promi
       if (detailError instanceof Error && detailError.name === 'AbortError') {
         throw detailError;
       }
-      console.warn(`Error fetching detailed template: ${detailError}`);
       // Fall back to basic template info
+      _templateDetailCache.set(id, basicTemplate);
       return basicTemplate;
     }
   } catch (error) {
@@ -229,7 +253,6 @@ export async function convertTemplateMediaItem(
   // Resolve to CDN URL (Cloudflare IPFS or FilCDN)
   const streamUrl = resolveIpfsUrl(item.url);
 
-  console.log(`🎬 Preparing ${item.name} from ${streamUrl}`);
 
   // Check if aborted
   if (signal?.aborted) {
@@ -253,7 +276,6 @@ export async function convertTemplateMediaItem(
     // 1. Check cache
     const cached = await getCachedMedia(streamUrl);
     if (cached) {
-      console.log(`📦 Cache hit for ${item.name} (${(cached.size / 1024 / 1024).toFixed(1)}MB)`);
       mediaBlob = cached;
     }
   } catch (cacheErr) {
@@ -264,10 +286,8 @@ export async function convertTemplateMediaItem(
   if (!mediaBlob) {
     // 2. Fetch with retry + gateway fallback
     try {
-      console.log(`⬇️ Downloading ${item.name}...`);
       const response = await fetchWithRetry(streamUrl, item.url, signal);
       mediaBlob = await response.blob();
-      console.log(`✅ Downloaded ${item.name} (${(mediaBlob.size / 1024 / 1024).toFixed(1)}MB)`);
 
       // 3. Store in IndexedDB for next time (fire-and-forget)
       cacheMedia(streamUrl, mediaBlob, mimeType, 7 * 24 * 60 * 60 * 1000) // 7-day TTL
@@ -305,7 +325,6 @@ export async function convertTemplateMediaItem(
     isLocal: !!mediaBlob
   };
 
-  console.log(`✅ ${item.name} ready (${mediaBlob ? 'cached/downloaded' : 'streaming'})`);
 
   return { mediaItem, blobUrl };
 }

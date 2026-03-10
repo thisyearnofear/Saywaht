@@ -305,6 +305,13 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       get().addToRecentTemplates(selectedTemplate);
 
       // Kick off cache/download hydration after the editor is already usable.
+      // Track progress so we can show a toast with download status.
+      const totalMedia = selectedTemplate.mediaItems?.length || 0;
+      let hydratedCount = 0;
+      const progressToastId = totalMedia > 1
+        ? toast.loading(`Loading media… 0/${totalMedia}`, { duration: Infinity })
+        : null;
+
       hydrateTemplateMediaItemsInBackground(
         selectedTemplate,
         {
@@ -336,18 +343,32 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
                 }
               });
             });
+
+            // Update progress toast
+            hydratedCount++;
+            if (progressToastId) {
+              if (hydratedCount >= totalMedia) {
+                toast.success('All media loaded', { id: progressToastId, duration: 2000 });
+              } else {
+                toast.loading(`Loading media… ${hydratedCount}/${totalMedia}`, { id: progressToastId });
+              }
+            }
           },
           onMediaItemError: (item, error) => {
-            console.warn(`Template media hydration failed for ${item.name}:`, error);
+            hydratedCount++;
+            if (progressToastId && hydratedCount >= totalMedia) {
+              toast.success('Media loading complete', { id: progressToastId, duration: 2000 });
+            }
           },
         },
         abortController.signal
       ).catch((error) => {
+        if (progressToastId) {
+          toast.dismiss(progressToastId);
+        }
         if (error instanceof Error && error.name === "AbortError") {
-          console.log("Background template hydration was cancelled");
           return;
         }
-        console.warn("Background template hydration failed:", error);
       });
 
       set({ isLoading: false, isApplying: false, abortController: null });

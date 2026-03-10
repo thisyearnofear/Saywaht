@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Template } from "@/lib/types";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { HoverVideoPreview } from "./hover-video-preview";
 import { LuSmartphone, LuSquare, LuMonitor } from "react-icons/lu";
 import { resolveIpfsUrl } from "@/lib/utils";
+import { prefetchTemplateById } from "@/lib/template-service";
 
 interface TemplateCategoryCardProps {
   template: Template;
@@ -25,6 +26,14 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
   // (Fix #1: eliminate double-fetch race condition)
 
   const resolvedThumbnailUrl = template.thumbnailUrl ? resolveIpfsUrl(template.thumbnailUrl) : null;
+  const prefetchedRef = useRef(false);
+
+  // Prefetch the template detail JSON on hover so navigation feels instant
+  const handlePrefetch = useCallback(() => {
+    if (prefetchedRef.current) return;
+    prefetchedRef.current = true;
+    prefetchTemplateById(template.id);
+  }, [template.id]);
 
   const handleSelect = () => {
     router.push(`/templates/${template.id}`);
@@ -66,6 +75,8 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
   return (
     <Card
       className="overflow-hidden bg-card/50 border-border/50 md:hover:border-primary/50 transition-all duration-300 cursor-pointer group shadow-sm md:hover:shadow-xl touch-manipulation"
+      onMouseEnter={handlePrefetch}
+      onTouchStart={handlePrefetch}
       onClick={handleSelect}
     >
       <div className="relative aspect-video overflow-hidden">

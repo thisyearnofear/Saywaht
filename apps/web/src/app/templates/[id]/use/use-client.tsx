@@ -88,16 +88,20 @@ export default function TemplateUseClient({ id }: TemplateUseClientProps) {
     );
   }
 
+  const [isCreating, setIsCreating] = useState(false);
+
   const handleApplyTemplate = async () => {
-    if (!selectedTemplate) return;
-    // Await the full async template load (media fetching + track creation)
-    // before navigating, so the editor doesn't race with the background task.
+    if (!selectedTemplate || isCreating) return;
+    setIsCreating(true);
+    // Apply the template (sets up streaming stubs + kicks off background hydration)
+    // then navigate immediately — media downloads continue in the background
+    // while the editor is already usable with streaming URLs.
     const success = await applySelectedTemplate(projectName || selectedTemplate.name);
     if (success) {
-      // Clear the selected template BEFORE navigating so that EditorProvider
-      // does not attempt a second (duplicate) application of the same template.
       clearSelectedTemplate();
       router.push("/editor");
+    } else {
+      setIsCreating(false);
     }
   };
 
@@ -208,13 +212,13 @@ export default function TemplateUseClient({ id }: TemplateUseClientProps) {
           <div className="flex gap-4">
             <Button
               onClick={handleApplyTemplate}
-              disabled={isLoading}
+              disabled={isLoading || isCreating}
               className="flex-1 rounded-full h-12 text-lg font-bold"
             >
-              {isLoading ? (
+              {isLoading || isCreating ? (
                 <span className="flex items-center gap-2">
                   <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  Creating…
+                  {isCreating ? "Opening Editor…" : "Loading…"}
                 </span>
               ) : (
                 "Create Project"
