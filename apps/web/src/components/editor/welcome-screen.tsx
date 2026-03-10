@@ -10,69 +10,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useProjectStore } from "@/stores/project-store";
-import { useTemplateStore } from "@/stores/template-store";
 import { useSmartNavigation } from "@/hooks/use-smart-navigation";
-import { Template } from "@/lib/types";
-import { HoverVideoPreview } from "@/components/templates/hover-video-preview";
-import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
-import { Sparkles, Loader2, Video, Plus } from "@/lib/icons";
-import { resolveIpfsUrl } from "@/lib/utils";
+import { useState } from "react";
+import { Sparkles, Video, Plus } from "@/lib/icons";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// Interface for templates with category name
-interface FeaturedTemplate extends Template {
-  categoryName: string;
-}
+// Templates section removed - users can click "Explore All Packs" to visit templates page
 
 export function WelcomeScreen() {
   const isMobile = useIsMobile();
   const { createNewProject } = useProjectStore();
   const { navigateToTemplate, navigateToTemplates } = useSmartNavigation();
-  const { fetchCategories, categories, isLoading } = useTemplateStore();
   const [projectName, setProjectName] = useState("");
   const [showNameInput, setShowNameInput] = useState(false);
 
-  useEffect(() => {
-    // Load template categories when the component mounts
-    fetchCategories();
-  }, [fetchCategories]);
-
-  // Get featured templates with priority to animal voiceovers
-  const featuredTemplates = useMemo(() => {
-    if (!categories || categories.length === 0) return [];
-
-    // Collect templates from all categories
-    const templates: FeaturedTemplate[] = categories.flatMap((category) =>
-      category.templates.map((template) => ({
-        ...template,
-        categoryName: category.name,
-      }))
-    );
-
-    // Prioritize portrait templates first (mobile-first), then other formats
-    return templates
-      .sort((a, b) => {
-        // First priority: Portrait templates (mobile-first for Zora)
-        const aIsPortrait = a.aspectRatio === "portrait";
-        const bIsPortrait = b.aspectRatio === "portrait";
-
-        if (aIsPortrait && !bIsPortrait) return -1;
-        if (!aIsPortrait && bIsPortrait) return 1;
-
-        // Second priority: Square templates (universal)
-        const aIsSquare = a.aspectRatio === "square";
-        const bIsSquare = b.aspectRatio === "square";
-
-        if (aIsSquare && !bIsSquare) return -1;
-        if (!aIsSquare && bIsSquare) return 1;
-
-        // Third priority: Landscape templates
-        return 0;
-      })
-      .slice(0, 4); // Get top 4 templates
-  }, [categories]);
-
+  // Don't auto-load templates - significantly improves editor init time
+  // Users can still click "Explore All Packs" to browse templates
   const handleCreateProject = () => {
     if (showNameInput) {
       const name = projectName.trim() || "My Project";
@@ -123,56 +76,17 @@ export function WelcomeScreen() {
               <div className="flex flex-col lg:flex-row-reverse gap-10">
                 {/* Right Column - Templates (NOW PRIMARY) */}
                 <div className="flex-1 space-y-6">
-                  <div className="space-y-4 text-center lg:text-left">
-                    <h2 className="text-3xl font-black flex items-center justify-center lg:justify-start gap-3 italic uppercase tracking-tighter">
+                  <div className="space-y-4 text-center lg:text-right">
+                    <h2 className="text-3xl font-black flex items-center justify-center lg:justify-end gap-3 italic uppercase tracking-tighter">
                       <Sparkles className="h-8 w-8 text-yellow-400" />
                       Create with Style
                     </h2>
-                    <p className="text-white/80 font-medium">Pick a high-fidelity template to start your commentary.</p>
+                    <p className="text-white/80 font-medium">Browse professionally designed templates.</p>
                   </div>
 
-                  {isLoading ? (
-                    <div className="flex justify-center py-12">
-                      <Loader2 className="w-8 h-8 animate-spin text-white" />
-                    </div>
-                  ) : featuredTemplates.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      {featuredTemplates
-                        .map((template: FeaturedTemplate) => (
-                          <Card
-                            key={template.id}
-                            className="overflow-hidden bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-300 transform hover:scale-[1.03] cursor-pointer group rounded-2xl"
-                            onClick={() =>
-                              navigateToTemplate(template.id)
-                            }
-                          >
-                            <div className="aspect-[3/4] relative overflow-hidden">
-                              {template.thumbnailUrl ? (
-                                <HoverVideoPreview
-                                  videoSrc={resolveIpfsUrl(template.thumbnailUrl)}
-                                  alt={template.name}
-                                  className="w-full h-full"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                                  <Video className="h-8 w-8 text-white/20" />
-                                </div>
-                              )}
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10"></div>
-                              <div className="absolute bottom-3 left-3 text-white z-20 text-[10px] font-black uppercase tracking-widest leading-none">
-                                {template.name}
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-white/60">
-                      <p>No templates available</p>
-                    </div>
-                  )}
+                  {/* Templates removed - click button to visit templates page */}
 
-                  <div className="flex justify-center lg:justify-start pt-2">
+                  <div className="flex justify-center lg:justify-end pt-2">
                     <Button
                       onClick={() => navigateToTemplates()}
                       className="w-full h-16 bg-white text-blue-900 hover:bg-white/90 font-black uppercase tracking-widest rounded-2xl shadow-[0_20px_40px_rgba(255,255,255,0.1)] transition-all active:scale-95 text-lg"
@@ -228,33 +142,6 @@ export function WelcomeScreen() {
                     </Button>
                   )}
 
-                  {/* Stats Bar — hidden on mobile */}
-                  {!isMobile && (
-                    <div className="grid grid-cols-3 gap-4 mt-6 opacity-60">
-                      <div className="text-center border-r border-white/10">
-                        <div className="text-2xl font-bold text-blue-300">
-                          {isLoading ? "..." : featuredTemplates.length}
-                        </div>
-                        <div className="text-[8px] text-white/60 uppercase tracking-widest">
-                          Templates
-                        </div>
-                      </div>
-                      <div className="text-center border-r border-white/10">
-                        <div className="text-2xl font-bold text-purple-300">
-                          {isLoading ? "..." : categories.length}
-                        </div>
-                        <div className="text-[8px] text-white/60 uppercase tracking-widest">
-                          Categories
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-pink-300">HD</div>
-                        <div className="text-[8px] text-white/60 uppercase tracking-widest">
-                          Quality
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>

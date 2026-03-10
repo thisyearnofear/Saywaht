@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Template } from "@/lib/types";
@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { HoverVideoPreview } from "./hover-video-preview";
 import { LuSmartphone, LuSquare, LuMonitor } from "react-icons/lu";
 import { resolveIpfsUrl } from "@/lib/utils";
-import { prefetchTemplateById } from "@/lib/template-service";
 
 interface TemplateCategoryCardProps {
   template: Template;
@@ -26,14 +25,6 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
   // (Fix #1: eliminate double-fetch race condition)
 
   const resolvedThumbnailUrl = template.thumbnailUrl ? resolveIpfsUrl(template.thumbnailUrl) : null;
-  const prefetchedRef = useRef(false);
-
-  // Prefetch the template detail JSON on hover so navigation feels instant
-  const handlePrefetch = useCallback(() => {
-    if (prefetchedRef.current) return;
-    prefetchedRef.current = true;
-    prefetchTemplateById(template.id);
-  }, [template.id]);
 
   const handleSelect = () => {
     router.push(`/templates/${template.id}`);
@@ -46,26 +37,26 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
 
   // Get aspect ratio info for display
   const getAspectRatioInfo = () => {
-    const aspectRatio = template.aspectRatio || "landscape"; // fallback for older templates
+   const aspectRatio = template.aspectRatio || "landscape"; // fallback for older templates
     switch (aspectRatio) {
       case "portrait":
-        return {
+       return {
           icon: LuSmartphone,
           label: "Portrait",
-          color: "bg-green-500/20 text-green-300",
+         color: "bg-green-500/20 text-green-300",
         };
       case "square":
-        return {
+       return {
           icon: LuSquare,
           label: "Square",
-          color: "bg-blue-500/20 text-blue-300",
+         color: "bg-blue-500/20 text-blue-300",
         };
       case "landscape":
-      default:
-        return {
+     default:
+       return {
           icon: LuMonitor,
           label: "Landscape",
-          color: "bg-orange-500/20 text-orange-300",
+         color: "bg-orange-500/20 text-orange-300",
         };
     }
   };
@@ -75,13 +66,11 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
   return (
     <Card
       className="overflow-hidden bg-card/50 border-border/50 md:hover:border-primary/50 transition-all duration-300 cursor-pointer group shadow-sm md:hover:shadow-xl touch-manipulation"
-      onMouseEnter={handlePrefetch}
-      onTouchStart={handlePrefetch}
       onClick={handleSelect}
     >
       <div className="relative aspect-video overflow-hidden">
         {resolvedThumbnailUrl ? (
-          resolvedThumbnailUrl.endsWith(".mp4") || resolvedThumbnailUrl.includes("video") ? (
+         resolvedThumbnailUrl.endsWith(".mp4") || resolvedThumbnailUrl.includes("video") ? (
             // Use HoverVideoPreview component for MP4 files
             <HoverVideoPreview
               videoSrc={resolvedThumbnailUrl}
@@ -102,13 +91,13 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
           <div className="w-full h-full flex items-center justify-center bg-muted/30">
             <svg
               width="48"
-              height="48"
+             height="48"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+             stroke="currentColor"
+             strokeWidth="2"
+             strokeLinecap="round"
+             strokeLinejoin="round"
               className="text-muted-foreground/50"
             >
               <polygon points="5 3 19 12 5 21 5 3" />
@@ -166,13 +155,13 @@ export function TemplateCategoryCard({ template, showRecentBadge }: TemplateCate
           >
             <svg
               width="14"
-              height="14"
+             height="14"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+             stroke="currentColor"
+             strokeWidth="2.5"
+             strokeLinecap="round"
+             strokeLinejoin="round"
             >
               <polyline points="9 18 15 12 9 6" />
             </svg>

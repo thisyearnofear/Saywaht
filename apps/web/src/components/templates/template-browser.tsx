@@ -15,8 +15,6 @@ import { useProjectStore } from "@/stores/project-store";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileTemplateBrowser } from "./mobile-template-browser";
 import { resolveIpfsUrl, cn } from "@/lib/utils";
-import { useVideoPreloader } from "@/hooks/use-video-preloader";
-import { useMemo } from "react";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
@@ -32,20 +30,6 @@ export function TemplateBrowser() {
   const router = useRouter();
   const isMobile = useIsMobile();
 
-  // PREPERFORMANCE: Preload the first few template videos
-  const allTemplates = useMemo(() =>
-    categories.flatMap(c => c.templates),
-    [categories]);
-
-  const templateUrls = useMemo(() =>
-    allTemplates.map(t => resolveIpfsUrl(t.thumbnailUrl || "")),
-    [allTemplates]);
-
-  const stockUrls = useMemo(() =>
-    pexelsResults.map(v => v.video_files.find(f => f.quality === 'sd')?.link || v.video_files[0].link),
-    [pexelsResults]);
-
-  useVideoPreloader(mainTab === 'packs' ? templateUrls : stockUrls);
 
   useEffect(() => {
     fetchCategories();
