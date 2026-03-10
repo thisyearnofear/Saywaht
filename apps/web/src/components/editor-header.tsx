@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useAccount } from "wagmi";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +64,7 @@ export function EditorHeader() {
   const { isFarcasterMiniApp } = useFarcasterContext();
   const { shareToFarcaster, isSharing } = useFarcasterShare();
 
+  const router = useRouter();
   const [isExporting, setIsExporting] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [backendAvailable, setBackendAvailable] = useState(false);
@@ -318,7 +320,7 @@ export function EditorHeader() {
               </div>
             </DropdownMenuItem>
             
-            <DropdownMenuItem onClick={() => window.location.href = "/templates"} className="rounded-xl p-3">
+            <DropdownMenuItem onClick={() => router.push("/templates")} className="rounded-xl p-3">
               <Video className="h-4 w-4 mr-3 text-primary" />
               <div className="flex flex-col">
                 <span className="font-bold text-sm">Templates</span>

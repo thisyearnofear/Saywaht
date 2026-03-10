@@ -411,7 +411,7 @@ export function PreviewPanel({
         onClick={() => (controlsAreOverlay || showOverlayControls) && setShowOverlayControls(true)}
       >
         <div
-          className={cn("flex items-center justify-center flex-1", fillContainer && "w-full h-full")}
+          className={cn("flex items-center justify-center flex-1 w-full h-full", fillContainer && "w-full h-full")}
           style={{
             zoom: previewZoom,
             transformOrigin: "center",
@@ -429,12 +429,14 @@ export function PreviewPanel({
               height: "100%",
             } : {
               aspectRatio: aspectRatio.toString(),
-              width: "auto",
-              height: "auto",
               maxWidth: "100%",
               maxHeight: "100%",
-              minWidth: "100px",
-              minHeight: "100px",
+              // For portrait (aspect < 1): constrain by height, derive width
+              // For landscape/square (aspect >= 1): constrain by width, derive height
+              width: aspectRatio < 1 ? `calc(100% * ${aspectRatio})` : "100%",
+              height: aspectRatio < 1 ? "100%" : `calc(100% / ${aspectRatio})`,
+              minWidth: "120px",
+              minHeight: "120px",
             }}
           >
             {activeClips.length === 0 ? (
