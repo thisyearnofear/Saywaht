@@ -1,6 +1,7 @@
-# Netlify configuration for Next.js (via @netlify/plugin-nextjs)
-# The plugin handles SSR, correct MIME types for _next/static assets,
+# Netlify configuration for Next.js (via OpenNext adapter)
+# The adapter handles SSR, correct MIME types for _next/static assets,
 # and routing — no manual redirects or Content-Type headers needed.
+# Note: Do not pin @netlify/plugin-nextjs — let Netlify auto-apply the latest adapter.
 [build]
   command = "cd ../.. && npm install --omit=optional && cd apps/web && npm run build"
   publish = ".next"
@@ -26,6 +27,3 @@
   for = "/_next/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"

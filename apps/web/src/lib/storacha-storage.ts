@@ -1,158 +1,145 @@
 /**
- * Storacha SDK Integration
- * Decentralized storage for captions, transcripts, and metadata
- * Lightweight add-on for permanent content archiving
+ * Storacha Storage Service
+ * Permanent decentralized storage for captions, transcripts, and metadata
+ * Uses UCAN-based authorization with proper key management
  */
 
+import { create } from '@storacha/client'
+import { Signer } from '@storacha/client/principal/ed25519'
+import { StoreMemory } from '@storacha/client/stores/memory'
+import type { Client } from '@storacha/client'
+
 export interface StorachaConfig {
-  privateKey?: string;
-  delegation?: string;
-  gatewayUrl?: string;
+  privateKey?: string
+  gatewayUrl?: string
 }
 
 export interface StorachaUploadResult {
-  cid: string;
-  url: string;
-  gatewayUrl: string;
-  size: number;
+  cid: string
+  url: string
+  gatewayUrl: string
+  size: number
 }
 
-export interface StorachaCaptionPackage {
-  transcript: string;
-  segments: Array<{
-    text: string;
-    start: number;
-    end: number;
-  }>;
-  language: string;
-  generatedAt: string;
-  wordCount: number;
+export interface CaptionData {
+  transcript: string
+  segments: Array<{ text: string; start: number; end: number }>
+  language: string
 }
 
-export interface StorachaVideoMetadata {
-  title: string;
-  description?: string;
-  duration: number;
-  resolution?: string;
-  format: string;
-  createdAt: string;
-  tags?: string[];
-  captionCid?: string;
-  videoCid?: string;
+export interface VideoMetadata {
+  title: string
+  description?: string
+  duration: number
+  resolution?: string
+  format: string
+  tags?: string[]
+}
+
+export interface ContentPackage {
+  video: StorachaUploadResult
+  captions: StorachaUploadResult
+  metadata: StorachaUploadResult
+  contentIndex: StorachaUploadResult
 }
 
 /**
  * Storacha Storage Service
- * Provides permanent, decentralized storage for creator content
- * Perfect for storing captions, transcripts, and video metadata
+ * Provides permanent, decentralized storage using UCAN authorization
  */
 export class StorachaStorageService {
-  private client: any = null;
-  private config: StorachaConfig;
-  private isInitialized = false;
+  private client: Client | null = null
+  private config: Required<Omit<StorachaConfig, 'privateKey'>> & { privateKey?: string }
 
   constructor(config: StorachaConfig = {}) {
     this.config = {
-      gatewayUrl: 'https://w3s.link',
-      ...config
-    };
-  }
-
-  /**
-   * Initialize the Storacha client
-   */
-  async initialize(): Promise<void> {
-    if (this.isInitialized) return;
-    if (typeof window === 'undefined') return;
-
-    try {
-      // Dynamically import to avoid SSR issues
-      const { create } = await import('@storacha/client');
-      this.client = await create();
-      
-      // Note: Delegation handling requires additional setup with the new @storacha/client API
-      // For now, we'll use the default client which connects to the Storacha network
-      if (this.config.delegation) {
-        console.warn(
-          "Storacha delegation is not yet supported with the new @storacha/client API"
-        );
-      }
-
-      this.isInitialized = true;
-    } catch (error) {
-      console.error('❌ Storacha initialization failed:', error);
-      throw error;
+      gatewayUrl: config.gatewayUrl || 'https://w3s.link',
+      privateKey: config.privateKey
     }
   }
 
   /**
-   * Check if Storacha is available (configured)
+   * Initialize Storacha client with private key authentication
+   * Server-side only - frontend should use delegated capabilities
    */
-  isAvailable(): boolean {
-    return this.isInitialized || !!this.config.privateKey;
+  async initialize(): Promise<void> {
+    if (this.client) return
+    if (typeof window !== 'undefined') {
+      throw new Error('Storacha client initialization is server-side only')
+    }
+
+    if (!this.config.privateKey) {
+      throw new Error('STORACHA_PRIVATE_KEY required for server-side operations')
+    }
+
+    try {
+      const principal = Signer.parse(this.config.privateKey)
+      const store = new StoreMemory()
+      this.client = await create({ principal, store })
+    } catch (error) {
+      console.error('Storacha initialization failed:', error)
+      throw new Error('Failed to initialize Storacha client')
+    }
   }
 
   /**
-   * Store caption transcript and segments permanently
-   * Creates a JSON package with all caption data
+   * Check if Storacha is configured and available
+   */
+  isAvailable(): boolean {
+    return typeof window === 'undefined' && !!this.config.privateKey
+  }
+
+  /**
+   * Store caption transcript permanently
    */
   async storeCaptions(
     transcript: string,
     segments: Array<{ text: string; start: number; end: number }>,
     language: string = 'en'
   ): Promise<StorachaUploadResult> {
-    await this.initialize();
+    await this.initialize()
 
     if (!this.client) {
-      throw new Error('Storacha client not initialized');
+      throw new Error('Storacha client not initialized')
     }
 
-    const packageData: StorachaCaptionPackage = {
+    const captionPackage = {
       transcript,
       segments,
       language,
       generatedAt: new Date().toISOString(),
-      wordCount: transcript.split(/\s+/).length
-    };
+      wordCount: transcript.split(/\s+/).length,
+      platform: 'saywaht'
+    }
 
-    console.log('📝 Storing captions to Storacha...');
+    const blob = new Blob([JSON.stringify(captionPackage, null, 2)], {
+      type: 'application/json'
+    })
 
-    try {
-      const blob = new Blob([JSON.stringify(packageData, null, 2)], {
-        type: 'application/json'
-      });
+    const file = new File([blob], `captions-${Date.now()}.json`, {
+      type: 'application/json'
+    })
 
-      const file = new File([blob], `captions-${Date.now()}.json`, {
-        type: 'application/json'
-      });
+    const cid = await this.client.uploadFile(file)
 
-      const cid = await this.client.uploadFile(file);
-      
-      const result: StorachaUploadResult = {
-        cid: cid.toString(),
-        url: `ipfs://${cid}`,
-        gatewayUrl: `${this.config.gatewayUrl}/ipfs/${cid}`,
-        size: blob.size
-      };
-
-      console.log(`✅ Captions stored on Storacha: ${result.cid}`);
-      
-      return result;
-    } catch (error) {
-      console.error('❌ Storacha caption upload failed:', error);
-      throw error;
+    return {
+      cid: cid.toString(),
+      url: `ipfs://${cid}`,
+      gatewayUrl: `${this.config.gatewayUrl}/ipfs/${cid}`,
+      size: blob.size
     }
   }
 
   /**
-   * Store video metadata as a permanent record
-   * Links to video CID and caption CID for complete archiving
+   * Store video metadata as permanent record
    */
-  async storeVideoMetadata(metadata: StorachaVideoMetadata): Promise<StorachaUploadResult> {
-    await this.initialize();
+  async storeVideoMetadata(
+    metadata: VideoMetadata & { videoCid?: string; captionCid?: string }
+  ): Promise<StorachaUploadResult> {
+    await this.initialize()
 
     if (!this.client) {
-      throw new Error('Storacha client not initialized');
+      throw new Error('Storacha client not initialized')
     }
 
     const metadataWithTimestamp = {
@@ -160,82 +147,52 @@ export class StorachaStorageService {
       storedAt: new Date().toISOString(),
       platform: 'saywaht',
       type: 'video-metadata'
-    };
+    }
 
-    console.log('📄 Storing video metadata to Storacha...');
+    const blob = new Blob([JSON.stringify(metadataWithTimestamp, null, 2)], {
+      type: 'application/json'
+    })
 
-    try {
-      const blob = new Blob([JSON.stringify(metadataWithTimestamp, null, 2)], {
-        type: 'application/json'
-      });
+    const filename = `metadata-${metadata.title.replace(/\s+/g, '-').toLowerCase()}.json`
+    const file = new File([blob], filename, { type: 'application/json' })
 
-      const file = new File([blob], `metadata-${metadata.title.replace(/\s+/g, '-')}.json`, {
-        type: 'application/json'
-      });
+    const cid = await this.client.uploadFile(file)
 
-      const cid = await this.client.uploadFile(file);
-      
-      const result: StorachaUploadResult = {
-        cid: cid.toString(),
-        url: `ipfs://${cid}`,
-        gatewayUrl: `${this.config.gatewayUrl}/ipfs/${cid}`,
-        size: blob.size
-      };
-
-      console.log(`✅ Metadata stored on Storacha: ${result.cid}`);
-      
-      return result;
-    } catch (error) {
-      console.error('❌ Storacha metadata upload failed:', error);
-      throw error;
+    return {
+      cid: cid.toString(),
+      url: `ipfs://${cid}`,
+      gatewayUrl: `${this.config.gatewayUrl}/ipfs/${cid}`,
+      size: blob.size
     }
   }
 
   /**
-   * Store a complete content package: video, captions, and metadata
-   * This creates a permanent, verifiable archive of creator content
+   * Store complete content package: video, captions, and metadata
+   * Creates permanent, verifiable archive with content index
    */
   async storeContentPackage(
     videoFile: File,
-    captions: {
-      transcript: string;
-      segments: Array<{ text: string; start: number; end: number }>;
-      language: string;
-    },
-    metadata: Omit<StorachaVideoMetadata, 'captionCid' | 'videoCid' | 'createdAt'>,
-    onProgress?: (phase: 'video' | 'captions' | 'metadata', progress: number) => void
-  ): Promise<{
-    video: StorachaUploadResult;
-    captions: StorachaUploadResult;
-    metadata: StorachaUploadResult;
-    contentIndex: StorachaUploadResult;
-  }> {
-    onProgress?.('video', 0);
+    captions: CaptionData,
+    metadata: Omit<VideoMetadata, 'videoCid' | 'captionCid'>
+  ): Promise<ContentPackage> {
+    // Upload video
+    const videoResult = await this.uploadFile(videoFile)
 
-    // 1. Upload video
-    const videoResult = await this.uploadFile(videoFile);
-    onProgress?.('video', 100);
-
-    onProgress?.('captions', 0);
-    // 2. Upload captions
+    // Upload captions
     const captionResult = await this.storeCaptions(
       captions.transcript,
       captions.segments,
       captions.language
-    );
-    onProgress?.('captions', 100);
+    )
 
-    onProgress?.('metadata', 0);
-    // 3. Upload metadata with references
+    // Upload metadata with references
     const metadataResult = await this.storeVideoMetadata({
       ...metadata,
-      createdAt: new Date().toISOString(),
       videoCid: videoResult.cid,
       captionCid: captionResult.cid
-    });
-    onProgress?.('metadata', 50);
+    })
 
-    // 4. Create content index that ties everything together
+    // Create content index
     const contentIndex = {
       title: metadata.title,
       description: metadata.description,
@@ -243,143 +200,68 @@ export class StorachaStorageService {
       platform: 'saywaht',
       type: 'content-package',
       assets: {
-        video: {
-          cid: videoResult.cid,
-          url: videoResult.url,
-          gatewayUrl: videoResult.gatewayUrl,
-          size: videoResult.size
-        },
-        captions: {
-          cid: captionResult.cid,
-          url: captionResult.url,
-          gatewayUrl: captionResult.gatewayUrl,
-          size: captionResult.size
-        },
-        metadata: {
-          cid: metadataResult.cid,
-          url: metadataResult.url,
-          gatewayUrl: metadataResult.gatewayUrl,
-          size: metadataResult.size
-        }
+        video: { cid: videoResult.cid, size: videoResult.size },
+        captions: { cid: captionResult.cid, size: captionResult.size },
+        metadata: { cid: metadataResult.cid, size: metadataResult.size }
       }
-    };
+    }
 
     const indexBlob = new Blob([JSON.stringify(contentIndex, null, 2)], {
       type: 'application/json'
-    });
+    })
     const indexFile = new File([indexBlob], `index-${Date.now()}.json`, {
       type: 'application/json'
-    });
-    const indexCid = await this.client.uploadFile(indexFile);
-    
+    })
+    const indexCid = await this.client!.uploadFile(indexFile)
+
     const indexResult: StorachaUploadResult = {
       cid: indexCid.toString(),
       url: `ipfs://${indexCid}`,
       gatewayUrl: `${this.config.gatewayUrl}/ipfs/${indexCid}`,
       size: indexBlob.size
-    };
-
-    onProgress?.('metadata', 100);
-
-    console.log('✅ Complete content package stored on Storacha');
-    console.log(`   Video: ${videoResult.cid}`);
-    console.log(`   Captions: ${captionResult.cid}`);
-    console.log(`   Metadata: ${metadataResult.cid}`);
-    console.log(`   Index: ${indexResult.cid}`);
+    }
 
     return {
       video: videoResult,
       captions: captionResult,
       metadata: metadataResult,
       contentIndex: indexResult
-    };
+    }
   }
 
   /**
-   * Upload any file to Storacha
+   * Upload file to Storacha
    */
   async uploadFile(file: File): Promise<StorachaUploadResult> {
-    await this.initialize();
+    await this.initialize()
 
     if (!this.client) {
-      throw new Error('Storacha client not initialized');
+      throw new Error('Storacha client not initialized')
     }
 
-    console.log(`📤 Uploading ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB) to Storacha...`);
+    const cid = await this.client.uploadFile(file)
 
-    try {
-      const cid = await this.client.uploadFile(file);
-      
-      const result: StorachaUploadResult = {
-        cid: cid.toString(),
-        url: `ipfs://${cid}`,
-        gatewayUrl: `${this.config.gatewayUrl}/ipfs/${cid}`,
-        size: file.size
-      };
-
-      console.log(`✅ File stored on Storacha: ${result.cid}`);
-      
-      return result;
-    } catch (error) {
-      console.error('❌ Storacha upload failed:', error);
-      throw error;
+    return {
+      cid: cid.toString(),
+      url: `ipfs://${cid}`,
+      gatewayUrl: `${this.config.gatewayUrl}/ipfs/${cid}`,
+      size: file.size
     }
   }
 
   /**
-   * Upload a directory/folder of files
+   * Get gateway URL for CID retrieval
    */
-  async uploadDirectory(files: File[]): Promise<StorachaUploadResult> {
-    await this.initialize();
-
-    if (!this.client) {
-      throw new Error('Storacha client not initialized');
-    }
-
-    console.log(`📤 Uploading ${files.length} files to Storacha...`);
-
-    try {
-      const cid = await this.client.uploadDirectory(files);
-      
-      const totalSize = files.reduce((sum, f) => sum + f.size, 0);
-      
-      const result: StorachaUploadResult = {
-        cid: cid.toString(),
-        url: `ipfs://${cid}`,
-        gatewayUrl: `${this.config.gatewayUrl}/ipfs/${cid}`,
-        size: totalSize
-      };
-
-      console.log(`✅ Directory stored on Storacha: ${result.cid}`);
-      
-      return result;
-    } catch (error) {
-      console.error('❌ Storacha directory upload failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Retrieve content from Storacha via gateway
-   */
-  async retrieve(cid: string): Promise<Response> {
-    const url = `${this.config.gatewayUrl}/ipfs/${cid}`;
-    return fetch(url);
-  }
-
-  /**
-   * Get the gateway URL for a CID
-   */
-  getUrl(cid: string): string {
-    return `${this.config.gatewayUrl}/ipfs/${cid}`;
+  getGatewayUrl(cid: string): string {
+    return `${this.config.gatewayUrl}/ipfs/${cid}`
   }
 }
 
-// Export singleton instance
-export const storachaStorage = new StorachaStorageService();
+// Export singleton instance for server-side use
+export const storachaStorage = new StorachaStorageService()
 
 /**
- * Quick convenience functions
+ * Convenience functions for common operations
  */
 
 export async function storeCaptionsToStoracha(
@@ -387,24 +269,11 @@ export async function storeCaptionsToStoracha(
   segments: Array<{ text: string; start: number; end: number }>,
   language: string = 'en'
 ): Promise<StorachaUploadResult> {
-  return storachaStorage.storeCaptions(transcript, segments, language);
+  return storachaStorage.storeCaptions(transcript, segments, language)
 }
 
 export async function storeMetadataToStoracha(
-  metadata: StorachaVideoMetadata
+  metadata: VideoMetadata & { videoCid?: string; captionCid?: string }
 ): Promise<StorachaUploadResult> {
-  return storachaStorage.storeVideoMetadata(metadata);
-}
-
-export async function storeContentPackageToStoracha(
-  videoFile: File,
-  captions: {
-    transcript: string;
-    segments: Array<{ text: string; start: number; end: number }>;
-    language: string;
-  },
-  metadata: Omit<StorachaVideoMetadata, 'captionCid' | 'videoCid' | 'createdAt'>,
-  onProgress?: (phase: 'video' | 'captions' | 'metadata', progress: number) => void
-) {
-  return storachaStorage.storeContentPackage(videoFile, captions, metadata, onProgress);
+  return storachaStorage.storeVideoMetadata(metadata)
 }
