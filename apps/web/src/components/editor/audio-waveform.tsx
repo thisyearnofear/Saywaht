@@ -10,8 +10,9 @@ import { useEffect, useRef, useState } from "react";
  * Following Core Principles: minimal, performant, clean.
  */
 
-// Lazy-load WaveSurfer
-let WaveSurfer: typeof import("wavesurfer.js").default | null = null;
+// Lazy-load WaveSurfer - use type assertion for dynamic import
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let WaveSurfer: any = null;
 
 interface AudioWaveformProps {
   audioUrl: string;
@@ -25,7 +26,7 @@ export function AudioWaveform({
   className = "",
 }: AudioWaveformProps) {
   const waveformRef = useRef<HTMLDivElement>(null);
-  const wavesurfer = useRef<WaveSurfer | null>(null);
+  const wavesurfer = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -75,7 +76,7 @@ export function AudioWaveform({
           }
         });
 
-        ws.on("error", (err) => {
+        ws.on("error", (err: unknown) => {
           if (mounted) {
             console.error("WaveSurfer error:", err);
             setError(true);
@@ -84,7 +85,7 @@ export function AudioWaveform({
         });
 
         await ws.load(audioUrl);
-      } catch (err) {
+      } catch (err: unknown) {
         if (mounted) {
           console.error("Failed to initialize WaveSurfer:", err);
           setError(true);
