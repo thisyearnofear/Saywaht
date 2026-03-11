@@ -30,6 +30,7 @@ interface TemplateStore {
 
   // Actions
   fetchCategories: () => Promise<void>;
+  setCategories: (categories: TemplateCategory[]) => void; // NEW: Server-side hydration
   selectTemplate: (templateId: string) => Promise<void>;
   setSelectedTemplate: (template: Template) => void;
   clearSelectedTemplate: () => void;
@@ -69,6 +70,13 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
         isLoading: false
       });
     }
+  },
+
+  /**
+   * Server-side hydration of categories
+   */
+  setCategories: (categories) => {
+    set({ categories });
   },
 
   /**

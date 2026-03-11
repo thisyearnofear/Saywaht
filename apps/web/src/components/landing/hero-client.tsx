@@ -8,7 +8,7 @@ import { useAccount } from "wagmi";
 import { MobileWalletConnect } from "@/components/mobile-wallet-connect";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-export function Hero() {
+export function HeroClient() {
   const { isConnected } = useAccount();
   const isMobile = useIsMobile();
 

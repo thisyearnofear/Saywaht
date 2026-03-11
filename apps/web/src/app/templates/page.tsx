@@ -1,92 +1,9 @@
-"use client";
+import { TemplatesPageClient } from "@/components/templates/templates-page-client";
+import { fetchTemplateCategories } from "@/lib/template-service";
 
-import React from "react";
-import { TemplateBrowser } from "@/components/templates/template-browser";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { Header } from "@/components/header";
-import { ArrowLeft, Layers, Sparkles, Zap } from "@/lib/icons";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
+export default async function TemplatesPage() {
+  // Server-side data fetching
+  const categories = await fetchTemplateCategories();
 
-export default function TemplatesPage() {
-  const router = useRouter();
-  const isMobile = useIsMobile();
-
-  return (
-    <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden">
-      {!isMobile && <Header />}
-
-      <main className={cn(
-        "flex-1 flex flex-col overflow-y-auto touch-manipulation bg-muted/10 relative",
-        isMobile ? "pb-0" : "md:pb-12"
-      )}>
-        {/* Main Content - Compact for mobile */}
-        <div className={cn(
-          "relative container max-w-7xl mx-auto flex-1",
-          isMobile ? "px-0 py-0" : "px-3 py-4 md:py-12"
-        )}>
-          {/* Header Section - Compact */}
-          {!isMobile && (
-            <div className="flex flex-col md:flex-row items-center justify-between mb-6 md:mb-12 gap-4">
-              <div className="flex flex-col items-center md:items-start text-center md:text-left w-full">
-                <Button
-                  onClick={() => router.back()}
-                  variant="ghost"
-                  size="sm"
-                  className="mb-2 -ml-1 text-muted-foreground hover:text-foreground text-sm"
-                >
-                  <ArrowLeft className="mr-1 h-3 w-3" />
-                  Back
-                </Button>
-                <h1 className="text-2xl md:text-5xl font-bold tracking-tight mb-2">
-                  Choose a{" "}
-                  <span className="gradient-text">
-                    Template
-                  </span>
-                </h1>
-                <p className="text-sm md:text-lg text-muted-foreground max-w-xl">
-                  Jumpstart your creativity with professionally designed templates.
-                </p>
-              </div>
-
-              {/* Quick Stats - Hidden on very small screens */}
-              <div className="hidden sm:grid grid-cols-3 gap-2 md:gap-4 w-full md:w-auto">
-                <div className="glass rounded-lg md:rounded-xl p-2 md:p-4 flex flex-col items-center justify-center text-center">
-                  <Layers className="h-3 w-3 md:h-4 md:w-4 text-primary mb-1" />
-                  <div className="text-sm md:text-xl font-bold">12+</div>
-                  <div className="text-[8px] md:text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Layouts</div>
-                </div>
-                <div className="glass rounded-lg md:rounded-xl p-2 md:p-4 flex flex-col items-center justify-center text-center">
-                  <Sparkles className="h-3 w-3 md:h-4 md:w-4 text-accent mb-1" />
-                  <div className="text-sm md:text-xl font-bold">HD</div>
-                  <div className="text-[8px] md:text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Quality</div>
-                </div>
-                <div className="glass rounded-lg md:rounded-xl p-2 md:p-4 flex flex-col items-center justify-center text-center">
-                  <Zap className="h-3 w-3 md:h-4 md:w-4 text-yellow-500 mb-1" />
-                  <div className="text-sm md:text-xl font-bold">1-Click</div>
-                  <div className="text-[8px] md:text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Minting</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Template Browser Container */}
-          <div className={cn(
-            "bg-card/30 backdrop-blur-sm border border-border/50 shadow-2xl",
-            isMobile ? "rounded-none border-none h-full" : "rounded-2xl p-1 md:p-8"
-          )}>
-            <TemplateBrowser />
-          </div>
-
-          {/* Footer Note */}
-          {!isMobile && (
-            <div className="mt-12 text-center text-sm text-muted-foreground">
-              <p>Don&apos;t see what you&apos;re looking for? Start from <Button variant="link" className="p-0 h-auto text-primary" onClick={() => router.push('/editor')}>scratch</Button>.</p>
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
-  );
+  return <TemplatesPageClient initialCategories={categories} />;
 }

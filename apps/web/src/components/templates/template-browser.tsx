@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useTemplateStore } from "@/stores/template-store";
@@ -10,19 +10,18 @@ import { Input } from "@/components/ui/input";
 import { pexelsService, PexelsVideo, getPreferredPexelsVideoFile } from "@/services/pexels-service";
 import { Loader2, Search, ExternalLink, Image as ImageIcon, Video } from "@/lib/icons";
 import { toast } from "sonner";
-import { useMediaStore } from "@/stores/media-store";
-import { useProjectStore } from "@/stores/project-store";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileTemplateBrowser } from "./mobile-template-browser";
 import { resolveIpfsUrl, cn } from "@/lib/utils";
-import { useTimelineStore } from "@/stores/timeline-store";
-import { usePlaybackStore } from "@/stores/playback-store";
-import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
-import { useSceneStore } from "@/stores/scene-store";
-import { startTemplateFlowMeasurement } from "@/lib/template-performance";
+import { TemplateCategory } from "@/lib/types";
+import { canvasPresets } from "@/stores/canvas-store";
 
-export function TemplateBrowser() {
-  const { categories, isLoading, error, fetchCategories, recentTemplates } = useTemplateStore();
+interface TemplateBrowserProps {
+  initialCategories?: TemplateCategory[];
+}
+
+export function TemplateBrowser({ initialCategories }: TemplateBrowserProps) {
+  const store = useTemplateStore();
   const [mainTab, setMainTab] = useState<"packs" | "stock">("packs");
   const [searchQuery, setSearchQuery] = useState("");
   const [pexelsResults, setPexelsResults] = useState<PexelsVideo[]>([]);
@@ -30,10 +29,21 @@ export function TemplateBrowser() {
   const router = useRouter();
   const isMobile = useIsMobile();
 
+  const categories = initialCategories || store.categories;
+  const isLoading = store.isLoading;
+  const error = store.error;
+  const fetchCategories = store.fetchCategories;
 
+
+  // Use server-fetched categories if available, otherwise fetch from store
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    if (initialCategories && initialCategories.length > 0) {
+      // Hydrate the store with server-fetched categories
+      store.setCategories(initialCategories);
+    } else if (store.categories.length === 0) {
+      store.fetchCategories();
+    }
+  }, [initialCategories, store]);
 
   // Handle Pexels search
   // Fix #3: gate on mainTab so we don't fire a Pexels request when the user
@@ -76,14 +86,29 @@ export function TemplateBrowser() {
   }, [searchQuery, mainTab]);
 
 
-  const handleUsePexelsVideo = (video: PexelsVideo) => {
+  const handleUsePexelsVideo = async (video: PexelsVideo) => {
+    // Lazy-load editor stores only when user clicks "Use this video"
+    const [{ useMediaStore }, { useProjectStore }, { useTimelineStore }, { usePlaybackStore }, { useCanvasStore }, { useSceneStore }] = await Promise.all([
+      import("@/stores/media-store"),
+      import("@/stores/project-store"),
+      import("@/stores/timeline-store"),
+      import("@/stores/playback-store"),
+      import("@/stores/canvas-store"),
+      import("@/stores/scene-store"),
+    ]);
+
     const { addMediaItem, clearAllMedia } = useMediaStore.getState();
     const { createNewProject } = useProjectStore.getState();
     const { addTrack, addClipToTrack, setTracks } = useTimelineStore.getState();
     const { setCurrentTime, pause } = usePlaybackStore.getState();
+    const { setCanvasPreset } = useCanvasStore.getState();
+    const { initializeScenes } = useSceneStore.getState();
 
     const bestFile = getPreferredPexelsVideoFile(video);
     const mediaId = `pexels-${video.id}`;
+    
+    // Import measurement utility
+    const { startTemplateFlowMeasurement } = await import("@/lib/template-performance");
     startTemplateFlowMeasurement({
       templateId: mediaId,
       source: "stock-video",
@@ -121,14 +146,12 @@ export function TemplateBrowser() {
 
     // 5. Initialize canvas size based on video aspect ratio
     const videoAspectRatio = video.width / video.height;
-    const { setCanvasPreset } = useCanvasStore.getState();
     const preset = canvasPresets.reduce((prev, curr) => {
       return (Math.abs(curr.aspectRatio - videoAspectRatio) < Math.abs(prev.aspectRatio - videoAspectRatio) ? curr : prev);
     });
     setCanvasPreset(preset);
 
     // 6. Initialize scenes immediately
-    const { initializeScenes } = useSceneStore.getState();
     const updatedProject = useProjectStore.getState().activeProject;
     if (updatedProject) {
       initializeScenes(updatedProject.scenes || [], updatedProject.currentSceneId);
