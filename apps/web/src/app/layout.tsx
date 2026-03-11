@@ -4,7 +4,7 @@ import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { Toaster } from "../components/ui/sonner";
 import { TooltipProvider } from "../components/ui/tooltip";
-import { Web3Provider } from "@/components/wagmi-provider";
+import { Web3ProviderLazy } from "@/components/web3-provider-lazy";
 import { MobileProvider } from "@/contexts/mobile-context";
 import { FarcasterProvider } from "@/farcaster/components/farcaster-provider";
 import { PerformanceTracker } from "@/components/performance-tracker";
@@ -103,7 +103,7 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`} style={{ backgroundColor: "#09090b" }}>
-        <Web3Provider>
+        <Web3ProviderLazy>
           <ThemeProvider attribute="class" forcedTheme="dark" enableSystem>
             <MobileProvider>
               <FarcasterProvider>
@@ -116,7 +116,7 @@ export default function RootLayout({
               </FarcasterProvider>
             </MobileProvider>
           </ThemeProvider>
-        </Web3Provider>
+        </Web3ProviderLazy>
       </body>
     </html>
   );
