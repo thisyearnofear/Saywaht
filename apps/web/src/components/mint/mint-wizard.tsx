@@ -205,8 +205,8 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   // Trigger celebration when deployment is complete
   useEffect(() => {
     if (wizardData.deployedCoin) {
-      const timer = setTimeout(() => {
-        triggerCelebration();
+      const timer = setTimeout(async () => {
+        await triggerCelebration();
       }, 500);
 
       return () => clearTimeout(timer);

@@ -1,9 +1,24 @@
-import confetti from 'canvas-confetti';
+import type confetti from 'canvas-confetti';
+
+/**
+ * Lazy-load confetti to avoid shipping 30KB on initial bundle
+ * Only loads when celebration is actually triggered
+ */
+let confettiInstance: typeof confetti | null = null;
+
+async function getConfetti() {
+  if (!confettiInstance) {
+    confettiInstance = (await import('canvas-confetti')).default;
+  }
+  return confettiInstance;
+}
 
 /**
  * Trigger a celebration confetti animation
  */
-export function triggerCelebration() {
+export async function triggerCelebration() {
+  const confetti = await getConfetti();
+  
   // First burst from the left
   confetti({
     particleCount: 100,
@@ -36,7 +51,9 @@ export function triggerCelebration() {
 /**
  * Trigger a coin-themed confetti animation
  */
-export function triggerCoinCelebration() {
+export async function triggerCoinCelebration() {
+  const confetti = await getConfetti();
+  
   // Create custom coin-like shapes
   const coinShape = confetti.shapeFromText({ text: '🪙', scalar: 2 });
   const starShape = confetti.shapeFromText({ text: '⭐', scalar: 1.5 });
@@ -74,7 +91,8 @@ export function triggerCoinCelebration() {
 /**
  * Trigger a subtle success animation
  */
-export function triggerSuccessConfetti() {
+export async function triggerSuccessConfetti() {
+  const confetti = await getConfetti();
   confetti({
     particleCount: 50,
     spread: 45,

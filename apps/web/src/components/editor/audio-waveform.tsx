@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import WaveSurfer from "wavesurfer.js";
 
 /**
  * Audio Waveform Component
  * 
  * Visualizes audio clips on timeline using WaveSurfer.js
- * Simplified from upstream - only essential features.
+ * Lazy-loads WaveSurfer to avoid shipping 150KB on initial bundle
  * Following Core Principles: minimal, performant, clean.
  */
+
+// Lazy-load WaveSurfer
+let WaveSurfer: typeof import("wavesurfer.js").default | null = null;
 
 interface AudioWaveformProps {
   audioUrl: string;
@@ -34,6 +36,11 @@ export function AudioWaveform({
       if (!waveformRef.current || !audioUrl) return;
 
       try {
+        // Lazy-load WaveSurfer on first use
+        if (!WaveSurfer) {
+          WaveSurfer = (await import("wavesurfer.js")).default;
+        }
+
         // Clean up previous instance
         if (wavesurfer.current) {
           wavesurfer.current.destroy();

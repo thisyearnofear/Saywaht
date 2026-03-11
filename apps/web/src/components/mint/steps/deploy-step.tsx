@@ -154,7 +154,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
           coinAddress = predictedCoinAddress;
         }
 
-        triggerCoinCelebration();
+        await triggerCoinCelebration();
         toast.success("Coin deployed! 🎉");
 
         updateData({
