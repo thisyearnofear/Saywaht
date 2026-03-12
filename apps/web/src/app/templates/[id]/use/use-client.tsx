@@ -17,6 +17,7 @@ interface TemplateUseClientProps {
 export default function TemplateUseClient({ id }: TemplateUseClientProps) {
   const router = useRouter();
   const [projectName, setProjectName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
   const {
     selectedTemplate,
     isLoading,
@@ -88,8 +89,6 @@ export default function TemplateUseClient({ id }: TemplateUseClientProps) {
       </div>
     );
   }
-
-  const [isCreating, setIsCreating] = useState(false);
 
   const handleApplyTemplate = async () => {
     if (!selectedTemplate || isCreating) return;

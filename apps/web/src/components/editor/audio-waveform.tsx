@@ -11,7 +11,6 @@ import { useEffect, useRef, useState } from "react";
  */
 
 // Lazy-load WaveSurfer - use type assertion for dynamic import
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let WaveSurfer: any = null;
 
 interface AudioWaveformProps {

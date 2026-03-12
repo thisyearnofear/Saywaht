@@ -6,7 +6,7 @@ import type { NextRequest } from "next/server";
  * ENHANCEMENT: Centralized auth checks, redirects, request optimizations, and security headers
  */
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Create response and add security headers
