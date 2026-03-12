@@ -4,6 +4,40 @@ const FILECOIN_CALIBRATION_RPC =
   process.env.FILECOIN_CALIBRATION_RPC ||
   'https://api.calibration.node.glif.io/rpc/v1';
 
+const FILECOIN_PRIVATE_KEY_PLACEHOLDER_MARKERS = [
+  "your-filecoin-private-key",
+  "your_filecoin_private_key",
+  "placeholder",
+  "changeme",
+  "example",
+];
+
+export function normalizeAndValidateFilecoinPrivateKey(rawPrivateKey?: string): string {
+  if (!rawPrivateKey || !rawPrivateKey.trim()) {
+    throw new Error("FilCDN configuration error: FILECOIN_PRIVATE_KEY is missing.");
+  }
+
+  const trimmed = rawPrivateKey.trim();
+  const lowered = trimmed.toLowerCase();
+
+  if (FILECOIN_PRIVATE_KEY_PLACEHOLDER_MARKERS.some((marker) => lowered.includes(marker))) {
+    throw new Error(
+      "FilCDN configuration error: FILECOIN_PRIVATE_KEY is still a placeholder. " +
+      "Set a real 32-byte hex private key (64 hex chars, optionally prefixed with 0x)."
+    );
+  }
+
+  const normalized = trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(normalized)) {
+    throw new Error(
+      "FilCDN configuration error: FILECOIN_PRIVATE_KEY must be a valid 32-byte hex key " +
+      "(0x + 64 hex characters)."
+    );
+  }
+
+  return normalized;
+}
+
 export interface UploadResult {
   cid: string;
   filcdnUrl: string;
@@ -26,16 +60,14 @@ export class FilCDNService {
   }
 
   async initialize(): Promise<void> {
-    if (!this.config.privateKey) {
-      throw new Error('Private key is required for FilCDN operations');
-    }
+    const normalizedPrivateKey = normalizeAndValidateFilecoinPrivateKey(this.config.privateKey);
 
     try {
       console.log('🚀 Initializing FilCDN with Synapse SDK...');
       const { Synapse } = await import('@filoz/synapse-sdk');
       this.synapse = await Synapse.create({
         withCDN: true,
-        privateKey: this.config.privateKey,
+        privateKey: normalizedPrivateKey,
         rpcURL: FILECOIN_CALIBRATION_RPC,
       });
       console.log('✅ FilCDN Synapse SDK initialized');

@@ -110,8 +110,8 @@ export class ApiKeyManager {
   }
 
   static getFilecoinConfig(): { privateKey: string; walletAddress: string } {
-    const privateKey = process.env.FILECOIN_PRIVATE_KEY || process.env.NEXT_PUBLIC_FILECOIN_PRIVATE_KEY;
-    const walletAddress = process.env.FILECOIN_WALLET_ADDRESS || process.env.NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS;
+    const privateKey = process.env.FILECOIN_PRIVATE_KEY;
+    const walletAddress = process.env.FILECOIN_WALLET_ADDRESS;
     
     if (!privateKey || !walletAddress) {
       throw new Error('Filecoin configuration missing. Please set FILECOIN_PRIVATE_KEY and FILECOIN_WALLET_ADDRESS environment variables.');

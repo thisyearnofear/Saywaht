@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { FilCDNService } from "@/lib/filcdn";
+import { FilCDNService, normalizeAndValidateFilecoinPrivateKey } from "@/lib/filcdn";
 
 export async function POST(req: NextRequest) {
     try {
@@ -10,10 +10,19 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "No file provided" }, { status: 400 });
         }
 
-        const privateKey = process.env.FILECOIN_PRIVATE_KEY;
-        if (!privateKey) {
-            console.error("FILECOIN_PRIVATE_KEY is missing");
-            return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+        let privateKey: string;
+        try {
+            privateKey = normalizeAndValidateFilecoinPrivateKey(process.env.FILECOIN_PRIVATE_KEY);
+        } catch (configError) {
+            console.error("Invalid FILECOIN_PRIVATE_KEY configuration:", configError);
+            return NextResponse.json(
+                {
+                    error:
+                        "FilCDN configuration error: FILECOIN_PRIVATE_KEY must be a valid 32-byte hex key (0x + 64 hex chars) and not a placeholder.",
+                    success: false,
+                },
+                { status: 500 }
+            );
         }
 
         const service = new FilCDNService({
