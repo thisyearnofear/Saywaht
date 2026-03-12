@@ -72,7 +72,7 @@ export const metadata: Metadata = {
             type: "launch_frame",
             name: "Saywaht",
             url: `${baseUrl}/farcaster`,
-            splashImageUrl: `${baseUrl}/images/android-chrome-192x192.png`,
+            splashImageUrl: `${baseUrl}/images/android-chrome-512x512.png`,
             splashBackgroundColor: "#000000",
           },
         },
@@ -89,6 +89,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <head>
+        {/* ENHANCEMENT: Force branded first paint before CSS/JS hydration */}
+        <meta name="theme-color" content="#000000" />
+        <style>{`html, body { background: #000000 !important; }`}</style>
         {/* ENHANCEMENT: Improved viewport for mobile wallet compatibility */}
         {/* Removed user-scalable=no to prevent issues with wallet browsers */}
         <meta

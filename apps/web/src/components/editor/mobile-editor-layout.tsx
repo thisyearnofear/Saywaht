@@ -87,7 +87,7 @@ export function MobileEditorLayout({
   const { isFarcasterMiniApp } = useFarcasterContext();
   const { shareToFarcaster, isSharing } = useFarcasterShare();
   const { undo, redo, canUndo, canRedo } = useEditorHistory();
-  const { isApplying: isApplyingTemplate } = useTemplateStore();
+  const { isApplying: isApplyingTemplate, clearSelectedTemplate } = useTemplateStore();
   const { gatedPlay } = useMobilePlaybackGate();
   
   // Check for reduced motion preference
@@ -183,6 +183,15 @@ export function MobileEditorLayout({
       trackCount: tracks.length,
     });
   }, [hasTimelineClips, hasText, hasVoiceover, isFarcasterMiniApp, tracks.length]);
+
+  useEffect(() => {
+    // In mini-app flows we can already have a ready project/timeline while
+    // template apply flags lag behind; clear stale applying UI state.
+    if (isApplyingTemplate && activeProject && hasTimelineClips) {
+      clearSelectedTemplate();
+      toast.dismiss();
+    }
+  }, [isApplyingTemplate, activeProject, hasTimelineClips, clearSelectedTemplate]);
 
   const handleFinish = useCallback(async () => {
     addHapticFeedback("heavy");
@@ -419,7 +428,9 @@ export function MobileEditorLayout({
         <Drawer open={!!activeTool} onOpenChange={(open) => !open && setActiveTool(null)}>
           <DrawerContent className={cn(
             "bg-background border-white/10 flex flex-col transition-all duration-500",
-            activeTool === "record" ? "h-[45vh]" : "h-[75vh]"
+            activeTool === "record"
+              ? (isRecordingInProgress ? "h-[22vh]" : "h-[45vh]")
+              : "h-[75vh]"
           )}>
             <div className="flex-1 flex flex-col min-h-0">
               <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 shrink-0">
@@ -475,7 +486,7 @@ export function MobileEditorLayout({
         </Drawer>
 
         {/* Compact Timeline */}
-        {(activeTool === null || activeTool === "record") && (
+        {(activeTool === null || (activeTool === "record" && !isRecordingInProgress)) && (
           <div className="z-20 overflow-hidden border-t border-white/10 bg-background/95 shrink-0">
             <MobileTimeline compact />
           </div>

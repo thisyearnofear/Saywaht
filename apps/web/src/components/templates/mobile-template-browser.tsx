@@ -399,6 +399,7 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
       toast.dismiss(PEXELS_PREPARE_TOAST_ID);
       toast.error("Failed to load clip. Please check your connection.");
     } finally {
+      toast.dismiss(PEXELS_PREPARE_TOAST_ID);
       setIsApplying(null);
     }
   };
