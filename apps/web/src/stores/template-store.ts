@@ -130,7 +130,7 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
    * Clears the selected template
    */
   clearSelectedTemplate: () => {
-    set({ selectedTemplate: null });
+    set({ selectedTemplate: null, isApplying: false });
   },
 
   /**

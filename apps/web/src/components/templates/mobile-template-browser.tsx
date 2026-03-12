@@ -405,6 +405,8 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
 
   const handleUseTemplate = async (template: Template) => {
     setIsApplying(template.id);
+    // Dismiss any existing loading toasts before starting
+    toast.dismiss(PEXELS_PREPARE_TOAST_ID);
     try {
       startTemplateFlowMeasurement({
         templateId: template.id,
@@ -418,6 +420,8 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
       const success = await applySelectedTemplate();
       if (success) {
         clearSelectedTemplate();
+        // Dismiss any pending toasts before navigating to editor
+        toast.dismiss();
         if (onNavigateToEditor) onNavigateToEditor(); else router.push("/editor");
       } else {
         toast.error("Failed to load template. Please try again.");

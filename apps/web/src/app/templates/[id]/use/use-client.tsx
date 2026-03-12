@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Header } from "@/components/header";
 import { ArrowLeft, Layers, Sparkles, Mic } from "@/lib/icons";
+import { toast } from "sonner";
 
 interface TemplateUseClientProps {
   id: string;
@@ -99,6 +100,8 @@ export default function TemplateUseClient({ id }: TemplateUseClientProps) {
     const success = await applySelectedTemplate(projectName || selectedTemplate.name);
     if (success) {
       clearSelectedTemplate();
+      // Dismiss any pending toasts before navigating to editor
+      toast.dismiss();
       router.push("/editor");
     } else {
       setIsCreating(false);

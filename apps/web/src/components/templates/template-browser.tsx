@@ -21,7 +21,6 @@ interface TemplateBrowserProps {
 }
 
 export function TemplateBrowser({ initialCategories }: TemplateBrowserProps) {
-  const store = useTemplateStore();
   const [mainTab, setMainTab] = useState<"packs" | "stock">("packs");
   const [searchQuery, setSearchQuery] = useState("");
   const [pexelsResults, setPexelsResults] = useState<PexelsVideo[]>([]);
@@ -29,21 +28,22 @@ export function TemplateBrowser({ initialCategories }: TemplateBrowserProps) {
   const router = useRouter();
   const isMobile = useIsMobile();
 
-  const categories = initialCategories || store.categories;
-  const isLoading = store.isLoading;
-  const error = store.error;
-  const fetchCategories = store.fetchCategories;
-
+  const categories = useTemplateStore((state) => state.categories);
+  const isLoading = useTemplateStore((state) => state.isLoading);
+  const error = useTemplateStore((state) => state.error);
+  const fetchCategories = useTemplateStore((state) => state.fetchCategories);
+  const setCategories = useTemplateStore((state) => state.setCategories);
 
   // Use server-fetched categories if available, otherwise fetch from store
   useEffect(() => {
     if (initialCategories && initialCategories.length > 0) {
       // Hydrate the store with server-fetched categories
-      store.setCategories(initialCategories);
-    } else if (store.categories.length === 0) {
-      store.fetchCategories();
+      setCategories(initialCategories);
+      return;
     }
-  }, [initialCategories, store]);
+
+    fetchCategories();
+  }, [initialCategories, fetchCategories, setCategories]);
 
   // Handle Pexels search
   // Fix #3: gate on mainTab so we don't fire a Pexels request when the user
