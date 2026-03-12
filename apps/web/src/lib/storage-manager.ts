@@ -1,5 +1,6 @@
 import { groveStorage } from "./grove-storage";
-import { getFilCDNService } from "./filcdn";
+import { getFilCDNService, isFilCDNConfigured } from "./filcdn";
+import { requestDelegation, uploadFileToStoracha } from "./storacha-client";
 
 const filcdnStorage = getFilCDNService();
 
@@ -7,8 +8,9 @@ const filcdnStorage = getFilCDNService();
  * Unified Storage Manager
  * 
  * Provides a single interface for managing media storage across multiple providers:
- * - Grove (primary, 8MB limit)
- * - FilCDN (secondary, higher limits)
+ * - Grove (primary, up to 125MB)
+ * - Storacha (secondary warm storage for larger files)
+ * - FilCDN (optional, only when explicitly configured)
  * 
  * Features:
  * - Automatic provider selection based on file size
@@ -20,11 +22,12 @@ const filcdnStorage = getFilCDNService();
  */
 
 // Storage provider types
-export type StorageProvider = "grove" | "filcdn" | "ipfs" | "local";
+export type StorageProvider = "grove" | "storacha" | "filcdn" | "ipfs" | "local";
 
 // Storage limits by provider (in MB)
 export const STORAGE_LIMITS = {
-  grove: 8,
+  grove: 125,
+  storacha: 1024,
   filcdn: 254,
   ipfs: 50,
   local: 0, // No limit for local storage
@@ -521,8 +524,32 @@ class StorageManager {
                   provider: "grove",
                   optimized: false,
                 };
+
+              case "storacha":
+                const { delegation } = await requestDelegation();
+                const storachaResult = await uploadFileToStoracha(file, delegation);
+
+                return {
+                  url: storachaResult.gatewayUrl,
+                  ipfsUrl: storachaResult.url,
+                  gatewayUrl: storachaResult.gatewayUrl,
+                  metadataUrl: undefined,
+                  size: file.size / (1024 * 1024),
+                  provider: "storacha",
+                  optimized: false,
+                };
                 
               case "filcdn":
+                const filcdnStatus = await isFilCDNConfigured();
+                if (!filcdnStatus.configured) {
+                  throw createStorageError(
+                    "FilCDN is not configured. Configure Filecoin credentials or use Grove/Storacha.",
+                    StorageErrorType.AUTHENTICATION,
+                    "filcdn",
+                    false
+                  );
+                }
+
                 const filcdnResult = await filcdnStorage.uploadFile(file);
                 
                 return {
@@ -681,8 +708,8 @@ class StorageManager {
   }
 
   /**
-   * Archive exported video + captions to Filecoin (FilCDN via Synapse SDK).
-   * Stores media and a manifest for deterministic retrieval.
+   * Archive exported video + captions to decentralized storage.
+   * Uses Grove/Storacha by default; FilCDN is optional fallback when configured.
    */
   async archiveExportToFilecoin(params: {
     projectName: string;
@@ -702,8 +729,8 @@ class StorageManager {
     );
 
     const video = await this.uploadFile(videoFile, {
-      preferredProvider: "filcdn",
-      allowFallback: false,
+      preferredProvider: this.getBestProviderForFile(videoFile),
+      allowFallback: true,
       optimize: false,
       maxRetries: 2,
     });
@@ -723,8 +750,8 @@ class StorageManager {
       );
 
       transcript = await this.uploadFile(transcriptFile, {
-        preferredProvider: "filcdn",
-        allowFallback: false,
+        preferredProvider: "grove",
+        allowFallback: true,
         optimize: false,
         maxRetries: 2,
       });
@@ -759,8 +786,8 @@ class StorageManager {
     );
 
     const manifest = await this.uploadFile(manifestFile, {
-      preferredProvider: "filcdn",
-      allowFallback: false,
+      preferredProvider: "grove",
+      allowFallback: true,
       optimize: false,
       maxRetries: 2,
     });
@@ -793,7 +820,10 @@ class StorageManager {
     let fallbackProvider: StorageProvider;
     
     if (failedProvider === "grove") {
-      fallbackProvider = "filcdn";
+      fallbackProvider = "storacha";
+    } else if (failedProvider === "storacha") {
+      const filcdnStatus = await isFilCDNConfigured();
+      fallbackProvider = filcdnStatus.configured ? "filcdn" : "grove";
     } else if (failedProvider === "filcdn") {
       fallbackProvider = "grove";
     } else {
@@ -881,19 +911,21 @@ class StorageManager {
    */
   getBestProviderForFile(file: File): StorageProvider {
     const sizeMB = file.size / (1024 * 1024);
-    
+
     if (sizeMB <= STORAGE_LIMITS.grove) {
       return "grove";
-    } else if (sizeMB <= STORAGE_LIMITS.filcdn) {
-      return "filcdn";
-    } else {
-      // If file is too large for all providers, return the one with highest limit
-      const providers = Object.entries(STORAGE_LIMITS)
-        .filter(([_, limit]) => limit > 0)
-        .sort(([_, limitA], [__, limitB]) => limitB - limitA);
-      
-      return (providers[0]?.[0] as StorageProvider) || "local";
     }
+
+    if (sizeMB <= STORAGE_LIMITS.storacha) {
+      return "storacha";
+    }
+
+    // If file is too large for all providers, return the one with highest limit
+    const providers = Object.entries(STORAGE_LIMITS)
+      .filter(([_, limit]) => limit > 0)
+      .sort(([_, limitA], [__, limitB]) => limitB - limitA);
+
+    return (providers[0]?.[0] as StorageProvider) || "local";
   }
 }
 
