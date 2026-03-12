@@ -431,10 +431,10 @@ export function PreviewPanel({
               aspectRatio: aspectRatio.toString(),
               maxWidth: "100%",
               maxHeight: "100%",
-              // For portrait (aspect < 1): constrain by height, derive width
-              // For landscape/square (aspect >= 1): constrain by width, derive height
-              width: aspectRatio < 1 ? `calc(100% * ${aspectRatio})` : "100%",
-              height: aspectRatio < 1 ? "100%" : `calc(100% / ${aspectRatio})`,
+              // Let aspect-ratio compute the opposite dimension to avoid
+              // percentage-based collapse in resizable/flex containers.
+              width: aspectRatio < 1 ? "auto" : "100%",
+              height: aspectRatio < 1 ? "100%" : "auto",
               minWidth: "120px",
               minHeight: "120px",
             }}

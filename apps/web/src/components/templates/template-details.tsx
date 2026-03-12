@@ -102,7 +102,7 @@ export function TemplateDetails({ templateId }: TemplateDetailsProps) {
     // Fully await the async media-loading so the timeline is populated
     // before we navigate.  Clear the template afterwards so EditorProvider
     // doesn't attempt a second (duplicate) application.
-    const success = await applySelectedTemplate();
+    const success = await applySelectedTemplate(selectedTemplate.name);
     if (success) {
       clearSelectedTemplate();
       router.push("/editor");

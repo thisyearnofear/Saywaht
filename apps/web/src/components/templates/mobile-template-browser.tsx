@@ -417,7 +417,7 @@ export function MobileTemplateBrowser({ onNavigateToEditor, onBack }: MobileTemp
       // Use the already-loaded template object directly — avoids redundant network
       // fetches that break in Farcaster WebView (relative URLs resolve to wrong host)
       setSelectedTemplate(template);
-      const success = await applySelectedTemplate();
+      const success = await applySelectedTemplate(template.name);
       if (success) {
         clearSelectedTemplate();
         // Dismiss any pending toasts before navigating to editor
