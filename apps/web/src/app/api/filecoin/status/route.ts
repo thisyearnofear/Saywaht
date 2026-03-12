@@ -22,8 +22,8 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 export async function GET(_req: NextRequest) {
   try {
-    const privateKey = process.env.FILECOIN_PRIVATE_KEY;
-    const walletAddress = process.env.FILECOIN_WALLET_ADDRESS || null;
+    const privateKey = process.env["FILECOIN_PRIVATE_KEY"];
+    const walletAddress = process.env["FILECOIN_WALLET_ADDRESS"] || null;
 
     if (!privateKey) {
       console.log("FilCDN not configured - FILECOIN_PRIVATE_KEY missing");

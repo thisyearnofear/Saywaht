@@ -5,8 +5,8 @@ const FILECOIN_CALIBRATION_RPC =
   'https://api.calibration.node.glif.io/rpc/v1';
 
 const FILECOIN_PRIVATE_KEY_PLACEHOLDER_MARKERS = [
-  "your-filecoin-private-key",
-  "your_filecoin_private_key",
+  "your-private-key",
+  "your_private_key",
   "placeholder",
   "changeme",
   "example",

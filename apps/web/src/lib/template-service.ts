@@ -11,8 +11,13 @@ function assetUrl(path: string): string {
   if (typeof window !== "undefined") {
     return `${window.location.origin}${path}`;
   }
-  // SSR fallback — relative is fine on the server
-  return path;
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.URL ||
+    process.env.DEPLOY_PRIME_URL ||
+    "http://localhost:3000";
+
+  return `${appUrl.replace(/\/$/, "")}${path}`;
 }
 
 /**

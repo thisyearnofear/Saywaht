@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
         let privateKey: string;
         try {
-            privateKey = normalizeAndValidateFilecoinPrivateKey(process.env.FILECOIN_PRIVATE_KEY);
+            privateKey = normalizeAndValidateFilecoinPrivateKey(process.env["FILECOIN_PRIVATE_KEY"]);
         } catch (configError) {
             console.error("Invalid FILECOIN_PRIVATE_KEY configuration:", configError);
             return NextResponse.json(
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
         const service = new FilCDNService({
             privateKey,
-            walletAddress: process.env.FILECOIN_WALLET_ADDRESS
+            walletAddress: process.env["FILECOIN_WALLET_ADDRESS"]
         });
 
         await service.initialize();

@@ -42,8 +42,8 @@ export async function POST(req: NextRequest) {
 
     // Initialize storage service
     const storage = new FilecoinExportStorage({
-      privateKey: process.env.FILECOIN_PRIVATE_KEY,
-      walletAddress: process.env.FILECOIN_WALLET_ADDRESS
+      privateKey: process.env["FILECOIN_PRIVATE_KEY"],
+      walletAddress: process.env["FILECOIN_WALLET_ADDRESS"]
     });
 
     console.log(`📤 Storing exported video: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
