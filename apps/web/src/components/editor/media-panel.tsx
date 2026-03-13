@@ -16,7 +16,6 @@ import {
   ChevronUp,
   Mic,
   Sparkles,
-  Cloud,
   Zap,
   Globe,
   Type,
@@ -34,7 +33,6 @@ import { FileUpload } from "./file-upload";
 import { GroveUpload } from "./grove-upload";
 import { isFilCDNConfigured, UploadResult } from "@/lib/filcdn";
 import { type GroveUploadResult } from "@/lib/grove-storage";
-import { Badge } from "../ui/badge";
 import {
   Collapsible,
   CollapsibleContent,
@@ -444,75 +442,77 @@ export function MediaPanel() {
           {activeTab === "upload" && (
             <>
               {/* Upload section */}
-              <div className="p-3 border-b bg-muted/5">
-                <Tabs defaultValue="local" className="w-full">
-                  {/* On mobile show only Local tab — Grove/FilCDN are advanced and rarely used */}
-                  <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-8">
-                    <TabsTrigger value="local" className="text-xs">
-                      <Upload className="h-3 w-3 mr-1" />
-                      <span>Local</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="grove" className="text-xs hidden sm:flex">
-                      <Globe className="h-3 w-3 mr-1" />
-                      Grove
-                    </TabsTrigger>
-                    <TabsTrigger value="filcdn" className="text-xs hidden sm:flex">
-                      <Zap className="h-3 w-3 mr-1" />
-                      FilCDN
-                    </TabsTrigger>
-                  </TabsList>
+              <div className="p-3 border-b bg-muted/5 space-y-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFileSelect}
+                  disabled={isProcessing}
+                  className="w-full"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Upload className="h-4 w-4 animate-spin mr-2" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      <span>Add Files</span>
+                    </>
+                  )}
+                </Button>
 
-                  <TabsContent value="local" className="mt-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleFileSelect}
-                      disabled={isProcessing}
-                      className="w-full"
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Upload className="h-4 w-4 animate-spin mr-2" />
-                          <span>Processing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-4 w-4 mr-2" />
-                          <span>Add Files</span>
-                        </>
-                      )}
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-full justify-between text-xs">
+                      <span>Advanced storage</span>
+                      <ChevronDown className="h-3 w-3 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                     </Button>
-                  </TabsContent>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-2 pt-1">
+                    <Tabs defaultValue="grove" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2 h-8">
+                        <TabsTrigger value="grove" className="text-xs">
+                          <Globe className="h-3 w-3 mr-1" />
+                          Grove
+                        </TabsTrigger>
+                        <TabsTrigger value="filcdn" className="text-xs">
+                          <Zap className="h-3 w-3 mr-1" />
+                          FilCDN
+                        </TabsTrigger>
+                      </TabsList>
 
-                  {/* Grove and FilCDN hidden on small screens — advanced upload options */}
-                  <TabsContent value="grove" className="mt-3">
-                    <GroveUpload onUploadComplete={handleGroveUpload} />
-                  </TabsContent>
+                      <TabsContent value="grove" className="mt-3">
+                        <GroveUpload onUploadComplete={handleGroveUpload} />
+                      </TabsContent>
 
-                  <TabsContent value="filcdn" className="mt-3">
-                    {filStatus?.configured || isConnected ? (
-                      <FileUpload onUploadComplete={handleFilCDNUpload} />
-                    ) : (
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground mb-2">
-                          FilCDN not configured
-                        </p>
-                        <Button asChild size="sm" variant="outline">
-                          <a
-                            href={
-                              process.env.NEXT_PUBLIC_FILCDN_WEB_APP_URL ||
-                              "https://filcdn.com"
-                            }
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            Setup Guide
-                          </a>
-                        </Button>
-                      </div>
-                    )}
-                  </TabsContent>
-                </Tabs>
+                      <TabsContent value="filcdn" className="mt-3">
+                        {filStatus?.configured || isConnected ? (
+                          <FileUpload onUploadComplete={handleFilCDNUpload} />
+                        ) : (
+                          <div className="text-center">
+                            <p className="text-xs text-muted-foreground mb-2">
+                              FilCDN not configured
+                            </p>
+                            <Button asChild size="sm" variant="outline">
+                              <a
+                                href={
+                                  process.env.NEXT_PUBLIC_FILCDN_WEB_APP_URL ||
+                                  "https://filcdn.com"
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                Setup Guide
+                              </a>
+                            </Button>
+                          </div>
+                        )}
+                      </TabsContent>
+                    </Tabs>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
 
               {/* Media library */}

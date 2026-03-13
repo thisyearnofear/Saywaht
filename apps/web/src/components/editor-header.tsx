@@ -69,7 +69,7 @@ export function EditorHeader() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [backendAvailable, setBackendAvailable] = useState(false);
   const { tracks, getTotalDuration } = useTimelineStore();
-  const { mediaItems } = useMediaStore();
+  const { mediaItems, updateMediaItem } = useMediaStore();
   const { textElements } = useTextStore();
 
   useEffect(() => {
@@ -169,9 +169,21 @@ export function EditorHeader() {
     if (!activeProject || tracks.length === 0) return;
     setIsDeploying(true);
     try {
-      toast.loading("Preparing for launch...", { id: "deploy-progress" });
+      toast.loading("Preparing media for mint...", { id: "deploy-progress" });
       const projectData = { project: activeProject, tracks, mediaItems };
-      const uploadPromise = storageManager.exportProjectData(projectData);
+      const { projectData: normalizedProjectData, normalizedItems } =
+        await storageManager.normalizeProjectMediaForExport(projectData);
+
+      normalizedItems.forEach((item) => {
+        updateMediaItem(item.id, {
+          url: item.toUrl,
+          isLocal: false,
+          file: undefined,
+        });
+      });
+
+      toast.loading("Uploading project snapshot...", { id: "deploy-progress" });
+      const uploadPromise = storageManager.exportProjectData(normalizedProjectData);
       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 60000));
       const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
       toast.dismiss("deploy-progress");
@@ -183,7 +195,8 @@ export function EditorHeader() {
       window.location.href = mintUrl;
     } catch (error) {
       toast.dismiss("deploy-progress");
-      toast.error("Preparation failed. Try again.");
+      const message = error instanceof Error ? error.message : "Preparation failed. Try again.";
+      toast.error(message);
     } finally {
       setIsDeploying(false);
     }

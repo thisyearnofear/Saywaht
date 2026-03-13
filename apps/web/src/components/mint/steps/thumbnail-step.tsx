@@ -158,6 +158,10 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
     });
   };
 
+  const isBlobUrl = (value?: string | null): boolean => {
+    return typeof value === "string" && value.startsWith("blob:");
+  };
+
   const generateAIThumbnail = async () => {
     setIsGenerating(true);
     setGenerationStatus("working");
@@ -183,11 +187,26 @@ export function ThumbnailStep({ data, updateData }: ThumbnailStepProps) {
 
           if (mediaItem.type !== "video") continue;
 
+          if (isBlobUrl(mediaItem.url) && !mediaItem.file) {
+            // Blob URLs are session-scoped and may be invalid in the mint route.
+            // Skip unreliable extraction and rely on thumbnail/image fallbacks.
+            continue;
+          }
+
+          let objectUrlToRevoke: string | null = null;
           try {
-            videoFrame = await extractFrameFromVideo(mediaItem.url);
+            const sourceUrl = mediaItem.file
+              ? (objectUrlToRevoke = URL.createObjectURL(mediaItem.file))
+              : mediaItem.url;
+
+            videoFrame = await extractFrameFromVideo(sourceUrl);
             break;
           } catch (error) {
             console.error("Failed to extract frame:", error);
+          } finally {
+            if (objectUrlToRevoke) {
+              URL.revokeObjectURL(objectUrlToRevoke);
+            }
           }
         }
         if (videoFrame) break;

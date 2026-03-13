@@ -81,6 +81,17 @@ export interface FilecoinArchiveResult {
   };
 }
 
+export interface ProjectExportData {
+  project: any;
+  tracks: any[];
+  mediaItems: any[];
+}
+
+export interface MediaNormalizationResult {
+  projectData: ProjectExportData;
+  normalizedItems: Array<{ id: string; fromUrl: string; toUrl: string }>;
+}
+
 // Upload options interface
 export interface UploadOptions {
   preferredProvider?: StorageProvider;
@@ -144,6 +155,31 @@ function slugifyFileBasename(value: string): string {
       .replace(/[^a-z0-9]+/g, "_")
       .replace(/^_+|_+$/g, "") || "export"
   );
+}
+
+function inferMimeType(mediaType?: string): string {
+  if (mediaType === "video") return "video/mp4";
+  if (mediaType === "audio") return "audio/mpeg";
+  if (mediaType === "image") return "image/jpeg";
+  return "application/octet-stream";
+}
+
+function inferFileExtension(mimeType?: string, mediaType?: string): string {
+  if (mimeType) {
+    if (mimeType.includes("mp4")) return "mp4";
+    if (mimeType.includes("webm")) return "webm";
+    if (mimeType.includes("quicktime")) return "mov";
+    if (mimeType.includes("mpeg")) return "mp3";
+    if (mimeType.includes("wav")) return "wav";
+    if (mimeType.includes("ogg")) return "ogg";
+    if (mimeType.includes("png")) return "png";
+    if (mimeType.includes("jpeg") || mimeType.includes("jpg")) return "jpg";
+  }
+
+  if (mediaType === "video") return "mp4";
+  if (mediaType === "audio") return "mp3";
+  if (mediaType === "image") return "jpg";
+  return "bin";
 }
 
 function extractCid(upload: UploadResult): string | undefined {
@@ -662,17 +698,91 @@ class StorageManager {
     const opts = { ...options, preferredProvider: "grove" as StorageProvider };
     return this.uploadFile(metadataFile, opts);
   }
+
+  async normalizeProjectMediaForExport(
+    projectData: ProjectExportData,
+    options: UploadOptions = {}
+  ): Promise<MediaNormalizationResult> {
+    const mediaById = new Map(
+      (projectData.mediaItems || []).map((item) => [item.id, item])
+    );
+
+    const referencedMediaIds = new Set<string>();
+    for (const track of projectData.tracks || []) {
+      for (const clip of track?.clips || []) {
+        if (clip?.mediaId) {
+          referencedMediaIds.add(clip.mediaId);
+        }
+      }
+    }
+
+    const normalizedItems: Array<{ id: string; fromUrl: string; toUrl: string }> = [];
+    const normalizedMediaItems = (projectData.mediaItems || []).map((item) => ({ ...item }));
+
+    for (const item of normalizedMediaItems) {
+      if (!referencedMediaIds.has(item.id)) {
+        continue;
+      }
+
+      if (typeof item.url !== "string" || !item.url.startsWith("blob:")) {
+        continue;
+      }
+
+      const sourceItem = mediaById.get(item.id);
+      let file: File | null = sourceItem?.file instanceof File ? sourceItem.file : null;
+
+      if (!file) {
+        const response = await fetch(item.url);
+        if (!response.ok) {
+          throw new Error(`Failed to read local media for ${item.name || item.id}`);
+        }
+
+        const blob = await response.blob();
+        const extension = inferFileExtension(blob.type, item.type);
+        const baseName = slugifyFileBasename(item.name || `${item.type || "media"}_${item.id}`);
+        file = new File([blob], `${baseName}.${extension}`, {
+          type: blob.type || inferMimeType(item.type),
+        });
+      }
+
+      const uploadResult = await this.uploadFile(file, {
+        preferredProvider: this.getBestProviderForFile(file),
+        allowFallback: true,
+        optimize: false,
+        ...options,
+      });
+
+      const previousUrl = item.url;
+      item.url = uploadResult.gatewayUrl || uploadResult.url;
+      item.isLocal = false;
+      item.isGrove = uploadResult.provider === "grove" || uploadResult.provider === "ipfs";
+      item.isFilCDN = uploadResult.provider === "filcdn";
+      item.cid = extractCid(uploadResult) || item.cid;
+      item.size = file.size;
+      delete item.file;
+
+      normalizedItems.push({
+        id: item.id,
+        fromUrl: previousUrl,
+        toUrl: item.url,
+      });
+    }
+
+    return {
+      projectData: {
+        ...projectData,
+        mediaItems: normalizedMediaItems,
+      },
+      normalizedItems,
+    };
+  }
   
   /**
    * Export project data to Grove storage for decentralized access
    * Consolidates project, tracks, and media items into a single JSON file
    */
   async exportProjectData(
-    projectData: {
-      project: any;
-      tracks: any[];
-      mediaItems: any[];
-    },
+    projectData: ProjectExportData,
     options: UploadOptions = {}
   ): Promise<UploadResult> {
     // Create comprehensive project data structure
