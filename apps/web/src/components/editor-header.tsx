@@ -173,9 +173,14 @@ export function EditorHeader() {
       const projectData = { project: activeProject, tracks, mediaItems };
       const uploadPromise = storageManager.exportProjectData(projectData);
       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 60000));
-      await Promise.race([uploadPromise, timeoutPromise]);
+      const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
       toast.dismiss("deploy-progress");
-      window.location.href = `/mint/${activeProject.id}`;
+      const dataUrl = (uploadResult as { gatewayUrl?: string; url?: string }).gatewayUrl
+        || (uploadResult as { gatewayUrl?: string; url?: string }).url;
+      const mintUrl = dataUrl
+        ? `/mint/${activeProject.id}?dataUrl=${encodeURIComponent(dataUrl)}`
+        : `/mint/${activeProject.id}`;
+      window.location.href = mintUrl;
     } catch (error) {
       toast.dismiss("deploy-progress");
       toast.error("Preparation failed. Try again.");

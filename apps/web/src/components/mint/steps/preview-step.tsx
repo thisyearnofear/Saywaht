@@ -143,6 +143,24 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
       setVideoUploadError(null);
 
       try {
+        const videoMediaIds = new Set(
+          mediaItems.filter((item) => item.type === "video").map((item) => item.id)
+        );
+        const hasTimelineVideoClip = tracks.some(
+          (track) =>
+            track.type === "video" &&
+            track.clips.some((clip) => videoMediaIds.has(clip.mediaId))
+        );
+
+        if (!hasTimelineVideoClip) {
+          setVideoUploadStatus("failed");
+          setVideoUploadError(
+            "No timeline video clips were found for export. Go back to the editor and make sure your video clip is on the timeline, then try minting again."
+          );
+          await generateMetadataOnly();
+          return;
+        }
+
         const totalDuration = Math.max(getTotalDuration(), 5);
 
         const feasibility = await checkExportFeasibility(

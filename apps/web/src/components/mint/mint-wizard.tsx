@@ -34,6 +34,9 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCanvasStore } from "@/stores/canvas-store";
+import { useProjectStore } from "@/stores/project-store";
+import { useTimelineStore } from "@/stores/timeline-store";
+import { useMediaStore } from "@/stores/media-store";
 
 export interface MintWizardData {
   // Thumbnail data
@@ -114,6 +117,9 @@ interface MintWizardProps {
 export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   const isMobile = useIsMobile();
   const { getFormat: getVideoFormat } = useCanvasStore();
+  const { updateProject } = useProjectStore();
+  const { setTracks } = useTimelineStore();
+  const { clearAllMedia, addMediaItem } = useMediaStore();
   const { navigateToEditor } = useSmartNavigation();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoadingData, setIsLoadingData] = useState(false);
@@ -174,6 +180,63 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  useEffect(() => {
+    if (!isClient || !dataUrl) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const hydrateFromExport = async () => {
+      setIsLoadingData(true);
+      try {
+        const response = await fetch(dataUrl, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`Failed to load project data: ${response.status}`);
+        }
+
+        const exported = await response.json();
+        if (cancelled) return;
+
+        if (exported?.project) {
+          updateProject(exported.project);
+        }
+
+        if (Array.isArray(exported?.tracks)) {
+          setTracks(exported.tracks);
+        }
+
+        if (Array.isArray(exported?.mediaItems)) {
+          clearAllMedia();
+          exported.mediaItems.forEach((item: any) => {
+            addMediaItem(item);
+          });
+        }
+      } catch (error) {
+        console.error("Failed to hydrate mint project data", error);
+        toast.error("Could not restore project timeline for mint. Please return to editor and try again.");
+      } finally {
+        if (!cancelled) {
+          setIsLoadingData(false);
+        }
+      }
+    };
+
+    hydrateFromExport();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    addMediaItem,
+    clearAllMedia,
+    dataUrl,
+    isClient,
+    projectId,
+    setTracks,
+    updateProject,
+  ]);
 
   const updateWizardData = useCallback((updates: Partial<MintWizardData>) => {
     setWizardData((prev: MintWizardData) => ({ ...prev, ...updates }));
