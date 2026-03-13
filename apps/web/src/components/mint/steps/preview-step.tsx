@@ -34,6 +34,7 @@ import { storageManager, StorageErrorType } from "@/lib/storage-manager";
 import { Progress } from "@/components/ui/progress";
 import { useTextStore } from "@/stores/text-store";
 import { cn } from "@/lib/utils";
+import { loadFilecoinArchives } from "@/lib/filecoin-archives";
 
 interface PreviewStepProps {
   data: MintWizardData;
@@ -43,6 +44,11 @@ interface PreviewStepProps {
 export function PreviewStep({ data, updateData }: PreviewStepProps) {
   const { preferences } = useUserPreferencesStore();
   
+  const { activeProject } = useProjectStore();
+  const { tracks, getTotalDuration } = useTimelineStore();
+  const { mediaItems } = useMediaStore();
+  const { textElements } = useTextStore();
+
   const getAspectRatioClass = () => {
     switch (data.videoFormat) {
       case "portrait":
@@ -86,11 +92,6 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
     null
   );
 
-  const { activeProject } = useProjectStore();
-  const { tracks, getTotalDuration } = useTimelineStore();
-  const { mediaItems } = useMediaStore();
-  const { textElements } = useTextStore();
-  
   const thumbnailSourceLabel = data.thumbnailSource
     ? {
         ai: "AI Generated",
@@ -143,6 +144,29 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
       setVideoUploadError(null);
 
       try {
+        // ENHANCEMENT: Check for existing Filecoin archive to avoid duplicate work
+        // If the user just exported in the editor, we can reuse that asset
+        const archives = loadFilecoinArchives();
+        const recentArchive = archives.find(a => 
+          a.projectId === activeProject.id && 
+          (new Date().getTime() - new Date(a.createdAt).getTime() < 1000 * 60 * 30) // Within 30 mins
+        );
+
+        if (recentArchive) {
+          console.log("♻️ Reusing recent Filecoin archive for minting:", recentArchive.videoUrl);
+          setExportedVideoUrl(recentArchive.videoUrl);
+          setArchiveManifestUrl(recentArchive.manifestUrl);
+          setArchiveCaptionsUrl(recentArchive.transcriptUrl || null);
+          setVideoUploadStatus("success");
+          
+          await generateMetadataWithVideo(
+            recentArchive.videoUrl,
+            recentArchive.manifestUrl,
+            recentArchive.transcriptUrl
+          );
+          return;
+        }
+
         const videoMediaIds = new Set(
           mediaItems.filter((item) => item.type === "video").map((item) => item.id)
         );

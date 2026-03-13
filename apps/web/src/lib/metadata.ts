@@ -149,23 +149,22 @@ export async function uploadMetadataToIPFS(metadata: CoinMetadata): Promise<stri
 
     // Wait for IPFS propagation to ensure content is available
     try {
-      console.log('⏳ Waiting for IPFS propagation...');
-      await new Promise(resolve => setTimeout(resolve, 1500)); 
+      console.log('⏳ Waiting for IPFS propagation (5s)...');
+      await new Promise(resolve => setTimeout(resolve, 5000)); 
       console.log('✅ IPFS propagation wait complete');
     } catch (error) {
       console.warn('⚠️ Propagation wait failed, but continuing:', error);
     }
 
-    // Use Grove gateway URL for better reliability with Zora's validation service
-    // Grove gateway URLs are immediately available and more reliable than IPFS URLs
-    const gatewayUrl = result.gatewayUrl;
+    // Use standard IPFS URI for Zora metadata to ensure maximum compatibility with SDK and contracts
+    // We still do the hydration above to ensure it's available via gateways
     const ipfsUri = result.uri.replace('lens://', 'ipfs://');
 
     console.log('✅ Metadata uploaded to IPFS:', ipfsUri);
-    console.log('🌐 Gateway URL:', gatewayUrl);
-    console.log('🔗 Using gateway URL for metadata URI to ensure Zora validation works');
+    console.log('🌐 Gateway URL:', result.gatewayUrl);
+    console.log('🔗 Using IPFS URI for metadata to ensure Zora protocol compatibility');
 
-    return gatewayUrl; // Return gateway URL instead of IPFS URI for better compatibility
+    return ipfsUri; // Return IPFS URI instead of gateway URL for standard Zora compatibility
   } catch (error) {
     console.error('❌ Failed to upload metadata to IPFS:', error);
 

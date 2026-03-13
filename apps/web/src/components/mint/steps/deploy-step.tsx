@@ -54,6 +54,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [status, setStatus] = useState<"idle" | "pending" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (
@@ -117,8 +118,13 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to get coin calldata");
+          let errorData;
+          try {
+            errorData = await response.json();
+          } catch (e) {
+            errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+          }
+          throw new Error(errorData.error || `Failed to get coin calldata (${response.status})`);
         }
 
         const responseData = await response.json();
@@ -129,10 +135,13 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         }
 
         const hash = await walletClient.sendTransaction({
-          to: calls[0].to,
-          data: `${calls[0].data}07626173656170700080218021802180218021802180218021` as `0x${string}`,
+          to: calls[0].to as `0x${string}`,
+          // CLEAN: Ensure we only append suffix once and check if calls[0].data is valid
+          data: (calls[0].data.endsWith("07626173656170700080218021802180218021802180218021") 
+            ? calls[0].data 
+            : `${calls[0].data}07626173656170700080218021802180218021802180218021`) as `0x${string}`,
           value: calls[0].value ? BigInt(calls[0].value) : undefined,
-          account: walletClient.account,
+          account: address as `0x${string}`,
           chain: publicClient.chain,
         });
 
@@ -190,8 +199,11 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         setStatus("idle");
       } catch (err) {
         console.error("Deploy failed:", err);
+        const msg = err instanceof Error ? err.message : "Something went wrong. Please check your wallet and try again.";
+        setErrorMessage(msg);
         setStatus("error");
         updateData({ isDeploying: false });
+        toast.error(msg);
       }
     };
 
@@ -226,7 +238,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
       return {
         icon: <X className="w-8 h-8 text-white" />,
         title: "Deployment Error",
-        description: "Something went wrong. Please check your wallet and try again.",
+        description: errorMessage || "Something went wrong. Please check your wallet and try again.",
         color: "bg-destructive shadow-destructive/20",
         label: "Error",
         labelColor: "text-destructive bg-destructive/10"
