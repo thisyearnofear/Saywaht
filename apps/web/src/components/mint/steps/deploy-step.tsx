@@ -79,6 +79,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
           chainId: base.id,
           platformReferrer: PLATFORM_ADDRESS,
           payoutRecipientOverride: address,
+          skipMetadataValidation: true,
         };
 
         setContractCallParams(coinArgs);
