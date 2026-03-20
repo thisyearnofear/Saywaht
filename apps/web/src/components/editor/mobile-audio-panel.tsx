@@ -41,6 +41,7 @@ export function MobileAudioPanel({
   const [showMobileRecording, setShowMobileRecording] = useState(false);
   const [autoStartRecording, setAutoStartRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [recorderState, setRecorderState] = useState<MobileRecorderState>("idle");
 
   // Filter for audio files only
   const audioFiles = mediaItems.filter(
@@ -121,6 +122,11 @@ export function MobileAudioPanel({
     generateCaptions(audioBlob);
   };
 
+  const handleRecordingStateChange = (state: MobileRecorderState) => {
+    setRecorderState(state);
+    onRecordingStateChange?.(state);
+  };
+
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
       <div className="border-b border-border/50 bg-muted/5 p-2.5 space-y-2.5">
@@ -130,11 +136,11 @@ export function MobileAudioPanel({
             onClose={() => {
               setShowMobileRecording(false);
               setAutoStartRecording(false);
-              if (onRecordingStateChange) onRecordingStateChange("idle");
+              handleRecordingStateChange("idle");
             }}
             onComplete={handleRecordingComplete}
             autoStart={autoStartRecording}
-            onRecordingStateChange={onRecordingStateChange}
+            onRecordingStateChange={handleRecordingStateChange}
           />
         ) : (
           <Button
@@ -149,22 +155,24 @@ export function MobileAudioPanel({
         )}
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="p-3 space-y-2.5">
-          {audioFiles.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-6 text-center">
-              <div className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-muted/30">
-                <Volume2 className="h-6 w-6 text-muted-foreground/40" />
+      {recorderState !== "recording" && (
+        <ScrollArea className="flex-1">
+          <div className="p-3 space-y-2.5">
+            {audioFiles.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <div className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-muted/30">
+                  <Volume2 className="h-6 w-6 text-muted-foreground/40" />
+                </div>
+                <p className="text-xs font-semibold text-muted-foreground/60">No voiceovers yet</p>
               </div>
-              <p className="text-xs font-semibold text-muted-foreground/60">No voiceovers yet</p>
-            </div>
-          ) : (
-            audioFiles.map((audio) => (
-              <AudioFileCard key={audio.id} audio={audio} />
-            ))
-          )}
-        </div>
-      </ScrollArea>
+            ) : (
+              audioFiles.map((audio) => (
+                <AudioFileCard key={audio.id} audio={audio} />
+              ))
+            )}
+          </div>
+        </ScrollArea>
+      )}
     </div>
   );
 }

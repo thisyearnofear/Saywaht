@@ -41,6 +41,77 @@ interface DeployStepProps {
   updateData: (updates: Partial<MintWizardData>) => void;
 }
 
+const BACKEND_EXPORT_URL =
+  process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || "https://persidian.com";
+const COIN_CALLDATA_RETRY_DELAYS_MS = [0, 4000, 9000];
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableCoinCalldataError(message: string) {
+  const normalized = message.toLowerCase();
+
+  return [
+    "metadata fetch failed",
+    "timed out",
+    "timeout",
+    "fetch failed",
+    "failed to fetch",
+    "502",
+    "503",
+    "504",
+  ].some((fragment) => normalized.includes(fragment));
+}
+
+async function requestCoinCalldata(contractCallParams: any) {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < COIN_CALLDATA_RETRY_DELAYS_MS.length; attempt++) {
+    const delayMs = COIN_CALLDATA_RETRY_DELAYS_MS[attempt];
+
+    if (delayMs > 0) {
+      console.warn(`Retrying coin calldata request after ${delayMs}ms...`);
+      await sleep(delayMs);
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_EXPORT_URL}/api/zora/create-coin-calldata`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(contractCallParams),
+      });
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+        }
+
+        throw new Error(errorData.error || `Failed to get coin calldata (${response.status})`);
+      }
+
+      return response.json();
+    } catch (error) {
+      const resolvedError =
+        error instanceof Error ? error : new Error("Failed to request coin calldata");
+
+      lastError = resolvedError;
+
+      if (
+        attempt === COIN_CALLDATA_RETRY_DELAYS_MS.length - 1 ||
+        !isRetryableCoinCalldataError(resolvedError.message)
+      ) {
+        throw resolvedError;
+      }
+    }
+  }
+
+  throw lastError || new Error("Failed to request coin calldata");
+}
+
 export function DeployStep({ data, updateData }: DeployStepProps) {
   const { address } = useAccount();
   const publicClient = usePublicClient();
@@ -112,23 +183,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
       setStatus("pending");
 
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || "https://persidian.com"}/api/zora/create-coin-calldata`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(contractCallParams),
-        });
-
-        if (!response.ok) {
-          let errorData;
-          try {
-            errorData = await response.json();
-          } catch (e) {
-            errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
-          }
-          throw new Error(errorData.error || `Failed to get coin calldata (${response.status})`);
-        }
-
-        const responseData = await response.json();
+        const responseData = await requestCoinCalldata(contractCallParams);
         const { calls, predictedCoinAddress } = responseData;
 
         if (!calls || !Array.isArray(calls) || calls.length === 0) {
@@ -177,7 +232,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
         });
 
         if (coinAddress) {
-          fetch(`${process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || 'https://persidian.com'}/api/coins`, {
+          fetch(`${BACKEND_EXPORT_URL}/api/coins`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

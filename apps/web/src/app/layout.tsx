@@ -64,7 +64,7 @@ export const metadata: Metadata = {
   },
   // Farcaster Mini App v2 Metadata - Single source of truth
   other: {
-    "fc:miniapp": JSON.stringify(
+    "fc:frame": JSON.stringify(
       generateMiniAppEmbed({
         button: {
           title: "🎬 Open Saywaht",
@@ -72,7 +72,7 @@ export const metadata: Metadata = {
             type: "launch_frame",
             name: "Saywaht",
             url: `${baseUrl}/farcaster`,
-            splashImageUrl: `${baseUrl}/images/android-chrome-512x512.png`,
+            splashImageUrl: `${baseUrl}/images/android-chrome-192x192.png`,
             splashBackgroundColor: "#000000",
           },
         },

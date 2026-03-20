@@ -102,10 +102,10 @@ export function MobileEditorLayout({
   const [showWorkflowBar, setShowWorkflowBar] = useState(true); // Allow dismissing workflow bar
   const [showSettings, setShowSettings] = useState(false);
   const [preferredCaptionGroupId, setPreferredCaptionGroupId] = useState<string | null>(null);
-  const timelineVisible = activeTool === null || activeTool === "record";
   const hasTimelineClips = tracks.some((track) => track.clips.length > 0);
   const hasVoiceover = tracks.some((t) => t.type === "audio" && t.clips.length > 0);
   const hasText = textElements.length > 0;
+  const isRecordingPreviewLocked = activeTool === "record" && isRecordingInProgress;
 
   // Track which workflow steps are completed
   const completedSteps = useMemo(() => ({
@@ -184,14 +184,19 @@ export function MobileEditorLayout({
     });
   }, [hasTimelineClips, hasText, hasVoiceover, isFarcasterMiniApp, tracks.length]);
 
+  const previousTimelineReadyState = useRef(hasTimelineClips);
   useEffect(() => {
-    // In mini-app flows we can already have a ready project/timeline while
-    // template apply flags lag behind; clear stale applying UI state.
-    if (isApplyingTemplate && activeProject && hasTimelineClips) {
+    const becamePlayable = !previousTimelineReadyState.current && hasTimelineClips;
+    previousTimelineReadyState.current = hasTimelineClips;
+
+    // In mini-app flows we can already have a usable preview while template
+    // hydration metadata is still settling. Clear stale blocking state once the
+    // timeline becomes playable.
+    if (isApplyingTemplate && becamePlayable) {
       clearSelectedTemplate();
       toast.dismiss();
     }
-  }, [isApplyingTemplate, activeProject, hasTimelineClips, clearSelectedTemplate]);
+  }, [isApplyingTemplate, hasTimelineClips, clearSelectedTemplate]);
 
   const handleFinish = useCallback(async () => {
     addHapticFeedback("heavy");
@@ -217,7 +222,9 @@ export function MobileEditorLayout({
     <div
       className={cn(
         "relative h-full w-full overflow-hidden bg-black text-white mobile-editor",
-        className
+        className,
+        isRecordingPreviewLocked && "recording",
+        isFarcasterMiniApp && "farcaster-miniapp"
       )}
       style={{ opacity: 1 }} // Remove motion animation for better performance
     >
@@ -304,7 +311,7 @@ export function MobileEditorLayout({
         </div>
 
         {/* Workflow Progress Bar - Dismissible */}
-        {showWorkflowBar && (
+        {showWorkflowBar && !isRecordingPreviewLocked && (
           <div className="z-30 flex items-center justify-between gap-2 border-b border-white/5 bg-black/60 px-4 py-1.5 backdrop-blur-sm">
             <div className="flex items-center justify-center gap-3 flex-1">
               {[
@@ -359,6 +366,10 @@ export function MobileEditorLayout({
           {hasTimelineClips ? (
             <>
               <MobilePreviewPanel
+                className={cn(
+                  "split-view-preview",
+                  isRecordingPreviewLocked && "recording-focused"
+                )}
                 showResolution={false}
                 showControls={false}
                 controlsVariant="overlay"
@@ -371,7 +382,10 @@ export function MobileEditorLayout({
               />
 
               <button
-                className="absolute inset-0 z-10 flex items-center justify-center touch-manipulation"
+                className={cn(
+                  "absolute inset-0 z-10 flex items-center justify-center touch-manipulation",
+                  isRecordingPreviewLocked && "pointer-events-none"
+                )}
                 onClick={() => {
                   addHapticFeedback("light");
                   if (!isPlaying) {
@@ -382,7 +396,7 @@ export function MobileEditorLayout({
                 }}
                 aria-label={isPlaying ? "Pause preview" : "Play preview"}
               >
-                {isPlaying && isStalled ? (
+                {isRecordingPreviewLocked ? null : isPlaying && isStalled ? (
                   <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-black/35 backdrop-blur-xl">
                     <Loader2 className="h-7 w-7 animate-spin text-white" />
                   </div>
@@ -422,6 +436,12 @@ export function MobileEditorLayout({
               Recording
             </div>
           )}
+
+          {isRecordingPreviewLocked && (
+            <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 -translate-x-1/2 rounded-full border border-white/10 bg-black/65 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/75 backdrop-blur">
+              Preview stays live while you record
+            </div>
+          )}
         </div>
 
         {/* Tool Drawer */}
@@ -429,7 +449,9 @@ export function MobileEditorLayout({
           <DrawerContent className={cn(
             "bg-background border-white/10 flex flex-col transition-all duration-500",
             activeTool === "record"
-              ? (isRecordingInProgress ? "h-[22vh]" : "h-[45vh]")
+              ? (isRecordingPreviewLocked
+                ? "min-h-[10.5rem] h-[20vh] border-red-500/20 bg-black/92"
+                : "h-[45vh]")
               : "h-[75vh]"
           )}>
             <div className="flex-1 flex flex-col min-h-0">
@@ -493,41 +515,43 @@ export function MobileEditorLayout({
         )}
 
         {/* Bottom Navigation */}
-        <div
-          className="z-30 border-t border-white/10 bg-black/95 px-3 pb-safe shrink-0"
-          style={{ paddingBottom: "max(0.75rem, calc(env(safe-area-inset-bottom) + 0.35rem))" }}
-        >
-          <div className="grid grid-cols-4 gap-1.5 py-1.5">
-            {MOBILE_TOOL_CONFIG.map((tool) => {
-              const Icon = tool.icon;
-              const isActive = activeTool === tool.id;
-              return (
-                <button
-                  key={tool.id}
-                  className={cn(
-                    "flex h-12.5 flex-col items-center justify-center rounded-lg border text-white transition-all active:scale-95",
-                    isActive
-                      ? "border-primary bg-primary/15"
-                      : "border-white/10 bg-white/[0.03]"
-                  )}
-                  onClick={() => {
-                    if (tool.id === "record") {
-                      openToolSheet("record", { autoStartRecording: true });
-                    } else {
-                      openToolSheet(tool.id);
-                    }
-                  }}
-                  aria-label={tool.label}
-                >
-                  <Icon className={cn("h-5 w-5", tool.id === "record" && "text-red-500")} />
-                  <span className="mt-0.5 text-[9px] font-black uppercase tracking-[0.08em]">
-                    {tool.label}
-                  </span>
-                </button>
-              );
-            })}
+        {!isRecordingPreviewLocked && (
+          <div
+            className="z-30 border-t border-white/10 bg-black/95 px-3 pb-safe shrink-0"
+            style={{ paddingBottom: "max(0.75rem, calc(env(safe-area-inset-bottom) + 0.35rem))" }}
+          >
+            <div className="grid grid-cols-4 gap-1.5 py-1.5">
+              {MOBILE_TOOL_CONFIG.map((tool) => {
+                const Icon = tool.icon;
+                const isActive = activeTool === tool.id;
+                return (
+                  <button
+                    key={tool.id}
+                    className={cn(
+                      "flex h-12.5 flex-col items-center justify-center rounded-lg border text-white transition-all active:scale-95",
+                      isActive
+                        ? "border-primary bg-primary/15"
+                        : "border-white/10 bg-white/[0.03]"
+                    )}
+                    onClick={() => {
+                      if (tool.id === "record") {
+                        openToolSheet("record", { autoStartRecording: true });
+                      } else {
+                        openToolSheet(tool.id);
+                      }
+                    }}
+                    aria-label={tool.label}
+                  >
+                    <Icon className={cn("h-5 w-5", tool.id === "record" && "text-red-500")} />
+                    <span className="mt-0.5 text-[9px] font-black uppercase tracking-[0.08em]">
+                      {tool.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {showCoachmark && (
@@ -569,7 +593,7 @@ export function MobileEditorLayout({
       {children}
 
       {/* Template Loading Overlay */}
-      {isApplyingTemplate && (
+      {isApplyingTemplate && !hasTimelineClips && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -578,7 +602,7 @@ export function MobileEditorLayout({
                 Loading Template
               </p>
               <p className="mt-1 text-xs text-white/60">
-                Preparing your video...
+                Loading template assets...
               </p>
             </div>
           </div>

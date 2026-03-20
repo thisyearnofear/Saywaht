@@ -1,6 +1,7 @@
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
 import { ExportOptions } from "./canvas-export-utils";
+import { assessBackendExportCompatibility, resolveBackendUploadPlan } from "./export-runtime-config";
 import { FORMAT_DIMENSIONS } from "./video-utils";
 
 // Backend export service configuration
@@ -28,7 +29,7 @@ export async function getBackendUrl(): Promise<string> {
     } catch { continue; }
   }
 
-  return BACKEND_URLS[0] || 'http://157.180.36.156:3001';
+  return BACKEND_URLS[0] || 'http://157.180.36.156:3100';
 }
 
 
@@ -73,6 +74,11 @@ export const exportVideoBackend = async (
   
   try {
     console.log('⚡ Starting Pro Export for best quality...');
+
+    const compatibility = assessBackendExportCompatibility(mediaItems);
+    if (!compatibility.compatible) {
+      throw new Error(compatibility.reason || "Backend export cannot process one or more local media files");
+    }
     
     // Get the working backend URL
     const BACKEND_URL = await getBackendUrl();
@@ -100,24 +106,35 @@ export const exportVideoBackend = async (
     
     // Upload media files that are File objects or blob URLs
     const uploadedFiles: string[] = [];
-    const blobUrlMapping: Record<string, string> = {};
+    const uploadedFileMapping: Record<string, string> = {};
     
     for (const item of mediaItems) {
       if (item.file instanceof File) {
         // Upload File objects directly
-        formData.append('mediaFiles', item.file, item.name);
-        uploadedFiles.push(item.name);
+        const uploadPlan = resolveBackendUploadPlan(item, item.file.type);
+        if (!uploadPlan.compatible) {
+          throw new Error(uploadPlan.reason || `Unsupported backend upload for ${item.name}`);
+        }
+
+        formData.append('mediaFiles', item.file, uploadPlan.fileName);
+        uploadedFiles.push(uploadPlan.fileName);
+        uploadedFileMapping[item.id] = uploadPlan.fileName;
       } else if (item.url.startsWith('blob:')) {
         // Fetch and upload blob URLs (e.g., recorded audio)
         try {
           const response = await fetch(item.url);
           const blob = await response.blob();
-          const fileName = item.name || `media-${item.id}`;
-          formData.append('mediaFiles', blob, fileName);
-          uploadedFiles.push(fileName);
-          blobUrlMapping[item.url] = fileName;
+          const uploadPlan = resolveBackendUploadPlan(item, blob.type);
+          if (!uploadPlan.compatible) {
+            throw new Error(uploadPlan.reason || `Unsupported backend upload for ${item.name}`);
+          }
+
+          formData.append('mediaFiles', blob, uploadPlan.fileName);
+          uploadedFiles.push(uploadPlan.fileName);
+          uploadedFileMapping[item.id] = uploadPlan.fileName;
         } catch (error) {
           console.error(`Failed to fetch blob URL for ${item.name}:`, error);
+          throw error;
         }
       }
     }
@@ -135,11 +152,9 @@ export const exportVideoBackend = async (
         // - Blob URLs: use the uploaded file name from mapping
         // - Relative URLs: make absolute
         // - Absolute URLs: keep as-is
-        url: item.file instanceof File 
-          ? item.name
-          : item.url.startsWith('blob:') && blobUrlMapping[item.url]
-            ? blobUrlMapping[item.url]
-            : item.url.startsWith('http') || item.url.startsWith('blob:')
+        url: uploadedFileMapping[item.id]
+          ? uploadedFileMapping[item.id]
+          : item.url.startsWith('http') || item.url.startsWith('blob:')
               ? item.url 
               : `${window.location.origin}${item.url}`,
         isLocal: item.file instanceof File || item.url.startsWith('blob:')
@@ -200,6 +215,11 @@ async function pollForCompletion(
 ): Promise<BackendJobStatus> {
   const startTime = Date.now();
   const pollInterval = 2000; // 2 seconds
+  const stallTimeout = Math.min(90000, Math.max(30000, Math.floor(timeout / 5)));
+  let lastProgress = -1;
+  let lastMessage = "";
+  let lastStatus = "";
+  let lastAdvanceAt = Date.now();
   
   while (Date.now() - startTime < timeout) {
     try {
@@ -210,6 +230,18 @@ async function pollForCompletion(
       }
       
       const status: BackendJobStatus = await response.json();
+
+      const isAdvancing =
+        status.progress > lastProgress ||
+        status.message !== lastMessage ||
+        status.status !== lastStatus;
+
+      if (isAdvancing) {
+        lastAdvanceAt = Date.now();
+        lastProgress = status.progress;
+        lastMessage = status.message;
+        lastStatus = status.status;
+      }
       
       // Update progress
       onProgress(Math.max(10, status.progress)); // Ensure progress doesn't go backwards
@@ -223,6 +255,10 @@ async function pollForCompletion(
       
       if (status.status === 'failed') {
         throw new Error(status.error || 'Export failed on backend');
+      }
+
+      if (Date.now() - lastAdvanceAt > stallTimeout) {
+        throw new Error(`Export stalled: Job ${jobId} made no progress for ${stallTimeout}ms`);
       }
       
       // Wait before next poll

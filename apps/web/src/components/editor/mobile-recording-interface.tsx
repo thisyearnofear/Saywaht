@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Mic,
@@ -55,6 +55,7 @@ export function MobileRecordingInterface({
     play: playVideo,
     pause: pauseVideo,
     seek: seekVideo,
+    currentTime: previewCurrentTime,
     duration: videoDuration,
   } = usePlaybackStore();
 
@@ -95,6 +96,9 @@ export function MobileRecordingInterface({
     isWarning: recordingTime >= MAX_RECORDING_DURATION * 0.7 && recordingTime < MAX_RECORDING_DURATION * 0.9,
     isCritical: recordingTime >= MAX_RECORDING_DURATION * 0.9,
   };
+  const elapsedLabel = RecordingCountdown.formatCountdownTime(recordingTime);
+  const remainingLabel = RecordingCountdown.formatCountdownTime(countdownState.remaining);
+  const recordingProgress = Math.min(100, (recordingTime / MAX_RECORDING_DURATION) * 100);
 
   useEffect(() => {
     onRecordingStateChange?.(recordingState);
@@ -210,14 +214,19 @@ export function MobileRecordingInterface({
       };
 
       mediaRecorder.start();
+      const recordingStart = Math.max(
+        0,
+        Math.min(previewCurrentTime, Math.max(0, videoDuration - 0.1))
+      );
+
       setRecordingState("recording");
       setRecordingTime(0);
       setTrimStart(0);
       setTrimEnd(0);
-      setStartTime(0);
+      setStartTime(recordingStart);
       
       // Sync video playback exactly with recording
-      seekVideo(0); 
+      seekVideo(recordingStart);
       setTimeout(() => playVideo(), 50); // Small buffer for sync
 
       timerRef.current = setInterval(() => {
@@ -231,8 +240,11 @@ export function MobileRecordingInterface({
       addHapticFeedback("heavy");
     } catch (error) {
       console.error("Failed to start recording:", error);
+      toast.error("Microphone access failed", {
+        description: "Allow microphone access to record your voiceover."
+      });
     }
-  }, [visualizeAudio, playVideo, seekVideo, MAX_RECORDING_DURATION]);
+  }, [previewCurrentTime, videoDuration, visualizeAudio, playVideo, seekVideo, MAX_RECORDING_DURATION]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -316,6 +328,71 @@ export function MobileRecordingInterface({
 
   const isRecording = recordingState === "recording";
   const isCompleted = recordingState === "completed";
+
+  if (isRecording) {
+    return (
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-2xl border border-red-500/30 bg-black/85 p-3 shadow-2xl backdrop-blur-xl"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-red-400">
+                Recording Live
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-white/65">
+              Watch the preview above while your voice records in sync.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-right">
+            <div className="text-[9px] font-black uppercase tracking-[0.14em] text-white/45">
+              Time Left
+            </div>
+            <div
+              className={cn(
+                "mt-1 text-lg font-black tabular-nums",
+                countdownState.isCritical ? "text-red-400" : "text-white"
+              )}
+            >
+              {remainingLabel}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <canvas ref={canvasRef} width={300} height={80} className="h-10 w-full" />
+              <div className="mt-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.12em] text-white/45">
+                <span>{elapsedLabel} recorded</span>
+                <span>{Math.round(recordingProgress)}%</span>
+              </div>
+            </div>
+
+            <Button
+              size="lg"
+              className="h-14 w-14 shrink-0 rounded-full bg-red-600 hover:bg-red-700 ring-4 ring-red-500/25 ring-offset-2 ring-offset-black shadow-xl"
+              onClick={stopRecording}
+              aria-label="Stop recording"
+            >
+              <Square className="h-5 w-5 fill-white" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[0.12em] text-white/50">
+          <span>Preview locked to avoid accidental pauses</span>
+          <span>{countdownState.remaining}s left</span>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div 

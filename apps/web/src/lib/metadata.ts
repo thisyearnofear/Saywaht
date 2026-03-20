@@ -3,6 +3,8 @@ import { TimelineTrack } from "@/stores/timeline-store";
 import { validateMetadataJSON } from "@zoralabs/coins-sdk";
 import { processThumbnailForMetadata } from "./thumbnail-upload";
 
+const METADATA_PROPAGATION_TIMEOUT_MS = 15000;
+
 export interface CoinMetadata {
   name: string;
   description: string;
@@ -30,6 +32,38 @@ export interface GenerateMetadataParams {
   thumbnailUrl?: string; // Optional custom thumbnail URL (for metadata)
   archiveManifestUrl?: string;
   captionsUrl?: string;
+}
+
+async function waitForMetadataPropagation(uri: string, gatewayUrl: string): Promise<void> {
+  try {
+    console.log("⏳ Verifying metadata propagation...");
+
+    const response = await fetch("/api/ipfs/metadata-ready", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        uri,
+        gatewayUrl,
+        timeoutMs: METADATA_PROPAGATION_TIMEOUT_MS,
+      }),
+    });
+
+    const result = await response.json().catch(() => ({ ready: false }));
+
+    if (response.ok && result?.ready) {
+      console.log("✅ Metadata propagation verified:", result.url);
+      return;
+    }
+
+    console.warn(
+      "⚠️ Metadata propagation could not be verified before continuing:",
+      result?.error || `HTTP ${response.status}`
+    );
+  } catch (error) {
+    console.warn("⚠️ Metadata propagation verification failed, continuing:", error);
+  }
 }
 
 /**
@@ -130,35 +164,9 @@ export async function uploadMetadataToIPFS(metadata: CoinMetadata): Promise<stri
 
     const result = await groveStorage.uploadMetadata(metadata);
 
-    // Improvement 2: IPFS Hydration (Kicker)
-    // Fire and forget requests to multiple gateways to speed up propagation for Zora's validator
-    const ipfsHash = result.uri.replace('lens://', '').replace('ipfs://', '');
-    if (ipfsHash) {
-      const gateways = [
-        `https://ipfs.io/ipfs/${ipfsHash}`,
-        `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`,
-        `https://dweb.link/ipfs/${ipfsHash}`,
-        `https://gateway.pinata.cloud/ipfs/${ipfsHash}`
-      ];
-      
-      console.log('🚀 Hydrating IPFS gateways for Zora validation...');
-      gateways.forEach(url => {
-        fetch(url, { method: 'HEAD', mode: 'no-cors' }).catch(() => {});
-      });
-    }
-
-    // Wait for IPFS propagation to ensure content is available
-    try {
-      console.log('⏳ Waiting for IPFS propagation (5s)...');
-      await new Promise(resolve => setTimeout(resolve, 5000)); 
-      console.log('✅ IPFS propagation wait complete');
-    } catch (error) {
-      console.warn('⚠️ Propagation wait failed, but continuing:', error);
-    }
-
     // Use standard IPFS URI for Zora metadata to ensure maximum compatibility with SDK and contracts
-    // We still do the hydration above to ensure it's available via gateways
     const ipfsUri = result.uri.replace('lens://', 'ipfs://');
+    await waitForMetadataPropagation(ipfsUri, result.gatewayUrl);
 
     console.log('✅ Metadata uploaded to IPFS:', ipfsUri);
     console.log('🌐 Gateway URL:', result.gatewayUrl);
@@ -173,4 +181,3 @@ export async function uploadMetadataToIPFS(metadata: CoinMetadata): Promise<stri
     return "ipfs://bafybeigoxzqzbnxsn35vq7lls3ljxdcwjafxvbvkivprsodzrptpiguysy";
   }
 }
-

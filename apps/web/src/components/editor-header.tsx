@@ -184,7 +184,7 @@ export function EditorHeader() {
 
       toast.loading("Uploading project snapshot...", { id: "deploy-progress" });
       const uploadPromise = storageManager.exportProjectData(normalizedProjectData);
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 60000));
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 180000));
       const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
       toast.dismiss("deploy-progress");
       const dataUrl = (uploadResult as { gatewayUrl?: string; url?: string }).gatewayUrl
@@ -334,7 +334,9 @@ export function EditorHeader() {
               <Download className="h-4 w-4 mr-3 text-primary" />
               <div className="flex flex-col">
                 <span className="font-bold text-sm">Download MP4</span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Optimized export</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                  {backendAvailable ? "Server render preferred" : "Browser render fallback"}
+                </span>
               </div>
             </DropdownMenuItem>
             

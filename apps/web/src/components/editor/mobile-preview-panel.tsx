@@ -42,7 +42,11 @@ export function MobilePreviewPanel({
   const { canvasSize } = useCanvasStore();
   const { videoObjectFit, toggleVideoObjectFit } = useEditorStore();
   const { clipLoadingStatus } = useTemplateStore();
-  const hasLoadingClips = Object.values(clipLoadingStatus).some((s) => s === "loading");
+  const clipStatuses = Object.values(clipLoadingStatus);
+  const loadingClipCount = clipStatuses.filter((status) => status === "loading").length;
+  const readyClipCount = clipStatuses.filter((status) => status === "ready").length;
+  const errorClipCount = clipStatuses.filter((status) => status === "error").length;
+  const trackedClipCount = clipStatuses.length;
 
   const handleZoomChange = (scale: number) => {
     if (previewRef.current) {
@@ -154,10 +158,20 @@ export function MobilePreviewPanel({
       )}
 
       {/* Per-clip loading indicator — shown after template apply while videos buffer */}
-      {hasLoadingClips && (
+      {loadingClipCount > 0 && (
         <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white text-[11px] px-3 py-1.5 rounded-full border border-white/10">
           <Loader2 className="h-3 w-3 animate-spin" />
-          <span>Loading clips…</span>
+          <span>
+            {readyClipCount > 0 && trackedClipCount > 0
+              ? `Loading clips ${readyClipCount}/${trackedClipCount}`
+              : `Loading ${loadingClipCount} clip${loadingClipCount === 1 ? "" : "s"}…`}
+          </span>
+        </div>
+      )}
+
+      {errorClipCount > 0 && loadingClipCount === 0 && (
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 bg-red-950/80 backdrop-blur-sm text-red-100 text-[11px] px-3 py-1.5 rounded-full border border-red-400/20">
+          <span>{errorClipCount} clip{errorClipCount === 1 ? "" : "s"} had loading issues</span>
         </div>
       )}
 

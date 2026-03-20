@@ -4,7 +4,7 @@
     "payload": "eyJkb21haW4iOiJzYXl3YWh0Lm5ldGxpZnkuYXBwIn0",
     "signature": "hEHGInzKUWHewoTcx1PPt1x6vQsO0LOpWNccpPPbiOB1B8nH90C6J8UezgbcE8RT79zcwzZPGOYn5Cd7pM/7Gxs="
   },
-  "miniapp": {
+  "frame": {
     "version": "1",
     "name": "Saywaht",
     "tagline": "Coin Your Commentary",

@@ -7,8 +7,9 @@
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
 import { exportVideoTrueOffline } from "./optimized-export";
-import { FORMAT_DIMENSIONS, VideoFormat, getVideoBitrate } from "./video-utils";
-import { exportVideoBackend, BackendExportOptions } from "./backend-export";
+import { VideoFormat, getVideoBitrate } from "./video-utils";
+import { exportVideoBackend, isBackendExportAvailable } from "./backend-export";
+import { getExportRuntimeConfig } from "./export-runtime-config";
 import { getExportErrorMessage } from "./export-error-handler";
 import { startExportDiagnostics, updateExportProgress, finishExportDiagnostics } from "./monitoring";
 
@@ -25,6 +26,8 @@ export interface ExportOptions {
   frameRate?: number;
   videoBitrate?: number;
   audioBitrate?: number;
+  maxFileSizeMB?: number;
+  timeout?: number;
 }
 
 // CONSOLIDATION: Export configuration (from deleted export-config.ts)
@@ -116,15 +119,25 @@ async function selectExportMethod(
   }
 
   const complexity = analyzeContentComplexity(tracks, mediaItems, totalDuration);
+  const runtimeConfig = getExportRuntimeConfig({
+    tracks,
+    mediaItems,
+    totalDuration,
+    surface: "download",
+  });
+
+  if (!runtimeConfig.backendCompatible) {
+    console.info("Falling back to offline export because backend compatibility checks failed.", {
+      reason: runtimeConfig.backendCompatibilityReason,
+    });
+    return "offline";
+  }
 
   // Check if backend is available
   try {
-    const response = await fetch('/api/health', {
-      method: 'GET',
-      signal: AbortSignal.timeout(2000)
-    });
+    const backendAvailable = await isBackendExportAvailable();
 
-    if (response.ok) {
+    if (backendAvailable) {
       // Use backend for complex content or high quality
       if (complexity.score > 0.5 || options.quality === "high" || totalDuration > 60) {
         return "backend";
@@ -179,6 +192,13 @@ export const exportVideo = async (
     outputFormat: "mp4"
   }
 ): Promise<Blob> => {
+  const runtimeConfig = getExportRuntimeConfig({
+    tracks,
+    mediaItems,
+    totalDuration,
+    surface: "download",
+  });
+
   // CONSOLIDATION: Start diagnostics tracking
   const contentInfo = {
     tracks: tracks.length,
@@ -218,8 +238,8 @@ export const exportVideo = async (
             trackedProgress,
             {
               ...options,
-              maxFileSizeMB: 100,
-              timeout: Math.max(totalDuration * 5000, 60000)
+              maxFileSizeMB: options.maxFileSizeMB ?? 100,
+              timeout: options.timeout ?? runtimeConfig.backendTimeoutMs
             }
           );
           return backendResult.blob;

@@ -6,7 +6,7 @@
  */
 
 export interface MiniAppEmbed {
-  version: "1";
+  version: "next";
   imageUrl: string;
   button: {
     title: string;
@@ -28,7 +28,7 @@ export function generateMiniAppEmbed(overrides?: Partial<MiniAppEmbed>): MiniApp
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://saywaht.netlify.app';
 
   const defaultEmbed: MiniAppEmbed = {
-    version: "1",
+    version: "next",
     imageUrl: `${baseUrl}/opengraph-image.jpg`,
     button: {
       title: "🎬 Open Saywaht",
@@ -36,7 +36,7 @@ export function generateMiniAppEmbed(overrides?: Partial<MiniAppEmbed>): MiniApp
         type: "launch_frame",
         name: "Saywaht",
         url: baseUrl,
-        splashImageUrl: `${baseUrl}/images/android-chrome-512x512.png`,
+        splashImageUrl: `${baseUrl}/images/android-chrome-192x192.png`,
         splashBackgroundColor: "#000000"
       }
     }

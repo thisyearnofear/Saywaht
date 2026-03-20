@@ -1,6 +1,7 @@
 import { TimelineTrack } from "@/stores/timeline-store";
 import { MediaItem } from "@/stores/media-store";
 import { FORMAT_DIMENSIONS, VideoFormat, getQualityBitrate } from "./video-utils";
+import { getExportRuntimeConfig } from "./export-runtime-config";
 import { exportVideo } from "./canvas-export-utils";
 
 /**
@@ -19,6 +20,7 @@ export interface UnifiedExportOptions {
   videoBitrate?: number;
   audioBitrate?: number;
   maxFileSizeMB?: number;
+  timeout?: number;
   onSizeEstimate?: (estimatedSizeMB: number, maxSizeMB: number) => Promise<boolean>;
 }
 
@@ -158,6 +160,13 @@ export async function unifiedExport(
   }
 
   // Convert UnifiedExportOptions to ExportOptions for our smart export system
+  const runtimeConfig = getExportRuntimeConfig({
+    tracks,
+    mediaItems,
+    totalDuration,
+    surface: "mint",
+  });
+
   const exportOptions = {
     format: options.format || "portrait",
     quality: options.quality || "medium",
@@ -167,7 +176,8 @@ export async function unifiedExport(
     videoBitrate: options.videoBitrate || getQualityBitrate(options.quality || "medium"),
     audioBitrate: options.audioBitrate || 192000,
     method: "auto" as const, // Use intelligent method selection
-    maxFileSizeMB: options.maxFileSizeMB || await getDefaultMaxSize()
+    maxFileSizeMB: options.maxFileSizeMB || await getDefaultMaxSize(),
+    timeout: options.timeout || runtimeConfig.backendTimeoutMs,
   };
   
   // Convert progress callback to simple percentage for our export system
