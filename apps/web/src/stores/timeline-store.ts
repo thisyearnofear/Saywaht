@@ -18,6 +18,9 @@ export interface TimelineClip {
   contrast?: number; // Visual effect multiplier (1.0 = neutral)
   saturation?: number; // Visual effect multiplier (1.0 = neutral)
   audioGain?: number; // Clip gain multiplier (1.0 = neutral)
+  // Transitions
+  transitionType?: "none" | "crossfade" | "blur" | "wipe" | "zoom";
+  transitionDuration?: number; // Seconds
 }
 
 export interface TimelineTrack {
@@ -77,6 +80,12 @@ interface TimelineStore {
     effects: Partial<Pick<TimelineClip, "brightness" | "contrast" | "saturation">>
   ) => void;
   updateClipAudioGain: (trackId: string, clipId: string, audioGain: number) => void;
+  updateClipTransition: (
+    trackId: string,
+    clipId: string,
+    type: TimelineClip["transitionType"],
+    duration?: number
+  ) => void;
   toggleTrackMute: (trackId: string) => void;
 
   // Computed values
@@ -332,6 +341,24 @@ export const useTimelineStore = create<TimelineStore>()(
                   clips: track.clips.map((clip: TimelineClip) =>
                     clip.id === clipId
                       ? { ...clip, audioGain: Math.max(0, Math.min(3, audioGain)) }
+                      : clip
+                  ),
+                }
+              : track
+          ),
+        }));
+      },
+
+      updateClipTransition: (trackId: string, clipId: string, type: TimelineClip["transitionType"], duration = 0.5) => {
+        get().pushHistory();
+        set((state: TimelineStore) => ({
+          tracks: state.tracks.map((track: TimelineTrack) =>
+            track.id === trackId
+              ? {
+                  ...track,
+                  clips: track.clips.map((clip: TimelineClip) =>
+                    clip.id === clipId
+                      ? { ...clip, transitionType: type, transitionDuration: duration }
                       : clip
                   ),
                 }

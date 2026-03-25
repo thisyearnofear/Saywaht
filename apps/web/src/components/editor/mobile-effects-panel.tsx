@@ -33,6 +33,14 @@ const AUDIO_EFFECTS: Effect[] = [
   { id: "reset-audio", name: "Reset", icon: "↺" },
 ];
 
+const TRANSITIONS: Effect[] = [
+  { id: "crossfade", name: "Fade", icon: "✨" },
+  { id: "blur", name: "Blur", icon: "💨" },
+  { id: "wipe", name: "Wipe", icon: "↔️" },
+  { id: "zoom", name: "Zoom", icon: "🔍" },
+  { id: "none", name: "None", icon: "✕" },
+];
+
 function EffectCard({
   effect,
   onApply,
@@ -59,6 +67,7 @@ export function MobileEffectsPanel({ className, onRequestMedia }: MobileEffectsP
   const tracks = useTimelineStore((s) => s.tracks);
   const updateClipVisualEffects = useTimelineStore((s) => s.updateClipVisualEffects);
   const updateClipAudioGain = useTimelineStore((s) => s.updateClipAudioGain);
+  const updateClipTransition = useTimelineStore((s) => s.updateClipTransition);
   const mediaItems = useMediaStore((s) => s.mediaItems);
   const currentTime = usePlaybackStore((s) => s.currentTime);
   const hasTimelineContent = tracks.some((track) => track.clips.length > 0);
@@ -138,13 +147,29 @@ export function MobileEffectsPanel({ className, onRequestMedia }: MobileEffectsP
     toast.success(`Applied to ${targets.length} clip${targets.length > 1 ? "s" : ""}.`);
   };
 
+  const applyTransition = (transitionId: string) => {
+    if (activeClipRefs.length === 0) {
+      toast.info("Move playhead over a clip.");
+      return;
+    }
+    const type = transitionId as TimelineClip["transitionType"];
+    activeClipRefs.forEach(({ trackId, clip }) => {
+      updateClipTransition(trackId, clip.id, type, 0.5);
+    });
+    toast.success(`Transition set to ${transitionId}`);
+  };
+
   const handleEffectApply = (effectId: string) => {
     addHapticFeedback("medium");
     if (effectId === "brighten" || effectId === "darken" || effectId === "contrast-up" || effectId === "reset-video") {
       applyVideoEffect(effectId);
       return;
     }
-    applyAudioEffect(effectId);
+    if (effectId === "boost" || effectId === "soften" || effectId === "reset-audio") {
+      applyAudioEffect(effectId);
+      return;
+    }
+    applyTransition(effectId);
   };
 
   if (!hasTimelineContent && mediaItems.length === 0) {
@@ -179,20 +204,27 @@ export function MobileEffectsPanel({ className, onRequestMedia }: MobileEffectsP
             <h2 className="text-sm font-bold uppercase tracking-wider">Effects</h2>
           </div>
 
-          <TabsList className="grid w-full grid-cols-2 rounded-xl bg-muted/30 h-11 p-1">
+          <TabsList className="grid w-full grid-cols-3 rounded-xl bg-muted/30 h-11 p-1">
             <TabsTrigger
               value="video"
-              className="rounded-lg text-xs font-bold data-[state=active]:bg-background transition-all"
+              className="rounded-lg text-[10px] font-bold data-[state=active]:bg-background transition-all"
               onClick={() => addHapticFeedback("light")}
             >
-              Video FX
+              Video
             </TabsTrigger>
             <TabsTrigger
               value="audio"
-              className="rounded-lg text-xs font-bold data-[state=active]:bg-background transition-all"
+              className="rounded-lg text-[10px] font-bold data-[state=active]:bg-background transition-all"
               onClick={() => addHapticFeedback("light")}
             >
-              Audio FX
+              Audio
+            </TabsTrigger>
+            <TabsTrigger
+              value="transitions"
+              className="rounded-lg text-[10px] font-bold data-[state=active]:bg-background transition-all"
+              onClick={() => addHapticFeedback("light")}
+            >
+              Transitions
             </TabsTrigger>
           </TabsList>
           <p className="mt-3 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
@@ -212,6 +244,14 @@ export function MobileEffectsPanel({ className, onRequestMedia }: MobileEffectsP
           <TabsContent value="audio" className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col">
             <div className="grid grid-cols-3 gap-3 p-4">
               {AUDIO_EFFECTS.map((effect) => (
+                <EffectCard key={effect.id} effect={effect} onApply={handleEffectApply} />
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="transitions" className="m-0 h-full data-[state=active]:flex data-[state=active]:flex-col">
+            <div className="grid grid-cols-3 gap-3 p-4">
+              {TRANSITIONS.map((effect) => (
                 <EffectCard key={effect.id} effect={effect} onApply={handleEffectApply} />
               ))}
             </div>

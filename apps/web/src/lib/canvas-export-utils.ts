@@ -279,3 +279,26 @@ export const exportVideo = async (
     throw error;
   }
 };
+
+/**
+ * CAPTURE: Grabs the current frame from the preview canvas
+ */
+export const captureFrameAsBlob = async (
+  quality = 0.8
+): Promise<Blob> => {
+  // Find the preview canvas in the DOM
+  const canvas = document.querySelector('canvas[data-preview="true"]') as HTMLCanvasElement;
+  if (!canvas) {
+    // Fallback: search for any visible canvas in the preview area
+    const anyCanvas = document.querySelector('.preview-container canvas') as HTMLCanvasElement;
+    if (anyCanvas) return new Promise(resolve => anyCanvas.toBlob(b => resolve(b!), 'image/jpeg', quality));
+    throw new Error("Preview canvas not found");
+  }
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("Failed to capture frame"));
+    }, 'image/jpeg', quality);
+  });
+};

@@ -28,9 +28,16 @@ export function useFarcasterShare() {
         try {
             toast.loading("Preparing your reaction...", { id: "farcaster-share" });
 
-            // 1. Export Video
-            // Dynamic import for PERFORMANCE (Adaptive loading)
-            const { exportVideo } = await import("@/lib/canvas-export-utils");
+            // 1. Capture Thumbnail and Export Video in parallel for speed
+            const { exportVideo, captureFrameAsBlob } = await import("@/lib/canvas-export-utils");
+            
+            // Try to capture thumbnail first (fast)
+            let thumbnailBlob: Blob | null = null;
+            try {
+              thumbnailBlob = await captureFrameAsBlob(0.9);
+            } catch (err) {
+              console.warn("Frame capture failed, using video-only share", err);
+            }
 
             // Ensure minimum duration for visibility
             const totalDuration = Math.max(getTotalDuration(), 5);
@@ -53,23 +60,20 @@ export function useFarcasterShare() {
                 }
             );
 
-            // 2. Upload Video
+            // 2. Upload Video and Thumbnail
             toast.loading("Uploading to decentralized storage...", { id: "farcaster-share" });
-            const file = new File([blob], "reaction.mp4", { type: "video/mp4" });
-
-            const uploadResult = await storageManager.uploadFile(file, {
-                preferredProvider: "grove", // Use Grove for speed/reliability
-                onProgress: (progress) => {
-                    toast.loading(`Uploading... ${Math.round(progress)}%`, {
-                        id: "farcaster-share",
-                    });
-                }
-            });
+            const videoFile = new File([blob], "reaction.mp4", { type: "video/mp4" });
+            
+            const [videoResult, thumbResult] = await Promise.all([
+               storageManager.uploadFile(videoFile, { preferredProvider: "grove" }),
+               thumbnailBlob ? storageManager.uploadFile(new File([thumbnailBlob], "thumbnail.jpg", { type: "image/jpeg" }), { preferredProvider: "grove" }) : Promise.resolve(null)
+            ]);
 
             toast.success("Ready to share!", { id: "farcaster-share" });
 
             const text = "Check out my reaction video! 🎥✨ created with @saywaht";
-            const embeds = [uploadResult.url];
+            const embeds = [videoResult.url];
+            if (thumbResult) embeds.unshift(thumbResult.url); // Use thumbnail first for rich preview
 
             await hapticSelection();
             await hapticImpact('light');

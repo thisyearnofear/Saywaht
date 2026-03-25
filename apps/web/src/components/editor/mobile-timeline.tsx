@@ -58,6 +58,13 @@ export const MobileTimeline = React.memo(function MobileTimeline({
   const pinchStartDistRef = useRef<number>(0);
   const pinchStartZoomRef = useRef<number>(1);
   const isPinchingRef = useRef<boolean>(false);
+  
+  // Trimming state
+  const [isTrimming, setIsTrimming] = useState<"start" | "end" | null>(null);
+  const [trimDelta, setTrimDelta] = useState(0);
+  const trimStartValRef = useRef(0);
+  const trimEndValRef = useRef(0);
+  const trimStartTimeRef = useRef(0);
 
   const SNAP_THRESHOLD = 0.2; // Seconds
 
@@ -280,6 +287,73 @@ export const MobileTimeline = React.memo(function MobileTimeline({
     seek(Math.min(duration, currentTime + 5));
   }, [seek, currentTime, duration]);
 
+  const handleTrimStart = useCallback((e: React.PointerEvent, trackId: string, clip: any) => {
+    e.stopPropagation();
+    setIsTrimming("start");
+    trimStartValRef.current = clip.trimStart;
+    trimEndValRef.current = clip.trimEnd;
+    trimStartTimeRef.current = clip.startTime;
+    addHapticFeedback("medium");
+    
+    const startX = e.clientX;
+    const handleMove = (moveEvent: PointerEvent) => {
+      const rect = timelineRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const moveDeltaX = moveEvent.clientX - startX;
+      const moveDeltaTime = (moveDeltaX / rect.width) * duration;
+      
+      // Calculate new values with constraints
+      const newTrimStart = Math.max(0, Math.min(clip.duration - clip.trimEnd - 0.5, trimStartValRef.current + moveDeltaTime));
+      const actualDelta = newTrimStart - trimStartValRef.current;
+      
+      setTrimDelta(actualDelta);
+      useTimelineStore.getState().updateClipTrim(trackId, clip.id, newTrimStart, clip.trimEnd);
+      useTimelineStore.getState().updateClipStartTime(trackId, clip.id, trimStartTimeRef.current + actualDelta);
+    };
+    
+    const handleUp = () => {
+      setIsTrimming(null);
+      setTrimDelta(0);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      addHapticFeedback("heavy");
+    };
+    
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  }, [duration]);
+
+  const handleTrimEnd = useCallback((e: React.PointerEvent, trackId: string, clip: any) => {
+    e.stopPropagation();
+    setIsTrimming("end");
+    trimStartValRef.current = clip.trimStart;
+    trimEndValRef.current = clip.trimEnd;
+    addHapticFeedback("medium");
+    
+    const startX = e.clientX;
+    const handleMove = (moveEvent: PointerEvent) => {
+      const rect = timelineRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const moveDeltaX = moveEvent.clientX - startX;
+      const moveDeltaTime = (moveDeltaX / rect.width) * duration;
+      
+      const newTrimEnd = Math.max(0, Math.min(clip.duration - clip.trimStart - 0.5, trimEndValRef.current - moveDeltaTime));
+      setTrimDelta(- (newTrimEnd - trimEndValRef.current));
+      useTimelineStore.getState().updateClipTrim(trackId, clip.id, clip.trimStart, newTrimEnd);
+    };
+    
+    const handleUp = () => {
+      setIsTrimming(null);
+      setTrimDelta(0);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      addHapticFeedback("heavy");
+    };
+    
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  }, [duration]);
+
   // Clip deletion
   const handleDeleteClip = useCallback((trackId: string, clipId: string) => {
     addHapticFeedback("medium");
@@ -497,7 +571,7 @@ export const MobileTimeline = React.memo(function MobileTimeline({
                           )}
                           style={{
                             left: `${((clip.startTime - startTime) / visibleDuration) * 100}%`,
-                            width: `${(clip.duration / visibleDuration) * 100}%`,
+                            width: `${((clip.duration - clip.trimStart - clip.trimEnd) / visibleDuration) * 100}%`,
                             minWidth: '32px',
                           }}
                           onClick={(e) => {
@@ -506,26 +580,57 @@ export const MobileTimeline = React.memo(function MobileTimeline({
                             addHapticFeedback("light");
                           }}
                         >
+                          {/* Trimming Handles */}
+                          {isSelected && (
+                            <>
+                              <div 
+                                className="absolute left-0 top-0 bottom-0 w-4 bg-yellow-400/80 rounded-l-lg z-20 cursor-ew-resize flex items-center justify-center active:bg-yellow-400"
+                                onPointerDown={(e) => handleTrimStart(e, track.id, clip)}
+                              >
+                                <div className="w-1 h-4 bg-black/40 rounded-full" />
+                                {isTrimming === "start" && (
+                                  <div className="absolute -top-8 left-0 bg-yellow-400 text-black text-[9px] font-black px-1.5 py-0.5 rounded shadow-lg whitespace-nowrap">
+                                    {trimDelta > 0 ? "+" : ""}{trimDelta.toFixed(1)}s
+                                  </div>
+                                )}
+                              </div>
+                              <div 
+                                className="absolute right-0 top-0 bottom-0 w-4 bg-yellow-400/80 rounded-r-lg z-20 cursor-ew-resize flex items-center justify-center active:bg-yellow-400"
+                                onPointerDown={(e) => handleTrimEnd(e, track.id, clip)}
+                              >
+                                <div className="w-1 h-4 bg-black/40 rounded-full" />
+                                {isTrimming === "end" && (
+                                  <div className="absolute -top-8 right-0 bg-yellow-400 text-black text-[9px] font-black px-1.5 py-0.5 rounded shadow-lg whitespace-nowrap">
+                                    {trimDelta > 0 ? "+" : ""}{trimDelta.toFixed(1)}s
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          )}
+
                           {/* Clip content */}
                           <div className="h-full flex items-center px-2 overflow-hidden">
-                            <GripVertical className="h-3 w-3 text-muted-foreground/40 mr-1.5 flex-shrink-0" />
-                            <span className="text-[10px] font-bold truncate text-foreground/80">
+                            {!isSelected && <GripVertical className="h-3 w-3 text-muted-foreground/40 mr-1.5 flex-shrink-0" />}
+                            <span className={cn(
+                              "text-[10px] font-bold truncate",
+                              isSelected ? "text-primary-foreground" : "text-foreground/80"
+                            )}>
                               {clip.name || mediaItem?.name || "Clip"}
                             </span>
                           </div>
 
-                          {/* Delete button when selected - Bigger touch target */}
-                          {isSelected && (
+                          {/* Delete button when selected - Higher to avoid handles */}
+                          {isSelected && !isTrimming && (
                             <Button
                               variant="destructive"
                               size="icon"
-                              className="absolute -top-3 -right-3 h-7 w-7 rounded-full shadow-lg border-2 border-background animate-in zoom-in-50"
+                              className="absolute -top-6 left-1/2 -translate-x-1/2 h-6 w-6 rounded-full shadow-lg border-2 border-background animate-in zoom-in-50"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteClip(track.id, clip.id);
                               }}
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-3 w-3" />
                             </Button>
                           )}
                         </div>
