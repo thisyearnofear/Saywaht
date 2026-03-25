@@ -69,8 +69,9 @@ export function MobileRecordingInterface({
   const [trimEnd, setTrimEnd] = useState(0); 
   const [startTime, setStartTime] = useState(0); // Offset on project timeline
 
-  // Explicitly set to 10s to ensure no confusion with 15s templates
-  const MAX_RECORDING_DURATION = 10;
+  // Dynamic duration: Cap at 60s, but allow at least 15s or the video's actual length.
+  const MAX_RECORDING_DURATION = Math.min(60, Math.max(15, Math.ceil(videoDuration || 0) + 2));
+
 
   // Cleanup on unmount
   useEffect(() => {
@@ -420,13 +421,13 @@ export function MobileRecordingInterface({
             className="w-full flex items-center justify-between px-1"
           >
             <div className={cn(
-                "rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest",
-                isCompleted ? "bg-green-500/10 text-green-600" : "bg-muted text-muted-foreground"
+                "rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5",
+                isCompleted ? "bg-green-500/10 text-green-600 border border-green-500/20" : "bg-muted text-muted-foreground border border-border/50"
               )}>
-              {isCompleted ? "✓ Recorded • Review & Sync" : "🎙 Ready • 10s Max"}
+              {isCompleted ? <><Check className="h-3 w-3" /> Recorded • Review & Sync</> : <><Mic className="h-3 w-3" /> Ready • {MAX_RECORDING_DURATION}s Max</>}
             </div>
             
-            <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground" onClick={handleClose}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground" onClick={handleClose}>
               <X className="h-4 w-4" />
             </Button>
           </motion.div>
@@ -478,10 +479,10 @@ export function MobileRecordingInterface({
                 {/* Sync & Trim Controls */}
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[8px] font-black text-muted-foreground uppercase">
-                        <span className="flex items-center gap-1"><Scissors className="h-2 w-2" /> Start Trim</span>
-                        <span className="text-primary">{trimStart.toFixed(1)}s</span>
+                    <div className="space-y-1.5 p-3 rounded-xl bg-black/40 border border-white/5">
+                      <div className="flex justify-between text-[9px] font-black text-white/50 uppercase tracking-widest">
+                        <span className="flex items-center gap-1.5"><Scissors className="h-2.5 w-2.5" /> Trim Start</span>
+                        <span className="text-white bg-white/10 px-1.5 rounded">{trimStart.toFixed(1)}s</span>
                       </div>
                       <input 
                         type="range" 
@@ -495,13 +496,13 @@ export function MobileRecordingInterface({
                           if (reviewAudioRef.current) reviewAudioRef.current.currentTime = val;
                           seekVideo(startTime + val);
                         }}
-                        className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                        className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-white mt-2"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[8px] font-black text-muted-foreground uppercase">
-                        <span className="flex items-center gap-1">Sync Start</span>
-                        <span className="text-primary">{startTime.toFixed(1)}s</span>
+                    <div className="space-y-1.5 p-3 rounded-xl bg-black/40 border border-white/5">
+                      <div className="flex justify-between text-[9px] font-black text-white/50 uppercase tracking-widest">
+                        <span className="flex items-center gap-1.5"><Play className="h-2.5 w-2.5" /> Sync Video</span>
+                        <span className="text-white bg-white/10 px-1.5 rounded">{startTime.toFixed(1)}s</span>
                       </div>
                       <input 
                         type="range" 
@@ -514,7 +515,7 @@ export function MobileRecordingInterface({
                           setStartTime(val);
                           seekVideo(val + trimStart);
                         }}
-                        className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                        className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-white mt-2"
                       />
                     </div>
                   </div>
@@ -622,11 +623,21 @@ export function MobileRecordingInterface({
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            className="text-center"
+            className="text-center w-full"
           >
-            <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-              {isCompleted ? "Step 3: Save to Project" : "Tap to Start • 10s Max"}
-            </p>
+            {isCompleted ? (
+              <Button 
+                variant="default"
+                className="w-full h-12 rounded-xl bg-white text-black hover:bg-white/90 font-black uppercase tracking-widest text-[11px]"
+                onClick={acceptRecording}
+              >
+                <Check className="mr-2 h-4 w-4" /> Apply Voiceover
+              </Button>
+            ) : (
+              <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                Tap to Start • {MAX_RECORDING_DURATION}s Max
+              </p>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
