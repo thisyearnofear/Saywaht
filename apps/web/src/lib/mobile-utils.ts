@@ -8,7 +8,21 @@
 export function addHapticFeedback(intensity: 'light' | 'medium' | 'heavy' = 'light') {
   if (typeof window === 'undefined') return;
 
-  // Try TWA (Telegram/Mini-App) haptics first as they are more refined
+  // 1. Try Farcaster SDK haptics if available (async, so we don't await)
+  // We check for the sdk in the window or cached in the lib
+  try {
+    const farcasterSdk = (window as any).farcaster?.sdk;
+    if (farcasterSdk?.haptics) {
+      if (intensity === 'light') farcasterSdk.haptics.impactOccurred?.('light');
+      else if (intensity === 'medium') farcasterSdk.haptics.impactOccurred?.('medium');
+      else farcasterSdk.haptics.notificationOccurred?.('success');
+      // Continue to other fallbacks just in case, or return?
+      // For Farcaster, we usually return after calling the SDK.
+      return;
+    }
+  } catch (e) {}
+
+  // 2. Try TWA (Telegram/Mini-App) haptics
   const twa = (window as any).Telegram?.WebApp || (window as any).twa;
   if (twa?.HapticFeedback) {
     if (intensity === 'light') twa.HapticFeedback.impactOccurred('light');
@@ -17,6 +31,7 @@ export function addHapticFeedback(intensity: 'light' | 'medium' | 'heavy' = 'lig
     return;
   }
 
+  // 3. Native Browser Vibrate fallback
   if ('vibrate' in navigator) {
     const duration = intensity === 'light' ? 10 : intensity === 'medium' ? 25 : 50;
     navigator.vibrate(duration);

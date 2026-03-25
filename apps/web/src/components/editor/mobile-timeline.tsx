@@ -52,7 +52,12 @@ export const MobileTimeline = React.memo(function MobileTimeline({
   const timelineRef = useRef<HTMLDivElement>(null);
   const scrubbingRef = useRef<boolean>(false);
   const lastSnappedTimeRef = useRef<number | null>(null);
-  const lastSeekTimeRef = useRef<number>(0); // For throttling seeks
+  const lastSeekTimeRef = useRef<number>(0); 
+  
+  // Pinch zoom state
+  const pinchStartDistRef = useRef<number>(0);
+  const pinchStartZoomRef = useRef<number>(1);
+  const isPinchingRef = useRef<boolean>(false);
 
   const SNAP_THRESHOLD = 0.2; // Seconds
 
@@ -104,6 +109,24 @@ export const MobileTimeline = React.memo(function MobileTimeline({
   // Touch handling that prevents conflicts
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     e.stopPropagation();
+    
+    if (e.touches.length === 2) {
+      // Start pinching
+      isPinchingRef.current = true;
+      scrubbingRef.current = false;
+      
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const dist = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) +
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      pinchStartDistRef.current = dist;
+      pinchStartZoomRef.current = zoomLevel;
+      return;
+    }
+
+    isPinchingRef.current = false;
     scrubbingRef.current = true;
     setIsScrubbing(true);
     addHapticFeedback("light");
@@ -115,9 +138,28 @@ export const MobileTimeline = React.memo(function MobileTimeline({
     setTooltipTime(newTime);
     setTooltipPosition((newTime / duration) * 100);
     setShowTimeTooltip(true);
-  }, [seek, getTimeFromPosition, duration]);
+  }, [seek, getTimeFromPosition, duration, zoomLevel]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (isPinchingRef.current && e.touches.length === 2) {
+      e.preventDefault();
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const dist = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) +
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      
+      const scale = dist / pinchStartDistRef.current;
+      const newZoom = Math.max(0.5, Math.min(5, pinchStartZoomRef.current * scale));
+      
+      if (Math.abs(newZoom - zoomLevel) > 0.05) {
+        setZoomLevel(newZoom);
+        // addHapticFeedback('light'); // Too frequent on zoom
+      }
+      return;
+    }
+
     if (!scrubbingRef.current) return;
     
     e.preventDefault();
@@ -153,10 +195,17 @@ export const MobileTimeline = React.memo(function MobileTimeline({
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     e.stopPropagation();
-    scrubbingRef.current = false;
-    setIsScrubbing(false);
-    setShowTimeTooltip(false);
-    addHapticFeedback("medium");
+    
+    if (e.touches.length < 2) {
+      isPinchingRef.current = false;
+    }
+    
+    if (scrubbingRef.current) {
+      scrubbingRef.current = false;
+      setIsScrubbing(false);
+      setShowTimeTooltip(false);
+      addHapticFeedback("medium");
+    }
   }, []);
 
   // Mouse handling for desktop

@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import type { FarcasterUser, FarcasterFrameState } from "@/farcaster/types";
 import { useMobileContext } from "@/contexts/mobile-context";
 import { getFarcasterSdk } from "@/lib/farcaster-sdk";
+import { FarcasterSplashScreen } from "./farcaster-splash-screen";
 
 type FarcasterContextType = {
   farcasterUser: FarcasterUser | null;
@@ -39,19 +40,25 @@ export function FarcasterProvider({
   const [isFarcasterMiniApp, setIsFarcasterMiniApp] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isReady, setIsReady] = useState(false);
+  const [isSplashComplete, setIsSplashComplete] = useState(false);
 
   // Initialize Farcaster Mini App SDK with optimized performance
   useEffect(() => {
     const initializeSDK = async () => {
-      // Compute the URL-based detection synchronously up front
-      const urlHasFarcasterParams = typeof window !== "undefined" && (
+      // Compute the URL-based detection
+      const urlHasMiniAppParams = typeof window !== "undefined" && (
         window.location.search.includes("farcaster") ||
         window.location.search.includes("fid") ||
+        window.location.search.includes("base") ||
+        window.location.search.includes("cbwallet") ||
         window.location.pathname.includes("farcaster")
       );
 
-      // Fast path: if no Farcaster indicators in URL, skip SDK detection
-      if (!urlHasFarcasterParams) {
+      // Detection: Are we in a frame? (Common for Mini Apps)
+      const isInFrame = typeof window !== "undefined" && window.self !== window.top;
+
+      // Fast path: if no indicators, skip SDK detection for better performance on desktop
+      if (!urlHasMiniAppParams && !isInFrame) {
         setIsFarcasterMiniApp(false);
         setIsReady(true);
         setIsInitializing(false);
@@ -147,6 +154,12 @@ export function FarcasterProvider({
 
   return (
     <FarcasterContext.Provider value={contextValue}>
+      {isFarcasterMiniApp && (!isReady || !isSplashComplete) && (
+        <FarcasterSplashScreen 
+          isVisible={!isReady || !isSplashComplete} 
+          onComplete={() => setIsSplashComplete(true)} 
+        />
+      )}
       {children}
     </FarcasterContext.Provider>
   );

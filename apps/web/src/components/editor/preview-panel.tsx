@@ -9,6 +9,7 @@ import { useEditorStore } from "@/stores/editor-store";
 import { useTextStore } from "@/stores/text-store";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
+import { addHapticFeedback } from "@/lib/mobile-utils";
 import { VideoPlayer } from "../ui/video-player";
 import { ImageTimelineTreatment } from "../ui/image-timeline-treatment";
 import { AudioPlayer } from "@/components/ui/audio-player";
@@ -52,6 +53,8 @@ export function PreviewPanel({
     controlsVariant === "overlay"
   );
   const previewRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [snapGuides, setSnapGuides] = useState<{ x?: boolean; y?: boolean }>({});
   const controlsAreOverlay = controlsVariant === "overlay";
 
   // Memoize active clips calculation to prevent unnecessary re-renders
@@ -279,23 +282,46 @@ export function PreviewPanel({
         onPointerDown={(e) => {
           if (!onTextElementTap) return;
           e.stopPropagation();
+          setIsDragging(true);
           const target = e.currentTarget;
           const rect = previewRef.current?.getBoundingClientRect();
           if (!rect) return;
 
+          const SNAP_THRESHOLD = 0.05; // 5% proximity
+
           const handlePointerMove = (moveEvent: PointerEvent) => {
-            const x = (moveEvent.clientX - rect.left) / rect.width;
-            const y = (moveEvent.clientY - rect.top) / rect.height;
-            useTextStore.getState().updateTextElement(text.id, { 
-              x: Math.max(0, Math.min(1, x)), 
-              y: Math.max(0, Math.min(1, y)) 
-            });
+            let x = (moveEvent.clientX - rect.left) / rect.width;
+            let y = (moveEvent.clientY - rect.top) / rect.height;
+            
+            x = Math.max(0, Math.min(1, x));
+            y = Math.max(0, Math.min(1, y));
+
+            const guides: { x?: boolean; y?: boolean } = {};
+            
+            // Snap to center X
+            if (Math.abs(x - 0.5) < SNAP_THRESHOLD) {
+              if (!snapGuides.x) addHapticFeedback('light');
+              x = 0.5;
+              guides.x = true;
+            }
+            
+            // Snap to center Y
+            if (Math.abs(y - 0.5) < SNAP_THRESHOLD) {
+              if (!snapGuides.y) addHapticFeedback('light');
+              y = 0.5;
+              guides.y = true;
+            }
+
+            setSnapGuides(guides);
+            useTextStore.getState().updateTextElement(text.id, { x, y });
           };
 
           const handlePointerUp = () => {
             window.removeEventListener('pointermove', handlePointerMove);
             window.removeEventListener('pointerup', handlePointerUp);
-            onTextElementTap(text.id); // Also select it
+            setIsDragging(false);
+            setSnapGuides({});
+            onTextElementTap(text.id);
           };
 
           window.addEventListener('pointermove', handlePointerMove);
@@ -459,6 +485,14 @@ export function PreviewPanel({
                 {activeClips.map((clipData, index) => renderClip(clipData, index))}
               </>
             )}
+            {/* Snapping Guides */}
+            {isDragging && snapGuides.x && (
+              <div className="absolute inset-y-0 left-1/2 w-px bg-primary/60 shadow-[0_0_8px_rgba(var(--primary),0.8)] z-[60] pointer-events-none" />
+            )}
+            {isDragging && snapGuides.y && (
+              <div className="absolute inset-x-0 top-1/2 h-px bg-primary/60 shadow-[0_0_8px_rgba(var(--primary),0.8)] z-[60] pointer-events-none" />
+            )}
+
             {/* Text elements layer - always render on top */}
             {activeTextElements.map((text) => renderTextElement(text))}
           </div>

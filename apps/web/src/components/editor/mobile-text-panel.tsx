@@ -45,6 +45,14 @@ import {
   updateCaptionGroupStyle,
 } from "@/lib/transcription/caption-pipeline";
 
+const TEXT_STYLE_PRESETS = [
+  { id: 'vhs', name: 'VHS', color: '#FFFFFF', backgroundColor: '#00000080', fontSize: 24, fontWeight: 'bold', fontFamily: 'Courier New', textShadow: '2px 2px #FF00FF' },
+  { id: 'neon', name: 'Neon', color: '#00FFFF', fontSize: 28, fontWeight: 'black', fontFamily: 'Inter', textShadow: '0 0 10px #00FFFF' },
+  { id: 'cinema', name: 'Cinema', color: '#FDE047', fontSize: 22, fontWeight: 'medium', fontFamily: 'Georgia', textShadow: '1px 1px 2px #000000' },
+  { id: 'modern', name: 'Modern', color: '#FFFFFF', fontSize: 32, fontWeight: 'black', fontFamily: 'Inter', textAlign: 'center' },
+  { id: 'bold', name: 'Bold', color: '#EF4444', fontSize: 36, fontWeight: 'black', fontFamily: 'Inter' },
+];
+
 interface MobileTextPanelProps {
   className?: string;
   preferredCaptionGroupId?: string | null;
@@ -73,6 +81,7 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
   const [captionStatus, setCaptionStatus] = useState("");
   const [captionProgress, setCaptionProgress] = useState(0);
   const [activeCaptionGroupId, setActiveCaptionGroupId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "tools">("tools");
 
   const handleAddText = () => {
     if (!newText.trim()) return;
@@ -184,24 +193,53 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
     [resolvedCaptionGroupId, updateCaptionGroup]
   );
 
-  const handleApplyCaptionStyle = useCallback(() => {
+  const handleApplyPreset = useCallback((preset: typeof TEXT_STYLE_PRESETS[0]) => {
     if (!resolvedCaptionGroupId) return;
+    addHapticFeedback('medium');
     const ids = getCaptionElements(resolvedCaptionGroupId).map((item) => item.id);
-    updateCaptionGroupStyle(ids, { fontSize: 30, fontWeight: "bold", color: "#FFFFFF" }, updateTextElement);
-    toast.success("Caption style updated");
+    const updates = { 
+        fontSize: preset.fontSize, 
+        color: preset.color, 
+        fontWeight: preset.fontWeight as any,
+        fontFamily: preset.fontFamily,
+        textAlign: preset.textAlign as any
+    };
+    updateCaptionGroupStyle(ids, updates, updateTextElement);
+    toast.success(`Applied ${preset.name} style to captions`);
   }, [resolvedCaptionGroupId, getCaptionElements, updateTextElement]);
+
 
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
       <div className="border-b border-border/50 bg-muted/5 p-3">
-        <div className="mb-3 flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-            <Type className="h-4 w-4 text-primary" />
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+              <Type className="h-4 w-4 text-primary" />
+            </div>
+            <h2 className="text-xs font-bold uppercase tracking-wider">Text Overlays</h2>
           </div>
-          <h2 className="text-xs font-bold uppercase tracking-wider">Text Overlays</h2>
-          <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-            {textElements.length} TOTAL
-          </span>
+          
+          <div className="flex items-center bg-muted/40 p-1 rounded-full border border-border/20">
+            <button
+               onClick={() => { addHapticFeedback('light'); setViewMode('tools'); }}
+               className={cn(
+                 "px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full transition-all",
+                 viewMode === 'tools' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+               )}
+            >
+              Tools
+            </button>
+            <button
+               onClick={() => { addHapticFeedback('light'); setViewMode('list'); }}
+               className={cn(
+                 "px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full transition-all",
+                 viewMode === 'list' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+               )}
+            >
+              List
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-2">
@@ -325,19 +363,25 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-2 text-[10px]"
-                  onClick={handleApplyCaptionStyle}
-                >
-                  Style
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
                   className="h-8 px-2 text-[10px] text-destructive hover:text-destructive"
                   onClick={handleClearCaptions}
                 >
                   Clear
                 </Button>
+              </div>
+
+              {/* Styles Ribbon */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                 {TEXT_STYLE_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      onClick={() => handleApplyPreset(preset)}
+                      className="flex-shrink-0 px-3 py-1.5 rounded-lg border border-border/40 bg-muted/20 text-[9px] font-black uppercase tracking-wider hover:bg-muted transition-all"
+                      style={{ color: preset.color }}
+                    >
+                      {preset.name}
+                    </button>
+                 ))}
               </div>
 
               <div className="flex flex-wrap gap-1.5">
@@ -367,7 +411,7 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
         </div>
       </div>
 
-      {editingElement && (
+      {editingElement && viewMode === "tools" && (
         <div className="space-y-3 border-b border-border/50 bg-muted/5 p-3">
           <div className="flex items-center justify-between">
             <div className="text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground">
@@ -494,26 +538,6 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
                   updateTextElement(editingElement.id, { endTime: newEnd });
                 }}
               />
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 rounded-lg border-dashed text-[9px] font-bold"
-                  onClick={() => updateTextElement(editingElement.id, { startTime: currentTime })}
-                >
-                  <Clock className="mr-1.5 h-3 w-3" />
-                  Start @ Playhead
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 rounded-lg border-dashed text-[9px] font-bold"
-                  onClick={() => updateTextElement(editingElement.id, { endTime: currentTime })}
-                >
-                  <Clock className="mr-1.5 h-3 w-3" />
-                  End @ Playhead
-                </Button>
-              </div>
             </div>
           </div>
         </div>
@@ -521,7 +545,39 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
 
       <ScrollArea className="flex-1">
         <div className="space-y-2.5 p-3">
-          {textElements.length === 0 ? (
+          {viewMode === "list" && captionElements.length > 0 ? (
+            <div className="space-y-2">
+               {captionElements.map((element) => (
+                  <div 
+                    key={element.id}
+                    className="flex flex-col gap-2 p-3 rounded-xl border border-border/50 bg-card active:bg-muted/30 transition-all"
+                  >
+                    <div className="flex items-center justify-between">
+                       <span className="text-[9px] font-black text-primary tabular-nums">
+                         {formatTime(element.startTime)}
+                       </span>
+                       <Button 
+                         variant="ghost" 
+                         size="icon" 
+                         className="h-6 w-6 text-muted-foreground/30"
+                         onClick={() => deleteTextElement(element.id)}
+                       >
+                         <Trash2 className="h-3 w-3" />
+                       </Button>
+                    </div>
+                    <Textarea
+                      value={element.content}
+                      onChange={(e) => updateTextElement(element.id, { content: e.target.value })}
+                      onFocus={() => {
+                        addHapticFeedback('light');
+                        usePlaybackStore.getState().seek(element.startTime);
+                      }}
+                      className="min-h-[40px] text-xs border-none bg-muted/20 p-2 rounded-lg resize-none"
+                    />
+                  </div>
+               ))}
+            </div>
+          ) : textElements.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted/30">
                 <Type className="h-6 w-6 text-muted-foreground/40" />
@@ -530,42 +586,11 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
               <p className="mt-1 px-6 text-[11px] text-muted-foreground/60">
                 Add text to create captions, titles or subtitles for your video.
               </p>
-              <div className="mt-3 flex w-full gap-2 px-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 flex-1 text-[10px]"
-                  onClick={handleGenerateCaptions}
-                  disabled={isGeneratingCaptions}
-                >
-                  Generate Captions
-                </Button>
-                <Button
-                  size="sm"
-                  className="h-8 flex-1 text-[10px]"
-                  onClick={() => {
-                    addHapticFeedback("light");
-                    const effectiveDur = duration > 0 ? duration : 10;
-                    const id = addTextElement({
-                      content: "New text",
-                      x: 0.5,
-                      y: 0.5,
-                      fontSize: 32,
-                      fontFamily: "Inter",
-                      color: "#ffffff",
-                      textAlign: "center",
-                      startTime: currentTime,
-                      endTime: Math.min(currentTime + 3, effectiveDur),
-                    });
-                    setEditingId(id);
-                  }}
-                >
-                  Add Text
-                </Button>
-              </div>
             </div>
           ) : (
-            textElements.map((element) => (
+            textElements
+              .filter(el => viewMode === 'list' || !el.isAutoCaption)
+              .map((element) => (
               <button
                 key={element.id}
                 className={cn(
@@ -575,6 +600,7 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
                 onClick={() => {
                   setEditingId(element.id);
                   addHapticFeedback("light");
+                  usePlaybackStore.getState().seek(element.startTime);
                 }}
               >
                 <div

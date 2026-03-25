@@ -367,8 +367,8 @@ export function MobileEditorLayout({
             <>
               <MobilePreviewPanel
                 className={cn(
-                  "split-view-preview",
-                  isRecordingPreviewLocked && "recording-focused"
+                  "split-view-preview transition-all duration-500",
+                  isRecordingPreviewLocked ? "recording-mode shadow-2xl scale-[0.85] -translate-y-12" : ""
                 )}
                 showResolution={false}
                 showControls={false}
@@ -431,43 +431,44 @@ export function MobileEditorLayout({
             </div>
           )}
 
-          {isRecordingInProgress && (
-            <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-full bg-red-500/90 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-white">
-              Recording
-            </div>
-          )}
-
-          {isRecordingPreviewLocked && (
-            <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 -translate-x-1/2 rounded-full border border-white/10 bg-black/65 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/75 backdrop-blur">
-              Preview stays live while you record
-            </div>
-          )}
         </div>
+
+        {/* Persistent Pro Timeline - Always visible for scrubbing unless in extreme recording mode */}
+        {!isRecordingPreviewLocked && hasTimelineClips && (
+          <div className={cn(
+            "z-20 border-t border-white/5 bg-black/40 backdrop-blur-xl transition-all duration-500",
+            activeTool ? "h-[10vh]" : "h-[18vh]"
+          )}>
+            <MobileTimeline compact={!activeTool} />
+          </div>
+        )}
 
         {/* Tool Drawer */}
         <Drawer open={!!activeTool} onOpenChange={(open) => !open && setActiveTool(null)}>
           <DrawerContent className={cn(
-            "bg-background border-white/10 flex flex-col transition-all duration-500",
+            "bg-black/95 border-white/10 flex flex-col transition-all duration-500",
             activeTool === "record"
               ? (isRecordingPreviewLocked
-                ? "min-h-[10.5rem] h-[20vh] border-red-500/20 bg-black/92"
+                ? "h-[22dvh] border-red-500/30 shadow-[0_-20px_40px_rgba(239,68,68,0.15)]"
                 : "h-[45vh]")
               : "h-[75vh]"
           )}>
             <div className="flex-1 flex flex-col min-h-0">
-              <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 shrink-0">
-                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                  {activeTool === "record" ? "Voiceover" : `Editing • ${activeTool}`}
+              {!isRecordingPreviewLocked && (
+                <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 shrink-0">
+                  <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                    {activeTool === "record" ? "Voiceover" : `Editing • ${activeTool}`}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full"
+                    onClick={closeToolSheet}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-full"
-                  onClick={closeToolSheet}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
+              )}
 
               <div className="flex-1 min-h-0 overflow-hidden">
                 {/* Lazy load only the active tool panel for better performance */}
@@ -507,12 +508,6 @@ export function MobileEditorLayout({
           </DrawerContent>
         </Drawer>
 
-        {/* Compact Timeline */}
-        {(activeTool === null || (activeTool === "record" && !isRecordingInProgress)) && (
-          <div className="z-20 overflow-hidden border-t border-white/10 bg-background/95 shrink-0">
-            <MobileTimeline compact />
-          </div>
-        )}
 
         {/* Bottom Navigation */}
         {!isRecordingPreviewLocked && (
@@ -528,12 +523,13 @@ export function MobileEditorLayout({
                   <button
                     key={tool.id}
                     className={cn(
-                      "flex h-12.5 flex-col items-center justify-center rounded-lg border text-white transition-all active:scale-95",
+                      "flex h-14 flex-col items-center justify-center rounded-2xl border text-white transition-all active:scale-90",
                       isActive
-                        ? "border-primary bg-primary/15"
-                        : "border-white/10 bg-white/[0.03]"
+                        ? "border-primary/20 bg-primary/20 tool-active-glow z-10"
+                        : "border-white/5 bg-white/[0.04]"
                     )}
                     onClick={() => {
+                      addHapticFeedback("light");
                       if (tool.id === "record") {
                         openToolSheet("record", { autoStartRecording: true });
                       } else {
@@ -542,8 +538,16 @@ export function MobileEditorLayout({
                     }}
                     aria-label={tool.label}
                   >
-                    <Icon className={cn("h-5 w-5", tool.id === "record" && "text-red-500")} />
-                    <span className="mt-0.5 text-[9px] font-black uppercase tracking-[0.08em]">
+                    <div className={cn(
+                      "flex h-7 w-7 items-center justify-center rounded-full mb-0.5",
+                      isActive ? "bg-primary text-white" : "text-white/40"
+                    )}>
+                      <Icon className={cn("h-4 w-4", tool.id === "record" && !isActive && "text-red-500/80")} />
+                    </div>
+                    <span className={cn(
+                      "text-[8px] font-black uppercase tracking-[0.12em]",
+                      isActive ? "text-white" : "text-white/25"
+                    )}>
                       {tool.label}
                     </span>
                   </button>

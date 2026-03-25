@@ -9,7 +9,6 @@ import { MobileOnboardingOverlay } from "@/components/editor/mobile-onboarding-o
 import { MobileTemplateBrowser } from "@/components/templates/mobile-template-browser";
 import { TradingFeed } from "@/components/trading/trading-feed";
 import { MintWizard } from "@/components/mint/mint-wizard";
-import { FarcasterSplashScreen } from "./farcaster-splash-screen";
 import { useMobileOnboarding } from "@/components/editor/mobile-onboarding-overlay";
 import { FarcasterClientLogic } from "@/farcaster/components/farcaster-client-logic";
 import { CastContextPanel } from "./cast-context-panel";
@@ -37,18 +36,11 @@ export function FarcasterMobileEditorLayout({
   const [showFarcasterOnboarding, setShowFarcasterOnboarding] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [isSplashAnimationComplete, setIsSplashAnimationComplete] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const prevStep = useRef(frameState.step);
 
-  // Hydration guard - crucial for WebViews and Next.js
   useEffect(() => {
     setIsMounted(true);
-  }, []);
-
-  // Stable callback for splash screen to prevent effect re-runs
-  const handleSplashComplete = useCallback(() => {
-    setIsSplashAnimationComplete(true);
   }, []);
 
   // Load SDK safely (returns null during SSR)
@@ -163,32 +155,16 @@ export function FarcasterMobileEditorLayout({
     }
   }, [frameState.step]);
 
-  // Determine if we should show the splash screen
-  // Show if not mounted yet OR if initializing and animation hasn't finished
-  const showSplash = !isMounted || (isFarcasterMiniApp && (!isReady || !isSplashAnimationComplete));
+  // While mounting for non-Farcaster users, render the editor directly
+  const isShowInitialLoading = !isMounted;
 
   /**
    * Render the appropriate content based on frame state step
    * This handles hash-based navigation within the Mini App
    */
   const renderContent = () => {
-    // Show splash screen during initialization (Farcaster Mini App only)
-    if (showSplash && isFarcasterMiniApp) {
-      return (
-        <FarcasterSplashScreen
-          isVisible={showSplash}
-          onComplete={handleSplashComplete}
-        />
-      );
-    }
-
-    // While mounting for non-Farcaster users, render the editor directly
-    if (showSplash) {
-      return renderEditorPage();
-    }
-
-    // Transitioning between pages — show animated skeleton
-    if (isTransitioning) {
+    // Show animated skeleton while mounting or transitioning
+    if (isShowInitialLoading || isTransitioning) {
       return (
         <div className="flex-1 min-h-0 flex flex-col gap-4 p-4 animate-pulse">
           <div className="h-8 w-32 bg-white/10 rounded-xl" />

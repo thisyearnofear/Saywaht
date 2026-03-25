@@ -105,21 +105,32 @@ export default function RootLayout({
         {/* ENHANCEMENT: Prevent text size adjustment on orientation change */}
         <meta name="format-detection" content="telephone=no" />
       </head>
-      <body className={`${inter.variable} font-sans antialiased`} style={{ backgroundColor: "#09090b" }}>
-        <Web3ProviderLazy>
-          <ThemeProvider attribute="class" forcedTheme="dark" enableSystem>
-            <MobileProvider>
-              <FarcasterProvider>
+      <body 
+        className={`${inter.variable} font-sans antialiased selection:bg-primary/20`} 
+        style={{ 
+          backgroundColor: "#000000",
+          color: "#ffffff",
+          margin: 0,
+          padding: 0,
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          overscrollBehavior: "none"
+        }}
+      >
+        <ThemeProvider attribute="class" forcedTheme="dark" enableSystem>
+          <MobileProvider>
+            <FarcasterProvider>
+              <Web3ProviderLazy>
                 <TooltipProvider>
                   {children}
                   <Toaster />
-                  {/* PERFORMANT: Track app performance metrics */}
                   <PerformanceTracker />
                 </TooltipProvider>
-              </FarcasterProvider>
-            </MobileProvider>
-          </ThemeProvider>
-        </Web3ProviderLazy>
+              </Web3ProviderLazy>
+            </FarcasterProvider>
+          </MobileProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
