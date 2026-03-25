@@ -42,10 +42,6 @@ import { MobileSettingsPanel } from "@/components/editor/mobile-settings-panel";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { toast } from "sonner";
 import { markTemplateEditorReady } from "@/lib/template-performance";
-import {
-  Drawer,
-  DrawerContent,
-} from "@/components/ui/drawer";
 
 import dynamic from "next/dynamic";
 
@@ -443,26 +439,27 @@ export function MobileEditorLayout({
           </div>
         )}
 
-        {/* Tool Drawer */}
-        <Drawer open={!!activeTool} onOpenChange={(open) => !open && setActiveTool(null)}>
-          <DrawerContent className={cn(
-            "bg-black/95 border-white/10 flex flex-col transition-all duration-500",
+        {/* Active Tool Panel (Inline) */}
+        {activeTool && (
+          <div className={cn(
+            "z-40 w-full bg-black border-t border-white/10 flex flex-col transition-all duration-300 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]",
             activeTool === "record"
               ? (isRecordingPreviewLocked
                 ? "h-[22dvh] border-red-500/30 shadow-[0_-20px_40px_rgba(239,68,68,0.15)]"
-                : "h-[45vh]")
-              : "h-[75vh]"
+                : "h-[40vh]")
+              : "h-[50vh]",
+            "max-h-[60vh] md:max-h-[50vh]"
           )}>
             <div className="flex-1 flex flex-col min-h-0">
               {!isRecordingPreviewLocked && (
-                <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 shrink-0">
-                  <div className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                <div className="flex items-center justify-between border-b border-white/10 px-4 py-2 shrink-0 bg-neutral-900/50">
+                  <div className="text-[10px] font-black uppercase tracking-[0.16em] text-white/60">
                     {activeTool === "record" ? "Voiceover" : `Editing • ${activeTool}`}
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-full"
+                    className="h-8 w-8 rounded-full text-white/70 hover:text-white hover:bg-white/10"
                     onClick={closeToolSheet}
                   >
                     <X className="h-4 w-4" />
@@ -470,43 +467,37 @@ export function MobileEditorLayout({
                 </div>
               )}
 
-              <div className="flex-1 min-h-0 overflow-hidden">
-                {/* Lazy load only the active tool panel for better performance */}
-                {activeTool && (
-                  <>
-                    {activeTool === "record" && (
-                      <MobileAudioPanel
-                        autoStartRecordingNonce={recordAutoStartNonce}
-                        onRecordingStateChange={(state) => {
-                          setIsRecordingInProgress(state === "recording");
-                        }}
-                        onCaptionsGenerated={({ groupId, count }) => {
-                          setPreferredCaptionGroupId(groupId);
-                          setActiveTool("text");
-                          toast.success(`Generated ${count} captions. Edit them in Text.`);
-                        }}
-                      />
-                    )}
-                    {activeTool === "media" && (
-                      <MobileMediaPanel 
-                        onMediaAdded={() => {
-                          // Auto-close drawer after media is added
-                          closeToolSheet();
-                        }}
-                      />
-                    )}
-                    {activeTool === "text" && (
-                      <MobileTextPanel preferredCaptionGroupId={preferredCaptionGroupId} />
-                    )}
-                    {activeTool === "effects" && (
-                      <MobileEffectsPanel onRequestMedia={() => openToolSheet("media")} />
-                    )}
-                  </>
+              <div className="flex-1 min-h-0 overflow-hidden bg-black">
+                {activeTool === "record" && (
+                  <MobileAudioPanel
+                    autoStartRecordingNonce={recordAutoStartNonce}
+                    onRecordingStateChange={(state) => {
+                      setIsRecordingInProgress(state === "recording");
+                    }}
+                    onCaptionsGenerated={({ groupId, count }) => {
+                      setPreferredCaptionGroupId(groupId);
+                      setActiveTool("text");
+                      toast.success(`Generated ${count} captions. Edit them in Text.`);
+                    }}
+                  />
+                )}
+                {activeTool === "media" && (
+                  <MobileMediaPanel 
+                    onMediaAdded={() => {
+                      // Optionally close tool sheet after adding media
+                    }}
+                  />
+                )}
+                {activeTool === "text" && (
+                  <MobileTextPanel preferredCaptionGroupId={preferredCaptionGroupId} />
+                )}
+                {activeTool === "effects" && (
+                  <MobileEffectsPanel onRequestMedia={() => openToolSheet("media")} />
                 )}
               </div>
             </div>
-          </DrawerContent>
-        </Drawer>
+          </div>
+        )}
 
 
         {/* Bottom Navigation */}
