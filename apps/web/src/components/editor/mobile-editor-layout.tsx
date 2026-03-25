@@ -439,30 +439,27 @@ export function MobileEditorLayout({
           </div>
         )}
 
-        {/* Active Tool Panel (Inline) */}
+        {/* Active Tool Panel (Inline Floating Dock) */}
         {activeTool && (
           <div className={cn(
-            "z-40 w-full bg-black border-t border-white/10 flex flex-col transition-all duration-300 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]",
+            "relative z-40 w-full bg-black flex flex-col transition-all duration-300 shadow-[0_-15px_60px_rgba(0,0,0,0.8)] border-t border-white/5",
             activeTool === "record"
               ? (isRecordingPreviewLocked
-                ? "h-[22dvh] border-red-500/30 shadow-[0_-20px_40px_rgba(239,68,68,0.15)]"
-                : "h-[40vh]")
-              : "h-[50vh]",
-            "max-h-[60vh] md:max-h-[50vh]"
+                ? "h-[22dvh] border-red-500/30"
+                : "h-[30vh]")
+              : "h-[35vh]",
+            "max-h-[40vh] md:max-h-[35vh]"
           )}>
             <div className="flex-1 flex flex-col min-h-0">
               {!isRecordingPreviewLocked && (
-                <div className="flex items-center justify-between border-b border-white/10 px-4 py-2 shrink-0 bg-neutral-900/50">
-                  <div className="text-[10px] font-black uppercase tracking-[0.16em] text-white/60">
-                    {activeTool === "record" ? "Voiceover" : `Editing • ${activeTool}`}
-                  </div>
+                <div className="flex items-center justify-between px-3 py-1 shrink-0 bg-transparent absolute top-[-36px] right-0 z-50">
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     size="icon"
-                    className="h-8 w-8 rounded-full text-white/70 hover:text-white hover:bg-white/10"
+                    className="h-7 w-7 rounded-full bg-white/10 text-white shadow-xl hover:bg-white/20 backdrop-blur-md border border-white/5"
                     onClick={closeToolSheet}
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3 w-3" />
                   </Button>
                 </div>
               )}
