@@ -1,607 +1,676 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "@/app/editor/mobile-editor.css";
+
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useSmartNavigation } from "@/hooks/use-smart-navigation";
+import { toast } from "sonner";
+import { MobileAudioPanel } from "@/components/editor/mobile-audio-panel";
+import { MobileEffectsPanel } from "@/components/editor/mobile-effects-panel";
+import { MobileMediaPanel } from "@/components/editor/mobile-media-panel";
+import { MobilePreviewPanel } from "@/components/editor/mobile-preview-panel";
+import { MobileSettingsPanel } from "@/components/editor/mobile-settings-panel";
+import { MobileTextPanel } from "@/components/editor/mobile-text-panel";
+import { MobileTimeline } from "@/components/editor/mobile-timeline";
 import { Button } from "@/components/ui/button";
-import {
-  Mic,
-  Type,
-  Layers,
-  Video,
-  Share2,
-  Zap,
-  Loader2,
-  Undo2,
-  Redo2,
-  Play,
-  X,
-  Check,
-  Settings,
-} from "@/lib/icons";
-import { cn } from "@/lib/utils";
-import { usePlaybackControls } from "@/hooks/use-playback-controls";
-import { usePlaybackStore } from "@/stores/playback-store";
-import { useMediaStore } from "@/stores/media-store";
-import { useProjectStore } from "@/stores/project-store";
-import { useTimelineStore } from "@/stores/timeline-store";
-import { useTextStore } from "@/stores/text-store";
-import { useTemplateStore } from "@/stores/template-store";
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 import { useFarcasterShare } from "@/farcaster/hooks/use-farcaster-share";
 import { useEditorHistory } from "@/hooks/use-editor-history";
 import { useMobilePlaybackGate } from "@/hooks/use-mobile-playback-gate";
-import { MobileTimeline } from "@/components/editor/mobile-timeline";
-import { MobileMediaPanel } from "@/components/editor/mobile-media-panel";
-import { MobileAudioPanel } from "@/components/editor/mobile-audio-panel";
-import { MobilePreviewPanel } from "@/components/editor/mobile-preview-panel";
-import { MobileTextPanel } from "@/components/editor/mobile-text-panel";
-import { MobileEffectsPanel } from "@/components/editor/mobile-effects-panel";
-import { MobileSettingsPanel } from "@/components/editor/mobile-settings-panel";
+import { usePlaybackControls } from "@/hooks/use-playback-controls";
+import { useSmartNavigation } from "@/hooks/use-smart-navigation";
+import {
+	ChevronDown,
+	ChevronUp,
+	Layers,
+	Loader2,
+	Mic,
+	Play,
+	Redo2,
+	Settings,
+	Share2,
+	Type,
+	Undo2,
+	Video,
+	X,
+	Zap,
+} from "@/lib/icons";
 import { addHapticFeedback } from "@/lib/mobile-utils";
-import { toast } from "sonner";
 import { markTemplateEditorReady } from "@/lib/template-performance";
-
-import dynamic from "next/dynamic";
+import { cn } from "@/lib/utils";
+import { useMediaStore } from "@/stores/media-store";
+import { usePlaybackStore } from "@/stores/playback-store";
+import { useProjectStore } from "@/stores/project-store";
+import { useTemplateStore } from "@/stores/template-store";
+import { useTextStore } from "@/stores/text-store";
+import { useTimelineStore } from "@/stores/timeline-store";
 
 const QuickActions = dynamic(
-  () =>
-    import("@/components/editor/quick-actions").then((mod) => ({
-      default: mod.QuickActions,
-    })),
-  { ssr: false }
+	() =>
+		import("@/components/editor/quick-actions").then((mod) => ({
+			default: mod.QuickActions,
+		})),
+	{ ssr: false },
 );
 
 interface MobileEditorLayoutProps {
-  children?: React.ReactNode;
-  className?: string;
-  hideOnboarding?: boolean;
+	children?: React.ReactNode;
+	className?: string;
+	hideOnboarding?: boolean;
 }
 
 type MobileTool = "record" | "media" | "text" | "effects";
 
-const MOBILE_TOOL_CONFIG: Array<{ id: MobileTool; label: string; icon: typeof Mic }> = [
-  { id: "record", label: "Record", icon: Mic },
-  { id: "media", label: "Media", icon: Video },
-  { id: "text", label: "Text", icon: Type },
-  { id: "effects", label: "Effects", icon: Layers },
+const MOBILE_TOOL_CONFIG: Array<{
+	id: MobileTool;
+	label: string;
+	icon: typeof Mic;
+}> = [
+	{ id: "record", label: "Record", icon: Mic },
+	{ id: "media", label: "Media", icon: Video },
+	{ id: "text", label: "Text", icon: Type },
+	{ id: "effects", label: "Effects", icon: Layers },
 ];
 
 export function MobileEditorLayout({
-  children,
-  className,
-  hideOnboarding = false,
+	children,
+	className,
+	hideOnboarding = false,
 }: MobileEditorLayoutProps) {
-  const router = useRouter();
-  const { navigateToMint } = useSmartNavigation();
-  const { isPlaying, isStalled, toggle, play } = usePlaybackStore();
-  const { mediaItems } = useMediaStore();
-  const { activeProject } = useProjectStore();
-  const { tracks } = useTimelineStore();
-  const { selectText, textElements } = useTextStore();
-  const { isFarcasterMiniApp } = useFarcasterContext();
-  const { shareToFarcaster, isSharing } = useFarcasterShare();
-  const { undo, redo, canUndo, canRedo } = useEditorHistory();
-  const { isApplying: isApplyingTemplate, clearSelectedTemplate } = useTemplateStore();
-  const { gatedPlay } = useMobilePlaybackGate();
-  
-  // Check for reduced motion preference
-  const prefersReducedMotion = useRef(
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  ).current;
+	const router = useRouter();
+	const { navigateToMint } = useSmartNavigation();
+	const { isPlaying, isStalled, toggle, play } = usePlaybackStore();
+	const { mediaItems } = useMediaStore();
+	const { activeProject } = useProjectStore();
+	const { tracks } = useTimelineStore();
+	const { selectText, textElements } = useTextStore();
+	const { isFarcasterMiniApp } = useFarcasterContext();
+	const { shareToFarcaster, isSharing } = useFarcasterShare();
+	const { undo, redo, canUndo, canRedo } = useEditorHistory();
+	const { isApplying: isApplyingTemplate, clearSelectedTemplate } =
+		useTemplateStore();
+	const { gatedPlay } = useMobilePlaybackGate();
 
-  const [activeTool, setActiveTool] = useState<MobileTool | null>("media");
-  const [recordAutoStartNonce, setRecordAutoStartNonce] = useState(0);
-  const [isRecordingInProgress, setIsRecordingInProgress] = useState(false);
-  const [showCoachmark, setShowCoachmark] = useState(false);
-  const [showWorkflowBar, setShowWorkflowBar] = useState(true); // Allow dismissing workflow bar
-  const [showSettings, setShowSettings] = useState(false);
-  const [preferredCaptionGroupId, setPreferredCaptionGroupId] = useState<string | null>(null);
-  const hasTimelineClips = tracks.some((track) => track.clips.length > 0);
-  const hasVoiceover = tracks.some((t) => t.type === "audio" && t.clips.length > 0);
-  const hasText = textElements.length > 0;
-  const isRecordingPreviewLocked = activeTool === "record" && isRecordingInProgress;
+	// Check for reduced motion preference
+	const prefersReducedMotion = useRef(
+		typeof window !== "undefined" &&
+			window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+	).current;
 
-  // Track which workflow steps are completed
-  const completedSteps = useMemo(() => ({
-    media: hasTimelineClips,
-    voice: hasVoiceover,
-    text: hasText,
-  }), [hasTimelineClips, hasVoiceover, hasText]);
+	const [activeTool, setActiveTool] = useState<MobileTool | null>(null);
+	const [recordAutoStartNonce, setRecordAutoStartNonce] = useState(0);
+	const [isRecordingInProgress, setIsRecordingInProgress] = useState(false);
+	const [showCoachmark, setShowCoachmark] = useState(false);
+	const [showWorkflowBar, setShowWorkflowBar] = useState(false);
+	const [showSettings, setShowSettings] = useState(false);
+	const [preferredCaptionGroupId, setPreferredCaptionGroupId] = useState<
+		string | null
+	>(null);
+	const [isToolPanelExpanded, setIsToolPanelExpanded] = useState(false);
+	const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
+	const hasTimelineClips = tracks.some((track) => track.clips.length > 0);
+	const hasVoiceover = tracks.some(
+		(t) => t.type === "audio" && t.clips.length > 0,
+	);
+	const hasText = textElements.length > 0;
+	const isRecordingPreviewLocked =
+		activeTool === "record" && isRecordingInProgress;
 
-  usePlaybackControls();
+	// Track which workflow steps are completed
+	const completedSteps = useMemo(
+		() => ({
+			media: hasTimelineClips,
+			voice: hasVoiceover,
+			text: hasText,
+		}),
+		[hasTimelineClips, hasVoiceover, hasText],
+	);
 
-  // Auto-open media panel on first mount only when there's nothing in the timeline.
-  // We intentionally omit activeTool from deps so closing the panel doesn't
-  // immediately re-open it (the previous behaviour that made it impossible to dismiss).
-  const hasAutoOpenedMedia = useRef(false);
-  useEffect(() => {
-    if (!hasAutoOpenedMedia.current && mediaItems.length === 0 && !hasTimelineClips) {
-      hasAutoOpenedMedia.current = true;
-      setActiveTool("media");
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+	usePlaybackControls();
 
-  useEffect(() => {
-    if (hideOnboarding || typeof window === "undefined") {
-      return;
-    }
-    const hasSeenCoachmark = window.localStorage.getItem("saywaht-mobile-coachmark-v2");
-    if (!hasSeenCoachmark) {
-      setShowCoachmark(true);
-    }
-  }, [hideOnboarding]);
+	// Auto-open media panel on first mount only when there's nothing in the timeline.
+	// We intentionally omit activeTool from deps so closing the panel doesn't
+	// immediately re-open it (the previous behaviour that made it impossible to dismiss).
+	const hasAutoOpenedMedia = useRef(false);
+	useEffect(() => {
+		// Disabled auto-open for minimal experience - users explicitly tap tools
+	}, []);
 
-  const dismissCoachmark = useCallback(() => {
-    setShowCoachmark(false);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("saywaht-mobile-coachmark-v2", "seen");
-    }
-  }, []);
+	useEffect(() => {
+		if (hideOnboarding || typeof window === "undefined") {
+			return;
+		}
+		const hasSeenCoachmark = window.localStorage.getItem(
+			"saywaht-mobile-coachmark-v2",
+		);
+		if (!hasSeenCoachmark) {
+			setShowCoachmark(true);
+		}
+	}, [hideOnboarding]);
 
-  const openToolSheet = useCallback((tool: MobileTool, options?: { autoStartRecording?: boolean }) => {
-    addHapticFeedback("medium");
-    setActiveTool(tool);
-    if (tool === "record" && options?.autoStartRecording) {
-      setRecordAutoStartNonce((prev) => prev + 1);
-    }
-  }, []);
+	const dismissCoachmark = useCallback(() => {
+		setShowCoachmark(false);
+		if (typeof window !== "undefined") {
+			window.localStorage.setItem("saywaht-mobile-coachmark-v2", "seen");
+		}
+	}, []);
 
-  const closeToolSheet = useCallback(() => {
-    addHapticFeedback("light");
-    setActiveTool(null);
-  }, []);
+	const openToolSheet = useCallback(
+		(tool: MobileTool, options?: { autoStartRecording?: boolean }) => {
+			addHapticFeedback("medium");
+			setActiveTool(tool);
+			if (tool === "record" && options?.autoStartRecording) {
+				setRecordAutoStartNonce((prev) => prev + 1);
+			}
+		},
+		[],
+	);
 
-  // Tool-to-tool handoff: suggest next step when timeline gets first clip
-  const prevHasClips = useRef(hasTimelineClips);
-  useEffect(() => {
-    if (!prevHasClips.current && hasTimelineClips && activeTool === "media") {
-      toast.success("Clip added! Record a voiceover next?", {
-        action: {
-          label: "Record",
-          onClick: () => openToolSheet("record", { autoStartRecording: true }),
-        },
-        duration: 4000,
-      });
-    }
-    prevHasClips.current = hasTimelineClips;
-  }, [hasTimelineClips, activeTool, openToolSheet]);
+	const closeToolSheet = useCallback(() => {
+		addHapticFeedback("light");
+		setActiveTool(null);
+	}, []);
 
-  useEffect(() => {
-    if (!hasTimelineClips) return;
+	// Tool-to-tool handoff: suggest next step when timeline gets first clip
+	const prevHasClips = useRef(hasTimelineClips);
+	useEffect(() => {
+		if (!prevHasClips.current && hasTimelineClips && activeTool === "media") {
+			toast.success("Clip added! Record a voiceover next?", {
+				action: {
+					label: "Record",
+					onClick: () => openToolSheet("record", { autoStartRecording: true }),
+				},
+				duration: 4000,
+			});
+		}
+		prevHasClips.current = hasTimelineClips;
+	}, [hasTimelineClips, activeTool, openToolSheet]);
 
-    markTemplateEditorReady({
-      hasVoiceover,
-      hasText,
-      surface: isFarcasterMiniApp ? "farcaster-miniapp" : "mobile-web",
-      trackCount: tracks.length,
-    });
-  }, [hasTimelineClips, hasText, hasVoiceover, isFarcasterMiniApp, tracks.length]);
+	useEffect(() => {
+		if (!hasTimelineClips) return;
 
-  const previousTimelineReadyState = useRef(hasTimelineClips);
-  useEffect(() => {
-    const becamePlayable = !previousTimelineReadyState.current && hasTimelineClips;
-    previousTimelineReadyState.current = hasTimelineClips;
+		markTemplateEditorReady({
+			hasVoiceover,
+			hasText,
+			surface: isFarcasterMiniApp ? "farcaster-miniapp" : "mobile-web",
+			trackCount: tracks.length,
+		});
+	}, [
+		hasTimelineClips,
+		hasText,
+		hasVoiceover,
+		isFarcasterMiniApp,
+		tracks.length,
+	]);
 
-    // In mini-app flows we can already have a usable preview while template
-    // hydration metadata is still settling. Clear stale blocking state once the
-    // timeline becomes playable.
-    if (isApplyingTemplate && becamePlayable) {
-      clearSelectedTemplate();
-      toast.dismiss();
-    }
-  }, [isApplyingTemplate, hasTimelineClips, clearSelectedTemplate]);
+	const previousTimelineReadyState = useRef(hasTimelineClips);
+	useEffect(() => {
+		const becamePlayable =
+			!previousTimelineReadyState.current && hasTimelineClips;
+		previousTimelineReadyState.current = hasTimelineClips;
 
-  const handleFinish = useCallback(async () => {
-    addHapticFeedback("heavy");
-    if (!activeProject || !hasTimelineClips) {
-      toast.error("Add a clip to your timeline first", {
-        action: {
-          label: "Open Media",
-          onClick: () => openToolSheet("media"),
-        },
-      });
-      return;
-    }
+		// In mini-app flows we can already have a usable preview while template
+		// hydration metadata is still settling. Clear stale blocking state once the
+		// timeline becomes playable.
+		if (isApplyingTemplate && becamePlayable) {
+			clearSelectedTemplate();
+			toast.dismiss();
+		}
+	}, [isApplyingTemplate, hasTimelineClips, clearSelectedTemplate]);
 
-    if (isFarcasterMiniApp) {
-      await shareToFarcaster();
-      return;
-    }
+	const handleFinish = useCallback(async () => {
+		addHapticFeedback("heavy");
+		if (!activeProject || !hasTimelineClips) {
+			toast.error("Add a clip to your timeline first", {
+				action: {
+					label: "Open Media",
+					onClick: () => openToolSheet("media"),
+				},
+			});
+			return;
+		}
 
-    navigateToMint(activeProject.id);
-  }, [activeProject, hasTimelineClips, isFarcasterMiniApp, shareToFarcaster, navigateToMint, openToolSheet]);
+		if (isFarcasterMiniApp) {
+			await shareToFarcaster();
+			return;
+		}
 
-  return (
-    <div
-      className={cn(
-        "relative h-full w-full overflow-hidden bg-black text-white mobile-editor",
-        className,
-        isRecordingPreviewLocked && "recording",
-        isFarcasterMiniApp && "farcaster-miniapp"
-      )}
-      style={{ opacity: 1 }} // Remove motion animation for better performance
-    >
-      <div className="absolute inset-0 flex flex-col">
-        <div
-          className="z-30 flex items-center justify-between border-b border-white/10 bg-black/80 px-4 backdrop-blur-md pt-safe"
-          style={{ minHeight: "calc(3rem + env(safe-area-inset-top))" }}
-        >
-          <div className="flex items-center gap-2 py-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-[10px] font-black text-white">
-              W
-            </div>
-            <span className="text-sm font-black uppercase tracking-tight">saywaht</span>
-          </div>
+		navigateToMint(activeProject.id);
+	}, [
+		activeProject,
+		hasTimelineClips,
+		isFarcasterMiniApp,
+		shareToFarcaster,
+		navigateToMint,
+		openToolSheet,
+	]);
 
-          <div className="flex items-center gap-1 py-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              onClick={() => {
-                addHapticFeedback("light");
-                setShowSettings(true);
-              }}
-              aria-label="Settings"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              onClick={() => {
-                addHapticFeedback("light");
-                undo();
-                toast("Undone", { duration: 1500 });
-              }}
-              disabled={!canUndo()}
-              aria-label="Undo"
-            >
-              <Undo2 className={cn("h-4 w-4", !canUndo() && "opacity-25")} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              onClick={() => {
-                addHapticFeedback("light");
-                redo();
-                toast("Redone", { duration: 1500 });
-              }}
-              disabled={!canRedo()}
-              aria-label="Redo"
-            >
-              <Redo2 className={cn("h-4 w-4", !canRedo() && "opacity-25")} />
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              className={cn(
-                "h-9 rounded-full px-4 text-[10px] font-black uppercase tracking-widest text-white transition-all",
-                hasTimelineClips
-                  ? "bg-primary shadow-[0_0_12px_rgba(var(--primary),0.4)]"
-                  : "bg-muted-foreground/30"
-              )}
-              onClick={handleFinish}
-              disabled={isSharing}
-            >
-              {isSharing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : isFarcasterMiniApp ? (
-                <>
-                  <Share2 className="mr-1.5 h-3.5 w-3.5" />
-                  Share
-                </>
-              ) : (
-                <>
-                  <Zap className={cn("mr-1.5 h-3.5 w-3.5", hasTimelineClips && "fill-white")} />
-                  Finish
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
+	return (
+		<div
+			className={cn(
+				"relative h-full w-full overflow-hidden bg-black text-white mobile-editor",
+				className,
+				isRecordingPreviewLocked && "recording",
+				isFarcasterMiniApp && "farcaster-miniapp",
+			)}
+			style={{ opacity: 1 }} // Remove motion animation for better performance
+		>
+			<div className="absolute inset-0 flex flex-col">
+				<div
+					className="z-30 flex items-center justify-between border-b border-white/5 bg-black/30 px-3 pt-safe"
+					style={{ minHeight: "calc(2.5rem + env(safe-area-inset-top))" }}
+				>
+					<div className="flex items-center gap-2 py-1.5">
+						<div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-[8px] font-black text-white">
+							W
+						</div>
+					</div>
 
-        {/* Workflow Progress Bar - Dismissible */}
-        {showWorkflowBar && !isRecordingPreviewLocked && (
-          <div className="z-30 flex items-center justify-between gap-2 border-b border-white/5 bg-black/60 px-4 py-1.5 backdrop-blur-sm">
-            <div className="flex items-center justify-center gap-3 flex-1">
-              {[
-                { key: "media", label: "Media", done: completedSteps.media },
-                { key: "voice", label: "Voice", done: completedSteps.voice },
-                { key: "text", label: "Text", done: completedSteps.text },
-              ].map((step, i) => (
-                <button
-                  key={step.key}
-                  className="flex items-center gap-1.5"
-                  onClick={() => {
-                    const toolMap: Record<string, MobileTool> = { media: "media", voice: "record", text: "text" };
-                    openToolSheet(toolMap[step.key]);
-                  }}
-                >
-                  <div className={cn(
-                    "flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-black transition-colors",
-                    step.done
-                      ? "bg-primary text-white"
-                      : "border border-white/20 text-white/40"
-                  )}>
-                    {step.done ? <Check className="h-2.5 w-2.5" /> : i + 1}
-                  </div>
-                  <span className={cn(
-                    "text-[9px] font-bold uppercase tracking-wider transition-colors",
-                    step.done ? "text-white/80" : "text-white/30"
-                  )}>
-                    {step.label}
-                  </span>
-                  {i < 2 && <span className="ml-1.5 text-[8px] text-white/15">›</span>}
-                </button>
-              ))}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 rounded-full shrink-0"
-              onClick={() => setShowWorkflowBar(false)}
-              aria-label="Hide workflow"
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
-        )}
+					<div className="flex items-center gap-0.5 py-1.5">
+						<Button
+							variant="ghost"
+							size="icon"
+							className="h-7 w-7 rounded-full bg-white/5"
+							onClick={() => {
+								addHapticFeedback("light");
+								undo();
+								toast("Undone", { duration: 1500 });
+							}}
+							disabled={!canUndo()}
+							aria-label="Undo"
+						>
+							<Undo2 className={cn("h-3 w-3", !canUndo() && "opacity-25")} />
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="h-7 w-7 rounded-full bg-white/5"
+							onClick={() => {
+								addHapticFeedback("light");
+								redo();
+								toast("Redone", { duration: 1500 });
+							}}
+							disabled={!canRedo()}
+							aria-label="Redo"
+						>
+							<Redo2 className={cn("h-3 w-3", !canRedo() && "opacity-25")} />
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="h-7 w-7 rounded-full bg-white/5"
+							onClick={() => {
+								addHapticFeedback("light");
+								setShowSettings(true);
+							}}
+							aria-label="Settings"
+						>
+							<Settings className="h-3 w-3" />
+						</Button>
+						<Button
+							variant="default"
+							size="sm"
+							className={cn(
+								"h-7 rounded-full px-3 text-[9px] font-black uppercase tracking-wider text-white transition-all",
+								hasTimelineClips
+									? "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.3)]"
+									: "bg-muted-foreground/30",
+							)}
+							onClick={handleFinish}
+							disabled={isSharing}
+						>
+							{isSharing ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : isFarcasterMiniApp ? (
+								<>
+									<Share2 className="mr-1.5 h-3.5 w-3.5" />
+									Share
+								</>
+							) : (
+								<>
+									<Zap
+										className={cn(
+											"mr-1.5 h-3.5 w-3.5",
+											hasTimelineClips && "fill-white",
+										)}
+									/>
+									Finish
+								</>
+							)}
+						</Button>
+					</div>
+				</div>
 
-        <div
-          className={cn(
-            "relative flex-1 overflow-hidden",
-            isRecordingInProgress && "ring-2 ring-red-500 ring-inset"
-          )}
-        >
-          {hasTimelineClips ? (
-            <>
-              <MobilePreviewPanel
-                className={cn(
-                  "split-view-preview transition-all duration-500",
-                  isRecordingPreviewLocked ? "recording-mode shadow-2xl scale-[0.85] -translate-y-12" : ""
-                )}
-                showResolution={false}
-                showControls={false}
-                controlsVariant="overlay"
-                isFullscreen={true}
-                onTextElementTap={(textId) => {
-                  addHapticFeedback("light");
-                  selectText(textId);
-                  setActiveTool("text");
-                }}
-              />
+				<div
+					className={cn(
+						"relative flex-1 overflow-hidden",
+						isRecordingInProgress && "ring-2 ring-red-500 ring-inset",
+					)}
+				>
+					{hasTimelineClips ? (
+						<>
+							<MobilePreviewPanel
+								className={cn(
+									"split-view-preview transition-all duration-500",
+									isRecordingPreviewLocked
+										? "recording-mode shadow-2xl scale-[0.85] -translate-y-12"
+										: "",
+								)}
+								showResolution={false}
+								showControls={false}
+								controlsVariant="overlay"
+								isFullscreen={true}
+								onTextElementTap={(textId) => {
+									addHapticFeedback("light");
+									selectText(textId);
+									setActiveTool("text");
+								}}
+							/>
 
-              <button
-                className={cn(
-                  "absolute inset-0 z-10 flex items-center justify-center touch-manipulation",
-                  isRecordingPreviewLocked && "pointer-events-none"
-                )}
-                onClick={() => {
-                  addHapticFeedback("light");
-                  if (!isPlaying) {
-                    gatedPlay(); // Use gated play for mobile
-                    return;
-                  }
-                  toggle();
-                }}
-                aria-label={isPlaying ? "Pause preview" : "Play preview"}
-              >
-                {isRecordingPreviewLocked ? null : isPlaying && isStalled ? (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-black/35 backdrop-blur-xl">
-                    <Loader2 className="h-7 w-7 animate-spin text-white" />
-                  </div>
-                ) : !isPlaying ? (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-black/35 backdrop-blur-xl">
-                    <Play className="ml-0.5 h-8 w-8 fill-white text-white" />
-                  </div>
-                ) : null}
-              </button>
-            </>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-neutral-950 via-black to-neutral-950">
-              <div className="mx-5 rounded-2xl border border-white/15 bg-black/55 p-5 text-center backdrop-blur">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/15">
-                  <Video className="h-6 w-6 text-primary" />
-                </div>
-                <p className="text-sm font-black uppercase tracking-tight text-white">
-                  Add your first clip
-                </p>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-white/60">
-                  Pick a clip from Media, then tap <span className="font-bold text-white/80">Add</span> to place it on the timeline.
-                </p>
-                <Button
-                  size="sm"
-                  className="mt-4 h-10 w-full rounded-full text-[10px] font-black uppercase tracking-widest"
-                  onClick={() => openToolSheet("media")}
-                >
-                  <Video className="mr-1.5 h-3.5 w-3.5" />
-                  Open Media
-                </Button>
-              </div>
-            </div>
-          )}
+							<button
+								className={cn(
+									"absolute inset-0 z-10 flex items-center justify-center touch-manipulation",
+									isRecordingPreviewLocked && "pointer-events-none",
+								)}
+								onClick={() => {
+									addHapticFeedback("light");
+									if (activeTool) {
+										closeToolSheet();
+										return;
+									}
+									if (!isPlaying) {
+										gatedPlay();
+										return;
+									}
+									toggle();
+								}}
+								aria-label={
+									activeTool
+										? "Close panel"
+										: isPlaying
+											? "Pause preview"
+											: "Play preview"
+								}
+							>
+								{isRecordingPreviewLocked ? null : isPlaying && isStalled ? (
+									<div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-black/35 backdrop-blur-xl">
+										<Loader2 className="h-7 w-7 animate-spin text-white" />
+									</div>
+								) : !isPlaying ? (
+									<div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-black/35 backdrop-blur-xl">
+										<Play className="ml-0.5 h-8 w-8 fill-white text-white" />
+									</div>
+								) : null}
+							</button>
+						</>
+					) : (
+						<div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-neutral-950 via-black to-neutral-950">
+							<div className="mx-5 rounded-2xl border border-white/15 bg-black/55 p-5 text-center backdrop-blur">
+								<div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/15">
+									<Video className="h-6 w-6 text-primary" />
+								</div>
+								<p className="text-sm font-black uppercase tracking-tight text-white">
+									Add your first clip
+								</p>
+								<p className="mt-1.5 text-[11px] leading-relaxed text-white/60">
+									Pick a clip from Media, then tap{" "}
+									<span className="font-bold text-white/80">Add</span> to place
+									it on the timeline.
+								</p>
+								<Button
+									size="sm"
+									className="mt-4 h-10 w-full rounded-full text-[10px] font-black uppercase tracking-widest"
+									onClick={() => openToolSheet("media")}
+								>
+									<Video className="mr-1.5 h-3.5 w-3.5" />
+									Open Media
+								</Button>
+							</div>
+						</div>
+					)}
+				</div>
 
-        </div>
+				{/* Persistent Pro Timeline - Always visible for scrubbing unless in extreme recording mode */}
+				{!isRecordingPreviewLocked && hasTimelineClips && (
+					<div
+						className={cn(
+							"z-20 border-t border-white/5 bg-black/20 backdrop-blur-sm transition-all duration-300 flex flex-col",
+							isTimelineCollapsed ? "h-[5vh]" : "h-[12vh]",
+						)}
+					>
+						<button
+							className="flex items-center justify-center py-0.5 hover:bg-white/5 transition-colors"
+							onClick={() => {
+								addHapticFeedback("light");
+								setIsTimelineCollapsed(!isTimelineCollapsed);
+							}}
+							aria-label={
+								isTimelineCollapsed ? "Expand timeline" : "Collapse timeline"
+							}
+						>
+							{isTimelineCollapsed ? (
+								<span className="text-[8px] font-medium text-white/40 uppercase tracking-wider">
+									Swipe up for timeline
+								</span>
+							) : (
+								<ChevronDown className="h-3 w-3 text-white/30" />
+							)}
+						</button>
+						{!isTimelineCollapsed && <MobileTimeline compact={true} />}
+					</div>
+				)}
 
-        {/* Persistent Pro Timeline - Always visible for scrubbing unless in extreme recording mode */}
-        {!isRecordingPreviewLocked && hasTimelineClips && (
-          <div className={cn(
-            "z-20 border-t border-white/5 bg-black/40 backdrop-blur-xl transition-all duration-500",
-            activeTool ? "h-[10vh]" : "h-[18vh]"
-          )}>
-            <MobileTimeline compact={!activeTool} />
-          </div>
-        )}
+				{/* Active Tool Panel (Inline Floating Dock) */}
+				{activeTool && (
+					<div
+						className={cn(
+							"relative z-40 w-full bg-black/50 backdrop-blur-md flex flex-col transition-all duration-300 border-t border-white/5",
+							activeTool === "record"
+								? isRecordingPreviewLocked
+									? "h-[20dvh]"
+									: "h-[24vh]"
+								: "h-[28vh]",
+							"max-h-[32vh]",
+						)}
+					>
+						<div className="flex-1 flex flex-col min-h-0">
+							{!isRecordingPreviewLocked && (
+								<div className="flex items-center justify-end gap-2 px-3 py-1 shrink-0 bg-black/20 border-b border-white/5">
+									<span className="mr-auto text-[9px] font-bold uppercase tracking-wider text-white/50">
+										{MOBILE_TOOL_CONFIG.find((t) => t.id === activeTool)
+											?.label || "Tools"}
+									</span>
+									<Button
+										variant="ghost"
+										size="icon"
+										className="h-6 w-6 rounded-full bg-white/5"
+										onClick={() => setIsToolPanelExpanded(!isToolPanelExpanded)}
+									>
+										{isToolPanelExpanded ? (
+											<ChevronDown className="h-3 w-3" />
+										) : (
+											<ChevronUp className="h-3 w-3" />
+										)}
+									</Button>
+									<Button
+										variant="ghost"
+										size="icon"
+										className="h-6 w-6 rounded-full bg-white/5"
+										onClick={closeToolSheet}
+									>
+										<X className="h-3 w-3" />
+									</Button>
+								</div>
+							)}
 
-        {/* Active Tool Panel (Inline Floating Dock) */}
-        {activeTool && (
-          <div className={cn(
-            "relative z-40 w-full bg-black flex flex-col transition-all duration-300 shadow-[0_-15px_60px_rgba(0,0,0,0.8)] border-t border-white/5",
-            activeTool === "record"
-              ? (isRecordingPreviewLocked
-                ? "h-[22dvh] border-red-500/30"
-                : "h-[30vh]")
-              : "h-[35vh]",
-            "max-h-[40vh] md:max-h-[35vh]"
-          )}>
-            <div className="flex-1 flex flex-col min-h-0">
-              {!isRecordingPreviewLocked && (
-                <div className="flex items-center justify-between px-3 py-1 shrink-0 bg-transparent absolute top-[-36px] right-0 z-50">
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-7 w-7 rounded-full bg-white/10 text-white shadow-xl hover:bg-white/20 backdrop-blur-md border border-white/5"
-                    onClick={closeToolSheet}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
+							<div className="flex-1 min-h-0 overflow-hidden bg-black/30">
+								{activeTool === "record" && (
+									<MobileAudioPanel
+										autoStartRecordingNonce={recordAutoStartNonce}
+										onRecordingStateChange={(state) => {
+											setIsRecordingInProgress(state === "recording");
+										}}
+										onCaptionsGenerated={({ groupId, count }) => {
+											setPreferredCaptionGroupId(groupId);
+											setActiveTool("text");
+											toast.success(
+												`Generated ${count} captions. Edit them in Text.`,
+											);
+										}}
+									/>
+								)}
+								{activeTool === "media" && (
+									<MobileMediaPanel
+										onMediaAdded={() => {
+											// Optionally close tool sheet after adding media
+										}}
+									/>
+								)}
+								{activeTool === "text" && (
+									<MobileTextPanel
+										preferredCaptionGroupId={preferredCaptionGroupId}
+									/>
+								)}
+								{activeTool === "effects" && (
+									<MobileEffectsPanel
+										onRequestMedia={() => openToolSheet("media")}
+									/>
+								)}
+							</div>
+						</div>
+					</div>
+				)}
 
-              <div className="flex-1 min-h-0 overflow-hidden bg-black">
-                {activeTool === "record" && (
-                  <MobileAudioPanel
-                    autoStartRecordingNonce={recordAutoStartNonce}
-                    onRecordingStateChange={(state) => {
-                      setIsRecordingInProgress(state === "recording");
-                    }}
-                    onCaptionsGenerated={({ groupId, count }) => {
-                      setPreferredCaptionGroupId(groupId);
-                      setActiveTool("text");
-                      toast.success(`Generated ${count} captions. Edit them in Text.`);
-                    }}
-                  />
-                )}
-                {activeTool === "media" && (
-                  <MobileMediaPanel 
-                    onMediaAdded={() => {
-                      // Optionally close tool sheet after adding media
-                    }}
-                  />
-                )}
-                {activeTool === "text" && (
-                  <MobileTextPanel preferredCaptionGroupId={preferredCaptionGroupId} />
-                )}
-                {activeTool === "effects" && (
-                  <MobileEffectsPanel onRequestMedia={() => openToolSheet("media")} />
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+				{/* Bottom Navigation */}
+				{!isRecordingPreviewLocked && (
+					<div
+						className="z-30 border-t border-white/5 bg-black/30 backdrop-blur-sm px-3 pb-safe shrink-0"
+						style={{
+							paddingBottom:
+								"max(0.75rem, calc(env(safe-area-inset-bottom) + 0.35rem))",
+						}}
+					>
+						<div className="grid grid-cols-4 gap-1 py-1">
+							{MOBILE_TOOL_CONFIG.map((tool) => {
+								const Icon = tool.icon;
+								const isActive = activeTool === tool.id;
+								return (
+									<button
+										key={tool.id}
+										className={cn(
+											"flex h-12 flex-col items-center justify-center rounded-xl border text-white transition-all active:scale-95",
+											isActive
+												? "border-primary/20 bg-primary/20 tool-active-glow z-10"
+												: "border-white/5 bg-white/[0.04]",
+										)}
+										onClick={() => {
+											addHapticFeedback("light");
+											if (tool.id === "record") {
+												openToolSheet("record", { autoStartRecording: true });
+											} else {
+												openToolSheet(tool.id);
+											}
+										}}
+										aria-label={tool.label}
+									>
+										<div
+											className={cn(
+												"flex h-7 w-7 items-center justify-center rounded-full mb-0.5",
+												isActive ? "bg-primary text-white" : "text-white/40",
+											)}
+										>
+											<Icon
+												className={cn(
+													"h-4 w-4",
+													tool.id === "record" &&
+														!isActive &&
+														"text-red-500/80",
+												)}
+											/>
+										</div>
+										<span
+											className={cn(
+												"text-[8px] font-black uppercase tracking-[0.12em]",
+												isActive ? "text-white" : "text-white/25",
+											)}
+										>
+											{tool.label}
+										</span>
+										{(tool.id === "media"
+											? completedSteps.media
+											: tool.id === "record"
+												? completedSteps.voice
+												: completedSteps.text) && (
+											<div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary" />
+										)}
+									</button>
+								);
+							})}
+						</div>
+					</div>
+				)}
+			</div>
 
+			{showCoachmark && (
+				<div className="absolute bottom-24 left-3 right-3 z-40 rounded-2xl border border-primary/20 bg-background/95 p-3 shadow-2xl">
+					<div className="flex items-start gap-3">
+						<div className="mt-0.5 h-2.5 w-2.5 rounded-full bg-primary" />
+						<div className="flex-1">
+							<p className="text-xs font-semibold text-foreground">
+								{!hasTimelineClips
+									? "Start by adding media to your timeline."
+									: !hasVoiceover
+										? "Nice! Now tap Record to add your voiceover."
+										: "Looking good! Add text or tap Finish when ready."}
+							</p>
+							<p className="mt-1 text-[11px] text-muted-foreground">
+								{!hasTimelineClips
+									? "Open Media → choose a clip → tap Add."
+									: !hasVoiceover
+										? "Your voice is recorded over the video preview."
+										: "Captions were auto-generated from your recording."}
+							</p>
+						</div>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="h-8 w-8 rounded-full"
+							onClick={dismissCoachmark}
+							aria-label="Dismiss tip"
+						>
+							<X className="h-4 w-4" />
+						</Button>
+					</div>
+				</div>
+			)}
 
-        {/* Bottom Navigation */}
-        {!isRecordingPreviewLocked && (
-          <div
-            className="z-30 border-t border-white/10 bg-black/95 px-3 pb-safe shrink-0"
-            style={{ paddingBottom: "max(0.75rem, calc(env(safe-area-inset-bottom) + 0.35rem))" }}
-          >
-            <div className="grid grid-cols-4 gap-1.5 py-1.5">
-              {MOBILE_TOOL_CONFIG.map((tool) => {
-                const Icon = tool.icon;
-                const isActive = activeTool === tool.id;
-                return (
-                  <button
-                    key={tool.id}
-                    className={cn(
-                      "flex h-14 flex-col items-center justify-center rounded-2xl border text-white transition-all active:scale-90",
-                      isActive
-                        ? "border-primary/20 bg-primary/20 tool-active-glow z-10"
-                        : "border-white/5 bg-white/[0.04]"
-                    )}
-                    onClick={() => {
-                      addHapticFeedback("light");
-                      if (tool.id === "record") {
-                        openToolSheet("record", { autoStartRecording: true });
-                      } else {
-                        openToolSheet(tool.id);
-                      }
-                    }}
-                    aria-label={tool.label}
-                  >
-                    <div className={cn(
-                      "flex h-7 w-7 items-center justify-center rounded-full mb-0.5",
-                      isActive ? "bg-primary text-white" : "text-white/40"
-                    )}>
-                      <Icon className={cn("h-4 w-4", tool.id === "record" && !isActive && "text-red-500/80")} />
-                    </div>
-                    <span className={cn(
-                      "text-[8px] font-black uppercase tracking-[0.12em]",
-                      isActive ? "text-white" : "text-white/25"
-                    )}>
-                      {tool.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
+			<div className="hidden md:block">
+				<QuickActions />
+			</div>
+			{children}
 
-      {showCoachmark && (
-        <div className="absolute bottom-24 left-3 right-3 z-40 rounded-2xl border border-primary/20 bg-background/95 p-3 shadow-2xl">
-          <div className="flex items-start gap-3">
-              <div className="mt-0.5 h-2.5 w-2.5 rounded-full bg-primary" />
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-foreground">
-                  {!hasTimelineClips
-                    ? "Start by adding media to your timeline."
-                    : !hasVoiceover
-                      ? "Nice! Now tap Record to add your voiceover."
-                      : "Looking good! Add text or tap Finish when ready."}
-                </p>
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  {!hasTimelineClips
-                    ? "Open Media → choose a clip → tap Add."
-                    : !hasVoiceover
-                      ? "Your voice is recorded over the video preview."
-                      : "Captions were auto-generated from your recording."}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                onClick={dismissCoachmark}
-                aria-label="Dismiss tip"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-          </div>
-        </div>
-      )}
+			{/* Template Loading Overlay */}
+			{isApplyingTemplate && !hasTimelineClips && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
+					<div className="flex flex-col items-center gap-4">
+						<Loader2 className="h-12 w-12 animate-spin text-primary" />
+						<div className="text-center">
+							<p className="text-sm font-black uppercase tracking-widest text-white">
+								Loading Template
+							</p>
+							<p className="mt-1 text-xs text-white/60">
+								Loading template assets...
+							</p>
+						</div>
+					</div>
+				</div>
+			)}
 
-      <div className="hidden md:block">
-        <QuickActions />
-      </div>
-      {children}
-
-      {/* Template Loading Overlay */}
-      {isApplyingTemplate && !hasTimelineClips && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <div className="text-center">
-              <p className="text-sm font-black uppercase tracking-widest text-white">
-                Loading Template
-              </p>
-              <p className="mt-1 text-xs text-white/60">
-                Loading template assets...
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <MobileSettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
-    </div>
-  );
+			<MobileSettingsPanel
+				isOpen={showSettings}
+				onClose={() => setShowSettings(false)}
+			/>
+		</div>
+	);
 }
