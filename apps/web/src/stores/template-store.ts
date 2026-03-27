@@ -1,421 +1,517 @@
-import { create } from "zustand";
-import { Template, TemplateCategory } from "@/lib/types";
-import {
-  buildTemplateTracks,
-  fetchTemplateCategories,
-  fetchTemplateById,
-  hydrateTemplateMediaItemsInBackground,
-  prepareTemplateMediaItemsForStreaming,
-} from "@/lib/template-service";
-import { useMediaStore } from "@/stores/media-store";
-import { useTimelineStore } from "@/stores/timeline-store";
-import { useProjectStore } from "@/stores/project-store";
-import { usePlaybackStore } from "@/stores/playback-store";
-import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
-import { useSceneStore } from "@/stores/scene-store";
-import { useEditorStore } from "@/stores/editor-store";
 import { toast } from "sonner";
+import { create } from "zustand";
+import {
+	buildTemplateTracks,
+	fetchTemplateById,
+	fetchTemplateCategories,
+	hydrateTemplateMediaItemsInBackground,
+	prepareTemplateMediaItemsForStreaming,
+} from "@/lib/template-service";
+import type { Template, TemplateCategory } from "@/lib/types";
+import { canvasPresets, useCanvasStore } from "@/stores/canvas-store";
+import { useEditorStore } from "@/stores/editor-store";
+import { useMediaStore } from "@/stores/media-store";
+import { usePlaybackStore } from "@/stores/playback-store";
+import { useProjectStore } from "@/stores/project-store";
+import { useSceneStore } from "@/stores/scene-store";
+import { useTimelineStore } from "@/stores/timeline-store";
 
 interface TemplateStore {
-  // State
-  categories: TemplateCategory[];
-  isLoading: boolean;
-  isApplying: boolean; // NEW: Track template application progress
-  error: string | null;
-  selectedTemplate: Template | null;
-  recentTemplates: Template[]; // Track recently used templates
-  templateBlobUrls: string[]; // NEW: Track blob URLs for cleanup
-  abortController: AbortController | null; // NEW: For cancelling in-flight requests
-  clipLoadingStatus: Record<string, 'loading' | 'ready' | 'error'>; // Per-clip loading status
+	// State
+	categories: TemplateCategory[];
+	isLoading: boolean;
+	isApplying: boolean; // NEW: Track template application progress
+	error: string | null;
+	selectedTemplate: Template | null;
+	recentTemplates: Template[]; // Track recently used templates
+	templateBlobUrls: string[]; // NEW: Track blob URLs for cleanup
+	abortController: AbortController | null; // NEW: For cancelling in-flight requests
+	clipLoadingStatus: Record<string, "loading" | "ready" | "error">; // Per-clip loading status
 
-  // Actions
-  fetchCategories: () => Promise<void>;
-  setCategories: (categories: TemplateCategory[]) => void; // NEW: Server-side hydration
-  selectTemplate: (templateId: string) => Promise<void>;
-  setSelectedTemplate: (template: Template) => void;
-  clearSelectedTemplate: () => void;
-  applySelectedTemplate: (projectName?: string, mergeStrategy?: 'replace' | 'merge') => Promise<boolean>;
-  mergeTemplateToProject: () => Promise<boolean>;
-  addToRecentTemplates: (template: Template) => void;
-  clearRecentTemplates: () => void;
-  cleanupBlobUrls: () => void; // NEW: Cleanup blob URLs
-  cancelPendingLoad: () => void; // NEW: Cancel in-flight template load
-  setClipLoadingStatus: (clipId: string, status: 'loading' | 'ready' | 'error') => void;
-  clearClipLoadingStatus: () => void;
+	// Actions
+	fetchCategories: () => Promise<void>;
+	setCategories: (categories: TemplateCategory[]) => void; // NEW: Server-side hydration
+	selectTemplate: (templateId: string) => Promise<void>;
+	setSelectedTemplate: (template: Template) => void;
+	clearSelectedTemplate: () => void;
+	applySelectedTemplate: (
+		projectName?: string,
+		mergeStrategy?: "replace" | "merge",
+	) => Promise<boolean>;
+	mergeTemplateToProject: () => Promise<boolean>;
+	addToRecentTemplates: (template: Template) => void;
+	clearRecentTemplates: () => void;
+	cleanupBlobUrls: () => void; // NEW: Cleanup blob URLs
+	cancelPendingLoad: () => void; // NEW: Cancel in-flight template load
+	setClipLoadingStatus: (
+		clipId: string,
+		status: "loading" | "ready" | "error",
+	) => void;
+	clearClipLoadingStatus: () => void;
 }
 
 export const useTemplateStore = create<TemplateStore>((set, get) => ({
-  categories: [],
-  isLoading: false,
-  isApplying: false,
-  error: null,
-  selectedTemplate: null,
-  recentTemplates: [],
-  templateBlobUrls: [], // NEW: Initialize blob URL tracking
-  abortController: null, // NEW: Initialize abort controller
-  clipLoadingStatus: {}, // Per-clip loading status
+	categories: [],
+	isLoading: false,
+	isApplying: false,
+	error: null,
+	selectedTemplate: null,
+	recentTemplates: [],
+	templateBlobUrls: [], // NEW: Initialize blob URL tracking
+	abortController: null, // NEW: Initialize abort controller
+	clipLoadingStatus: {}, // Per-clip loading status
 
-  /**
-   * Fetches all template categories
-   */
-  fetchCategories: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      const categories = await fetchTemplateCategories();
-      set({ categories, isLoading: false });
-    } catch (error) {
-      console.error('Failed to fetch templates:', error);
-      set({
-        error: error instanceof Error ? error.message : 'Failed to load templates',
-        isLoading: false
-      });
-    }
-  },
+	/**
+	 * Fetches all template categories
+	 */
+	fetchCategories: async () => {
+		set({ isLoading: true, error: null });
+		try {
+			const categories = await fetchTemplateCategories();
+			set({ categories, isLoading: false });
+		} catch (error) {
+			console.error("Failed to fetch templates:", error);
+			set({
+				error:
+					error instanceof Error ? error.message : "Failed to load templates",
+				isLoading: false,
+			});
+		}
+	},
 
-  /**
-   * Server-side hydration of categories
-   */
-  setCategories: (categories) => {
-    set({ categories });
-  },
+	/**
+	 * Server-side hydration of categories
+	 */
+	setCategories: (categories) => {
+		set({ categories });
+	},
 
-  /**
-   * Selects a template by ID
-   */
-  selectTemplate: async (templateId: string) => {
-    // Cancel any pending template load
-    get().cancelPendingLoad();
-    
-    // Create new abort controller for this load
-    const abortController = new AbortController();
-    set({ isLoading: true, error: null, abortController });
-    
-    try {
-      const template = await fetchTemplateById(templateId, abortController.signal);
-      
-      // Check if this request was aborted
-      if (abortController.signal.aborted) {
-        console.log('Template selection was cancelled');
-        set({ isLoading: false, abortController: null });
-        return;
-      }
-      
-      set({ selectedTemplate: template, isLoading: false, abortController: null });
-    } catch (error) {
-      // Don't show error if request was aborted
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Template selection was cancelled');
-        return;
-      }
-      
-      console.error('Failed to select template:', error);
-      set({
-        error: error instanceof Error ? error.message : 'Failed to select template',
-        isLoading: false,
-        abortController: null
-      });
-    }
-  },
+	/**
+	 * Selects a template by ID
+	 */
+	selectTemplate: async (templateId: string) => {
+		// Cancel any pending template load
+		get().cancelPendingLoad();
 
-  /**
-   * Sets the selected template directly (skips network fetch)
-   * Use when the full template object is already available
-   */
-  setSelectedTemplate: (template: Template) => {
-    get().cancelPendingLoad();
-    set({ selectedTemplate: template, isLoading: false, error: null, abortController: null });
-  },
+		// Create new abort controller for this load
+		const abortController = new AbortController();
+		set({ isLoading: true, error: null, abortController });
 
-  /**
-   * Clears the selected template
-   */
-  clearSelectedTemplate: () => {
-    set({ selectedTemplate: null, isApplying: false });
-  },
+		try {
+			const template = await fetchTemplateById(
+				templateId,
+				abortController.signal,
+			);
 
-  /**
-   * Adds a template to recent templates list (max 5)
-   */
-  addToRecentTemplates: (template: Template) => {
-    set((state) => {
-      // Remove duplicate if exists
-      const existingIndex = state.recentTemplates.findIndex(t => t.id === template.id);
-      let updatedRecents = existingIndex >= 0
-        ? [...state.recentTemplates.slice(0, existingIndex), ...state.recentTemplates.slice(existingIndex + 1)]
-        : [...state.recentTemplates];
+			// Check if this request was aborted
+			if (abortController.signal.aborted) {
+				console.log("Template selection was cancelled");
+				set({ isLoading: false, abortController: null });
+				return;
+			}
 
-      // Add new template at beginning
-      updatedRecents = [template, ...updatedRecents];
+			set({
+				selectedTemplate: template,
+				isLoading: false,
+				abortController: null,
+			});
+		} catch (error) {
+			// Don't show error if request was aborted
+			if (error instanceof Error && error.name === "AbortError") {
+				console.log("Template selection was cancelled");
+				return;
+			}
 
-      // Limit to 5 most recent
-      return { recentTemplates: updatedRecents.slice(0, 5) };
-    });
-  },
+			console.error("Failed to select template:", error);
+			set({
+				error:
+					error instanceof Error ? error.message : "Failed to select template",
+				isLoading: false,
+				abortController: null,
+			});
+		}
+	},
 
-  /**
-   * Clears all recent templates
-   */
-  clearRecentTemplates: () => {
-    set({ recentTemplates: [] });
-  },
+	/**
+	 * Sets the selected template directly (skips network fetch)
+	 * Use when the full template object is already available
+	 */
+	setSelectedTemplate: (template: Template) => {
+		get().cancelPendingLoad();
+		set({
+			selectedTemplate: template,
+			isLoading: false,
+			error: null,
+			abortController: null,
+		});
+	},
 
-  /**
-   * Cleanup blob URLs to prevent memory leaks
-   */
-  cleanupBlobUrls: () => {
-    const { templateBlobUrls } = get();
-    templateBlobUrls.forEach(url => {
-      try { URL.revokeObjectURL(url); } catch (_) { /* ignore */ }
-    });
-    set({ templateBlobUrls: [] });
-  },
+	/**
+	 * Clears the selected template
+	 */
+	clearSelectedTemplate: () => {
+		set({ selectedTemplate: null, isApplying: false });
+	},
 
-  /**
-   * Cancel any pending template load
-   */
-  cancelPendingLoad: () => {
-    const { abortController } = get();
-    if (abortController) {
-      console.log('🛑 Cancelling pending template load');
-      abortController.abort();
-      set({ abortController: null, isLoading: false, isApplying: false });
-    }
-  },
+	/**
+	 * Adds a template to recent templates list (max 5)
+	 */
+	addToRecentTemplates: (template: Template) => {
+		set((state) => {
+			// Remove duplicate if exists
+			const existingIndex = state.recentTemplates.findIndex(
+				(t) => t.id === template.id,
+			);
+			let updatedRecents =
+				existingIndex >= 0
+					? [
+							...state.recentTemplates.slice(0, existingIndex),
+							...state.recentTemplates.slice(existingIndex + 1),
+						]
+					: [...state.recentTemplates];
 
-  /**
-   * Applies the selected template to the current project
-   * @param projectName Optional project name for new projects
-   * @param mergeStrategy Strategy for merging with existing content: 'replace' (default) or 'merge'
-   * Returns true if successful, false otherwise
-   */
-  applySelectedTemplate: async (projectName?: string, mergeStrategy: 'replace' | 'merge' = 'replace') => {
-    const { selectedTemplate } = get();
-    if (!selectedTemplate) {
-      toast.error('No template selected');
-      return false;
-    }
+			// Add new template at beginning
+			updatedRecents = [template, ...updatedRecents];
 
-    // Cancel any pending loads
-    get().cancelPendingLoad();
+			// Limit to 5 most recent
+			return { recentTemplates: updatedRecents.slice(0, 5) };
+		});
+	},
 
-    // Cleanup old blob URLs before loading new template
-    if (mergeStrategy === 'replace') {
-      get().cleanupBlobUrls();
-    }
+	/**
+	 * Clears all recent templates
+	 */
+	clearRecentTemplates: () => {
+		set({ recentTemplates: [] });
+	},
 
-    // Create abort controller for this template application
-    const abortController = new AbortController();
-    set({ isLoading: true, isApplying: true, abortController });
+	/**
+	 * Cleanup blob URLs to prevent memory leaks
+	 */
+	cleanupBlobUrls: () => {
+		const { templateBlobUrls } = get();
+		templateBlobUrls.forEach((url) => {
+			try {
+				URL.revokeObjectURL(url);
+			} catch (_) {
+				/* ignore */
+			}
+		});
+		set({ templateBlobUrls: [] });
+	},
 
-    try {
-      // Get required stores
-      const { clearAllMedia, addMediaItem, updateMediaItem } = useMediaStore.getState();
-      const { addTrack, addClipToTrack, removeTrack } = useTimelineStore.getState();
-      const { createNewProject, activeProject } = useProjectStore.getState();
-      const { setCurrentTime, pause } = usePlaybackStore.getState();
+	/**
+	 * Cancel any pending template load
+	 */
+	cancelPendingLoad: () => {
+		const { abortController } = get();
+		if (abortController) {
+			console.log("🛑 Cancelling pending template load");
+			abortController.abort();
+			set({ abortController: null, isLoading: false, isApplying: false });
+		}
+	},
 
-      // Create a new project when:
-      //  - there is no active project at all, OR
-      //  - an explicit projectName was given AND we are replacing (i.e. the
-      //    user intentionally started a fresh project from the template page).
-      // When EditorProvider calls applySelectedTemplate() as a safety-net it
-      // passes no projectName, so it will only create a project if there isn't
-      // one already.
-      const shouldCreateNew = !activeProject || (mergeStrategy === 'replace' && !!projectName);
-      if (shouldCreateNew) {
-        const newProjectName = projectName || selectedTemplate.name;
-        createNewProject(newProjectName);
-      }
+	/**
+	 * Applies the selected template to the current project
+	 * @param projectName Optional project name for new projects
+	 * @param mergeStrategy Strategy for merging with existing content: 'replace' (default) or 'merge'
+	 * Returns true if successful, false otherwise
+	 */
+	applySelectedTemplate: async (
+		projectName?: string,
+		mergeStrategy: "replace" | "merge" = "replace",
+	) => {
+		const { selectedTemplate } = get();
+		if (!selectedTemplate) {
+			toast.error("No template selected");
+			return false;
+		}
 
-      // Prepare media for immediate streaming so the editor can open without
-      // waiting for every template asset to finish downloading.
-      const { mediaItems } = prepareTemplateMediaItemsForStreaming(selectedTemplate);
-      const templateTracks = buildTemplateTracks(selectedTemplate, mediaItems);
+		// Cancel any pending loads
+		get().cancelPendingLoad();
 
-      // Check if aborted
-      if (abortController.signal.aborted) {
-        console.log("Template application was cancelled");
-        set({ isLoading: false, isApplying: false, abortController: null });
-        return false;
-      }
+		// Cleanup old blob URLs before loading new template
+		if (mergeStrategy === "replace") {
+			get().cleanupBlobUrls();
+		}
 
-      // Only clear after successful download
-      if (mergeStrategy === 'replace') {
-        clearAllMedia();
-        const currentTracks = useTimelineStore.getState().tracks;
-        currentTracks.forEach(track => removeTrack(track.id));
-      }
+		// Create abort controller for this template application
+		const abortController = new AbortController();
+		set({ isLoading: true, isApplying: true, abortController });
 
-      // Add media items to the store
-      mediaItems.forEach(item => addMediaItem(item));
+		try {
+			// Get required stores
+			const { clearAllMedia, addMediaItem, updateMediaItem } =
+				useMediaStore.getState();
+			const { addTrack, addClipToTrack, removeTrack } =
+				useTimelineStore.getState();
+			const { createNewProject, activeProject } = useProjectStore.getState();
+			const { setCurrentTime, pause } = usePlaybackStore.getState();
 
-      // Snapshot clip IDs before adding new ones
-      const clipIdsBefore = new Set(
-        useTimelineStore.getState().tracks.flatMap(t => t.clips.map(c => c.id))
-      );
+			// Create a new project when:
+			//  - there is no active project at all, OR
+			//  - an explicit projectName was given AND we are replacing (i.e. the
+			//    user intentionally started a fresh project from the template page).
+			// When EditorProvider calls applySelectedTemplate() as a safety-net it
+			// passes no projectName, so it will only create a project if there isn't
+			// one already.
+			const shouldCreateNew =
+				!activeProject || (mergeStrategy === "replace" && !!projectName);
+			if (shouldCreateNew) {
+				const newProjectName = projectName || selectedTemplate.name;
+				createNewProject(newProjectName);
+			}
 
-      // Add tracks and clips to the timeline
-      templateTracks.forEach((track) => {
-        const trackId = addTrack(track.type);
+			// Prepare media for immediate streaming so the editor can open without
+			// waiting for every template asset to finish downloading.
+			const { mediaItems } =
+				prepareTemplateMediaItemsForStreaming(selectedTemplate);
+			const templateTracks = buildTemplateTracks(selectedTemplate, mediaItems);
 
-        // Add clips to the track
-        track.clips.forEach((clip) => {
-          addClipToTrack(trackId, {
-            mediaId: clip.mediaId,
-            name: clip.name,
-            duration: clip.duration,
-            startTime: clip.startTime,
-            trimStart: clip.trimStart,
-            trimEnd: clip.trimEnd
-          });
-        });
-      });
+			// Check if aborted
+			if (abortController.signal.aborted) {
+				console.log("Template application was cancelled");
+				set({ isLoading: false, isApplying: false, abortController: null });
+				return false;
+			}
 
-      // Collect newly added clip IDs and mark them as loading
-      const newClipLoadingStatus: Record<string, 'loading' | 'ready' | 'error'> = {};
-      useTimelineStore.getState().tracks.forEach(t =>
-        t.clips.forEach(c => {
-          if (!clipIdsBefore.has(c.id)) {
-            newClipLoadingStatus[c.id] = 'loading';
-          }
-        })
-      );
-      set({ clipLoadingStatus: newClipLoadingStatus });
+			// Only clear after successful download
+			if (mergeStrategy === "replace") {
+				clearAllMedia();
+				const currentTracks = useTimelineStore.getState().tracks;
+				currentTracks.forEach((track) => removeTrack(track.id));
+			}
 
-      // Initialize canvas size based on template aspect ratio
-      const { setCanvasPreset } = useCanvasStore.getState();
-      const preset = canvasPresets.find(p => {
-        if (selectedTemplate.aspectRatio === 'portrait') return p.name.includes('Portrait');
-        if (selectedTemplate.aspectRatio === 'square') return p.name.includes('Square');
-        if (selectedTemplate.aspectRatio === 'landscape') return p.name.includes('HD');
-        return false;
-      }) || canvasPresets[0];
-      setCanvasPreset(preset);
+			// Add media items to the store
+			mediaItems.forEach((item) => addMediaItem(item));
 
-      // Initialize scenes immediately so the scene store is in sync with the new project
-      const { initializeScenes } = useSceneStore.getState();
-      const updatedProject = useProjectStore.getState().activeProject;
-      if (updatedProject) {
-        initializeScenes(updatedProject.scenes || [], updatedProject.currentSceneId);
-      }
+			// Snapshot clip IDs before adding new ones
+			const clipIdsBefore = new Set(
+				useTimelineStore
+					.getState()
+					.tracks.flatMap((t) => t.clips.map((c) => c.id)),
+			);
 
-      // Reset playhead to start; sync duration so playback works immediately
-      setCurrentTime(0);
-      const totalDuration = useTimelineStore.getState().getTotalDuration();
-      if (totalDuration > 0) {
-        usePlaybackStore.getState().setDuration(totalDuration);
-      }
+			// Add tracks and clips to the timeline
+			templateTracks.forEach((track) => {
+				const trackId = addTrack(track.type);
 
-      // Default to cover mode so video fills the fullscreen preview
-      useEditorStore.getState().setVideoObjectFit("cover");
+				// Add clips to the track
+				track.clips.forEach((clip) => {
+					addClipToTrack(trackId, {
+						mediaId: clip.mediaId,
+						name: clip.name,
+						duration: clip.duration,
+						startTime: clip.startTime,
+						trimStart: clip.trimStart,
+						trimEnd: clip.trimEnd,
+					});
+				});
+			});
 
-      // Track this template as recently used
-      get().addToRecentTemplates(selectedTemplate);
+			// Collect newly added clip IDs and mark them as loading
+			const newClipLoadingStatus: Record<
+				string,
+				"loading" | "ready" | "error"
+			> = {};
+			useTimelineStore.getState().tracks.forEach((t) =>
+				t.clips.forEach((c) => {
+					if (!clipIdsBefore.has(c.id)) {
+						newClipLoadingStatus[c.id] = "loading";
+					}
+				}),
+			);
+			set({ clipLoadingStatus: newClipLoadingStatus });
 
-      // Kick off cache/download hydration after the editor is already usable.
-      // Track progress so we can show a toast with download status.
-      const totalMedia = selectedTemplate.mediaItems?.length || 0;
-      let hydratedCount = 0;
-      const progressToastId = totalMedia > 1
-        ? toast.loading(`Loading media… 0/${totalMedia}`, { duration: Infinity })
-        : null;
+			// Initialize canvas size based on template aspect ratio
+			const { setCanvasPreset } = useCanvasStore.getState();
+			const preset =
+				canvasPresets.find((p) => {
+					if (selectedTemplate.aspectRatio === "portrait")
+						return p.name.includes("Portrait");
+					if (selectedTemplate.aspectRatio === "square")
+						return p.name.includes("Square");
+					if (selectedTemplate.aspectRatio === "landscape")
+						return p.name.includes("HD");
+					return false;
+				}) || canvasPresets[0];
+			setCanvasPreset(preset);
 
-      hydrateTemplateMediaItemsInBackground(
-        selectedTemplate,
-        {
-          onMediaItemHydrated: ({ mediaItem, blobUrl }) => {
-            if (abortController.signal.aborted) {
-              if (blobUrl) {
-                try { URL.revokeObjectURL(blobUrl); } catch (_) { /* ignore */ }
-              }
-              return;
-            }
+			// Initialize scenes immediately so the scene store is in sync with the new project
+			const { initializeScenes } = useSceneStore.getState();
+			const updatedProject = useProjectStore.getState().activeProject;
+			if (updatedProject) {
+				initializeScenes(
+					updatedProject.scenes || [],
+					updatedProject.currentSceneId,
+				);
+			}
 
-            updateMediaItem(mediaItem.id, {
-              file: mediaItem.file,
-              url: mediaItem.url,
-              size: mediaItem.size,
-              isLocal: mediaItem.isLocal,
-            });
+			// Reset playhead to start; sync duration so playback works immediately
+			setCurrentTime(0);
+			const totalDuration = useTimelineStore.getState().getTotalDuration();
+			if (totalDuration > 0) {
+				usePlaybackStore.getState().setDuration(totalDuration);
+			}
 
-            if (blobUrl) {
-              set((state) => ({ templateBlobUrls: [...state.templateBlobUrls, blobUrl] }));
-            }
+			// Default to cover mode so video fills the fullscreen preview
+			useEditorStore.getState().setVideoObjectFit("cover");
 
-            // Mark all clips that reference this media item as ready
-            const tracks = useTimelineStore.getState().tracks;
-            tracks.forEach(track => {
-              track.clips.forEach(clip => {
-                if (clip.mediaId === mediaItem.id) {
-                  get().setClipLoadingStatus(clip.id, 'ready');
-                }
-              });
-            });
+			// Track this template as recently used
+			get().addToRecentTemplates(selectedTemplate);
 
-            // Update progress toast
-            hydratedCount++;
-            if (progressToastId) {
-              if (hydratedCount >= totalMedia) {
-                toast.success('All media loaded', { id: progressToastId, duration: 2000 });
-              } else {
-                toast.loading(`Loading media… ${hydratedCount}/${totalMedia}`, { id: progressToastId });
-              }
-            }
-          },
-          onMediaItemError: (item, error) => {
-            hydratedCount++;
-            if (progressToastId && hydratedCount >= totalMedia) {
-              toast.success('Media loading complete', { id: progressToastId, duration: 2000 });
-            }
-          },
-        },
-        abortController.signal
-      ).catch((error) => {
-        if (progressToastId) {
-          toast.dismiss(progressToastId);
-        }
-        if (error instanceof Error && error.name === "AbortError") {
-          return;
-        }
-      });
+			// Kick off cache/download hydration after the editor is already usable.
+			// Track progress so we can show a toast with download status.
+			const totalMedia = selectedTemplate.mediaItems?.length || 0;
+			let hydratedCount = 0;
+			const progressToastId =
+				totalMedia > 1
+					? toast.loading(`Loading media… 0/${totalMedia}`, {
+							duration: Infinity,
+						})
+					: null;
 
-      set({ isLoading: false, isApplying: false, abortController: null });
-      
-      toast.success(`Template "${selectedTemplate.name}" applied successfully!`);
-      return true;
-    } catch (error) {
-      // Don't show error if request was aborted
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Template application was cancelled');
-        return false;
-      }
-      
-      console.error('❌ Failed to apply template:', error);
-      toast.error('Failed to apply template');
-      set({
-        error: error instanceof Error ? error.message : 'Failed to apply template',
-        isLoading: false,
-        isApplying: false,
-        abortController: null
-      });
-      return false;
-    }
-  },
+			hydrateTemplateMediaItemsInBackground(
+				selectedTemplate,
+				{
+					onMediaItemHydrated: ({ mediaItem, blobUrl }) => {
+						if (abortController.signal.aborted) {
+							if (blobUrl) {
+								try {
+									URL.revokeObjectURL(blobUrl);
+								} catch (_) {
+									/* ignore */
+								}
+							}
+							return;
+						}
 
-  /**
-   * Adds template to existing project by merging content
-   */
-  mergeTemplateToProject: async () => {
-    return get().applySelectedTemplate(undefined, 'merge');
-  },
+						updateMediaItem(mediaItem.id, {
+							file: mediaItem.file,
+							url: mediaItem.url,
+							size: mediaItem.size,
+							isLocal: mediaItem.isLocal,
+						});
 
-  setClipLoadingStatus: (clipId: string, status: 'loading' | 'ready' | 'error') => {
-    set((state) => ({
-      clipLoadingStatus: { ...state.clipLoadingStatus, [clipId]: status }
-    }));
-  },
+						if (blobUrl) {
+							set((state) => ({
+								templateBlobUrls: [...state.templateBlobUrls, blobUrl],
+							}));
+						}
 
-  clearClipLoadingStatus: () => {
-    set({ clipLoadingStatus: {} });
-  },
+						// Mark all clips that reference this media item as ready
+						const tracks = useTimelineStore.getState().tracks;
+						tracks.forEach((track) => {
+							track.clips.forEach((clip) => {
+								if (clip.mediaId === mediaItem.id) {
+									get().setClipLoadingStatus(clip.id, "ready");
+								}
+							});
+						});
+
+						// Update progress toast
+						hydratedCount++;
+						if (progressToastId) {
+							if (hydratedCount >= totalMedia) {
+								toast.success("All media loaded", {
+									id: progressToastId,
+									duration: 2000,
+								});
+							} else {
+								toast.loading(`Loading media… ${hydratedCount}/${totalMedia}`, {
+									id: progressToastId,
+								});
+							}
+						}
+					},
+					onMediaItemError: (item, error) => {
+						hydratedCount++;
+
+						// Mark all clips that reference this failed media item as error
+						const tracks = useTimelineStore.getState().tracks;
+						tracks.forEach((track) => {
+							track.clips.forEach((clip) => {
+								if (clip.mediaId === item.id) {
+									get().setClipLoadingStatus(clip.id, "error");
+								}
+							});
+						});
+
+						// Show specific error toast for this item
+						console.error(`Failed to load media: ${item.name}`, error);
+						toast.error(`Failed to load: ${item.name}`);
+
+						if (progressToastId && hydratedCount >= totalMedia) {
+							const errorCount = Object.values(get().clipLoadingStatus).filter(
+								(s) => s === "error",
+							).length;
+							if (errorCount > 0) {
+								toast.warning(`${errorCount} media item(s) failed to load`, {
+									duration: 4000,
+								});
+							} else {
+								toast.success("All media loaded", {
+									id: progressToastId,
+									duration: 2000,
+								});
+							}
+						}
+					},
+				},
+				abortController.signal,
+			).catch((error) => {
+				if (progressToastId) {
+					toast.dismiss(progressToastId);
+				}
+				if (error instanceof Error && error.name === "AbortError") {
+					return;
+				}
+			});
+
+			set({ isLoading: false, isApplying: false, abortController: null });
+
+			toast.success(
+				`Template "${selectedTemplate.name}" applied successfully!`,
+			);
+			return true;
+		} catch (error) {
+			// Don't show error if request was aborted
+			if (error instanceof Error && error.name === "AbortError") {
+				console.log("Template application was cancelled");
+				return false;
+			}
+
+			console.error("❌ Failed to apply template:", error);
+			toast.error("Failed to apply template");
+			set({
+				error:
+					error instanceof Error ? error.message : "Failed to apply template",
+				isLoading: false,
+				isApplying: false,
+				abortController: null,
+			});
+			return false;
+		}
+	},
+
+	/**
+	 * Adds template to existing project by merging content
+	 */
+	mergeTemplateToProject: async () => {
+		return get().applySelectedTemplate(undefined, "merge");
+	},
+
+	setClipLoadingStatus: (
+		clipId: string,
+		status: "loading" | "ready" | "error",
+	) => {
+		set((state) => ({
+			clipLoadingStatus: { ...state.clipLoadingStatus, [clipId]: status },
+		}));
+	},
+
+	clearClipLoadingStatus: () => {
+		set({ clipLoadingStatus: {} });
+	},
 }));

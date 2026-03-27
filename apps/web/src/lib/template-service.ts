@@ -1,6 +1,11 @@
-import { Template, TemplateCategory, TemplateMediaItem, TemplateTimelineTrack } from "@/lib/types";
-import { MediaItem } from "@/stores/media-store";
-import { TimelineTrack, TimelineClip } from "@/stores/timeline-store";
+import {
+	type Template,
+	type TemplateCategory,
+	type TemplateMediaItem,
+	TemplateTimelineTrack,
+} from "@/lib/types";
+import type { MediaItem } from "@/stores/media-store";
+import { TimelineClip, type TimelineTrack } from "@/stores/timeline-store";
 
 /**
  * Resolves a public asset path to an absolute URL.
@@ -8,16 +13,16 @@ import { TimelineTrack, TimelineClip } from "@/stores/timeline-store";
  * not the app origin — so we always use an absolute URL.
  */
 function assetUrl(path: string): string {
-  if (typeof window !== "undefined") {
-    return `${window.location.origin}${path}`;
-  }
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.URL ||
-    process.env.DEPLOY_PRIME_URL ||
-    "http://localhost:3000";
+	if (typeof window !== "undefined") {
+		return `${window.location.origin}${path}`;
+	}
+	const appUrl =
+		process.env.NEXT_PUBLIC_APP_URL ||
+		process.env.URL ||
+		process.env.DEPLOY_PRIME_URL ||
+		"http://localhost:3000";
 
-  return `${appUrl.replace(/\/$/, "")}${path}`;
+	return `${appUrl.replace(/\/$/, "")}${path}`;
 }
 
 /**
@@ -30,19 +35,19 @@ let _categoriesCache: TemplateCategory[] | null = null;
  * Fetches all template categories (cached after first successful fetch)
  */
 export async function fetchTemplateCategories(): Promise<TemplateCategory[]> {
-  if (_categoriesCache) return _categoriesCache;
-  try {
-    const response = await fetch(assetUrl('/templates/index.json'));
-    if (!response.ok) {
-      throw new Error('Failed to load templates');
-    }
-    const data = await response.json();
-    _categoriesCache = data.categories || [];
-    return _categoriesCache!;
-  } catch (error) {
-    console.error('Error fetching templates:', error);
-    return [];
-  }
+	if (_categoriesCache) return _categoriesCache;
+	try {
+		const response = await fetch(assetUrl("/templates/index.json"));
+		if (!response.ok) {
+			throw new Error("Failed to load templates");
+		}
+		const data = await response.json();
+		_categoriesCache = data.categories || [];
+		return _categoriesCache!;
+	} catch (error) {
+		console.error("Error fetching templates:", error);
+		return [];
+	}
 }
 
 /**
@@ -51,15 +56,15 @@ export async function fetchTemplateCategories(): Promise<TemplateCategory[]> {
  * an infinite spinner.
  */
 function timeoutPromise(ms: number, signal?: AbortSignal): Promise<never> {
-  return new Promise((_, reject) => {
-    const id = setTimeout(() => {
-      const err = new Error(`Request timed out after ${ms}ms`);
-      err.name = 'AbortError';
-      reject(err);
-    }, ms);
-    // Clean up the timer if the caller's signal fires first
-    signal?.addEventListener('abort', () => clearTimeout(id), { once: true });
-  });
+	return new Promise((_, reject) => {
+		const id = setTimeout(() => {
+			const err = new Error(`Request timed out after ${ms}ms`);
+			err.name = "AbortError";
+			reject(err);
+		}, ms);
+		// Clean up the timer if the caller's signal fires first
+		signal?.addEventListener("abort", () => clearTimeout(id), { once: true });
+	});
 }
 
 /**
@@ -74,117 +79,128 @@ const _templateDetailCache = new Map<string, Template>();
  * `fetchTemplateById` returns instantly from cache.
  */
 export function prefetchTemplateById(id: string): void {
-  if (_templateDetailCache.has(id)) return;
-  // Fire and forget — errors are silently swallowed
-  fetchTemplateById(id).catch(() => {});
+	if (_templateDetailCache.has(id)) return;
+	// Fire and forget — errors are silently swallowed
+	fetchTemplateById(id).catch(() => {});
 }
 
 /**
  * Fetches a specific template by ID
  */
-export async function fetchTemplateById(id: string, signal?: AbortSignal): Promise<Template | null> {
-  // Return from cache if already fetched
-  const cached = _templateDetailCache.get(id);
-  if (cached) return cached;
-  const FETCH_TIMEOUT_MS = 10_000; // Fix #5: 10-second safety timeout
+export async function fetchTemplateById(
+	id: string,
+	signal?: AbortSignal,
+): Promise<Template | null> {
+	// Return from cache if already fetched
+	const cached = _templateDetailCache.get(id);
+	if (cached) return cached;
+	const FETCH_TIMEOUT_MS = 10_000; // Fix #5: 10-second safety timeout
 
-  try {
-    // First find the basic template info to get the category
-    const categories = await fetchTemplateCategories();
-    let basicTemplate: Template | null = null;
-    let categoryId = '';
-    let subcategory = '';
+	try {
+		// First find the basic template info to get the category
+		const categories = await fetchTemplateCategories();
+		let basicTemplate: Template | null = null;
+		let categoryId = "";
+		let subcategory = "";
 
-    // Find the template in categories
-    for (const category of categories) {
-      const template = category.templates.find(t => t.id === id);
-      if (template) {
-        basicTemplate = template;
-        categoryId = category.id;
-        subcategory = template.subcategory || '';
-        break;
-      }
-    }
+		// Find the template in categories
+		for (const category of categories) {
+			const template = category.templates.find((t) => t.id === id);
+			if (template) {
+				basicTemplate = template;
+				categoryId = category.id;
+				subcategory = template.subcategory || "";
+				break;
+			}
+		}
 
-    if (!basicTemplate || !categoryId) {
-      return null;
-    }
+		if (!basicTemplate || !categoryId) {
+			return null;
+		}
 
-    try {
-      // Try to fetch the template data based on new structure first
-      // Format: /templates/categoryId/subcategory/id.json (if subcategory exists)
-      // or /templates/categoryId/id.json (if no subcategory)
-      //
-      // Fix #5: every fetch is raced against a 10-second timeout so an
-      // unresponsive static-file server surfaces an error state with a
-      // "Try Again" button rather than an infinite spinner.
-      let detailResponse: Response;
+		try {
+			// Try to fetch the template data based on new structure first
+			// Format: /templates/categoryId/subcategory/id.json (if subcategory exists)
+			// or /templates/categoryId/id.json (if no subcategory)
+			//
+			// Fix #5: every fetch is raced against a 10-second timeout so an
+			// unresponsive static-file server surfaces an error state with a
+			// "Try Again" button rather than an infinite spinner.
+			let detailResponse: Response;
 
-      if (subcategory) {
-        detailResponse = await Promise.race([
-          fetch(assetUrl(`/templates/${categoryId}/${subcategory}/${id}.json`), { signal }),
-          timeoutPromise(FETCH_TIMEOUT_MS, signal),
-        ]);
-      } else {
-        detailResponse = await Promise.race([
-          fetch(assetUrl(`/templates/${categoryId}/${id}.json`), { signal }),
-          timeoutPromise(FETCH_TIMEOUT_MS, signal),
-        ]);
-      }
+			if (subcategory) {
+				detailResponse = await Promise.race([
+					fetch(
+						assetUrl(`/templates/${categoryId}/${subcategory}/${id}.json`),
+						{ signal },
+					),
+					timeoutPromise(FETCH_TIMEOUT_MS, signal),
+				]);
+			} else {
+				detailResponse = await Promise.race([
+					fetch(assetUrl(`/templates/${categoryId}/${id}.json`), { signal }),
+					timeoutPromise(FETCH_TIMEOUT_MS, signal),
+				]);
+			}
 
-      // If either of the new formats work, return that
-      if (detailResponse.ok) {
-        const result = await detailResponse.json();
-        _templateDetailCache.set(id, result);
-        return result;
-      }
+			// If either of the new formats work, return that
+			if (detailResponse.ok) {
+				const result = await detailResponse.json();
+				_templateDetailCache.set(id, result);
+				return result;
+			}
 
-      // Try legacy format as fallback
-      const legacyResponse = await Promise.race([
-        fetch(assetUrl(`/templates/${categoryId}/${id}/template.json`), { signal }),
-        timeoutPromise(FETCH_TIMEOUT_MS, signal),
-      ]);
-      if (legacyResponse.ok) {
-        const result = await legacyResponse.json();
-        _templateDetailCache.set(id, result);
-        return result;
-      }
+			// Try legacy format as fallback
+			const legacyResponse = await Promise.race([
+				fetch(assetUrl(`/templates/${categoryId}/${id}/template.json`), {
+					signal,
+				}),
+				timeoutPromise(FETCH_TIMEOUT_MS, signal),
+			]);
+			if (legacyResponse.ok) {
+				const result = await legacyResponse.json();
+				_templateDetailCache.set(id, result);
+				return result;
+			}
 
-      // Fall back to basic template info if no detailed info is available
-      _templateDetailCache.set(id, basicTemplate);
-      return basicTemplate;
-
-    } catch (detailError) {
-      // Re-throw abort/timeout errors so the store surfaces an error state
-      if (detailError instanceof Error && detailError.name === 'AbortError') {
-        throw detailError;
-      }
-      // Fall back to basic template info
-      _templateDetailCache.set(id, basicTemplate);
-      return basicTemplate;
-    }
-  } catch (error) {
-    // Re-throw abort/timeout errors
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw error;
-    }
-    console.error('Error fetching template:', error);
-    return null;
-  }
+			// Fall back to basic template info if no detailed info is available
+			_templateDetailCache.set(id, basicTemplate);
+			return basicTemplate;
+		} catch (detailError) {
+			// Re-throw abort/timeout errors so the store surfaces an error state
+			if (detailError instanceof Error && detailError.name === "AbortError") {
+				throw detailError;
+			}
+			// Fall back to basic template info
+			_templateDetailCache.set(id, basicTemplate);
+			return basicTemplate;
+		}
+	} catch (error) {
+		// Re-throw abort/timeout errors
+		if (error instanceof Error && error.name === "AbortError") {
+			throw error;
+		}
+		console.error("Error fetching template:", error);
+		return null;
+	}
 }
 
+import {
+	cacheMedia,
+	getCachedMedia,
+	initIndexedDB,
+} from "@/lib/storage-indexeddb";
 import { resolveIpfsUrl } from "@/lib/utils";
-import { getCachedMedia, cacheMedia, initIndexedDB } from "@/lib/storage-indexeddb";
 
 /**
  * IPFS gateway list for fallback resolution.
  * If the primary gateway (Cloudflare) fails we try alternatives.
  */
 const IPFS_GATEWAYS = [
-  'https://cloudflare-ipfs.com/ipfs/',
-  'https://dweb.link/ipfs/',
-  'https://w3s.link/ipfs/',
-  'https://ipfs.io/ipfs/',
+	"https://cloudflare-ipfs.com/ipfs/",
+	"https://dweb.link/ipfs/",
+	"https://w3s.link/ipfs/",
+	"https://ipfs.io/ipfs/",
 ];
 
 /**
@@ -192,50 +208,53 @@ const IPFS_GATEWAYS = [
  * For IPFS URIs it cycles through multiple gateways.
  */
 async function fetchWithRetry(
-  url: string,
-  originalUri: string,
-  signal?: AbortSignal,
-  maxRetries = 2
+	url: string,
+	originalUri: string,
+	signal?: AbortSignal,
+	maxRetries = 2,
 ): Promise<Response> {
-  const isIpfs = originalUri.startsWith('ipfs://') || originalUri.startsWith('lens://');
-  const hash = originalUri.startsWith('ipfs://') ? originalUri.replace('ipfs://', '')
-    : originalUri.startsWith('lens://') ? originalUri.replace('lens://', '')
-      : null;
+	const isIpfs =
+		originalUri.startsWith("ipfs://") || originalUri.startsWith("lens://");
+	const hash = originalUri.startsWith("ipfs://")
+		? originalUri.replace("ipfs://", "")
+		: originalUri.startsWith("lens://")
+			? originalUri.replace("lens://", "")
+			: null;
 
-  // Build list of URLs to try
-  const urls: string[] = [url];
-  if (isIpfs && hash) {
-    for (const gw of IPFS_GATEWAYS) {
-      const gwUrl = `${gw}${hash}`;
-      if (gwUrl !== url) urls.push(gwUrl);
-    }
-  }
+	// Build list of URLs to try
+	const urls: string[] = [url];
+	if (isIpfs && hash) {
+		for (const gw of IPFS_GATEWAYS) {
+			const gwUrl = `${gw}${hash}`;
+			if (gwUrl !== url) urls.push(gwUrl);
+		}
+	}
 
-  let lastError: Error | null = null;
+	let lastError: Error | null = null;
 
-  for (const tryUrl of urls) {
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      if (signal?.aborted) {
-        const err = new Error('AbortError');
-        err.name = 'AbortError';
-        throw err;
-      }
-      try {
-        const resp = await fetch(tryUrl, { signal });
-        if (resp.ok) return resp;
-        lastError = new Error(`HTTP ${resp.status} from ${tryUrl}`);
-      } catch (e) {
-        if ((e as Error).name === 'AbortError') throw e;
-        lastError = e as Error;
-      }
-      // Exponential backoff before retry (skip on last attempt)
-      if (attempt < maxRetries) {
-        await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt)));
-      }
-    }
-  }
+	for (const tryUrl of urls) {
+		for (let attempt = 0; attempt <= maxRetries; attempt++) {
+			if (signal?.aborted) {
+				const err = new Error("AbortError");
+				err.name = "AbortError";
+				throw err;
+			}
+			try {
+				const resp = await fetch(tryUrl, { signal });
+				if (resp.ok) return resp;
+				lastError = new Error(`HTTP ${resp.status} from ${tryUrl}`);
+			} catch (e) {
+				if ((e as Error).name === "AbortError") throw e;
+				lastError = e as Error;
+			}
+			// Exponential backoff before retry (skip on last attempt)
+			if (attempt < maxRetries) {
+				await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
+			}
+		}
+	}
 
-  throw lastError || new Error(`Failed to fetch ${url}`);
+	throw lastError || new Error(`Failed to fetch ${url}`);
 }
 
 /**
@@ -252,100 +271,123 @@ async function fetchWithRetry(
  * (especially inside Farcaster WebView) and instant on repeat use.
  */
 export async function convertTemplateMediaItem(
-  item: TemplateMediaItem,
-  signal?: AbortSignal
+	item: TemplateMediaItem,
+	signal?: AbortSignal,
 ): Promise<{ mediaItem: MediaItem; blobUrl: string | null }> {
-  // Resolve to CDN URL (Cloudflare IPFS or FilCDN)
-  const streamUrl = resolveIpfsUrl(item.url);
+	// Resolve to CDN URL (Cloudflare IPFS or FilCDN)
+	const streamUrl = resolveIpfsUrl(item.url);
 
+	// Check if aborted
+	if (signal?.aborted) {
+		const err = new Error("AbortError");
+		err.name = "AbortError";
+		throw err;
+	}
 
-  // Check if aborted
-  if (signal?.aborted) {
-    const err = new Error('AbortError');
-    err.name = 'AbortError';
-    throw err;
-  }
+	const mimeType =
+		item.type === "video"
+			? "video/mp4"
+			: item.type === "audio"
+				? "audio/mp3"
+				: "image/jpeg";
 
-  const mimeType = item.type === 'video' ? 'video/mp4' :
-    item.type === 'audio' ? 'audio/mp3' :
-      'image/jpeg';
+	// --- Cache-through: try IndexedDB first, then fetch & cache ---
+	let blobUrl: string | null = null;
+	let mediaBlob: Blob | null = null;
+	let fileSize = 0;
 
-  // --- Cache-through: try IndexedDB first, then fetch & cache ---
-  let blobUrl: string | null = null;
-  let mediaBlob: Blob | null = null;
-  let fileSize = 0;
+	// Retry IndexedDB operations up to 2 times
+	const maxCacheRetries = 2;
+	for (let cacheAttempt = 0; cacheAttempt <= maxCacheRetries; cacheAttempt++) {
+		try {
+			await initIndexedDB();
 
-  try {
-    await initIndexedDB();
+			// 1. Check cache
+			const cached = await getCachedMedia(streamUrl);
+			if (cached) {
+				mediaBlob = cached;
+				break;
+			}
+			break;
+		} catch (cacheErr) {
+			// Last attempt - just log and continue without cache
+			if (cacheAttempt === maxCacheRetries) {
+				console.warn("IndexedDB cache unavailable after retries:", cacheErr);
+			} else {
+				console.warn(
+					`IndexedDB cache retry ${cacheAttempt + 1}/${maxCacheRetries}:`,
+					cacheErr,
+				);
+				await new Promise((r) => setTimeout(r, 200 * (cacheAttempt + 1)));
+			}
+		}
+	}
 
-    // 1. Check cache
-    const cached = await getCachedMedia(streamUrl);
-    if (cached) {
-      mediaBlob = cached;
-    }
-  } catch (cacheErr) {
-    // IndexedDB unavailable (e.g. private browsing) — continue without cache
-    console.warn('IndexedDB cache unavailable:', cacheErr);
-  }
+	if (!mediaBlob) {
+		// 2. Fetch with retry + gateway fallback
+		try {
+			const response = await fetchWithRetry(streamUrl, item.url, signal);
+			mediaBlob = await response.blob();
 
-  if (!mediaBlob) {
-    // 2. Fetch with retry + gateway fallback
-    try {
-      const response = await fetchWithRetry(streamUrl, item.url, signal);
-      mediaBlob = await response.blob();
+			// 3. Store in IndexedDB for next time (fire-and-forget with retry)
+			cacheMedia(streamUrl, mediaBlob, mimeType, 7 * 24 * 60 * 60 * 1000)
+				.catch((err) => {
+					console.warn("Failed to cache media (will retry on next load):", err);
+				})
+				.catch(() => {}); // Fire-and-forget, don't block
+		} catch (fetchErr) {
+			if ((fetchErr as Error).name === "AbortError") throw fetchErr;
+			// If fetch fails, fall back to direct streaming URL
+			console.warn(
+				`⚠️ Download failed for ${item.name}, falling back to streaming:`,
+				fetchErr,
+			);
+		}
+	}
 
-      // 3. Store in IndexedDB for next time (fire-and-forget)
-      cacheMedia(streamUrl, mediaBlob, mimeType, 7 * 24 * 60 * 60 * 1000) // 7-day TTL
-        .catch(err => console.warn('Failed to cache media:', err));
-    } catch (fetchErr) {
-      if ((fetchErr as Error).name === 'AbortError') throw fetchErr;
-      // If fetch fails, fall back to direct streaming URL
-      console.warn(`⚠️ Download failed for ${item.name}, falling back to streaming:`, fetchErr);
-    }
-  }
+	// Create blob URL if we have the data, otherwise fall back to CDN streaming
+	let mediaUrl = streamUrl;
+	if (mediaBlob) {
+		blobUrl = URL.createObjectURL(mediaBlob);
+		mediaUrl = blobUrl;
+		fileSize = mediaBlob.size;
+	}
 
-  // Create blob URL if we have the data, otherwise fall back to CDN streaming
-  let mediaUrl = streamUrl;
-  if (mediaBlob) {
-    blobUrl = URL.createObjectURL(mediaBlob);
-    mediaUrl = blobUrl;
-    fileSize = mediaBlob.size;
-  }
+	// Create File object for compatibility
+	const file = mediaBlob
+		? new File([mediaBlob], item.name, { type: mimeType })
+		: new File([], item.name, { type: mimeType });
 
-  // Create File object for compatibility
-  const file = mediaBlob
-    ? new File([mediaBlob], item.name, { type: mimeType })
-    : new File([], item.name, { type: mimeType });
+	const mediaItem: MediaItem = {
+		id: item.id,
+		name: item.name,
+		type: item.type,
+		file,
+		url: mediaUrl,
+		thumbnailUrl: resolveIpfsUrl(item.thumbnailUrl || item.url),
+		duration: item.duration || 0,
+		aspectRatio: item.aspectRatio,
+		size: fileSize,
+		isLocal: !!mediaBlob,
+	};
 
-  const mediaItem: MediaItem = {
-    id: item.id,
-    name: item.name,
-    type: item.type,
-    file,
-    url: mediaUrl,
-    thumbnailUrl: resolveIpfsUrl(item.thumbnailUrl || item.url),
-    duration: item.duration || 0,
-    aspectRatio: item.aspectRatio,
-    size: fileSize,
-    isLocal: !!mediaBlob
-  };
-
-
-  return { mediaItem, blobUrl };
+	return { mediaItem, blobUrl };
 }
 
-export function createTemplateMediaItemStub(item: TemplateMediaItem): MediaItem {
-  return {
-    id: item.id,
-    name: item.name,
-    type: item.type,
-    url: resolveIpfsUrl(item.url),
-    thumbnailUrl: resolveIpfsUrl(item.thumbnailUrl || item.url),
-    duration: item.duration || 0,
-    aspectRatio: item.aspectRatio,
-    size: 0,
-    isLocal: false,
-  };
+export function createTemplateMediaItemStub(
+	item: TemplateMediaItem,
+): MediaItem {
+	return {
+		id: item.id,
+		name: item.name,
+		type: item.type,
+		url: resolveIpfsUrl(item.url),
+		thumbnailUrl: resolveIpfsUrl(item.thumbnailUrl || item.url),
+		duration: item.duration || 0,
+		aspectRatio: item.aspectRatio,
+		size: 0,
+		isLocal: false,
+	};
 }
 
 /**
@@ -353,120 +395,131 @@ export function createTemplateMediaItemStub(item: TemplateMediaItem): MediaItem 
  * Returns media items configured for direct CDN streaming
  */
 export async function loadTemplateMediaItems(
-  template: Template,
-  signal?: AbortSignal
+	template: Template,
+	signal?: AbortSignal,
 ): Promise<{ mediaItems: MediaItem[]; blobUrls: string[] }> {
-  const results = await Promise.all(
-    template.mediaItems.map(item => convertTemplateMediaItem(item, signal))
-  );
+	const results = await Promise.all(
+		template.mediaItems.map((item) => convertTemplateMediaItem(item, signal)),
+	);
 
-  const mediaItems = results.map(r => r.mediaItem);
-  const blobUrls = results.map(r => r.blobUrl).filter((u): u is string => u !== null);
+	const mediaItems = results.map((r) => r.mediaItem);
+	const blobUrls = results
+		.map((r) => r.blobUrl)
+		.filter((u): u is string => u !== null);
 
-  return { mediaItems, blobUrls };
+	return { mediaItems, blobUrls };
 }
 
-export function prepareTemplateMediaItemsForStreaming(
-  template: Template
-): { mediaItems: MediaItem[]; blobUrls: string[] } {
-  return {
-    mediaItems: template.mediaItems.map(createTemplateMediaItemStub),
-    blobUrls: [],
-  };
+export function prepareTemplateMediaItemsForStreaming(template: Template): {
+	mediaItems: MediaItem[];
+	blobUrls: string[];
+} {
+	return {
+		mediaItems: template.mediaItems.map(createTemplateMediaItemStub),
+		blobUrls: [],
+	};
 }
 
-function getTemplateMediaHydrationOrder(template: Template): TemplateMediaItem[] {
-  if (!template.timelineTracks || template.timelineTracks.length === 0) {
-    return template.mediaItems;
-  }
+function getTemplateMediaHydrationOrder(
+	template: Template,
+): TemplateMediaItem[] {
+	if (!template.timelineTracks || template.timelineTracks.length === 0) {
+		return template.mediaItems;
+	}
 
-  const mediaById = new Map(template.mediaItems.map((item) => [item.id, item]));
-  const prioritizedIds = new Set<string>();
-  const ordered: TemplateMediaItem[] = [];
+	const mediaById = new Map(template.mediaItems.map((item) => [item.id, item]));
+	const prioritizedIds = new Set<string>();
+	const ordered: TemplateMediaItem[] = [];
 
-  const clipsByStartTime = template.timelineTracks
-    .flatMap((track) => track.clips)
-    .sort((a, b) => a.startTime - b.startTime);
+	const clipsByStartTime = template.timelineTracks
+		.flatMap((track) => track.clips)
+		.sort((a, b) => a.startTime - b.startTime);
 
-  clipsByStartTime.forEach((clip) => {
-    if (prioritizedIds.has(clip.mediaId)) return;
-    const mediaItem = mediaById.get(clip.mediaId);
-    if (!mediaItem) return;
-    prioritizedIds.add(clip.mediaId);
-    ordered.push(mediaItem);
-  });
+	clipsByStartTime.forEach((clip) => {
+		if (prioritizedIds.has(clip.mediaId)) return;
+		const mediaItem = mediaById.get(clip.mediaId);
+		if (!mediaItem) return;
+		prioritizedIds.add(clip.mediaId);
+		ordered.push(mediaItem);
+	});
 
-  template.mediaItems.forEach((item) => {
-    if (prioritizedIds.has(item.id)) return;
-    ordered.push(item);
-  });
+	template.mediaItems.forEach((item) => {
+		if (prioritizedIds.has(item.id)) return;
+		ordered.push(item);
+	});
 
-  return ordered;
+	return ordered;
 }
 
 /**
  * Runs an array of async tasks with a maximum concurrency limit.
  */
 async function runWithConcurrency<T>(
-  tasks: (() => Promise<T>)[],
-  concurrency: number
+	tasks: (() => Promise<T>)[],
+	concurrency: number,
 ): Promise<T[]> {
-  const results: T[] = new Array(tasks.length);
-  let index = 0;
+	const results: T[] = new Array(tasks.length);
+	let index = 0;
 
-  async function worker() {
-    while (index < tasks.length) {
-      const i = index++;
-      results[i] = await tasks[i]();
-    }
-  }
+	async function worker() {
+		while (index < tasks.length) {
+			const i = index++;
+			results[i] = await tasks[i]();
+		}
+	}
 
-  const workers = Array.from({ length: Math.min(concurrency, tasks.length) }, worker);
-  await Promise.all(workers);
-  return results;
+	const workers = Array.from(
+		{ length: Math.min(concurrency, tasks.length) },
+		worker,
+	);
+	await Promise.all(workers);
+	return results;
 }
 
 export async function hydrateTemplateMediaItemsInBackground(
-  template: Template,
-  callbacks: {
-    onMediaItemHydrated?: (result: { mediaItem: MediaItem; blobUrl: string | null }) => void;
-    onMediaItemError?: (item: TemplateMediaItem, error: unknown) => void;
-  } = {},
-  signal?: AbortSignal
+	template: Template,
+	callbacks: {
+		onMediaItemHydrated?: (result: {
+			mediaItem: MediaItem;
+			blobUrl: string | null;
+		}) => void;
+		onMediaItemError?: (item: TemplateMediaItem, error: unknown) => void;
+	} = {},
+	signal?: AbortSignal,
 ): Promise<{ blobUrls: string[] }> {
-  const blobUrls: string[] = [];
-  const orderedItems = getTemplateMediaHydrationOrder(template);
+	const blobUrls: string[] = [];
+	const orderedItems = getTemplateMediaHydrationOrder(template);
 
-  if (signal?.aborted) {
-    const err = new Error("AbortError");
-    err.name = "AbortError";
-    throw err;
-  }
+	if (signal?.aborted) {
+		const err = new Error("AbortError");
+		err.name = "AbortError";
+		throw err;
+	}
 
-  // Hydrate up to 3 media items in parallel for faster loading
-  const tasks = orderedItems.map((item) => async () => {
-    if (signal?.aborted) {
-      const err = new Error("AbortError");
-      err.name = "AbortError";
-      throw err;
-    }
-    try {
-      const result = await convertTemplateMediaItem(item, signal);
-      if (result.blobUrl) {
-        blobUrls.push(result.blobUrl);
-      }
-      callbacks.onMediaItemHydrated?.(result);
-    } catch (error) {
-      if ((error as Error).name === "AbortError") {
-        throw error;
-      }
-      callbacks.onMediaItemError?.(item, error);
-    }
-  });
+	// Hydrate up to 3 media items in parallel for faster loading
+	const tasks = orderedItems.map((item) => async () => {
+		if (signal?.aborted) {
+			const err = new Error("AbortError");
+			err.name = "AbortError";
+			throw err;
+		}
+		try {
+			const result = await convertTemplateMediaItem(item, signal);
+			if (result.blobUrl) {
+				blobUrls.push(result.blobUrl);
+			}
+			callbacks.onMediaItemHydrated?.(result);
+		} catch (error) {
+			if ((error as Error).name === "AbortError") {
+				throw error;
+			}
+			callbacks.onMediaItemError?.(item, error);
+		}
+	});
 
-  await runWithConcurrency(tasks, 3);
+	await runWithConcurrency(tasks, 6);
 
-  return { blobUrls };
+	return { blobUrls };
 }
 
 /**
@@ -474,87 +527,87 @@ export async function hydrateTemplateMediaItemsInBackground(
  * that can be used in the timeline store
  */
 export function convertTemplateTracks(template: Template): TimelineTrack[] {
-  if (!template.timelineTracks) return [];
+	if (!template.timelineTracks) return [];
 
-  return template.timelineTracks.map(track => {
-    return {
-      id: crypto.randomUUID(), // Generate new IDs for the tracks
-      name: track.name,
-      type: track.type,
-      muted: track.muted || false,
-      clips: track.clips.map(clip => {
-        return {
-          id: crypto.randomUUID(), // Generate new IDs for the clips
-          mediaId: clip.mediaId, // Keep the same mediaId to reference the template media
-          name: clip.name,
-          duration: clip.duration,
-          startTime: clip.startTime,
-          trimStart: clip.trimStart,
-          trimEnd: clip.trimEnd
-        };
-      })
-    };
-  });
+	return template.timelineTracks.map((track) => {
+		return {
+			id: crypto.randomUUID(), // Generate new IDs for the tracks
+			name: track.name,
+			type: track.type,
+			muted: track.muted || false,
+			clips: track.clips.map((clip) => {
+				return {
+					id: crypto.randomUUID(), // Generate new IDs for the clips
+					mediaId: clip.mediaId, // Keep the same mediaId to reference the template media
+					name: clip.name,
+					duration: clip.duration,
+					startTime: clip.startTime,
+					trimStart: clip.trimStart,
+					trimEnd: clip.trimEnd,
+				};
+			}),
+		};
+	});
 }
 
 export function buildTemplateTracks(
-  template: Template,
-  mediaItems: MediaItem[]
+	template: Template,
+	mediaItems: MediaItem[],
 ): TimelineTrack[] {
-  if (template.timelineTracks) {
-    return convertTemplateTracks(template);
-  }
+	if (template.timelineTracks) {
+		return convertTemplateTracks(template);
+	}
 
-  const tracks: TimelineTrack[] = [];
-  const videoTrack: TimelineTrack = {
-    id: crypto.randomUUID(),
-    name: "Video Track",
-    type: "video",
-    clips: [],
-    muted: false,
-  };
+	const tracks: TimelineTrack[] = [];
+	const videoTrack: TimelineTrack = {
+		id: crypto.randomUUID(),
+		name: "Video Track",
+		type: "video",
+		clips: [],
+		muted: false,
+	};
 
-  const audioTrack: TimelineTrack = {
-    id: crypto.randomUUID(),
-    name: "Audio Track",
-    type: "audio",
-    clips: [],
-    muted: false,
-  };
+	const audioTrack: TimelineTrack = {
+		id: crypto.randomUUID(),
+		name: "Audio Track",
+		type: "audio",
+		clips: [],
+		muted: false,
+	};
 
-  let videoPosition = 0;
-  let audioPosition = 0;
+	let videoPosition = 0;
+	let audioPosition = 0;
 
-  mediaItems.forEach((item) => {
-    if (item.type === "video" || item.type === "image") {
-      videoTrack.clips.push({
-        id: crypto.randomUUID(),
-        mediaId: item.id,
-        name: item.name,
-        duration: item.duration || 5,
-        startTime: videoPosition,
-        trimStart: 0,
-        trimEnd: 0,
-      });
-      videoPosition += item.duration || 5;
-    } else if (item.type === "audio") {
-      audioTrack.clips.push({
-        id: crypto.randomUUID(),
-        mediaId: item.id,
-        name: item.name,
-        duration: item.duration || 5,
-        startTime: audioPosition,
-        trimStart: 0,
-        trimEnd: 0,
-      });
-      audioPosition += item.duration || 5;
-    }
-  });
+	mediaItems.forEach((item) => {
+		if (item.type === "video" || item.type === "image") {
+			videoTrack.clips.push({
+				id: crypto.randomUUID(),
+				mediaId: item.id,
+				name: item.name,
+				duration: item.duration || 5,
+				startTime: videoPosition,
+				trimStart: 0,
+				trimEnd: 0,
+			});
+			videoPosition += item.duration || 5;
+		} else if (item.type === "audio") {
+			audioTrack.clips.push({
+				id: crypto.randomUUID(),
+				mediaId: item.id,
+				name: item.name,
+				duration: item.duration || 5,
+				startTime: audioPosition,
+				trimStart: 0,
+				trimEnd: 0,
+			});
+			audioPosition += item.duration || 5;
+		}
+	});
 
-  if (videoTrack.clips.length > 0) tracks.push(videoTrack);
-  if (audioTrack.clips.length > 0) tracks.push(audioTrack);
+	if (videoTrack.clips.length > 0) tracks.push(videoTrack);
+	if (audioTrack.clips.length > 0) tracks.push(audioTrack);
 
-  return tracks;
+	return tracks;
 }
 
 /**
@@ -562,28 +615,33 @@ export function buildTemplateTracks(
  * This function loads all media items and creates timeline tracks from the template
  */
 export async function applyTemplate(
-  template: Template,
-  signal?: AbortSignal
+	template: Template,
+	signal?: AbortSignal,
 ): Promise<{
-  mediaItems: MediaItem[];
-  tracks: TimelineTrack[];
-  blobUrls: string[];
+	mediaItems: MediaItem[];
+	tracks: TimelineTrack[];
+	blobUrls: string[];
 }> {
-  console.log(`📦 Applying template: ${template.name}`);
+	console.log(`📦 Applying template: ${template.name}`);
 
-  // Load all media items with abort support
-  const { mediaItems, blobUrls } = await loadTemplateMediaItems(template, signal);
+	// Load all media items with abort support
+	const { mediaItems, blobUrls } = await loadTemplateMediaItems(
+		template,
+		signal,
+	);
 
-  // Check if aborted
-  if (signal?.aborted) {
-    // Cleanup any blob URLs we created before aborting
-    blobUrls.forEach(url => URL.revokeObjectURL(url));
-    throw new Error('AbortError');
-  }
+	// Check if aborted
+	if (signal?.aborted) {
+		// Cleanup any blob URLs we created before aborting
+		blobUrls.forEach((url) => URL.revokeObjectURL(url));
+		throw new Error("AbortError");
+	}
 
-  const tracks = buildTemplateTracks(template, mediaItems);
+	const tracks = buildTemplateTracks(template, mediaItems);
 
-  console.log(`✅ Template applied: ${mediaItems.length} media items, ${tracks.length} tracks`);
+	console.log(
+		`✅ Template applied: ${mediaItems.length} media items, ${tracks.length} tracks`,
+	);
 
-  return { mediaItems, tracks, blobUrls };
+	return { mediaItems, tracks, blobUrls };
 }
