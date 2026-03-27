@@ -109,6 +109,9 @@ export function MobileEditorLayout({
 	>(null);
 	const [isToolPanelExpanded, setIsToolPanelExpanded] = useState(false);
 	const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
+
+	// Swipe gesture state for tool panel
+	const toolPanelTouchStart = useRef<{ y: number; time: number } | null>(null);
 	const hasTimelineClips = tracks.some((track) => track.clips.length > 0);
 	const hasVoiceover = tracks.some(
 		(t) => t.type === "audio" && t.clips.length > 0,
@@ -473,6 +476,25 @@ export function MobileEditorLayout({
 								: "h-[28vh]",
 							"max-h-[32vh]",
 						)}
+						onTouchStart={(e) => {
+							toolPanelTouchStart.current = {
+								y: e.touches[0].clientY,
+								time: Date.now(),
+							};
+						}}
+						onTouchEnd={(e) => {
+							if (!toolPanelTouchStart.current) return;
+							const deltaY =
+								e.changedTouches[0].clientY - toolPanelTouchStart.current.y;
+							const deltaTime = Date.now() - toolPanelTouchStart.current.time;
+
+							// Swipe down: deltaY > 50px within 500ms -> close panel
+							if (deltaY > 50 && deltaTime < 500) {
+								addHapticFeedback("light");
+								closeToolSheet();
+							}
+							toolPanelTouchStart.current = null;
+						}}
 					>
 						<div className="flex-1 flex flex-col min-h-0">
 							{!isRecordingPreviewLocked && (
