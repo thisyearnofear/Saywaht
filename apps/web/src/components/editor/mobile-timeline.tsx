@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useMediaStore } from "@/stores/media-store";
+import { useTextStore } from "@/stores/text-store";
 import {
   ZoomIn,
   ZoomOut,

@@ -12,6 +12,7 @@ import {
   Music,
   Video,
   Plus,
+  Play,
   Sparkles,
   Loader2,
   Trash2,

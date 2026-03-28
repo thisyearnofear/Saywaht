@@ -21,6 +21,7 @@ import { useMobilePlaybackGate } from "@/hooks/use-mobile-playback-gate";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
 import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import {
+	Check,
 	ChevronDown,
 	ChevronUp,
 	Layers,
@@ -36,6 +37,7 @@ import {
 	X,
 	Zap,
 } from "@/lib/icons";
+import { motion, AnimatePresence } from "motion/react";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { markTemplateEditorReady } from "@/lib/template-performance";
 import { cn } from "@/lib/utils";
@@ -570,51 +572,6 @@ export function MobileEditorLayout({
 							)}
 
 							<div className="flex-1 min-h-0 overflow-hidden px-2 pb-2">
-								{activeTool === "record" && (
-									<MobileAudioPanel
-										autoStartRecordingNonce={recordAutoStartNonce}
-										onRecordingStateChange={(state) => {
-											setIsRecordingInProgress(state === "recording");
-										}}
-										onCaptionsGenerated={({ groupId, count }) => {
-											setPreferredCaptionGroupId(groupId);
-											setActiveTool("text");
-											toast.success(
-												`Generated ${count} captions. Edit them in Text.`,
-											);
-										}}
-									/>
-								)}
-								{activeTool === "media" && (
-									<MobileMediaPanel
-										onMediaAdded={() => {
-											// Optionally close tool sheet after adding media
-										}}
-									/>
-								)}
-								{activeTool === "text" && (
-									<MobileTextPanel
-										preferredCaptionGroupId={preferredCaptionGroupId}
-									/>
-								)}
-								{activeTool === "effects" && (
-									<MobileEffectsPanel
-										onRequestMedia={() => openToolSheet("media")}
-									/>
-								)}
-							</div>
-						</div>
-					</div>
-				)}
-										className="h-6 w-6 rounded-full bg-white/5"
-										onClick={closeToolSheet}
-									>
-										<X className="h-3 w-3" />
-									</Button>
-								</div>
-							)}
-
-							<div className="flex-1 min-h-0 overflow-hidden bg-black/30">
 								{activeTool === "record" && (
 									<MobileAudioPanel
 										autoStartRecordingNonce={recordAutoStartNonce}
