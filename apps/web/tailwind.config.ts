@@ -128,6 +128,12 @@ export default {
         shimmer: "shimmer 2s infinite linear",
         "spin-slow": "spin-slow 3s infinite linear",
       },
+      spacing: {
+        'safe-top': 'env(safe-area-inset-top)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+        'safe-left': 'env(safe-area-inset-left)',
+        'safe-right': 'env(safe-area-inset-right)',
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

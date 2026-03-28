@@ -47,6 +47,8 @@ import { useTextStore } from "@/stores/text-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 
 import { useMissionStore } from "@/services/mission-service";
+import { useSessionRecovery } from "@/hooks/use-session-recovery";
+import { trackEditorEvent } from "@/lib/analytics";
 
 const QuickActions = dynamic(
 	() =>
@@ -94,6 +96,7 @@ export function MobileEditorLayout({
 		useTemplateStore();
 	const { gatedPlay } = useMobilePlaybackGate();
 	const { level, currentXp, nextLevelXp } = useMissionStore();
+	const { hasRecoverableSession, recoverSession, discardSession, isRecovering } = useSessionRecovery();
 
 	// Check for reduced motion preference
 	const prefersReducedMotion = useRef(
@@ -135,6 +138,10 @@ export function MobileEditorLayout({
 	);
 
 	usePlaybackControls();
+
+  useEffect(() => {
+    trackEditorEvent("editor_open");
+  }, []);
 
 	// Auto-open media panel on first mount only when there's nothing in the timeline.
 	// We intentionally omit activeTool from deps so closing the panel doesn't
@@ -347,6 +354,7 @@ export function MobileEditorLayout({
 								hasTimelineClips
 									? "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.3)]"
 									: "bg-muted-foreground/30",
+                completedSteps.media && completedSteps.voice && !isFinishing && "animate-pulse ring-2 ring-primary/40 shadow-[0_0_15px_rgba(var(--primary),0.4)]"
 							)}
 							onClick={handleFinish}
 							disabled={isSharing || isFinishing}
@@ -379,30 +387,44 @@ export function MobileEditorLayout({
 						activeTool && "mb-[28vh]", // Reserved space to prevent timeline/nav clash, but tool floats over
 					)}
 				>
-					{hasTimelineClips ? (
-						<>
-							<MobilePreviewPanel
-								className={cn(
-									"split-view-preview transition-all duration-700 ease-in-out",
-									activeTool
-										? "scale-[0.82] -translate-y-6 shadow-2xl rounded-2xl"
-										: "scale-100",
-									isRecordingPreviewLocked && "scale-[0.75] -translate-y-12",
-									isFinishing && "scale-[0.4] -translate-y-[20vh] opacity-0",
-								)}
-								showResolution={false}
-								showControls={false}
-								controlsVariant="overlay"
-								isFullscreen={true}
-								onTextElementTap={(textId) => {
-									addHapticFeedback("light");
-									selectText(textId);
-									setActiveTool("text");
-								}}
-							/>
-
-							<button
-								className={cn(
+					          {hasTimelineClips ? (
+					            <>
+					              <MobilePreviewPanel
+					                className={cn(
+					                  "split-view-preview transition-all duration-700 ease-in-out",
+					                  activeTool
+					                    ? "scale-[0.82] -translate-y-6 shadow-2xl rounded-2xl"
+					                    : "scale-100",
+					                  isRecordingPreviewLocked && "scale-[0.75] -translate-y-12",
+					                  isFinishing && "scale-[0.4] -translate-y-[20vh] opacity-0",
+					                )}
+					                showResolution={false}
+					                showControls={false}
+					                controlsVariant="overlay"
+					                isFullscreen={true}
+					                onTextElementTap={(textId) => {
+					                  addHapticFeedback("light");
+					                  selectText(textId);
+					                  setActiveTool("text");
+					                }}
+					              />
+					
+					              {/* Progressive Loading Skeleton */}
+					              {isApplyingTemplate && (
+					                <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-md flex items-center justify-center">
+					                  <div className="w-[80%] aspect-[9/16] rounded-3xl border border-white/10 bg-white/5 relative overflow-hidden">
+					                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+					                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+					                      <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+					                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">
+					                        Analyzing Template
+					                      </span>
+					                    </div>
+					                  </div>
+					                </div>
+					              )}
+					
+					              <button								className={cn(
 									"absolute inset-0 z-10 flex items-center justify-center touch-manipulation",
 									(isRecordingPreviewLocked || isFinishing) &&
 										"pointer-events-none",
@@ -646,14 +668,21 @@ export function MobileEditorLayout({
 							{MOBILE_TOOL_CONFIG.map((tool) => {
 								const Icon = tool.icon;
 								const isActive = activeTool === tool.id;
+                
+                // GUIDED WORKFLOW: Pulse the next recommended action
+                const shouldPulse = 
+                  (tool.id === "media" && !completedSteps.media) ||
+                  (tool.id === "record" && completedSteps.media && !completedSteps.voice);
+
 								return (
 									<button
 										key={tool.id}
 										className={cn(
-											"flex h-12 flex-col items-center justify-center rounded-xl border text-white transition-all active:scale-95",
+											"flex h-12 flex-col items-center justify-center rounded-xl border text-white transition-all active:scale-95 relative",
 											isActive
 												? "border-primary/20 bg-primary/20 tool-active-glow z-10"
 												: "border-white/5 bg-white/[0.04]",
+                      shouldPulse && !isActive && "ring-2 ring-primary/40 animate-pulse border-primary/30 shadow-[0_0_15px_rgba(var(--primary),0.3)]"
 										)}
 										onClick={() => {
 											addHapticFeedback("light");
@@ -758,10 +787,51 @@ export function MobileEditorLayout({
 				</div>
 			)}
 
-			<MobileSettingsPanel
-				isOpen={showSettings}
-				onClose={() => setShowSettings(false)}
-			/>
-		</div>
-	);
-}
+			      <MobileSettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
+			
+			      {/* Session Recovery Prompt */}
+			      <AnimatePresence>
+			        {hasRecoverableSession && (
+			          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
+			            <motion.div
+			              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+			              animate={{ opacity: 1, scale: 1, y: 0 }}
+			              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+			              className="bg-black/60 border border-white/10 rounded-[2.5rem] max-w-sm w-full p-8 text-center shadow-[0_30px_60px_rgba(0,0,0,0.5)] backdrop-blur-2xl"
+			            >
+			              <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 mx-auto border border-primary/20">
+			                <Undo2 className="h-8 w-8 text-primary" />
+			              </div>
+			              
+			              <h2 className="text-xl font-black uppercase tracking-tight text-white mb-2">
+			                Unfinished Work?
+			              </h2>
+			              <p className="text-white/40 text-[13px] font-bold uppercase tracking-widest leading-relaxed mb-8">
+			                We found a previous session that wasn't finished. Would you like to restore it?
+			              </p>
+			
+			              <div className="space-y-3">
+			                <Button
+			                  className="w-full h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] bg-primary text-white shadow-xl shadow-primary/20 transition-all active:scale-95"
+			                  onClick={recoverSession}
+			                  disabled={isRecovering}
+			                >
+			                  {isRecovering ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+			                  Restore Session
+			                </Button>
+			                <Button
+			                  variant="ghost"
+			                  className="w-full h-12 text-white/20 font-black uppercase tracking-widest text-[9px] hover:text-white/40"
+			                  onClick={discardSession}
+			                  disabled={isRecovering}
+			                >
+			                  Discard & Start New
+			                </Button>
+			              </div>
+			            </motion.div>
+			          </div>
+			        )}
+			      </AnimatePresence>
+			    </div>
+			  );
+			}

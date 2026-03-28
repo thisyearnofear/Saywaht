@@ -30,6 +30,7 @@ interface MediaStore {
   updateMediaItem: (id: string, patch: Partial<MediaItem>) => void;
   removeMediaItem: (id: string) => void;
   clearAllMedia: () => void;
+  setMediaItems: (items: MediaItem[]) => void;
 }
 
 // Helper function to determine file type
@@ -212,6 +213,8 @@ export const useMediaStore = create<MediaStore>()(
 
         set({ mediaItems: [] });
       },
+
+      setMediaItems: (items: MediaItem[]) => set({ mediaItems: items }),
     }),
     {
       name: "media-storage",

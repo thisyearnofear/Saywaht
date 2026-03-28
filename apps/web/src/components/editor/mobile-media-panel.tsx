@@ -19,6 +19,7 @@ import {
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { processMediaFiles } from "@/lib/media-processing";
 import { toast } from "sonner";
+import { trackEditorEvent } from "@/lib/analytics";
 
 interface MobileMediaPanelProps {
   className?: string;
@@ -47,6 +48,7 @@ export function MobileMediaPanel({ className, onMediaAdded }: MobileMediaPanelPr
     try {
       const items = await processMediaFiles(files);
       items.forEach((item) => addMediaItem(item));
+      trackEditorEvent("media_added", { count: items.length });
       toast.success(`Added ${items.length} file(s)`);
       addHapticFeedback("medium");
     } catch (error) {

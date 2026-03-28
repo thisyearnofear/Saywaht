@@ -22,6 +22,7 @@ import { addHapticFeedback } from "@/lib/mobile-utils";
 import { toast } from "sonner";
 import { generateCaptionsFromAudioBlob } from "@/lib/transcription/caption-pipeline";
 import { useMissionStore } from "@/services/mission-service";
+import { trackEditorEvent } from "@/lib/analytics";
 
 interface MobileAudioPanelProps {
   className?: string;
@@ -136,6 +137,7 @@ export function MobileAudioPanel({
     
     toast.success("Added to project");
     addXp(25); // Reward for recording
+    trackEditorEvent("voiceover_completed", { duration: options.duration });
     generateCaptions(audioBlob);
   };
 
