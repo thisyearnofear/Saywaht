@@ -95,7 +95,7 @@ function normalizeChunks(chunks: CaptionChunk[], step: number): CaptionChunk[] {
   return normalized;
 }
 
-async function transcribeBlobToChunks(
+export async function transcribeBlobToChunks(
   blob: Blob,
   {
     language = "en",
@@ -141,7 +141,7 @@ async function transcribeBlobToChunks(
   };
 }
 
-function materializeCaptions({
+export function materializeCaptions({
   chunks,
   addTextElement,
   position = "bottom",

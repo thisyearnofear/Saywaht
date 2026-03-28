@@ -20,7 +20,11 @@ import {
 import { cn } from "@/lib/utils";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { toast } from "sonner";
-import { generateCaptionsFromAudioBlob } from "@/lib/transcription/caption-pipeline";
+import { 
+  generateCaptionsFromAudioBlob, 
+  transcribeBlobToChunks,
+  materializeCaptions
+} from "@/lib/transcription/caption-pipeline";
 import { useMissionStore } from "@/services/mission-service";
 import { trackEditorEvent } from "@/lib/analytics";
 
@@ -46,6 +50,7 @@ export function MobileAudioPanel({
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [recorderState, setRecorderState] = useState<MobileRecorderState>("idle");
   const [originalVolume, setOriginalVolume] = useState(1);
+  const [pendingTranscription, setPendingTranscription] = useState<{ chunks: any[]; audioHash: string } | null>(null);
 
   // Filter for audio files only
   const audioFiles = mediaItems.filter(
@@ -68,18 +73,51 @@ export function MobileAudioPanel({
   const handleVoiceoverRecord = () => {
     addHapticFeedback("medium");
     setAutoStartRecording(false);
+    setPendingTranscription(null);
     setShowMobileRecording(true);
   };
 
   useEffect(() => {
     if (!autoStartRecordingNonce) return;
     setAutoStartRecording(true);
+    setPendingTranscription(null);
     setShowMobileRecording(true);
   }, [autoStartRecordingNonce]);
 
-  const generateCaptions = async (blob: Blob) => {
+  const handleEagerTranscription = async (blob: Blob) => {
+    console.log("🎙️ [Pre-emptive] Starting background transcription...");
     setIsTranscribing(true);
+    try {
+      const result = await transcribeBlobToChunks(blob, {
+        language: "en",
+        cancelPrevious: true,
+      });
+      setPendingTranscription(result);
+      console.log("🎙️ [Pre-emptive] Transcription ready in background.");
+    } catch (err) {
+      console.error("Eager transcription failed", err);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
 
+  const generateCaptions = async (blob: Blob) => {
+    // If we have a pending result, use it immediately
+    if (pendingTranscription) {
+      console.log("🎙️ [Pre-emptive] Materializing background result...");
+      const result = materializeCaptions({
+        chunks: pendingTranscription.chunks,
+        addTextElement,
+        source: "voiceover",
+        audioHash: pendingTranscription.audioHash,
+      });
+      onCaptionsGenerated?.({ groupId: result.groupId, count: result.count });
+      setPendingTranscription(null);
+      return;
+    }
+
+    // Fallback to normal flow
+    setIsTranscribing(true);
     const captionPromise = generateCaptionsFromAudioBlob(blob, {
       addTextElement,
       position: "bottom",
@@ -160,6 +198,7 @@ export function MobileAudioPanel({
             onComplete={handleRecordingComplete}
             autoStart={autoStartRecording}
             onRecordingStateChange={handleRecordingStateChange}
+            onRawBlob={handleEagerTranscription}
           />
         ) : (
           <div className="space-y-4">

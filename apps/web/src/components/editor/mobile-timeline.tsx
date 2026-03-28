@@ -23,7 +23,9 @@ import {
   Sparkles,
   Scissors,
   Copy,
-  X
+  X,
+  Volume2,
+  VolumeX
 } from "@/lib/icons";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { formatTime } from "@/lib/utils";
@@ -147,6 +149,12 @@ export const MobileTimeline = React.memo(function MobileTimeline({
   const trimEndValRef = useRef(0);
   const trimStartTimeRef = useRef(0);
 
+  // One-handed zoom state
+  const lastTapTimeRef = useRef<number>(0);
+  const isOneHandZoomRef = useRef<boolean>(false);
+  const initialZoomYRef = useRef<number>(0);
+  const initialZoomLevelRef = useRef<number>(1);
+
   const SNAP_THRESHOLD = 0.2; // Seconds
 
   const getSnappedTime = useCallback((time: number): number => {
@@ -166,6 +174,13 @@ export const MobileTimeline = React.memo(function MobileTimeline({
           return clipEnd;
         }
       }
+    }
+
+    // 3. Snap to text elements
+    const textElements = useTextStore.getState().textElements;
+    for (const text of textElements) {
+      if (Math.abs(time - text.startTime) < SNAP_THRESHOLD) return text.startTime;
+      if (Math.abs(time - text.endTime) < SNAP_THRESHOLD) return text.endTime;
     }
 
     return time;
@@ -202,6 +217,7 @@ export const MobileTimeline = React.memo(function MobileTimeline({
       // Start pinching
       isPinchingRef.current = true;
       scrubbingRef.current = false;
+      isOneHandZoomRef.current = false;
       
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
@@ -214,7 +230,20 @@ export const MobileTimeline = React.memo(function MobileTimeline({
       return;
     }
 
+    // One-handed zoom detection (Double tap and hold)
+    const now = Date.now();
+    if (now - lastTapTimeRef.current < 300) {
+      isOneHandZoomRef.current = true;
+      scrubbingRef.current = false;
+      initialZoomYRef.current = e.touches[0].clientY;
+      initialZoomLevelRef.current = zoomLevel;
+      addHapticFeedback("medium");
+      return;
+    }
+    lastTapTimeRef.current = now;
+
     isPinchingRef.current = false;
+    isOneHandZoomRef.current = false;
     scrubbingRef.current = true;
     setIsScrubbing(true);
     addHapticFeedback("light");
@@ -244,6 +273,18 @@ export const MobileTimeline = React.memo(function MobileTimeline({
       if (Math.abs(newZoom - zoomLevel) > 0.05) {
         setZoomLevel(newZoom);
         // addHapticFeedback('light'); // Too frequent on zoom
+      }
+      return;
+    }
+
+    if (isOneHandZoomRef.current) {
+      e.preventDefault();
+      const deltaY = initialZoomYRef.current - e.touches[0].clientY;
+      const zoomFactor = 1 + deltaY / 200; // 200px for full scale change
+      const newZoom = Math.max(0.5, Math.min(5, initialZoomLevelRef.current * zoomFactor));
+      
+      if (Math.abs(newZoom - zoomLevel) > 0.05) {
+        setZoomLevel(newZoom);
       }
       return;
     }
@@ -286,6 +327,12 @@ export const MobileTimeline = React.memo(function MobileTimeline({
     
     if (e.touches.length < 2) {
       isPinchingRef.current = false;
+    }
+
+    if (isOneHandZoomRef.current) {
+      isOneHandZoomRef.current = false;
+      addHapticFeedback("heavy");
+      return;
     }
     
     if (scrubbingRef.current) {
@@ -662,6 +709,64 @@ export const MobileTimeline = React.memo(function MobileTimeline({
                           onTouchEnd={handleClipTouchEnd}
                           onTouchCancel={handleClipTouchEnd}
                         >
+                          {/* Contextual Floating Toolbar */}
+                          <AnimatePresence>
+                            {isSelected && !isTrimming && (
+                              <motion.div
+                                initial={{ opacity: 0, y: 10, x: '-50%' }}
+                                animate={{ opacity: 1, y: 0, x: '-50%' }}
+                                exit={{ opacity: 0, y: 10, x: '-50%' }}
+                                className="absolute -top-12 left-1/2 z-[60] flex items-center gap-1 rounded-full bg-black/80 backdrop-blur-xl border border-white/10 p-1 shadow-2xl"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full hover:bg-white/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const currentGain = clip.audioGain ?? 1;
+                                    const nextGain = currentGain > 0 ? 0 : 1;
+                                    useTimelineStore.getState().updateClipAudioGain(track.id, clip.id, nextGain);
+                                    addHapticFeedback("light");
+                                    toast.success(nextGain === 0 ? "Clip muted" : "Clip unmuted");
+                                  }}
+                                >
+                                  {(clip.audioGain ?? 1) > 0 ? <Volume2 className="h-3.5 w-3.5 text-white/70" /> : <VolumeX className="h-3.5 w-3.5 text-red-400" />}
+                                </Button>
+                                
+                                <div className="w-px h-4 bg-white/10 mx-0.5" />
+                                
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full hover:bg-white/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setContextMenuClip({ trackId: track.id, clip, x: e.clientX, y: e.clientY });
+                                    handleSplitClip();
+                                  }}
+                                >
+                                  <Scissors className="h-3.5 w-3.5 text-white/70" />
+                                </Button>
+
+                                <div className="w-px h-4 bg-white/10 mx-0.5" />
+
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full hover:bg-red-500/20"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteClip(track.id, clip.id);
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                                </Button>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+
                           {/* Trimming Handles */}
                           {isSelected && (
                             <>

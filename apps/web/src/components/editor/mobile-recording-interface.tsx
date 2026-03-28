@@ -32,6 +32,7 @@ interface MobileRecordingInterfaceProps {
   onComplete: (audioBlob: Blob, result: { duration: number; trimStart: number; trimEnd: number; startTime: number }) => void;
   autoStart?: boolean;
   onRecordingStateChange?: (state: MobileRecorderState) => void;
+  onRawBlob?: (blob: Blob) => void;
 }
 
 export function MobileRecordingInterface({
@@ -40,6 +41,7 @@ export function MobileRecordingInterface({
   onComplete,
   autoStart = false,
   onRecordingStateChange,
+  onRawBlob,
 }: MobileRecordingInterfaceProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -211,6 +213,7 @@ export function MobileRecordingInterface({
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         setAudioBlob(blob);
         setRecordingState("completed");
+        onRawBlob?.(blob); // Eagerly share the blob
         stream.getTracks().forEach((track) => track.stop());
       };
 
@@ -234,6 +237,8 @@ export function MobileRecordingInterface({
         setRecordingTime((prev) => {
           const newTime = prev + 1;
           if (newTime >= MAX_RECORDING_DURATION) stopRecordingRef.current();
+          // Heartbeat haptic every second during recording
+          addHapticFeedback("light");
           return newTime;
         });
       }, 1000);

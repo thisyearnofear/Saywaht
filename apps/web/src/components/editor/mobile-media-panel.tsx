@@ -88,7 +88,7 @@ export function MobileMediaPanel({ className, onMediaAdded }: MobileMediaPanelPr
             </Badge>
           )}
         </div>
-        
+
         <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -163,11 +163,11 @@ function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectM
   const handleBatchAdd = () => {
     if (selectedIds.length === 0) return;
     addHapticFeedback("heavy");
-    
+
     selectedIds.forEach((id) => {
       const item = mediaItems.find((m) => m.id === id);
       if (!item) return;
-      
+
       const trackType = item.type === "audio" ? "audio" : "video";
       let targetTrack = tracks.find((t) => t.type === trackType);
       let trackId = targetTrack?.id;
@@ -198,24 +198,81 @@ function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectM
 
   if (mediaItems.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-8 text-center gap-6">
-        <div className="w-20 h-20 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center">
-          <Video className="h-10 w-10 text-white/10" />
+      <div className="h-full flex flex-col p-6 gap-8">
+        <div className="flex flex-col items-center justify-center text-center gap-6 pt-4">
+          <div className="w-20 h-20 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center">
+            <Video className="h-10 w-10 text-white/10" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-[11px] font-black uppercase tracking-widest text-white/80">Media Library</p>
+            <p className="text-[10px] text-white/30 uppercase tracking-[0.15em] leading-relaxed max-w-[200px]">
+              Upload your first video or image to get started
+            </p>
+          </div>
+          <Button
+            className="w-full max-w-[200px] h-12 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-primary text-white shadow-xl shadow-primary/20"
+            onClick={onFileSelect}
+            disabled={isProcessing}
+          >
+            {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+            Add Files
+          </Button>
         </div>
-        <div className="space-y-2">
-          <p className="text-[11px] font-black uppercase tracking-widest text-white/80">Media Library</p>
-          <p className="text-[10px] text-white/30 uppercase tracking-[0.15em] leading-relaxed max-w-[200px]">
-            Upload your first video or image to get started
-          </p>
+
+        {/* Trending Prompt */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+              Trending Now
+            </span>
+          </div>
+
+          <button
+            onClick={async () => {
+              addHapticFeedback("heavy");
+              toast.info("Loading trending clip...");
+              // In production, this would fetch a real trending CID
+              const trendingItem: MediaItem = {
+                id: 'trending-clip-1',
+                name: 'Farcaster Viral Moment',
+                type: 'video',
+                url: 'https://persidian.com/api/proxy/video/sample-trending.mp4',
+                thumbnailUrl: 'https://persidian.com/api/proxy/image/sample-trending-thumb.jpg',
+                aspectRatio: 16/9,
+                isGrove: true,
+                duration: 15
+              };
+              useMediaStore.getState().addMediaItem(trendingItem);
+
+              const trackId = tracks.find(t => t.type === 'video')?.id ?? addTrack('video');
+              addClipToTrack(trackId, {
+                mediaId: trendingItem.id,
+                name: trendingItem.name,
+                duration: 15,
+                startTime: 0,
+                trimStart: 0,
+                trimEnd: 0
+              });
+
+              toast.success("Added trending clip! Ready to record.");
+              if (onMediaAdded) onMediaAdded();
+            }}
+            className="w-full aspect-video rounded-3xl border border-white/10 bg-white/5 relative overflow-hidden group active:scale-[0.98] transition-all"
+          >
+            <div className="absolute inset-0 bg-[url('https://persidian.com/api/proxy/image/sample-trending-thumb.jpg')] bg-cover bg-center opacity-40 group-hover:scale-110 transition-transform duration-700" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full bg-primary/20 border border-primary/40 backdrop-blur-md flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Play className="h-5 w-5 fill-primary text-primary ml-0.5" />
+              </div>
+            </div>
+            <div className="absolute bottom-4 left-5 right-4 text-left">
+              <p className="text-[11px] font-black uppercase tracking-widest text-white">Daily Prompt: Viral Moment</p>
+              <p className="text-[9px] font-bold text-white/40 mt-1 uppercase tracking-wider">Tap to start coining commentary</p>
+            </div>
+          </button>
         </div>
-        <Button 
-          className="w-full max-w-[200px] h-12 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-primary text-white shadow-xl shadow-primary/20"
-          onClick={onFileSelect} 
-          disabled={isProcessing}
-        >
-          {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-          Add Files
-        </Button>
       </div>
     );
   }
@@ -225,7 +282,7 @@ function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectM
       {/* Search & Tabs */}
       <div className="px-5 pt-5 pb-2 space-y-4 shrink-0">
         <div className="relative">
-           <input 
+           <input
              value={searchQuery}
              onChange={(e) => setSearchQuery(e.target.value)}
              placeholder="Search items..."
@@ -271,7 +328,7 @@ function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectM
               const selectedIndex = selectedIds.indexOf(item.id);
               const isSelected = selectedIndex !== -1;
               const isAudio = item.type === "audio";
-              
+
               if (isAudio) {
                 return (
                   <div
