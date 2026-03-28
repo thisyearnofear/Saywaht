@@ -104,52 +104,52 @@ export function MobileOnboardingOverlay({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-background border border-border rounded-2xl max-w-sm w-full p-6 text-center relative shadow-2xl">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xl z-[100] flex items-center justify-center p-6 transition-all duration-500">
+      <div className="bg-black/40 border border-white/10 rounded-[2.5rem] max-w-sm w-full p-8 text-center relative shadow-[0_30px_60px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
         {/* Close button */}
         <Button
           variant="ghost"
-          size="sm"
-          className="absolute top-2 right-2 text-muted-foreground hover:text-foreground h-9 w-9 rounded-full"
+          size="icon"
+          className="absolute top-4 right-4 text-white/30 hover:text-white h-10 w-10 rounded-full bg-white/5"
           onClick={handleSkip}
         >
           <X className="w-4 h-4" />
         </Button>
 
         {/* Step indicator */}
-        <div className="flex justify-center space-x-2 mb-6">
+        <div className="flex justify-center space-x-2.5 mb-8">
           {steps.map((_, index) => (
             <div
               key={index}
               className={cn(
-                "h-2 rounded-full transition-all duration-300",
+                "h-1 rounded-full transition-all duration-500",
                 index === currentStep
-                  ? "w-6 bg-primary"
+                  ? "w-8 bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]"
                   : index < currentStep
-                    ? "w-2 bg-primary/40"
-                    : "w-2 bg-border"
+                    ? "w-2 bg-primary/30"
+                    : "w-2 bg-white/10"
               )}
             />
           ))}
         </div>
 
         {/* Content */}
-        <div className="space-y-4">
-          <div className="text-4xl mb-2">{currentStepData.icon}</div>
+        <div className="space-y-6">
+          <div className="text-5xl mb-4 transform hover:scale-110 transition-transform duration-500">{currentStepData.icon}</div>
 
-          <h2 className="text-xl font-bold text-foreground">
+          <h2 className="text-2xl font-black uppercase tracking-tight text-white/90">
             {currentStepData.title}
           </h2>
 
-          <p className="text-muted-foreground leading-relaxed">
+          <p className="text-white/40 text-[13px] font-bold uppercase tracking-widest leading-relaxed">
             {currentStepData.description}
           </p>
         </div>
 
         {/* Actions */}
-        <div className="mt-8 space-y-3">
+        <div className="mt-10 space-y-4">
           <Button
-            className="w-full h-12 font-semibold"
+            className="w-full h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] bg-primary text-white shadow-xl shadow-primary/20 transition-all active:scale-95"
             onClick={handleNext}
           >
             {currentStep === steps.length - 1 ? (
@@ -168,7 +168,7 @@ export function MobileOnboardingOverlay({
           {currentStep < steps.length - 1 && (
             <Button
               variant="ghost"
-              className="w-full text-muted-foreground"
+              className="w-full h-12 text-white/20 font-black uppercase tracking-widest text-[9px] hover:text-white/40"
               onClick={handleSkip}
             >
               Skip Tutorial

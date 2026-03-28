@@ -42,6 +42,9 @@ export function useFarcasterShare() {
             // Ensure minimum duration for visibility
             const totalDuration = Math.max(getTotalDuration(), 5);
 
+            const currentFormat = getFormat();
+            const exportFormat = currentFormat === "portrait" ? "fast-portrait" : currentFormat;
+
             const blob = await exportVideo(
                 tracks,
                 mediaItems,
@@ -52,8 +55,8 @@ export function useFarcasterShare() {
                     });
                 },
                 {
-                    format: getFormat(),
-                    quality: "medium", // Balance quality/size for mobile upload
+                    format: exportFormat as any,
+                    quality: "low", // Fast render for social share
                     includeAudio: true,
                     method: "auto",
                     outputFormat: "mp4",

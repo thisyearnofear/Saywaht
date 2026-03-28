@@ -5,11 +5,12 @@
 
 export const FORMAT_DIMENSIONS = {
   portrait: { width: 1080, height: 1920 },  // 9:16 (mobile-first)
+  "fast-portrait": { width: 720, height: 1280 }, // 9:16 (optimized for speed)
   square: { width: 1080, height: 1080 },     // 1:1 (universal)
   landscape: { width: 1920, height: 1080 }, // 16:9 (traditional)
 } as const;
 
-export type VideoFormat = "landscape" | "portrait" | "square";
+export type VideoFormat = "landscape" | "portrait" | "square" | "fast-portrait";
 
 /**
  * Calculate aspect ratio preserving dimensions for drawing video to canvas

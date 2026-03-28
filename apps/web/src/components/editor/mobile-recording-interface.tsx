@@ -334,68 +334,57 @@ export function MobileRecordingInterface({
     return (
       <motion.div
         layout
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border border-red-500/30 bg-black/85 p-3 shadow-2xl backdrop-blur-xl"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="rounded-[2rem] border border-red-500/20 bg-black/40 p-4 shadow-2xl backdrop-blur-2xl"
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-red-500 animate-[pulse_1.5s_infinite]" />
-              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-red-500">
-                On Air
+              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500">
+                Recording
               </span>
             </div>
-            <p className="mt-1 text-[12px] font-bold leading-tight text-white/80">
-              Watch preview while you record
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md px-4 py-2.5 text-right shadow-inner">
-            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-white/40">
-              Time Remaining
-            </div>
-            <div
-              className={cn(
-                "mt-0.5 text-2xl font-black tabular-nums tracking-tighter",
-                countdownState.isCritical ? "text-red-500" : "text-white"
-              )}
-            >
-              {remainingLabel}
+            <div className="h-6 w-32">
+              <canvas ref={canvasRef} width={300} height={60} className="w-full h-full opacity-80" />
             </div>
           </div>
-        </div>
 
-        {/* Cinematic Progress Bar */}
-        <div className="mt-4 mb-1 h-1 w-full bg-white/5 rounded-full overflow-hidden">
-          <motion.div 
-             className="h-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"
-             initial={{ width: 0 }}
-             animate={{ width: `${recordingProgress}%` }}
-             transition={{ duration: 1, ease: "linear" }}
-          />
-        </div>
-
-        <div className="mt-2 rounded-2xl border border-white/5 bg-black/40 p-4">
           <div className="flex items-center gap-4">
-            <div className="min-w-0 flex-1 h-14 flex items-center">
-              <canvas ref={canvasRef} width={600} height={120} className="w-full h-12 opacity-90" />
+            <div className="text-right">
+              <div className="text-[8px] font-black uppercase tracking-widest text-white/30">
+                Remaining
+              </div>
+              <div
+                className={cn(
+                  "text-xl font-black tabular-nums tracking-tighter",
+                  countdownState.isCritical ? "text-red-500" : "text-white"
+                )}
+              >
+                {remainingLabel}
+              </div>
             </div>
 
             <Button
-              size="lg"
-              className="h-16 w-16 shrink-0 rounded-full bg-red-500 hover:bg-red-600 ring-4 ring-red-500/25 ring-offset-2 ring-offset-black shadow-[0_0_20px_rgba(239,68,68,0.4)] active:scale-90 transition-all"
+              size="icon"
+              className="h-14 w-14 shrink-0 rounded-full bg-red-500 hover:bg-red-600 ring-4 ring-red-500/20 shadow-xl active:scale-90 transition-all"
               onClick={stopRecording}
               aria-label="Stop recording"
             >
-              <div className="h-5 w-5 rounded-sm bg-white" />
+              <Square className="h-5 w-5 fill-white" />
             </Button>
           </div>
         </div>
 
-        <div className="mt-3 flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[0.12em] text-white/50">
-          <span>Preview locked to avoid accidental pauses</span>
-          <span>{countdownState.remaining}s left</span>
+        {/* Minimal Progress Line */}
+        <div className="mt-3 h-0.5 w-full bg-white/5 rounded-full overflow-hidden">
+          <motion.div 
+             className="h-full bg-red-500"
+             initial={{ width: 0 }}
+             animate={{ width: `${recordingProgress}%` }}
+             transition={{ duration: 1, ease: "linear" }}
+          />
         </div>
       </motion.div>
     );

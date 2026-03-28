@@ -46,6 +46,8 @@ import { useTemplateStore } from "@/stores/template-store";
 import { useTextStore } from "@/stores/text-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 
+import { useMissionStore } from "@/services/mission-service";
+
 const QuickActions = dynamic(
 	() =>
 		import("@/components/editor/quick-actions").then((mod) => ({
@@ -91,6 +93,7 @@ export function MobileEditorLayout({
 	const { isApplying: isApplyingTemplate, clearSelectedTemplate } =
 		useTemplateStore();
 	const { gatedPlay } = useMobilePlaybackGate();
+	const { level, currentXp, nextLevelXp } = useMissionStore();
 
 	// Check for reduced motion preference
 	const prefersReducedMotion = useRef(
@@ -98,6 +101,7 @@ export function MobileEditorLayout({
 			window.matchMedia("(prefers-reduced-motion: reduce)").matches,
 	).current;
 
+	const [isFinishing, setIsFinishing] = useState(false);
 	const [activeTool, setActiveTool] = useState<MobileTool | null>(null);
 	const [recordAutoStartNonce, setRecordAutoStartNonce] = useState(0);
 	const [isRecordingInProgress, setIsRecordingInProgress] = useState(false);
@@ -234,12 +238,20 @@ export function MobileEditorLayout({
 			return;
 		}
 
-		if (isFarcasterMiniApp) {
-			await shareToFarcaster();
-			return;
-		}
+		setIsFinishing(true);
+		setActiveTool(null);
 
-		navigateToMint(activeProject.id);
+		// Smooth cinematic pause before navigation
+		setTimeout(async () => {
+			if (isFarcasterMiniApp) {
+				await shareToFarcaster();
+				setIsFinishing(false);
+				return;
+			}
+
+			navigateToMint(activeProject.id);
+			// Don't reset isFinishing here as we are navigating away
+		}, 600);
 	}, [
 		activeProject,
 		hasTimelineClips,
@@ -256,17 +268,33 @@ export function MobileEditorLayout({
 				className,
 				isRecordingPreviewLocked && "recording",
 				isFarcasterMiniApp && "farcaster-miniapp",
+				isFinishing && "finishing",
 			)}
 			style={{ opacity: 1 }} // Remove motion animation for better performance
 		>
 			<div className="absolute inset-0 flex flex-col">
 				<div
-					className="z-30 flex items-center justify-between border-b border-white/5 bg-black/30 px-3 pt-safe"
+					className={cn(
+						"z-30 flex items-center justify-between border-b border-white/5 bg-black/30 px-3 pt-safe transition-all duration-500",
+						isFinishing && "opacity-0 -translate-y-full",
+					)}
 					style={{ minHeight: "calc(2.5rem + env(safe-area-inset-top))" }}
 				>
 					<div className="flex items-center gap-2 py-1.5">
 						<div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-[8px] font-black text-white">
 							W
+						</div>
+						<div className="flex flex-col gap-0.5 ml-1">
+							<div className="flex items-center gap-1.5">
+								<span className="text-[8px] font-black uppercase text-white/40 tracking-widest">Level</span>
+								<span className="text-[9px] font-black text-primary">{level}</span>
+							</div>
+							<div className="w-16 h-1 bg-white/5 rounded-full overflow-hidden">
+								<div 
+									className="h-full bg-primary shadow-[0_0_5px_rgba(var(--primary),0.5)]"
+									style={{ width: `${(currentXp / nextLevelXp) * 100}%` }}
+								/>
+							</div>
 						</div>
 					</div>
 
@@ -321,9 +349,9 @@ export function MobileEditorLayout({
 									: "bg-muted-foreground/30",
 							)}
 							onClick={handleFinish}
-							disabled={isSharing}
+							disabled={isSharing || isFinishing}
 						>
-							{isSharing ? (
+							{isSharing || isFinishing ? (
 								<Loader2 className="h-4 w-4 animate-spin" />
 							) : isFarcasterMiniApp ? (
 								<>
@@ -347,18 +375,20 @@ export function MobileEditorLayout({
 
 				<div
 					className={cn(
-						"relative flex-1 overflow-hidden",
-						isRecordingInProgress && "ring-2 ring-red-500 ring-inset",
+						"relative flex-1 overflow-hidden transition-all duration-500",
+						activeTool && "mb-[28vh]", // Reserved space to prevent timeline/nav clash, but tool floats over
 					)}
 				>
 					{hasTimelineClips ? (
 						<>
 							<MobilePreviewPanel
 								className={cn(
-									"split-view-preview transition-all duration-500",
-									isRecordingPreviewLocked
-										? "recording-mode shadow-2xl scale-[0.85] -translate-y-12"
-										: "",
+									"split-view-preview transition-all duration-700 ease-in-out",
+									activeTool
+										? "scale-[0.82] -translate-y-6 shadow-2xl rounded-2xl"
+										: "scale-100",
+									isRecordingPreviewLocked && "scale-[0.75] -translate-y-12",
+									isFinishing && "scale-[0.4] -translate-y-[20vh] opacity-0",
 								)}
 								showResolution={false}
 								showControls={false}
@@ -374,7 +404,8 @@ export function MobileEditorLayout({
 							<button
 								className={cn(
 									"absolute inset-0 z-10 flex items-center justify-center touch-manipulation",
-									isRecordingPreviewLocked && "pointer-events-none",
+									(isRecordingPreviewLocked || isFinishing) &&
+										"pointer-events-none",
 								)}
 								onClick={() => {
 									addHapticFeedback("light");
@@ -396,7 +427,8 @@ export function MobileEditorLayout({
 											: "Play preview"
 								}
 							>
-								{isRecordingPreviewLocked ? null : isPlaying && isStalled ? (
+								{isRecordingPreviewLocked || isFinishing ? null : isPlaying &&
+								  isStalled ? (
 									<div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-black/35 backdrop-blur-xl">
 										<Loader2 className="h-7 w-7 animate-spin text-white" />
 									</div>
@@ -438,8 +470,10 @@ export function MobileEditorLayout({
 				{!isRecordingPreviewLocked && hasTimelineClips && (
 					<div
 						className={cn(
-							"z-20 border-t border-white/5 bg-black/20 backdrop-blur-sm transition-all duration-300 flex flex-col",
-							isTimelineCollapsed ? "h-[5vh]" : "h-[12vh]",
+							"z-20 border-t border-white/5 bg-black/10 backdrop-blur-sm transition-all duration-500 flex flex-col",
+							isTimelineCollapsed ? "h-[4vh]" : "h-[10vh]",
+							(activeTool || isFinishing) &&
+								"opacity-0 pointer-events-none translate-y-4", // Hide timeline when tool is active for better focus
 						)}
 					>
 						<button
@@ -464,17 +498,17 @@ export function MobileEditorLayout({
 					</div>
 				)}
 
-				{/* Active Tool Panel (Inline Floating Dock) */}
+				{/* Active Tool Panel (Floating Glass Dock) */}
 				{activeTool && (
 					<div
 						className={cn(
-							"relative z-40 w-full bg-black/50 backdrop-blur-md flex flex-col transition-all duration-300 border-t border-white/5",
+							"absolute bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 mx-3 mb-2 flex flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-black/40 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl transition-all duration-300",
 							activeTool === "record"
 								? isRecordingPreviewLocked
-									? "h-[20dvh]"
-									: "h-[24vh]"
-								: "h-[28vh]",
-							"max-h-[32vh]",
+									? "h-[22vh]"
+									: "h-[30vh]"
+								: "h-[35vh]",
+							"max-h-[40vh]",
 						)}
 						onTouchStart={(e) => {
 							toolPanelTouchStart.current = {
@@ -498,26 +532,58 @@ export function MobileEditorLayout({
 					>
 						<div className="flex-1 flex flex-col min-h-0">
 							{!isRecordingPreviewLocked && (
-								<div className="flex items-center justify-end gap-2 px-3 py-1 shrink-0 bg-black/20 border-b border-white/5">
-									<span className="mr-auto text-[9px] font-bold uppercase tracking-wider text-white/50">
-										{MOBILE_TOOL_CONFIG.find((t) => t.id === activeTool)
-											?.label || "Tools"}
+								<div className="flex items-center justify-end gap-2 px-5 pt-3 pb-1 shrink-0 bg-transparent">
+									<span className="mr-auto text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+										{activeTool}
 									</span>
 									<Button
 										variant="ghost"
 										size="icon"
-										className="h-6 w-6 rounded-full bg-white/5"
-										onClick={() => setIsToolPanelExpanded(!isToolPanelExpanded)}
+										className="h-8 w-8 rounded-full bg-white/5 text-white/30"
+										onClick={() => closeToolSheet()}
 									>
-										{isToolPanelExpanded ? (
-											<ChevronDown className="h-3 w-3" />
-										) : (
-											<ChevronUp className="h-3 w-3" />
-										)}
+										<X className="h-4 w-4" />
 									</Button>
-									<Button
-										variant="ghost"
-										size="icon"
+								</div>
+							)}
+
+							<div className="flex-1 min-h-0 overflow-hidden px-2 pb-2">
+								{activeTool === "record" && (
+									<MobileAudioPanel
+										autoStartRecordingNonce={recordAutoStartNonce}
+										onRecordingStateChange={(state) => {
+											setIsRecordingInProgress(state === "recording");
+										}}
+										onCaptionsGenerated={({ groupId, count }) => {
+											setPreferredCaptionGroupId(groupId);
+											setActiveTool("text");
+											toast.success(
+												`Generated ${count} captions. Edit them in Text.`,
+											);
+										}}
+									/>
+								)}
+								{activeTool === "media" && (
+									<MobileMediaPanel
+										onMediaAdded={() => {
+											// Optionally close tool sheet after adding media
+										}}
+									/>
+								)}
+								{activeTool === "text" && (
+									<MobileTextPanel
+										preferredCaptionGroupId={preferredCaptionGroupId}
+									/>
+								)}
+								{activeTool === "effects" && (
+									<MobileEffectsPanel
+										onRequestMedia={() => openToolSheet("media")}
+									/>
+								)}
+							</div>
+						</div>
+					</div>
+				)}
 										className="h-6 w-6 rounded-full bg-white/5"
 										onClick={closeToolSheet}
 									>
@@ -567,7 +633,10 @@ export function MobileEditorLayout({
 				{/* Bottom Navigation */}
 				{!isRecordingPreviewLocked && (
 					<div
-						className="z-30 border-t border-white/5 bg-black/30 backdrop-blur-sm px-3 pb-safe shrink-0"
+						className={cn(
+							"z-30 border-t border-white/5 bg-black/30 backdrop-blur-sm px-3 pb-safe shrink-0 transition-all duration-500",
+							isFinishing && "translate-y-full opacity-0",
+						)}
 						style={{
 							paddingBottom:
 								"max(0.75rem, calc(env(safe-area-inset-bottom) + 0.35rem))",

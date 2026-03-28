@@ -20,10 +20,15 @@ import {
   SkipForward,
   Trash2,
   GripVertical,
-  Sparkles
+  Sparkles,
+  Scissors,
+  Copy,
+  X
 } from "@/lib/icons";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { formatTime } from "@/lib/utils";
+import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
 
 interface MobileTimelineProps {
   expanded?: boolean;
@@ -48,12 +53,88 @@ export const MobileTimeline = React.memo(function MobileTimeline({
   const [tooltipPosition, setTooltipPosition] = useState(0);
   const [tooltipTime, setTooltipTime] = useState(0);
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
+  const [contextMenuClip, setContextMenuClip] = useState<{ trackId: string; clip: any; x: number; y: number } | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const timelineRef = useRef<HTMLDivElement>(null);
   const scrubbingRef = useRef<boolean>(false);
   const lastSnappedTimeRef = useRef<number | null>(null);
   const lastSeekTimeRef = useRef<number>(0); 
-  
+
+  const handleClipTouchStart = useCallback((e: React.TouchEvent, trackId: string, clip: any) => {
+    // Only trigger if not already pinching or scrubbing
+    if (e.touches.length > 1 || scrubbingRef.current) return;
+    
+    const touch = e.touches[0];
+    const x = touch.clientX;
+    const y = touch.clientY;
+
+    longPressTimerRef.current = setTimeout(() => {
+      addHapticFeedback("heavy");
+      setContextMenuClip({ trackId, clip, x, y });
+      setSelectedClipId(clip.id);
+    }, 600);
+  }, []);
+
+  const handleClipTouchEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleSplitClip = useCallback(() => {
+    if (!contextMenuClip) return;
+    const { trackId, clip } = contextMenuClip;
+    const splitTime = currentTime;
+    
+    const clipEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+    if (splitTime <= clip.startTime + 0.2 || splitTime >= clipEnd - 0.2) {
+      toast.error("Playhead must be inside the clip to split");
+      setContextMenuClip(null);
+      return;
+    }
+
+    addHapticFeedback("medium");
+    const relativeSplitPoint = splitTime - clip.startTime;
+    
+    // Split: 
+    // 1. Current clip ends at splitTime
+    // 2. New clip starts at splitTime, with trimStart increased
+    
+    const originalTrimEnd = clip.trimEnd;
+    const newTrimEndForFirstHalf = originalTrimEnd + (clipEnd - splitTime);
+    
+    useTimelineStore.getState().updateClipTrim(trackId, clip.id, clip.trimStart, newTrimEndForFirstHalf);
+
+    const newClipData = {
+      ...clip,
+      startTime: splitTime,
+      trimStart: clip.trimStart + relativeSplitPoint,
+      trimEnd: originalTrimEnd
+    };
+    
+    useTimelineStore.getState().addClipToTrack(trackId, newClipData);
+    
+    toast.success("Clip split");
+    setContextMenuClip(null);
+  }, [contextMenuClip, currentTime]);
+
+  const handleDuplicateClip = useCallback(() => {
+    if (!contextMenuClip) return;
+    const { trackId, clip } = contextMenuClip;
+    addHapticFeedback("medium");
+    
+    const clipDuration = clip.duration - clip.trimStart - clip.trimEnd;
+    const newClipData = {
+      ...clip,
+      startTime: clip.startTime + clipDuration,
+    };
+    useTimelineStore.getState().addClipToTrack(trackId, newClipData);
+    
+    toast.success("Clip duplicated");
+    setContextMenuClip(null);
+  }, [contextMenuClip]);  
   // Pinch zoom state
   const pinchStartDistRef = useRef<number>(0);
   const pinchStartZoomRef = useRef<number>(1);
@@ -376,12 +457,12 @@ export const MobileTimeline = React.memo(function MobileTimeline({
 
   if (compact) {
     return (
-      <div className="bg-background px-3 py-2">
-        <div className="mb-2 flex items-center gap-2">
+      <div className="bg-transparent px-4 py-3">
+        <div className="mb-3 flex items-center gap-3">
           <Button
             variant="secondary"
             size="icon"
-            className="h-8 w-8 rounded-full bg-primary/10 text-primary hover:bg-primary/20"
+            className="h-9 w-9 rounded-full bg-primary/20 text-primary hover:bg-primary/30 border border-primary/10 shadow-lg"
             onClick={(e) => {
               e.stopPropagation();
               toggle();
@@ -394,14 +475,20 @@ export const MobileTimeline = React.memo(function MobileTimeline({
               <Play className="h-4 w-4 fill-primary ml-0.5" />
             )}
           </Button>
-          <span className="text-xs font-bold tabular-nums text-muted-foreground">
-            {formatTime(currentTime)} / {formatTime(duration)}
-          </span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 backdrop-blur-md">
+            <span className="text-[10px] font-black tabular-nums text-white/80">
+              {formatTime(currentTime)}
+            </span>
+            <span className="text-white/20 text-[10px]">/</span>
+            <span className="text-[10px] font-black tabular-nums text-white/40">
+              {formatTime(duration)}
+            </span>
+          </div>
         </div>
 
         <div
           ref={timelineRef}
-          className="relative h-7 w-full touch-manipulation"
+          className="relative h-8 w-full touch-manipulation"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -409,13 +496,13 @@ export const MobileTimeline = React.memo(function MobileTimeline({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
         >
-          <div className="absolute top-1/2 h-1.5 w-full -translate-y-1/2 rounded-full bg-muted" />
+          <div className="absolute top-1/2 h-1 w-full -translate-y-1/2 rounded-full bg-white/10" />
           <div
-            className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-primary"
+            className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.5)]"
             style={{ width: `${timelineProgress}%` }}
           />
           <div
-            className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/40 bg-background shadow"
+            className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary shadow-xl"
             style={{ left: `${timelineProgress}%` }}
           />
         </div>
@@ -426,21 +513,21 @@ export const MobileTimeline = React.memo(function MobileTimeline({
   return (
     <div
       className={cn(
-        "flex flex-col bg-background transition-all duration-300",
+        "flex flex-col bg-transparent transition-all duration-300",
         actualExpanded ? "h-full" : "h-full"
       )}
     >
       {/* Header with playback controls - Standardized and sleek */}
       <div
-        className="flex items-center justify-between h-14 bg-muted/20 px-4 border-b border-border/50 select-none"
+        className="flex items-center justify-between h-14 bg-white/[0.02] px-5 border-b border-white/5 select-none"
         onClick={handleToggle}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {/* Play/Pause Button - Bigger target */}
           <Button
             variant="secondary"
             size="icon"
-            className="h-10 w-10 rounded-full bg-primary/10 text-primary hover:bg-primary/20 border-none shadow-none"
+            className="h-10 w-10 rounded-xl bg-primary/20 text-primary hover:bg-primary/30 border border-primary/10 shadow-none"
             onClick={(e) => {
               e.stopPropagation();
               toggle();
@@ -454,53 +541,45 @@ export const MobileTimeline = React.memo(function MobileTimeline({
           </Button>
 
           {/* Time Display - Mono font for stability */}
-          <div className="flex items-center gap-1.5 text-xs font-bold bg-background/50 px-3 py-1.5 rounded-full border border-border/30">
-            <span className={cn("text-primary tabular-nums", !isPlaying && "text-foreground")}>
+          <div className="flex items-center gap-2 text-[10px] font-black bg-white/5 px-4 py-2 rounded-xl border border-white/5 backdrop-blur-md">
+            <span className={cn("text-primary tabular-nums", !isPlaying && "text-white/80")}>
               {formatTime(currentTime)}
             </span>
-            <span className="text-muted-foreground/40">/</span>
-            <span className="text-muted-foreground tabular-nums">{formatTime(duration)}</span>
+            <span className="text-white/20">/</span>
+            <span className="text-white/40 tabular-nums">{formatTime(duration)}</span>
           </div>
         </div>
 
         {/* Zoom controls - only when expanded, more compact */}
         {actualExpanded && (
-          <div className="flex items-center bg-muted/40 p-1 rounded-full border border-border/20">
+          <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/5">
             <Button
               variant="ghost"
               size="icon"
               onClick={handleZoomOut}
-              className="h-7 w-7 rounded-full"
+              className="h-8 w-8 rounded-lg hover:bg-white/5"
               disabled={zoomLevel <= 0.5}
             >
-              <ZoomOut className="h-3.5 w-3.5" />
+              <ZoomOut className="h-4 w-4 text-white/40" />
             </Button>
-            <span className="text-[10px] font-black w-10 text-center tabular-nums">
+            <span className="text-[10px] font-black w-10 text-center tabular-nums text-white/60">
               {Math.round(zoomLevel * 100)}%
             </span>
             <Button
               variant="ghost"
               size="icon"
               onClick={handleZoomIn}
-              className="h-7 w-7 rounded-full"
+              className="h-8 w-8 rounded-lg hover:bg-white/5"
               disabled={zoomLevel >= 5}
             >
-              <ZoomIn className="h-3.5 w-3.5" />
+              <ZoomIn className="h-4 w-4 text-white/40" />
             </Button>
-          </div>
-        )}
-        
-        {!actualExpanded && (
-          <div className="flex items-center gap-1 text-muted-foreground/40">
-            <SkipBack className="h-3 w-3" />
-            <div className="w-8 h-0.5 bg-border/50 rounded-full" />
-            <SkipForward className="h-3 w-3" />
           </div>
         )}
       </div>
 
       {/* Timeline content - High contrast and clear */}
-      <div className="flex-1 relative overflow-hidden bg-muted/5">
+      <div className="flex-1 relative overflow-hidden bg-transparent">
         {/* Scrubbing area with proper touch handling */}
         <div
           ref={timelineRef}
@@ -517,7 +596,7 @@ export const MobileTimeline = React.memo(function MobileTimeline({
           }}
         >
           {/* Time ruler - refined ticks */}
-          <div className="absolute top-0 left-0 right-0 h-6 bg-muted/40 border-b border-border/30 flex items-center z-10">
+          <div className="absolute top-0 left-0 right-0 h-7 bg-white/[0.03] border-b border-white/5 flex items-center z-10 backdrop-blur-sm">
             {Array.from({ length: 20 }).map((_, i) => {
               const time = startTime + i * (visibleDuration / 10);
               if (time > duration) return null;
@@ -525,10 +604,10 @@ export const MobileTimeline = React.memo(function MobileTimeline({
               return (
                 <div
                   key={i}
-                  className="absolute top-0 bottom-0 border-l border-border/40 flex items-end pb-0.5"
+                  className="absolute top-0 bottom-0 border-l border-white/5 flex items-end pb-1"
                   style={{ left: `${((time - startTime) / visibleDuration) * 100}%` }}
                 >
-                  <span className="text-[8px] font-bold text-muted-foreground/60 px-1 tabular-nums">
+                  <span className="text-[8px] font-black text-white/20 px-2 tabular-nums">
                     {formatTime(time)}
                   </span>
                 </div>
@@ -537,19 +616,19 @@ export const MobileTimeline = React.memo(function MobileTimeline({
           </div>
 
           {/* Track lanes - Layered and clean */}
-          <div className="absolute top-6 left-0 right-0 bottom-0">
+          <div className="absolute top-7 left-0 right-0 bottom-0">
             {tracks.length > 0 ? (
               tracks.map((track, index) => (
                 <div
                   key={track.id}
-                  className="h-14 border-b border-border/10 bg-background/20 relative group"
+                  className="h-16 border-b border-white/[0.02] bg-transparent relative group"
                   style={{
-                    backgroundColor: index % 2 === 0 ? 'hsl(var(--muted) / 0.1)' : 'transparent'
+                    backgroundColor: index % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent'
                   }}
                 >
                   {/* Floating Track label - Doesn't overlap with clips */}
-                  <div className="absolute left-3 top-1 z-10 pointer-events-none">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors">
+                  <div className="absolute left-4 top-1.5 z-10 pointer-events-none">
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/10 group-hover:text-white/30 transition-colors">
                       {track.name || `CH ${index + 1}`}
                     </span>
                   </div>
@@ -564,56 +643,49 @@ export const MobileTimeline = React.memo(function MobileTimeline({
                         <div
                           key={clip.id}
                           className={cn(
-                            "absolute top-4 bottom-1.5 rounded-lg border-2 cursor-pointer transition-all shadow-sm",
+                            "absolute top-5 bottom-2 rounded-xl border-2 cursor-pointer transition-all shadow-lg",
                             isSelected 
-                              ? "border-primary bg-primary/20 z-20 ring-4 ring-primary/10" 
-                              : "border-muted-foreground/10 bg-muted/60 hover:bg-muted/80"
+                              ? "border-primary bg-primary/30 z-20 ring-4 ring-primary/10 shadow-primary/20" 
+                              : "border-white/5 bg-white/[0.05] hover:bg-white/[0.08]"
                           )}
                           style={{
                             left: `${((clip.startTime - startTime) / visibleDuration) * 100}%`,
                             width: `${((clip.duration - clip.trimStart - clip.trimEnd) / visibleDuration) * 100}%`,
-                            minWidth: '32px',
+                            minWidth: '40px',
                           }}
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedClipId(clip.id);
                             addHapticFeedback("light");
                           }}
+                          onTouchStart={(e) => handleClipTouchStart(e, track.id, clip)}
+                          onTouchEnd={handleClipTouchEnd}
+                          onTouchCancel={handleClipTouchEnd}
                         >
                           {/* Trimming Handles */}
                           {isSelected && (
                             <>
                               <div 
-                                className="absolute left-0 top-0 bottom-0 w-4 bg-yellow-400/80 rounded-l-lg z-20 cursor-ew-resize flex items-center justify-center active:bg-yellow-400"
+                                className="absolute left-0 top-0 bottom-0 w-5 bg-white/80 rounded-l-lg z-20 cursor-ew-resize flex items-center justify-center active:bg-white"
                                 onPointerDown={(e) => handleTrimStart(e, track.id, clip)}
                               >
-                                <div className="w-1 h-4 bg-black/40 rounded-full" />
-                                {isTrimming === "start" && (
-                                  <div className="absolute -top-8 left-0 bg-yellow-400 text-black text-[9px] font-black px-1.5 py-0.5 rounded shadow-lg whitespace-nowrap">
-                                    {trimDelta > 0 ? "+" : ""}{trimDelta.toFixed(1)}s
-                                  </div>
-                                )}
+                                <div className="w-1 h-5 bg-black/20 rounded-full" />
                               </div>
                               <div 
-                                className="absolute right-0 top-0 bottom-0 w-4 bg-yellow-400/80 rounded-r-lg z-20 cursor-ew-resize flex items-center justify-center active:bg-yellow-400"
+                                className="absolute right-0 top-0 bottom-0 w-5 bg-white/80 rounded-r-lg z-20 cursor-ew-resize flex items-center justify-center active:bg-white"
                                 onPointerDown={(e) => handleTrimEnd(e, track.id, clip)}
                               >
-                                <div className="w-1 h-4 bg-black/40 rounded-full" />
-                                {isTrimming === "end" && (
-                                  <div className="absolute -top-8 right-0 bg-yellow-400 text-black text-[9px] font-black px-1.5 py-0.5 rounded shadow-lg whitespace-nowrap">
-                                    {trimDelta > 0 ? "+" : ""}{trimDelta.toFixed(1)}s
-                                  </div>
-                                )}
+                                <div className="w-1 h-5 bg-black/20 rounded-full" />
                               </div>
                             </>
                           )}
 
                           {/* Clip content */}
-                          <div className="h-full flex items-center px-2 overflow-hidden">
-                            {!isSelected && <GripVertical className="h-3 w-3 text-muted-foreground/40 mr-1.5 flex-shrink-0" />}
+                          <div className="h-full flex items-center px-3 overflow-hidden">
+                            {!isSelected && <GripVertical className="h-3 w-3 text-white/10 mr-2 flex-shrink-0" />}
                             <span className={cn(
-                              "text-[10px] font-bold truncate",
-                              isSelected ? "text-primary-foreground" : "text-foreground/80"
+                              "text-[10px] font-black uppercase tracking-tight truncate",
+                              isSelected ? "text-white" : "text-white/40"
                             )}>
                               {clip.name || mediaItem?.name || "Clip"}
                             </span>
@@ -624,13 +696,13 @@ export const MobileTimeline = React.memo(function MobileTimeline({
                             <Button
                               variant="destructive"
                               size="icon"
-                              className="absolute -top-6 left-1/2 -translate-x-1/2 h-6 w-6 rounded-full shadow-lg border-2 border-background animate-in zoom-in-50"
+                              className="absolute -top-7 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full shadow-2xl border-2 border-black animate-in zoom-in-50 bg-red-500 hover:bg-red-600"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteClip(track.id, clip.id);
                               }}
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           )}
                         </div>
@@ -640,12 +712,12 @@ export const MobileTimeline = React.memo(function MobileTimeline({
                 </div>
               ))
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-muted-foreground/20 px-8 text-center space-y-3">
-                <Sparkles className="h-8 w-8 opacity-20" />
-                <div className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-widest block opacity-40">Timeline Empty</span>
-                  <p className="text-[9px] font-bold leading-relaxed opacity-30">
-                    Add a template from the library or record your voice to start coining commentary.
+              <div className="h-full flex flex-col items-center justify-center text-white/5 px-10 text-center space-y-4">
+                <Sparkles className="h-10 w-10 opacity-10" />
+                <div className="space-y-2">
+                  <span className="text-[11px] font-black uppercase tracking-[0.2em] block opacity-20">Timeline Empty</span>
+                  <p className="text-[10px] font-bold leading-relaxed opacity-10 px-6">
+                    Add media or record voice to start coining commentary.
                   </p>
                 </div>
               </div>
@@ -654,23 +726,23 @@ export const MobileTimeline = React.memo(function MobileTimeline({
 
           {/* Playhead - Professional look */}
           <div
-            className="absolute top-0 bottom-0 w-0.5 bg-primary z-30 pointer-events-none"
+            className="absolute top-0 bottom-0 w-[1px] bg-primary z-30 pointer-events-none"
             style={{ left: `${((currentTime - startTime) / visibleDuration) * 100}%` }}
           >
             {/* Playhead handle - Diamond shape for precision */}
-            <div className="absolute -top-1 -left-[5px] w-[11px] h-[11px] bg-primary rotate-45 rounded-sm shadow-md" />
+            <div className="absolute -top-1 -left-[6px] w-[13px] h-[13px] bg-primary rotate-45 rounded-sm shadow-[0_0_15px_rgba(var(--primary),0.5)] border border-white/20" />
             
             {/* Playhead Line Glow */}
-            <div className="absolute inset-0 w-full bg-primary/20 blur-[1px]" />
+            <div className="absolute inset-0 w-full bg-primary/30 blur-[2px]" />
           </div>
 
           {/* Scrubbing feedback tooltip — follows playhead position */}
           {showTimeTooltip && (
             <div
-              className="absolute top-0 bg-primary text-primary-foreground text-[10px] font-black px-3 py-1.5 rounded-full shadow-xl animate-in fade-in-0 zoom-in-95 tabular-nums z-40 pointer-events-none -translate-x-1/2"
+              className="absolute top-0 bg-primary text-white text-[11px] font-black px-4 py-2 rounded-full shadow-2xl animate-in fade-in-0 zoom-in-95 tabular-nums z-40 pointer-events-none -translate-x-1/2 border border-white/20"
               style={{
-                left: `clamp(1.5rem, ${tooltipPosition}%, calc(100% - 1.5rem))`,
-                top: "-2.25rem",
+                left: `clamp(2rem, ${tooltipPosition}%, calc(100% - 2rem))`,
+                top: "-3rem",
               }}
             >
               {formatTime(tooltipTime)}
@@ -681,23 +753,97 @@ export const MobileTimeline = React.memo(function MobileTimeline({
 
       {/* Modern Control Bar (Navigation hints) */}
       {actualExpanded && (
-        <div className="h-10 flex items-center justify-center border-t border-border/30 bg-muted/10 px-4">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
-              <span className="text-[8px] font-bold text-muted-foreground/60 uppercase tracking-widest">Scrub</span>
+        <div className="h-10 flex items-center justify-center border-t border-white/5 bg-white/[0.02] px-4">
+          <div className="flex items-center gap-8">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
+              <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.15em]">Scrub</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
-              <span className="text-[8px] font-bold text-muted-foreground/60 uppercase tracking-widest">Select</span>
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
+              <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.15em]">Select</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
-              <span className="text-[8px] font-bold text-muted-foreground/60 uppercase tracking-widest">Pinch Zoom</span>
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
+              <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.15em]">Pinch Zoom</span>
             </div>
           </div>
         </div>
       )}
+
+      {/* Clip Context Menu Overlay */}
+      <AnimatePresence>
+        {contextMenuClip && (
+          <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-[2px]"
+            onClick={() => setContextMenuClip(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-black/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-2 min-w-[240px] shadow-[0_30px_60px_rgba(0,0,0,0.5)]"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: 'fixed',
+                left: `clamp(20px, ${contextMenuClip.x - 120}px, calc(100vw - 260px))`,
+                top: `${Math.max(100, contextMenuClip.y - 180)}px`
+              }}
+            >
+              <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Clip Actions</span>
+                <button onClick={() => setContextMenuClip(null)} className="text-white/20 hover:text-white">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              
+              <div className="p-1 grid grid-cols-1 gap-1">
+                <button 
+                  onClick={handleSplitClip}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl hover:bg-white/5 transition-all active:scale-[0.98]"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center">
+                    <Scissors className="h-4 w-4 text-white/60" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-white/80">Split at Playhead</p>
+                    <p className="text-[9px] font-bold text-white/20 uppercase">Cut clip into two</p>
+                  </div>
+                </button>
+
+                <button 
+                  onClick={handleDuplicateClip}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl hover:bg-white/5 transition-all active:scale-[0.98]"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center">
+                    <Copy className="h-4 w-4 text-white/60" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-white/80">Duplicate Clip</p>
+                    <p className="text-[9px] font-bold text-white/20 uppercase">Add copy to timeline</p>
+                  </div>
+                </button>
+
+                <button 
+                  onClick={() => {
+                    handleDeleteClip(contextMenuClip.trackId, contextMenuClip.clip.id);
+                    setContextMenuClip(null);
+                  }}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl hover:bg-red-500/10 transition-all active:scale-[0.98]"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center">
+                    <Trash2 className="h-4 w-4 text-red-400" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-red-400">Delete Clip</p>
+                    <p className="text-[9px] font-bold text-red-400/20 uppercase">Remove from project</p>
+                  </div>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 });

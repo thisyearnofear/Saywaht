@@ -64,7 +64,7 @@ export function MobileMediaPanel({ className, onMediaAdded }: MobileMediaPanelPr
   };
 
   return (
-    <div className={cn("flex flex-col h-full bg-background no-scrollbar", className)}>
+    <div className={cn("flex flex-col h-full bg-transparent no-scrollbar", className)}>
       <input
         ref={fileInputRef}
         type="file"
@@ -75,23 +75,23 @@ export function MobileMediaPanel({ className, onMediaAdded }: MobileMediaPanelPr
       />
 
       {/* Header Area */}
-      <div className="flex items-center justify-between border-b bg-muted/5 px-4 py-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground">
-            Project Media
+      <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.02] px-6 py-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+            Library
           </span>
           {mediaCount > 0 && (
-            <Badge variant="secondary" className="h-4 px-1.5 text-[9px] font-black bg-primary/10 text-primary border-none">
+            <Badge variant="secondary" className="h-4 px-1.5 text-[9px] font-black bg-primary/20 text-primary border-none">
               {mediaCount}
             </Badge>
           )}
         </div>
         
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-full text-primary"
+              className="h-9 w-9 rounded-full bg-white/5 text-primary"
               onClick={handleFileSelect}
               disabled={isProcessing}
             >
@@ -100,10 +100,10 @@ export function MobileMediaPanel({ className, onMediaAdded }: MobileMediaPanelPr
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 rounded-full px-3 text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/5"
+              className="h-9 rounded-full px-4 text-[9px] font-black uppercase tracking-widest text-primary bg-white/5 hover:bg-white/10"
               onClick={handleBrowseTemplates}
             >
-              <Sparkles className="mr-1.5 h-3 w-3" />
+              <Sparkles className="mr-2 h-3.5 w-3.5" />
               Templates
             </Button>
         </div>
@@ -197,17 +197,17 @@ function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectM
   if (mediaItems.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-8 text-center gap-6">
-        <div className="w-20 h-20 rounded-full bg-muted/20 flex items-center justify-center">
-          <Video className="h-10 w-10 text-muted-foreground/30" />
+        <div className="w-20 h-20 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center">
+          <Video className="h-10 w-10 text-white/10" />
         </div>
         <div className="space-y-2">
-          <p className="text-sm font-black uppercase tracking-tight">Media Library</p>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-relaxed">
+          <p className="text-[11px] font-black uppercase tracking-widest text-white/80">Media Library</p>
+          <p className="text-[10px] text-white/30 uppercase tracking-[0.15em] leading-relaxed max-w-[200px]">
             Upload your first video or image to get started
           </p>
         </div>
         <Button 
-          className="w-full max-w-[200px] h-12 rounded-2xl text-[10px] font-black uppercase tracking-widest"
+          className="w-full max-w-[200px] h-12 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-primary text-white shadow-xl shadow-primary/20"
           onClick={onFileSelect} 
           disabled={isProcessing}
         >
@@ -219,22 +219,22 @@ function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectM
   }
 
   return (
-    <div className="h-full flex flex-col relative bg-muted/2">
+    <div className="h-full flex flex-col relative bg-transparent">
       {/* Search & Tabs */}
-      <div className="px-4 pt-4 pb-2 space-y-3 bg-muted/5 shrink-0">
+      <div className="px-5 pt-5 pb-2 space-y-4 shrink-0">
         <div className="relative">
            <input 
              value={searchQuery}
              onChange={(e) => setSearchQuery(e.target.value)}
              placeholder="Search items..."
-             className="w-full h-10 pl-10 pr-4 rounded-xl bg-muted/40 border-none text-[11px] font-medium focus:ring-1 focus:ring-primary/30 outline-none"
+             className="w-full h-11 pl-11 pr-4 rounded-2xl bg-white/[0.05] border border-white/5 text-[11px] font-medium text-white placeholder:text-white/20 focus:ring-1 focus:ring-primary/30 outline-none transition-all"
            />
-           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40">
-              <Upload className="h-4 w-4" /> {/* Replace with Search icon if available, but Upload is okay here as placeholder or use generic */}
+           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20">
+              <Upload className="h-4 w-4" />
            </div>
         </div>
 
-        <div className="flex gap-4 border-b border-border/10">
+        <div className="flex gap-6 border-b border-white/5">
           {[
             { id: "all", label: "All", count: mediaItems.length },
             { id: "visuals", label: "Visuals", count: videoItems.length },
@@ -244,25 +244,25 @@ function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectM
               key={tab.id}
               onClick={() => { addHapticFeedback('light'); setActiveTab(tab.id as any); }}
               className={cn(
-                  "flex items-center gap-1.5 pb-2 border-b-2 transition-all",
-                  activeTab === tab.id ? "border-primary text-primary" : "border-transparent text-muted-foreground"
+                  "flex items-center gap-2 pb-3 border-b-2 transition-all",
+                  activeTab === tab.id ? "border-primary text-primary" : "border-transparent text-white/30"
               )}
             >
-              <span className="text-[10px] font-black uppercase tracking-wider">{tab.label}</span>
-              <span className="text-[9px] font-bold opacity-40">{tab.count}</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">{tab.label}</span>
+              <span className="text-[9px] font-bold opacity-30">{tab.count}</span>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 scrollable pb-24 touch-pan-y">
+      <div className="flex-1 overflow-y-auto p-5 scrollable pb-24 touch-pan-y no-scrollbar">
         {filteredItems.length === 0 ? (
            <div className="h-full flex flex-col items-center justify-center text-center py-12">
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">No matches found</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/20">No matches found</p>
            </div>
         ) : (
           <div className={cn(
-            "grid gap-2",
+            "grid gap-3",
             activeTab === "audio" ? "grid-cols-1" : "grid-cols-2"
           )}>
             {filteredItems.map((item: MediaItem) => {
@@ -276,21 +276,21 @@ function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectM
                     key={item.id}
                     onClick={() => toggleSelect(item.id)}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-xl border transition-all active:scale-[0.98]",
-                      isSelected ? "border-primary bg-primary/5" : "border-border/50 bg-card"
+                      "flex items-center gap-4 p-4 rounded-2xl border transition-all active:scale-[0.98]",
+                      isSelected ? "border-primary/50 bg-primary/10" : "border-white/5 bg-white/[0.03]"
                     )}
                   >
                     <div className={cn(
-                        "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-                        isSelected ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                        "h-9 w-9 rounded-xl flex items-center justify-center shrink-0",
+                        isSelected ? "bg-primary text-white" : "bg-white/5 text-white/30"
                     )}>
-                        {isSelected ? <span className="text-[10px] font-black">{selectedIndex + 1}</span> : <Music className="h-4 w-4" />}
+                        {isSelected ? <span className="text-[11px] font-black">{selectedIndex + 1}</span> : <Music className="h-4 w-4" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-black uppercase truncate">{item.name}</p>
+                        <p className="text-[10px] font-black uppercase truncate text-white/80">{item.name}</p>
                     </div>
-                    <button onClick={(e) => handleDelete(e, item.id)} className="text-muted-foreground/30">
-                        <Trash2 className="h-3.5 w-3.5" />
+                    <button onClick={(e) => handleDelete(e, item.id)} className="text-white/20 hover:text-red-400 transition-colors">
+                        <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 );
@@ -301,22 +301,22 @@ function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectM
                   key={item.id}
                   onClick={() => toggleSelect(item.id)}
                   className={cn(
-                    "relative aspect-[9/16] rounded-2xl border-2 transition-all overflow-hidden bg-muted group active:scale-95 shadow-sm",
-                    isSelected ? "border-primary shadow-[0_0_15px_rgba(var(--primary),0.3)]" : "border-transparent"
+                    "relative aspect-[9/16] rounded-2xl border-2 transition-all overflow-hidden bg-white/[0.03] group active:scale-95 shadow-sm",
+                    isSelected ? "border-primary shadow-[0_0_20px_rgba(var(--primary),0.3)]" : "border-transparent"
                   )}
                 >
                   {item.thumbnailUrl ? (
                     <img src={item.thumbnailUrl} alt={item.name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-muted/40">
-                      <Video className="h-6 w-6 text-muted-foreground/30" />
+                    <div className="w-full h-full flex items-center justify-center bg-white/[0.02]">
+                      <Video className="h-8 w-8 text-white/10" />
                     </div>
                   )}
 
                   {/* Selection Badge */}
                   <div className={cn(
-                    "absolute top-2 left-2 h-6 w-6 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-black transition-all",
-                    isSelected ? "bg-primary text-white scale-110" : "bg-black/20 text-transparent"
+                    "absolute top-3 left-3 h-7 w-7 rounded-full border-2 border-white flex items-center justify-center text-[11px] font-black transition-all",
+                    isSelected ? "bg-primary text-white scale-110 shadow-lg" : "bg-black/40 text-transparent border-white/10"
                   )}>
                     {isSelected && (selectedIndex + 1)}
                   </div>
@@ -324,14 +324,14 @@ function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectM
                   {/* Delete Button */}
                   <button
                     onClick={(e) => handleDelete(e, item.id)}
-                    className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/40 text-white/60 items-center justify-center hidden group-hover:flex backdrop-blur-sm shadow-lg"
+                    className="absolute top-3 right-3 h-7 w-7 rounded-full bg-black/60 text-white/60 items-center justify-center hidden group-hover:flex backdrop-blur-md shadow-lg border border-white/10"
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
 
-                  <div className="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-                     <p className="text-[9px] font-bold text-white truncate">{item.name}</p>
-                     <p className="text-[8px] text-white/60 font-black">{Math.round(item.duration || 0)}s</p>
+                  <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
+                     <p className="text-[10px] font-black text-white truncate uppercase tracking-tight">{item.name}</p>
+                     <p className="text-[9px] text-white/40 font-bold mt-0.5">{Math.round(item.duration || 0)}s</p>
                   </div>
                 </div>
               );
@@ -342,16 +342,16 @@ function ProjectMediaList({ onFileSelect, isProcessing, onMediaAdded }: ProjectM
 
       {/* Floating Action Bar */}
       {selectedIds.length > 0 && (
-        <div className="absolute bottom-4 inset-x-4 z-20">
+        <div className="absolute bottom-6 inset-x-6 z-20">
              <Button
                onClick={handleBatchAdd}
-               className="w-full h-14 rounded-2xl shadow-2xl bg-primary text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-between px-6 transition-all active:scale-95"
+               className="w-full h-14 rounded-2xl shadow-2xl bg-primary text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-between px-6 transition-all active:scale-95 border-none"
              >
                 <div className="flex flex-col items-start leading-tight">
                     <span>Add to Timeline</span>
-                    <span className="text-[8px] opacity-70">Ordered sequence</span>
+                    <span className="text-[9px] opacity-70 font-bold">Ordered sequence</span>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-[12px]">
+                <div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center text-[14px] font-black">
                    {selectedIds.length}
                 </div>
              </Button>

@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { addHapticFeedback } from "@/lib/mobile-utils";
 import { toast } from "sonner";
 import { generateCaptionsFromAudioBlob } from "@/lib/transcription/caption-pipeline";
+import { useMissionStore } from "@/services/mission-service";
 
 interface MobileAudioPanelProps {
   className?: string;
@@ -38,6 +39,7 @@ export function MobileAudioPanel({
   const { mediaItems, addMediaItem } = useMediaStore();
   const { tracks, addTrack, addClipToTrack } = useTimelineStore();
   const { addTextElement } = useTextStore();
+  const { addXp } = useMissionStore();
   const [showMobileRecording, setShowMobileRecording] = useState(false);
   const [autoStartRecording, setAutoStartRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -133,6 +135,7 @@ export function MobileAudioPanel({
     });
     
     toast.success("Added to project");
+    addXp(25); // Reward for recording
     generateCaptions(audioBlob);
   };
 
@@ -142,8 +145,8 @@ export function MobileAudioPanel({
   };
 
   return (
-    <div className={cn("flex flex-col h-full bg-background relative", className)}>
-      <div className="border-b border-border/50 bg-muted/5 p-4 shrink-0 transition-all">
+    <div className={cn("flex flex-col h-full bg-transparent relative", className)}>
+      <div className="border-b border-white/5 bg-white/[0.02] p-4 shrink-0 transition-all">
         {showMobileRecording ? (
           <MobileRecordingInterface
             isOpen={showMobileRecording}
@@ -160,28 +163,28 @@ export function MobileAudioPanel({
           <div className="space-y-4">
             <Button
               variant="default"
-              className="h-12 w-full rounded-2xl bg-red-500 hover:bg-red-600 text-white border-none shadow-[0_4px_14px_rgba(239,68,68,0.3)] text-[12px] font-black uppercase tracking-[0.14em] transition-all active:scale-[0.98]"
+              className="h-12 w-full rounded-2xl bg-red-500 hover:bg-red-600 text-white border-none shadow-[0_4px_14px_rgba(239,68,68,0.2)] text-[11px] font-black uppercase tracking-[0.14em] transition-all active:scale-[0.98]"
               onClick={handleVoiceoverRecord}
               disabled={isTranscribing}
             >
-              <Mic className="mr-2 h-5 w-5" />
+              <Mic className="mr-2 h-4 w-4" />
               {isTranscribing ? "AI is Transcribing..." : "Record Voiceover"}
             </Button>
             
             {hasVideoWithAudio && audioFiles.length > 0 && (
-              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 backdrop-blur-md">
+              <div className="rounded-2xl border border-white/5 bg-white/[0.04] p-3 backdrop-blur-md">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-white/40 flex items-center gap-1.5">
                     <Volume2 className="h-3 w-3" /> Background Mix
                   </span>
-                  <span className="text-[10px] font-black text-primary">{Math.round(originalVolume * 100)}%</span>
+                  <span className="text-[9px] font-black text-primary">{Math.round(originalVolume * 100)}%</span>
                 </div>
                 <input 
                   type="range" 
                   min={0} max={1} step={0.05} 
                   value={originalVolume}
                   onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                  className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
+                  className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-primary"
                 />
               </div>
             )}
@@ -191,13 +194,13 @@ export function MobileAudioPanel({
 
       {recorderState !== "recording" && (
         <ScrollArea className="flex-1">
-          <div className="p-3 space-y-2.5">
+          <div className="p-4 space-y-3">
             {audioFiles.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center">
-                <div className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-muted/30">
-                  <Volume2 className="h-6 w-6 text-muted-foreground/40" />
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.03] border border-white/5">
+                  <Volume2 className="h-6 w-6 text-white/20" />
                 </div>
-                <p className="text-xs font-semibold text-muted-foreground/60">No voiceovers yet</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/30">No voiceovers yet</p>
               </div>
             ) : (
               audioFiles.map((audio) => (
@@ -226,45 +229,45 @@ function AudioFileCard({ audio }: { audio: any }) {
   };
 
   return (
-    <div className="w-full flex flex-col gap-2 p-3 rounded-2xl bg-card border border-border/50 shadow-sm transition-all active:bg-muted/50 group">
-      <div className="flex items-center gap-3">
+    <div className="w-full flex flex-col gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/5 shadow-sm transition-all active:bg-white/[0.06] group">
+      <div className="flex items-center gap-4">
         <Button
           variant="secondary"
           size="icon"
-          className="h-10 w-10 rounded-xl bg-primary/10 text-primary shrink-0 border-none transition-all group-active:scale-95"
+          className="h-10 w-10 rounded-xl bg-primary/20 text-primary shrink-0 border border-primary/10 transition-all group-active:scale-95"
           onClick={handlePlayPause}
         >
           {isPlaying ? <Pause className="h-4 w-4 fill-primary" /> : <Play className="h-4 w-4 fill-primary ml-0.5" />}
         </Button>
 
         <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <h3 className="font-bold text-[11px] truncate uppercase tracking-tight text-foreground/90">
+          <h3 className="font-black text-[10px] truncate uppercase tracking-wider text-white/80">
             {audio.name}
           </h3>
-          <p className="text-[9px] font-medium text-muted-foreground/60">{Math.round(audio.duration || 0)}s</p>
+          <p className="text-[9px] font-bold text-white/30">{Math.round(audio.duration || 0)}s</p>
         </div>
 
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-white/5 transition-all"
+          className="h-8 w-8 rounded-full text-white/20 hover:text-white hover:bg-white/5 transition-all"
           onClick={(e) => {
             e.stopPropagation();
             addHapticFeedback("light");
           }}
         >
-          <Download className="h-4 w-4" />
+          <Download className="h-3.5 w-3.5" />
         </Button>
       </div>
       
       {/* Decorative Waveform */}
-      <div className="h-4 w-full flex items-center justify-between gap-0.5 opacity-30 mt-1 pl-13">
-         {Array.from({ length: 40 }).map((_, i) => (
+      <div className="h-5 w-full flex items-center justify-between gap-0.5 opacity-20 mt-1">
+         {Array.from({ length: 45 }).map((_, i) => (
             <div 
               key={i} 
               className={cn(
-                "w-1 rounded-full transition-all duration-200",
-                isPlaying ? "bg-primary" : "bg-muted-foreground"
+                "w-0.5 rounded-full transition-all duration-300",
+                isPlaying ? "bg-primary" : "bg-white/40"
               )} 
               style={{ height: `${20 + Math.random() * 80}%` }}
             />
