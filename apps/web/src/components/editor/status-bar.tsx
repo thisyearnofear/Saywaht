@@ -17,6 +17,7 @@ import {
 } from "@/lib/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { AutoSaveIndicator } from "./auto-save-indicator";
 
 export function StatusBar() {
   const { activeProject } = useProjectStore();
@@ -116,12 +117,7 @@ export function StatusBar() {
 
       {/* Right Section */}
       <div className="flex items-center gap-4">
-        {lastSavedText && (
-          <div className="flex items-center gap-1">
-            <CheckCircle className="w-3 h-3 text-green-500" />
-            <span>Saved {lastSavedText}</span>
-          </div>
-        )}
+        <AutoSaveIndicator />
 
         <div className="flex items-center gap-1">
           {isOnline ? (

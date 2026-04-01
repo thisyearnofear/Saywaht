@@ -12,14 +12,16 @@ import {
 import { useProjectStore } from "@/stores/project-store";
 import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import { useState } from "react";
-import { Sparkles, Video, Plus } from "@/lib/icons";
+import { Sparkles, Video, Plus, Clock, Play } from "@/lib/icons";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { RecentProjects, RecentProjectsMobile } from "./recent-projects";
+import { formatRelativeTime } from "@/hooks/use-celebrations";
 
 // Templates section removed - users can click "Explore All Packs" to visit templates page
 
 export function WelcomeScreen() {
   const isMobile = useIsMobile();
-  const { createNewProject } = useProjectStore();
+  const { createNewProject, recentProjects, addToRecentProjects, removeFromRecentProjects } = useProjectStore();
   const { navigateToTemplate, navigateToTemplates } = useSmartNavigation();
   const [projectName, setProjectName] = useState("");
   const [showNameInput, setShowNameInput] = useState(false);
@@ -145,6 +147,32 @@ export function WelcomeScreen() {
                 </div>
               </div>
             </div>
+
+            {/* Recent Projects Section */}
+            {recentProjects.length > 0 && (
+              <div className="mt-8">
+                {isMobile ? (
+                  <RecentProjectsMobile
+                    projects={recentProjects}
+                    onSelectProject={(project) => {
+                      // For now, just create a new project with that name
+                      // In the future, we'd load the actual project
+                      createNewProject(project.name);
+                    }}
+                    onDeleteProject={removeFromRecentProjects}
+                  />
+                ) : (
+                  <RecentProjects
+                    projects={recentProjects}
+                    onSelectProject={(project) => {
+                      createNewProject(project.name);
+                    }}
+                    onDeleteProject={removeFromRecentProjects}
+                    onCreateNew={() => setShowNameInput(true)}
+                  />
+                )}
+              </div>
+            )}
 
             {/* Bottom Feature Bar */}
             <div className="bg-white/5 px-8 py-5">

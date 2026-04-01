@@ -24,6 +24,11 @@ export interface UserPreferences {
   recentProjects: string[]; // Project IDs
   favoriteAssets: string[]; // Asset IDs
   hasCreatorCoin?: boolean;
+
+  // Celebration/milestone tracking
+  hasExportedVideo: boolean;
+  hasDeployedCoin: boolean;
+  hasUsedTemplate: boolean;
 }
 
 interface UserPreferencesStore {
@@ -35,6 +40,9 @@ interface UserPreferencesStore {
   addFavoriteAsset: (assetId: string) => void;
   removeFavoriteAsset: (assetId: string) => void;
   resetPreferences: () => void;
+  markExportedVideo: () => void;
+  markDeployedCoin: () => void;
+  markUsedTemplate: () => void;
 }
 
 const defaultPreferences: UserPreferences = {
@@ -51,6 +59,10 @@ const defaultPreferences: UserPreferences = {
   recentProjects: [],
   favoriteAssets: [],
   hasCreatorCoin: undefined,
+  // Celebration/milestone tracking
+  hasExportedVideo: false,
+  hasDeployedCoin: false,
+  hasUsedTemplate: false,
 };
 
 export const useUserPreferencesStore = create<UserPreferencesStore>()(
@@ -105,6 +117,21 @@ export const useUserPreferencesStore = create<UserPreferencesStore>()(
 
       resetPreferences: () =>
         set({ preferences: defaultPreferences }),
+
+      markExportedVideo: () =>
+        set((state) => ({
+          preferences: { ...state.preferences, hasExportedVideo: true },
+        })),
+
+      markDeployedCoin: () =>
+        set((state) => ({
+          preferences: { ...state.preferences, hasDeployedCoin: true },
+        })),
+
+      markUsedTemplate: () =>
+        set((state) => ({
+          preferences: { ...state.preferences, hasUsedTemplate: true },
+        })),
     }),
     {
       name: "saywaht-user-preferences",

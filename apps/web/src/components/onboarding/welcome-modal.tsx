@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "../ui/button";
 import {
@@ -20,6 +20,10 @@ import {
   X,
   Sparkles,
 } from "@/lib/icons";
+
+// ============================================================================
+// WELCOME MODULE - First-time user onboarding (static modal)
+// ============================================================================
 
 const onboardingSteps = [
   {
@@ -52,24 +56,32 @@ const onboardingSteps = [
   },
 ];
 
+// Storage keys for onboarding state
+const ONBOARDING_SEEN_KEY = "saywaht-onboarding-seen";
+const ONBOARDING_COMPLETED_KEY = "saywaht-onboarding-completed";
+
+function checkOnboardingStatus(key: string): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(key) === "true";
+}
+
+function setOnboardingStatus(key: string, value: boolean): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(key, value ? "true" : "false");
+}
+
 export function WelcomeModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    // Check if user has seen onboarding before
-    if (typeof window !== "undefined") {
-      const hasSeenOnboarding = localStorage.getItem("saywaht-onboarding-seen");
-      if (!hasSeenOnboarding) {
-        setIsOpen(true);
-      }
+    if (!checkOnboardingStatus(ONBOARDING_SEEN_KEY)) {
+      setIsOpen(true);
     }
   }, []);
 
   const handleClose = () => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("saywaht-onboarding-seen", "true");
-    }
+    setOnboardingStatus(ONBOARDING_SEEN_KEY, true);
     setIsOpen(false);
   };
 
@@ -163,4 +175,159 @@ export function WelcomeModal() {
       </DialogContent>
     </Dialog>
   );
+}
+
+// ============================================================================
+// PROGRESSIVE TOOLTIPS - Contextual hints for returning users
+// ============================================================================
+
+interface TooltipStep {
+  id: string;
+  target: string;
+  title: string;
+  content: string;
+  position: "top" | "bottom" | "left" | "right";
+}
+
+const TOOLTIP_STEPS: TooltipStep[] = [
+  {
+    id: "timeline",
+    target: "[data-timeline]",
+    title: "Timeline",
+    content: "Drag clips to reorder. Click to select and trim.",
+    position: "top",
+  },
+  {
+    id: "media-panel",
+    target: "[data-media-panel]",
+    title: "Media Panel",
+    content: "Upload videos, images, or audio. Drag directly onto timeline.",
+    position: "right",
+  },
+  {
+    id: "export",
+    target: "[data-export-button]",
+    title: "Export",
+    content: "Render your video. First export is free!",
+    position: "bottom",
+  },
+  {
+    id: "playback",
+    target: "[data-playback-controls]",
+    title: "Playback",
+    content: "Press Space to play/pause. Scrub to preview.",
+    position: "bottom",
+  },
+];
+
+const DID_YOU_KNOW_TIPS = [
+  { id: "space-play", content: "Press Space to play/pause" },
+  { id: "delete-clip", content: "Press Delete to remove selected clip" },
+  { id: "undo", content: "Press Ctrl+Z to undo any action" },
+  { id: "zoom-timeline", content: "Pinch to zoom the timeline" },
+  { id: "drag-reorder", content: "Drag clips to reorder in the timeline" },
+  { id: "preview-trim", content: "Press I/O to set in/out points" },
+  { id: "keyboard-nav", content: "Use ←/→ to move playhead frame by frame" },
+  { id: "snap-toggle", content: "Press S to toggle snap-to-grid" },
+];
+
+interface ProgressiveTooltipProps {
+  isVisible: boolean;
+  step: TooltipStep | null;
+  onDismiss: () => void;
+  onNext: () => void;
+}
+
+export function ProgressiveTooltip({
+  isVisible,
+  step,
+  onDismiss,
+  onNext,
+}: ProgressiveTooltipProps) {
+  return (
+    <AnimatePresence>
+      {isVisible && step && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          className="absolute z-50 w-64 p-3 bg-background border rounded-xl shadow-lg"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold">{step.title}</h4>
+              <p className="text-xs text-muted-foreground mt-1">{step.content}</p>
+            </div>
+            <button
+              onClick={onDismiss}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              ×
+            </button>
+          </div>
+          <button
+            onClick={onNext}
+            className="mt-2 text-xs text-primary hover:underline"
+          >
+            Got it →
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+import { DidYouKnowNudge } from "@/components/editor/onboarding-tooltips";
+
+export function useProgressiveOnboarding() {
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [isActive, setIsActive] = useState(false);
+  const [showDidYouKnow, setShowDidYouKnow] = useState(false);
+
+  useEffect(() => {
+    if (!checkOnboardingStatus(ONBOARDING_COMPLETED_KEY)) {
+      setIsActive(true);
+    }
+  }, []);
+
+  const nextStep = useCallback(() => {
+    if (currentStepIndex < TOOLTIP_STEPS.length - 1) {
+      setCurrentStepIndex((prev) => prev + 1);
+    } else {
+      setOnboardingStatus(ONBOARDING_COMPLETED_KEY, true);
+      setIsActive(false);
+    }
+  }, [currentStepIndex]);
+
+  const dismissStep = useCallback((stepId: string) => {
+    if (TOOLTIP_STEPS[currentStepIndex]?.id === stepId) {
+      nextStep();
+    }
+  }, [currentStepIndex, nextStep]);
+
+  const completeOnboarding = useCallback(() => {
+    setOnboardingStatus(ONBOARDING_COMPLETED_KEY, true);
+    setIsActive(false);
+  }, []);
+
+  const triggerDidYouKnow = useCallback(() => {
+    setShowDidYouKnow(true);
+    setTimeout(() => setShowDidYouKnow(false), 8000);
+  }, []);
+
+  const dismissDidYouKnow = useCallback(() => {
+    setShowDidYouKnow(false);
+  }, []);
+
+  return {
+    isActive,
+    currentStep: TOOLTIP_STEPS[currentStepIndex] || null,
+    currentStepIndex,
+    nextStep,
+    dismissStep,
+    completeOnboarding,
+    showDidYouKnow,
+    triggerDidYouKnow,
+    dismissDidYouKnow,
+  };
 }

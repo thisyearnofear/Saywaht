@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useEditorStore } from "@/stores/editor-store";
 import { usePanelStore } from "@/stores/panel-store";
@@ -26,12 +26,14 @@ import { useEditorHistory } from "./use-editor-history";
  * - End: Go to end
  * - Cmd/Ctrl + Z: Undo
  * - Shift + Cmd/Ctrl + Z: Redo
+ * - ?: Open shortcuts cheatsheet
  */
 export function useEditorShortcuts() {
   const { isPlaying, toggle, toggleMute, seek, currentTime, duration, muted } = usePlaybackStore();
   const { videoObjectFit, toggleVideoObjectFit, previewZoom, setPreviewZoom, resetPreviewZoom } = useEditorStore();
   const { toggleTimelineCollapse, isTimelineCollapsed } = usePanelStore();
   const { undo, redo } = useEditorHistory();
+  const [showCheatsheet, setShowCheatsheet] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -56,6 +58,13 @@ export function useEditorShortcuts() {
         } else {
           undo();
         }
+        return;
+      }
+
+      // Handle ? for cheatsheet
+      if (e.key === "?") {
+        e.preventDefault();
+        setShowCheatsheet(prev => !prev);
         return;
       }
 
@@ -199,5 +208,8 @@ export function useEditorShortcuts() {
     isTimelineCollapsed,
     undo,
     redo,
+    showCheatsheet,
   ]);
+
+  return { showCheatsheet, setShowCheatsheet };
 }

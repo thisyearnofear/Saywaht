@@ -25,6 +25,8 @@ import { trackEditorEvent } from "@/lib/analytics";
 export function useSessionRecovery() {
   const [hasRecoverableSession, setHasRecoverableSession] = useState(false);
   const [isRecovering, setIsRecovering] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   
   const { tracks, setTracks } = useTimelineStore();
   const { mediaItems, setMediaItems } = useMediaStore();
@@ -61,17 +63,22 @@ export function useSessionRecovery() {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
     saveTimeoutRef.current = setTimeout(async () => {
+      setIsSaving(true);
       try {
+        const now = Date.now();
         await saveEditorState({
           projectId: "current-session",
           timeline: { tracks },
           media: { mediaItems },
           text: { textElements },
-          savedAt: Date.now(),
+          savedAt: now,
         });
+        setLastSavedAt(now);
         console.log("💾 Session auto-saved to IndexedDB");
       } catch (err) {
         console.error("Auto-save failed:", err);
+      } finally {
+        setIsSaving(false);
       }
     }, 5000); // Debounce by 5 seconds
 
@@ -113,6 +120,8 @@ export function useSessionRecovery() {
     hasRecoverableSession,
     recoverSession,
     discardSession,
-    isRecovering
+    isRecovering,
+    lastSavedAt,
+    isSaving,
   };
 }

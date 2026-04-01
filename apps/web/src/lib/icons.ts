@@ -111,6 +111,11 @@ import {
   // Authentication
   LogOut,
 
+  // Additional
+  Keyboard,
+  Command,
+  Film,
+
   // Social & Engagement
   Heart,
   MessageCircle,
@@ -131,7 +136,7 @@ export {
   Cloud, Zap, Globe, Wifi, WifiOff, ExternalLink, Coins, Wallet, TrendingUp,
   TrendingDown, DollarSign, BarChart3, Loader2, AlertCircle, CheckCircle, Shield, AlertTriangle, Users, User, Clock,
   Layers, LayoutGrid, HardDrive, Type, Palette, Snowflake, Heart, MessageCircle, Eye, Github, LogOut,
-  Settings, Tag, Info, AlignLeft, AlignCenter, AlignRight,
+  Settings, Tag, Info, AlignLeft, AlignCenter, AlignRight, Keyboard, Command, Film,
 };
 
 // Enhanced icon registry for better DX and type safety

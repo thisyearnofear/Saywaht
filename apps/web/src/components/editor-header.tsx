@@ -10,6 +10,8 @@ import { useMediaStore } from "@/stores/media-store";
 import { useTextStore } from "@/stores/text-store";
 import { useCanvasStore, canvasPresets } from "@/stores/canvas-store";
 import { useEditorStore } from "@/stores/editor-store";
+import { useUserPreferencesStore } from "@/stores/user-preferences-store";
+import { CelebrationModal } from "@/components/celebrations/celebration-modal";
 import { badgeVariants } from "./ui/badge";
 import { cn } from "@/lib/utils";
 import { useAccount } from "wagmi";
@@ -54,6 +56,9 @@ import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 import { useFarcasterShare } from "@/farcaster/hooks/use-farcaster-share";
 import { saveFilecoinArchive } from "@/lib/filecoin-archives";
 import { FilecoinArchivesDialog } from "@/components/editor/filecoin-archives-dialog";
+import { useSessionRecovery } from "@/hooks/use-session-recovery";
+import { formatRelativeTime } from "@/hooks/use-celebrations";
+import { UnsavedBanner, useUnsavedBanner } from "@/components/editor/unsaved-banner";
 
 export function EditorHeader() {
   const { activeProject } = useProjectStore();
@@ -71,6 +76,22 @@ export function EditorHeader() {
   const { tracks, getTotalDuration } = useTimelineStore();
   const { mediaItems, updateMediaItem } = useMediaStore();
   const { textElements } = useTextStore();
+  const { preferences, markExportedVideo } = useUserPreferencesStore();
+  const [showFirstExportCelebration, setShowFirstExportCelebration] = useState(false);
+  
+  // Auto-save indicator
+  const { lastSavedAt, isSaving } = useSessionRecovery();
+  const [timeAgo, setTimeAgo] = useState("");
+  
+  useEffect(() => {
+    if (lastSavedAt) {
+      setTimeAgo(formatRelativeTime(lastSavedAt));
+      const interval = setInterval(() => {
+        setTimeAgo(formatRelativeTime(lastSavedAt));
+      }, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [lastSavedAt]);
 
   useEffect(() => {
     isBackendExportAvailable().then(setBackendAvailable);
@@ -157,6 +178,12 @@ export function EditorHeader() {
 
       toast.dismiss("export-progress");
       toast.success("Export successful!");
+
+      // Show celebration for first export
+      if (!preferences.hasExportedVideo) {
+        markExportedVideo();
+        setShowFirstExportCelebration(true);
+      }
     } catch (error) {
       toast.dismiss("export-progress");
       toast.error(getExportErrorMessage(error));
@@ -216,8 +243,19 @@ export function EditorHeader() {
             {activeProject?.name || "Untitled"}
           </h1>
           <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Draft</span>
+            {lastSavedAt ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                  {isSaving ? "Saving..." : `Saved ${timeAgo}`}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Draft</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -404,6 +442,13 @@ export function EditorHeader() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* First Export Celebration Modal */}
+      <CelebrationModal
+        isOpen={showFirstExportCelebration}
+        onClose={() => setShowFirstExportCelebration(false)}
+        type="first-export"
+      />
     </header>
   );
 }

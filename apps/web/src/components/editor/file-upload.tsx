@@ -16,6 +16,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { Switch } from "@/components/ui/switch";
 import { recordCustomMetric } from "@/lib/performance-monitor";
+import { UploadProgressRing } from "./upload-progress-ring";
 
 interface FileUploadProps {
   onUploadComplete?: (result: UploadResult) => void;
@@ -303,23 +304,10 @@ export function FileUpload({
           </div>
         )}
         {isUploading ? (
-          <div className="text-center space-y-4">
-            <span className="h-8 w-8 animate-spin mx-auto text-primary inline-block">
-              ⟳
-            </span>
-            <div>
-              <p className="font-medium">Uploading to FilCDN...</p>
-              <p className="text-sm text-muted-foreground">
-                Creating PDP deal with CDN enabled
-              </p>
-            </div>
-            <Progress value={uploadProgress} className="w-full" />
-            <p className="text-xs text-muted-foreground">
-              {uploadProgress < 40
-                ? "Initializing FilCDN..."
-                : uploadProgress < 80
-                ? "Uploading to Filecoin..."
-                : "Finalizing deal..."}
+          <div className="py-8">
+            <UploadProgressRing progress={uploadProgress} />
+            <p className="text-xs text-muted-foreground text-center mt-4">
+              Your video is being stored permanently on Filecoin...
             </p>
           </div>
         ) : (
