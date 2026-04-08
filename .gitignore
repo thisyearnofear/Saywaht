@@ -54,7 +54,6 @@ build
 # AI, Editor and specific tools
 .junie
 .qodo
-.github
 .claude
 .blackboxcli
 .zencoder
