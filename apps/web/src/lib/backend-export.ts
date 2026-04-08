@@ -5,11 +5,24 @@ import { assessBackendExportCompatibility, resolveBackendUploadPlan } from "./ex
 import { FORMAT_DIMENSIONS } from "./video-utils";
 
 // Backend export service configuration
-const BACKEND_URLS = [
-  process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL,
-  'http://157.180.36.156:3100', // Production FFmpeg backend
-  'http://localhost:3100'       // Local development default
-].filter(Boolean) as string[];
+// Keep HTTPS origins first to avoid mixed-content errors on secure pages.
+const configuredBackendUrl = process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL;
+const isBrowser = typeof window !== "undefined";
+const isHttpsPage = isBrowser && window.location.protocol === "https:";
+const isLocalhostPage =
+  isBrowser &&
+  (window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1");
+
+const fallbackBackendUrls = isHttpsPage
+  ? ["https://persidian.com"]
+  : isLocalhostPage
+    ? ["http://localhost:3100", "https://persidian.com"]
+    : ["https://persidian.com", "http://157.180.36.156:3100"];
+
+const BACKEND_URLS = Array.from(
+  new Set([configuredBackendUrl, ...fallbackBackendUrls].filter(Boolean))
+) as string[];
 
 let cachedBackendUrl: string | null = null;
 
@@ -29,7 +42,7 @@ export async function getBackendUrl(): Promise<string> {
     } catch { continue; }
   }
 
-  return BACKEND_URLS[0] || 'http://157.180.36.156:3100';
+  return BACKEND_URLS[0] || "https://persidian.com";
 }
 
 
