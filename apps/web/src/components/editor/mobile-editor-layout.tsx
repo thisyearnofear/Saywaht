@@ -47,6 +47,7 @@ import { useProjectStore } from "@/stores/project-store";
 import { useTemplateStore } from "@/stores/template-store";
 import { useTextStore } from "@/stores/text-store";
 import { useTimelineStore } from "@/stores/timeline-store";
+import { useEditorStore } from "@/stores/editor-store";
 
 import { useMissionStore } from "@/services/mission-service";
 import { useSessionRecovery } from "@/hooks/use-session-recovery";
@@ -91,6 +92,7 @@ export function MobileEditorLayout({
 	const { activeProject } = useProjectStore();
 	const { tracks } = useTimelineStore();
 	const { selectText, textElements } = useTextStore();
+	const { requestedToolPanel, clearRequestedToolPanel } = useEditorStore();
 	const { isFarcasterMiniApp } = useFarcasterContext();
 	const { shareToFarcaster, isSharing } = useFarcasterShare();
 	const { undo, redo, canUndo, canRedo } = useEditorHistory();
@@ -140,6 +142,12 @@ export function MobileEditorLayout({
 	);
 
 	usePlaybackControls();
+
+	useEffect(() => {
+		if (requestedToolPanel?.panel !== "text") return;
+		setActiveTool("text");
+		clearRequestedToolPanel();
+	}, [requestedToolPanel, clearRequestedToolPanel]);
 
   useEffect(() => {
     trackEditorEvent("editor_open");

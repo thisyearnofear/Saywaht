@@ -44,6 +44,13 @@ interface DeployStepProps {
 const BACKEND_EXPORT_URL =
   process.env.NEXT_PUBLIC_BACKEND_EXPORT_URL || "https://persidian.com";
 const COIN_CALLDATA_RETRY_DELAYS_MS = [0, 4000, 9000];
+const BASE_APPENDED_DATA_SUFFIX = "07626173656170700080218021802180218021802180218021";
+
+type CoinCall = {
+  to?: string;
+  data?: string;
+  value?: string | number | bigint;
+};
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -135,6 +142,36 @@ async function requestCoinCalldata(contractCallParams: any) {
   throw lastError || new Error("Failed to request coin calldata");
 }
 
+function normalizeCoinCalldataResponse(responseData: any): {
+  calls: CoinCall[];
+  predictedCoinAddress?: string;
+} {
+  const rawCalls =
+    (Array.isArray(responseData?.calls) && responseData.calls) ||
+    (Array.isArray(responseData?.transactions) && responseData.transactions) ||
+    (Array.isArray(responseData?.txs) && responseData.txs) ||
+    (Array.isArray(responseData) && responseData) ||
+    (responseData?.call ? [responseData.call] : null);
+
+  const calls = Array.isArray(rawCalls)
+    ? rawCalls
+        .map((entry) => entry?.call || entry?.tx || entry)
+        .filter(Boolean)
+    : [];
+
+  return {
+    calls,
+    predictedCoinAddress:
+      responseData?.predictedCoinAddress || responseData?.coinAddress,
+  };
+}
+
+function withBaseAppendedDataSuffix(data: string) {
+  return data.endsWith(BASE_APPENDED_DATA_SUFFIX)
+    ? data
+    : `${data}${BASE_APPENDED_DATA_SUFFIX}`;
+}
+
 export function DeployStep({ data, updateData }: DeployStepProps) {
   const { address } = useAccount();
   const publicClient = usePublicClient();
@@ -208,19 +245,22 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
       try {
         await assertBackendHealthy();
         const responseData = await requestCoinCalldata(contractCallParams);
-        const { calls, predictedCoinAddress } = responseData;
+        const { calls, predictedCoinAddress } =
+          normalizeCoinCalldataResponse(responseData);
+        const firstCall = calls[0];
 
-        if (!calls || !Array.isArray(calls) || calls.length === 0) {
-          throw new Error("Invalid response from server");
+        if (!firstCall?.to || typeof firstCall.to !== "string") {
+          throw new Error("Invalid coin calldata response: missing transaction target");
+        }
+
+        if (!firstCall?.data || typeof firstCall.data !== "string") {
+          throw new Error("Invalid coin calldata response: missing transaction data");
         }
 
         const hash = await walletClient.sendTransaction({
-          to: calls[0].to as `0x${string}`,
-          // CLEAN: Ensure we only append suffix once and check if calls[0].data is valid
-          data: (calls[0].data.endsWith("07626173656170700080218021802180218021802180218021") 
-            ? calls[0].data 
-            : `${calls[0].data}07626173656170700080218021802180218021802180218021`) as `0x${string}`,
-          value: calls[0].value ? BigInt(calls[0].value) : undefined,
+          to: firstCall.to as `0x${string}`,
+          data: withBaseAppendedDataSuffix(firstCall.data) as `0x${string}`,
+          value: firstCall.value ? BigInt(firstCall.value) : undefined,
           account: address as `0x${string}`,
           chain: publicClient.chain,
         });

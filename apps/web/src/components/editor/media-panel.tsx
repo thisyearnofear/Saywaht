@@ -40,6 +40,7 @@ import {
 } from "../ui/collapsible";
 import { cn } from "@/lib/utils";
 import { useAccount } from "wagmi";
+import { useEditorStore } from "@/stores/editor-store";
 
 import { pexelsService, PexelsVideo, PexelsImage } from "@/services/pexels-service";
 import { Input } from "../ui/input";
@@ -49,6 +50,7 @@ import { Loader2 } from "@/lib/icons";
 // MediaPanel lets users add, view, and drag media (images, videos, audio) into the project.
 export function MediaPanel() {
   const { mediaItems, addMediaItem, removeMediaItem } = useMediaStore();
+  const { requestedToolPanel, clearRequestedToolPanel } = useEditorStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<"upload" | "library" | "audio" | "text">("upload");
@@ -75,6 +77,12 @@ export function MediaPanel() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (requestedToolPanel?.panel !== "text") return;
+    setActiveTab("text");
+    clearRequestedToolPanel();
+  }, [requestedToolPanel, clearRequestedToolPanel]);
 
   const handlePexelsSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();

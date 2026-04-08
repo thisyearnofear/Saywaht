@@ -10,6 +10,10 @@ interface EditorState {
   // Video display preferences
   videoObjectFit: "contain" | "cover";
   previewZoom: number;
+  requestedToolPanel: {
+    panel: "text";
+    nonce: number;
+  } | null;
 
   // Actions
   setInitializing: (loading: boolean) => void;
@@ -18,6 +22,8 @@ interface EditorState {
   toggleVideoObjectFit: () => void;
   setPreviewZoom: (zoom: number) => void;
   resetPreviewZoom: () => void;
+  requestToolPanel: (panel: "text") => void;
+  clearRequestedToolPanel: () => void;
   initializeApp: () => Promise<void>;
 }
 
@@ -29,6 +35,7 @@ export const useEditorStore = create<EditorState>()(
       isPanelsReady: false,
       videoObjectFit: "contain",
       previewZoom: 1,
+      requestedToolPanel: null,
 
       // Actions
       setInitializing: (loading) => {
@@ -54,6 +61,19 @@ export const useEditorStore = create<EditorState>()(
 
       resetPreviewZoom: () => {
         set({ previewZoom: 1 });
+      },
+
+      requestToolPanel: (panel) => {
+        set({
+          requestedToolPanel: {
+            panel,
+            nonce: Date.now(),
+          },
+        });
+      },
+
+      clearRequestedToolPanel: () => {
+        set({ requestedToolPanel: null });
       },
 
       initializeApp: async () => {

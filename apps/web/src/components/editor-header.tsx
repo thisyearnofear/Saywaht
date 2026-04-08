@@ -25,22 +25,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { 
-  ZoomIn, 
-  ZoomOut, 
-  Play, 
-  Pause, 
-  Download, 
-  Zap, 
-  Video, 
-  MoreHorizontal, 
+import {
+  ZoomIn,
+  ZoomOut,
+  Play,
+  Pause,
+  Download,
+  Zap,
+  Video,
+  MoreHorizontal,
   ChevronLeft,
   Share2,
   Settings,
   Trash2,
   ExternalLink,
   HardDrive,
-  Loader2
+  Loader2,
+  Type,
 } from "@/lib/icons";
 import {
   Tooltip,
@@ -68,6 +69,7 @@ export function EditorHeader() {
   const { previewZoom, setPreviewZoom, resetPreviewZoom } = useEditorStore();
   const { isFarcasterMiniApp } = useFarcasterContext();
   const { shareToFarcaster, isSharing } = useFarcasterShare();
+  const requestToolPanel = useEditorStore((s) => s.requestToolPanel);
 
   const router = useRouter();
   const [isExporting, setIsExporting] = useState(false);
@@ -102,6 +104,15 @@ export function EditorHeader() {
     autoCaptionCount > 0
       ? `${autoCaptionCount} caption${autoCaptionCount === 1 ? "" : "s"} ready`
       : "No captions";
+
+  const openCaptionsPanel = () => {
+    requestToolPanel("text");
+    if (autoCaptionCount === 0) {
+      toast.message("Open Text to generate captions", {
+        description: "Captions live in the Text panel alongside manual text overlays.",
+      });
+    }
+  };
 
   const handleExport = async (method: ExportMethod = "auto") => {
     if (!activeProject || tracks.length === 0) {
@@ -317,16 +328,19 @@ export function EditorHeader() {
       {/* Right Section: Actions */}
       <div className="flex items-center gap-2">
         {tracks.length > 0 && (
-          <div
+          <button
+            type="button"
+            onClick={openCaptionsPanel}
             className={cn(
-              "hidden sm:flex h-9 items-center rounded-xl border px-3 text-[10px] font-black uppercase tracking-widest",
+              "hidden sm:flex h-9 items-center rounded-xl border px-3 text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-primary/15",
               autoCaptionCount > 0
                 ? "border-primary/30 bg-primary/10 text-primary"
                 : "border-amber-500/30 bg-amber-500/10 text-amber-500"
             )}
+            aria-label="Open captions panel"
           >
             {captionReadinessText}
-          </div>
+          </button>
         )}
         {/* Desktop-only Canvas Settings */}
         <div className="hidden lg:flex items-center gap-2 mr-2">
@@ -408,6 +422,16 @@ export function EditorHeader() {
               <div className="flex flex-col">
                 <span className="font-bold text-sm">Templates</span>
                 <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Switch template</span>
+              </div>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem onClick={openCaptionsPanel} className="rounded-xl p-3">
+              <Type className="h-4 w-4 mr-3 text-primary" />
+              <div className="flex flex-col">
+                <span className="font-bold text-sm">Captions</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                  {captionReadinessText}
+                </span>
               </div>
             </DropdownMenuItem>
 
