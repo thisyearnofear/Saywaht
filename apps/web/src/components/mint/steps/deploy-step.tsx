@@ -155,7 +155,13 @@ function normalizeCoinCalldataResponse(responseData: any): {
 
   const calls = Array.isArray(rawCalls)
     ? rawCalls
-        .map((entry) => entry?.call || entry?.tx || entry)
+        .flatMap((entry) => {
+          const normalizedEntry = entry?.call || entry?.tx || entry;
+          if (Array.isArray(normalizedEntry?.calls)) {
+            return normalizedEntry.calls;
+          }
+          return normalizedEntry ? [normalizedEntry] : [];
+        })
         .filter(Boolean)
     : [];
 
