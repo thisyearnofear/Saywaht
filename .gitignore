@@ -50,3 +50,13 @@ build
 *.complex.js
 *.old
 *.tmp
+
+# AI, Editor and specific tools
+.junie
+.qodo
+.github
+.claude
+.blackboxcli
+.zencoder
+.zenflow
+.vscode

@@ -764,7 +764,7 @@ export function MobileEditorLayout({
 			                Unfinished Work?
 			              </h2>
 			              <p className="text-white/40 text-[13px] font-bold uppercase tracking-widest leading-relaxed mb-8">
-			                We found a previous session that wasn't finished. Would you like to restore it?
+			                We found a previous session that wasn&apos;t finished. Would you like to restore it?
 			              </p>
 			
 			              <div className="space-y-3">
