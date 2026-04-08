@@ -1,16 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Button } from "../ui/button";
 import { useTextStore, DEFAULT_TEXT_PROPERTIES } from "@/stores/text-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
-import {
-  CAPTION_POSITION_Y,
-  generateCaptionsFromTimeline,
-  updateCaptionGroupStyle,
-} from "@/lib/transcription/caption-pipeline";
 import {
   Type,
   Plus,
@@ -24,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { SUPPORTED_LANGUAGES } from "@/constants/transcription-constants";
 import type { TranscriptionLanguage } from "@/constants/transcription-constants";
+import { useCaptionsFlow } from "@/hooks/use-captions-flow";
 
 // Text style presets
 const TEXT_PRESETS = [
@@ -54,8 +50,6 @@ const TEXT_PRESETS = [
   },
 ] as const;
 
-type CaptionPosition = "top" | "bottom";
-
 export function TextPanel() {
   const {
     addTextElement,
@@ -73,18 +67,34 @@ export function TextPanel() {
   const tracks = useTimelineStore((s) => s.tracks);
   const mediaItems = useMediaStore((s) => s.mediaItems);
 
-  // Auto-caption state
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState("");
-  const [activeCaptionGroupId, setActiveCaptionGroupId] = useState<string | null>(null);
-  const [selectedLanguage, setSelectedLanguage] =
-    useState<TranscriptionLanguage>("en");
-  const [captionPosition, setCaptionPosition] =
-    useState<CaptionPosition>("bottom");
-  const captionGroupIds = getCaptionGroupIds();
-  const resolvedGroupId =
-    activeCaptionGroupId || captionGroupIds[captionGroupIds.length - 1] || null;
+  const {
+    selectedLanguage,
+    setSelectedLanguage,
+    captionPosition,
+    isGeneratingCaptions,
+    captionStatus,
+    captionProgress,
+    setActiveCaptionGroupId,
+    captionGroupIds,
+    resolvedCaptionGroupId,
+    captionElements,
+    captionReadinessLabel,
+    hasCaptions,
+    generateCaptions,
+    clearResolvedCaptionGroup,
+    toggleCaptionPosition,
+    applyStyleToResolvedGroup,
+  } = useCaptionsFlow({
+    tracks,
+    mediaItems,
+    addTextElement,
+    updateTextElement,
+    getCaptionGroupIds,
+    getCaptionElements,
+    deleteCaptionGroup,
+    updateCaptionGroup,
+  });
 
   // Manual text
   const handleAddText = (presetIndex?: number) => {
@@ -106,73 +116,38 @@ export function TextPanel() {
   };
 
   // Auto-captions
-  const handleGenerate = useCallback(async () => {
-    setIsGenerating(true);
-    setProgress(0);
+  const handleGenerate = async () => {
     setStatusMessage("Preparing audio...");
 
     try {
-      const result = await generateCaptionsFromTimeline(tracks, mediaItems, {
-        addTextElement,
-        language: selectedLanguage,
-        position: captionPosition,
-        cancelPrevious: true,
-        onProgress: (info) => {
-          if (typeof info.progress === "number") {
-            setProgress(Math.round(info.progress));
-            setStatusMessage(
-              `Loading model (${Math.round(info.progress)}%)...`
-            );
-          } else {
-            setStatusMessage(info.status || "Loading model...");
-          }
-        },
-      });
+      const result = await generateCaptions();
 
       setActiveCaptionGroupId(result.groupId);
       setStatusMessage("Done!");
-      setProgress(100);
       toast.success(`Generated ${result.count} caption(s)`);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Transcription failed";
       setStatusMessage("");
       toast.error(message);
-    } finally {
-      setIsGenerating(false);
     }
-  }, [tracks, mediaItems, selectedLanguage, captionPosition, addTextElement]);
+  };
 
-  const handleTogglePosition = useCallback(
-    (pos: CaptionPosition) => {
-      if (pos === captionPosition) return;
-      setCaptionPosition(pos);
-      if (!resolvedGroupId) return;
-      updateCaptionGroup(resolvedGroupId, { y: CAPTION_POSITION_Y[pos] });
-    },
-    [captionPosition, resolvedGroupId, updateCaptionGroup]
-  );
-
-  const handleClearCaptions = useCallback(() => {
-    if (!resolvedGroupId) return;
-    deleteCaptionGroup(resolvedGroupId);
-    setActiveCaptionGroupId(null);
+  const handleClearCaptions = () => {
+    clearResolvedCaptionGroup();
     setStatusMessage("");
-    setProgress(0);
     toast.success("Captions cleared");
-  }, [resolvedGroupId, deleteCaptionGroup]);
+  };
 
-  const handleApplyCaptionStyle = useCallback(() => {
-    if (!resolvedGroupId) return;
-    updateCaptionGroupStyle(
-      getCaptionElements(resolvedGroupId).map((item) => item.id),
-      { fontSize: 32, fontWeight: "bold", color: "#FFFFFF" },
-      updateTextElement
-    );
+  const handleApplyCaptionStyle = () => {
+    const applied = applyStyleToResolvedGroup({
+      fontSize: 32,
+      fontWeight: "bold",
+      color: "#FFFFFF",
+    });
+    if (!applied) return;
     toast.success("Caption style updated");
-  }, [resolvedGroupId, getCaptionElements, updateTextElement]);
-
-  const captionElements = resolvedGroupId ? getCaptionElements(resolvedGroupId) : [];
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -194,11 +169,15 @@ export function TextPanel() {
           <div className="text-xs font-medium text-muted-foreground">
             Auto Captions
           </div>
+          <div className="rounded-md border border-primary/20 bg-primary/5 px-2.5 py-2 text-xs">
+            <span className="font-semibold text-primary">Caption Readiness:</span>{" "}
+            <span className="text-foreground">{captionReadinessLabel}</span>
+          </div>
 
           <div className="flex gap-2">
             {captionGroupIds.length > 0 && (
               <select
-                value={resolvedGroupId || ""}
+                value={resolvedCaptionGroupId || ""}
                 onChange={(e) => setActiveCaptionGroupId(e.target.value || null)}
                 className="h-9 px-2 rounded-md border border-input bg-background text-xs"
               >
@@ -214,7 +193,7 @@ export function TextPanel() {
               onChange={(e) =>
                 setSelectedLanguage(e.target.value as TranscriptionLanguage)
               }
-              disabled={isGenerating}
+              disabled={isGeneratingCaptions}
               className="flex-1 h-9 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             >
               {SUPPORTED_LANGUAGES.map((lang) => (
@@ -227,8 +206,8 @@ export function TextPanel() {
               variant={captionPosition === "top" ? "secondary" : "outline"}
               size="sm"
               className="h-9 px-2"
-              onClick={() => handleTogglePosition("top")}
-              disabled={isGenerating}
+              onClick={() => toggleCaptionPosition("top")}
+              disabled={isGeneratingCaptions}
               title="Position captions at top"
             >
               <ChevronUp className="h-4 w-4" />
@@ -237,8 +216,8 @@ export function TextPanel() {
               variant={captionPosition === "bottom" ? "secondary" : "outline"}
               size="sm"
               className="h-9 px-2"
-              onClick={() => handleTogglePosition("bottom")}
-              disabled={isGenerating}
+              onClick={() => toggleCaptionPosition("bottom")}
+              disabled={isGeneratingCaptions}
               title="Position captions at bottom"
             >
               <ChevronDown className="h-4 w-4" />
@@ -247,30 +226,34 @@ export function TextPanel() {
 
           <Button
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={isGeneratingCaptions}
             className="w-full"
             variant="outline"
           >
-            {isGenerating ? (
+            {isGeneratingCaptions ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Sparkles className="h-4 w-4 mr-2" />
             )}
-            {isGenerating ? "Generating..." : "Generate Captions"}
+            {isGeneratingCaptions
+              ? "Generating..."
+              : hasCaptions
+                ? "Regenerate Captions"
+                : "Generate Captions"}
           </Button>
 
           {/* Progress */}
-          {statusMessage && (
+          {(captionStatus || statusMessage) && (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{statusMessage}</span>
-                {isGenerating && <span>{progress}%</span>}
+                <span>{captionStatus || statusMessage}</span>
+                {isGeneratingCaptions && <span>{captionProgress}%</span>}
               </div>
-              {isGenerating && (
+              {isGeneratingCaptions && (
                 <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full bg-primary rounded-full transition-all duration-300"
-                    style={{ width: `${progress}%` }}
+                    style={{ width: `${captionProgress}%` }}
                   />
                 </div>
               )}
@@ -390,7 +373,10 @@ export function TextPanel() {
         )}
 
         {/* Empty State */}
-        {textElements.length === 0 && !isGenerating && !statusMessage && (
+        {textElements.length === 0 &&
+          !isGeneratingCaptions &&
+          !captionStatus &&
+          !statusMessage && (
           <div className="text-center py-6 text-muted-foreground">
             <Type className="h-10 w-10 mx-auto mb-3 opacity-30" />
             <p className="text-sm">No text layers yet</p>
@@ -398,7 +384,7 @@ export function TextPanel() {
               Generate captions or add text manually
             </p>
           </div>
-        )}
+          )}
       </div>
     </div>
   );

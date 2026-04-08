@@ -38,12 +38,8 @@ import { addHapticFeedback } from "@/lib/mobile-utils";
 import { toast } from "sonner";
 import { SUPPORTED_LANGUAGES } from "@/constants/transcription-constants";
 import type { TranscriptionLanguage } from "@/constants/transcription-constants";
-import {
-  CAPTION_POSITION_Y,
-  type CaptionPosition,
-  generateCaptionsFromTimeline,
-  updateCaptionGroupStyle,
-} from "@/lib/transcription/caption-pipeline";
+import type { CaptionPosition } from "@/lib/transcription/caption-pipeline";
+import { useCaptionsFlow } from "@/hooks/use-captions-flow";
 
 const TEXT_STYLE_PRESETS = [
   { id: 'vhs', name: 'VHS', color: '#FFFFFF', backgroundColor: '#00000080', fontSize: 24, fontWeight: 'bold', fontFamily: 'Courier New', textShadow: '2px 2px #FF00FF' },
@@ -75,12 +71,6 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
   const mediaItems = useMediaStore((s) => s.mediaItems);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newText, setNewText] = useState("");
-  const [selectedLanguage, setSelectedLanguage] = useState<TranscriptionLanguage>("en");
-  const [captionPosition, setCaptionPosition] = useState<CaptionPosition>("bottom");
-  const [isGeneratingCaptions, setIsGeneratingCaptions] = useState(false);
-  const [captionStatus, setCaptionStatus] = useState("");
-  const [captionProgress, setCaptionProgress] = useState(0);
-  const [activeCaptionGroupId, setActiveCaptionGroupId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "tools">("tools");
   const [isStyling, setIsStyling] = useState(false);
 
@@ -113,32 +103,36 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
 
   const editingElement = textElements.find((el) => el.id === editingId);
   const swatchColors = ["#ffffff", "#000000", "#ef4444", "#22c55e", "#3b82f6", "#f59e0b", "#ec4899"];
-  const captionGroupIds = getCaptionGroupIds();
-  const resolvedCaptionGroupId = useMemo(
-    () => activeCaptionGroupId || captionGroupIds[captionGroupIds.length - 1] || null,
-    [activeCaptionGroupId, captionGroupIds]
-  );
-  const captionElements = resolvedCaptionGroupId ? getCaptionElements(resolvedCaptionGroupId) : [];
-  const captionGroupMeta = useMemo(() => {
-    return captionGroupIds.map((groupId) => {
-      const elements = getCaptionElements(groupId);
-      const first = elements[0];
-      const generatedAt = first?.captionGeneratedAt
-        ? new Date(first.captionGeneratedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-        : null;
-      return {
-        groupId,
-        count: elements.length,
-        source: first?.captionSource || "timeline",
-        generatedAt,
-      };
-    });
-  }, [captionGroupIds, getCaptionElements]);
-
-  useEffect(() => {
-    if (!preferredCaptionGroupId) return;
-    setActiveCaptionGroupId(preferredCaptionGroupId);
-  }, [preferredCaptionGroupId]);
+  const {
+    selectedLanguage,
+    setSelectedLanguage,
+    captionPosition,
+    isGeneratingCaptions,
+    captionStatus,
+    captionProgress,
+    activeCaptionGroupId,
+    setActiveCaptionGroupId,
+    captionGroupIds,
+    captionGroupMeta,
+    resolvedCaptionGroupId,
+    captionElements,
+    hasCaptions,
+    captionReadinessLabel,
+    generateCaptions,
+    clearResolvedCaptionGroup,
+    toggleCaptionPosition,
+    applyStyleToResolvedGroup,
+  } = useCaptionsFlow({
+    tracks,
+    mediaItems,
+    addTextElement,
+    updateTextElement,
+    getCaptionGroupIds,
+    getCaptionElements,
+    deleteCaptionGroup,
+    updateCaptionGroup,
+    preferredCaptionGroupId,
+  });
 
   useEffect(() => {
     if (!selectedTextId) return;
@@ -146,58 +140,24 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
   }, [selectedTextId]);
 
   const handleGenerateCaptions = useCallback(async () => {
-    setIsGeneratingCaptions(true);
-    setCaptionStatus("Preparing audio...");
-    setCaptionProgress(0);
-
     try {
-      const result = await generateCaptionsFromTimeline(tracks, mediaItems, {
-        addTextElement,
-        language: selectedLanguage,
-        position: captionPosition,
-        cancelPrevious: true,
-        onProgress: (info) => {
-          if (typeof info.progress === "number") {
-            setCaptionProgress(Math.round(info.progress));
-          }
-          setCaptionStatus(info.status || "Transcribing...");
-        },
-      });
+      const result = await generateCaptions();
 
       setActiveCaptionGroupId(result.groupId);
-      setCaptionStatus("Done");
-      setCaptionProgress(100);
       toast.success(`Generated ${result.count} captions`);
     } catch (err) {
-      setCaptionStatus("");
       toast.error(err instanceof Error ? err.message : "Caption generation failed");
-    } finally {
-      setIsGeneratingCaptions(false);
     }
-  }, [tracks, mediaItems, addTextElement, selectedLanguage, captionPosition]);
+  }, [generateCaptions, setActiveCaptionGroupId]);
 
   const handleClearCaptions = useCallback(() => {
-    if (!resolvedCaptionGroupId) return;
-    deleteCaptionGroup(resolvedCaptionGroupId);
-    setActiveCaptionGroupId(null);
-    setCaptionStatus("");
-    setCaptionProgress(0);
+    clearResolvedCaptionGroup();
     toast.success("Captions cleared");
-  }, [resolvedCaptionGroupId, deleteCaptionGroup]);
-
-  const handleToggleCaptionPosition = useCallback(
-    (position: CaptionPosition) => {
-      setCaptionPosition(position);
-      if (!resolvedCaptionGroupId) return;
-      updateCaptionGroup(resolvedCaptionGroupId, { y: CAPTION_POSITION_Y[position] });
-    },
-    [resolvedCaptionGroupId, updateCaptionGroup]
-  );
+  }, [clearResolvedCaptionGroup]);
 
   const handleApplyPreset = useCallback((preset: typeof TEXT_STYLE_PRESETS[0]) => {
     if (!resolvedCaptionGroupId) return;
     addHapticFeedback('medium');
-    const ids = getCaptionElements(resolvedCaptionGroupId).map((item) => item.id);
     const updates = { 
         fontSize: preset.fontSize, 
         color: preset.color, 
@@ -205,9 +165,10 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
         fontFamily: preset.fontFamily,
         textAlign: preset.textAlign as any
     };
-    updateCaptionGroupStyle(ids, updates, updateTextElement);
+    const applied = applyStyleToResolvedGroup(updates);
+    if (!applied) return;
     toast.success(`Applied ${preset.name} style to captions`);
-  }, [resolvedCaptionGroupId, getCaptionElements, updateTextElement]);
+  }, [resolvedCaptionGroupId, applyStyleToResolvedGroup]);
 
   const handleSmartStyle = useCallback(async () => {
     if (!resolvedCaptionGroupId) return;
@@ -228,9 +189,10 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
       if (!response.ok) throw new Error("Failed to get smart style");
       
       const { style } = await response.json();
-      const ids = elements.map(el => el.id);
-      
-      updateCaptionGroupStyle(ids, style, updateTextElement);
+      const applied = applyStyleToResolvedGroup(style);
+      if (!applied) {
+        throw new Error("No active caption group");
+      }
       toast.success("AI applied a smart style based on your content!");
     } catch (error) {
       console.error("Smart styling failed:", error);
@@ -238,7 +200,7 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
     } finally {
       setIsStyling(false);
     }
-  }, [resolvedCaptionGroupId, getCaptionElements, updateTextElement]);
+  }, [resolvedCaptionGroupId, getCaptionElements, applyStyleToResolvedGroup]);
 
 
   return (
@@ -301,6 +263,9 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
               Auto Captions
             </span>
           </div>
+          <div className="rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-primary">
+            {captionReadinessLabel}
+          </div>
 
           <div className="flex gap-2">
             <div className="flex-1">
@@ -325,7 +290,7 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
               variant={captionPosition === "top" ? "secondary" : "outline"}
               size="icon"
               className={cn("h-9 w-9 rounded-xl border-white/5 bg-white/5", captionPosition === "top" && "bg-primary text-white border-none")}
-              onClick={() => handleToggleCaptionPosition("top")}
+              onClick={() => toggleCaptionPosition("top")}
               disabled={isGeneratingCaptions}
             >
               <ChevronUp className="h-4 w-4" />
@@ -334,7 +299,7 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
               variant={captionPosition === "bottom" ? "secondary" : "outline"}
               size="icon"
               className={cn("h-9 w-9 rounded-xl border-white/5 bg-white/5", captionPosition === "bottom" && "bg-primary text-white border-none")}
-              onClick={() => handleToggleCaptionPosition("bottom")}
+              onClick={() => toggleCaptionPosition("bottom")}
               disabled={isGeneratingCaptions}
             >
               <ChevronDown className="h-4 w-4" />
@@ -351,7 +316,7 @@ export function MobileTextPanel({ className, preferredCaptionGroupId = null }: M
             ) : (
               <Sparkles className="mr-2 h-4 w-4" />
             )}
-            {captionElements.length > 0 ? "Regenerate" : "Generate"}
+            {hasCaptions ? "Regenerate" : "Generate"}
           </Button>
 
           {captionStatus && (

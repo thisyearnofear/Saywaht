@@ -97,6 +97,12 @@ export function EditorHeader() {
     isBackendExportAvailable().then(setBackendAvailable);
   }, []);
 
+  const autoCaptionCount = textElements.filter((el) => el.isAutoCaption).length;
+  const captionReadinessText =
+    autoCaptionCount > 0
+      ? `${autoCaptionCount} caption${autoCaptionCount === 1 ? "" : "s"} ready`
+      : "No captions";
+
   const handleExport = async (method: ExportMethod = "auto") => {
     if (!activeProject || tracks.length === 0) {
       toast.error("No content to export");
@@ -196,6 +202,11 @@ export function EditorHeader() {
     if (!activeProject || tracks.length === 0) return;
     setIsDeploying(true);
     try {
+      if (autoCaptionCount === 0) {
+        toast.message("No captions yet", {
+          description: "You can still launch now, or add captions in Text for better accessibility.",
+        });
+      }
       toast.loading("Preparing media for mint...", { id: "deploy-progress" });
       const projectData = { project: activeProject, tracks, mediaItems };
       const { projectData: normalizedProjectData, normalizedItems } =
@@ -305,6 +316,18 @@ export function EditorHeader() {
 
       {/* Right Section: Actions */}
       <div className="flex items-center gap-2">
+        {tracks.length > 0 && (
+          <div
+            className={cn(
+              "hidden sm:flex h-9 items-center rounded-xl border px-3 text-[10px] font-black uppercase tracking-widest",
+              autoCaptionCount > 0
+                ? "border-primary/30 bg-primary/10 text-primary"
+                : "border-amber-500/30 bg-amber-500/10 text-amber-500"
+            )}
+          >
+            {captionReadinessText}
+          </div>
+        )}
         {/* Desktop-only Canvas Settings */}
         <div className="hidden lg:flex items-center gap-2 mr-2">
           <DropdownMenu>
@@ -362,7 +385,9 @@ export function EditorHeader() {
                 <Zap className="h-4 w-4 mr-3 text-primary" />
                 <div className="flex flex-col">
                   <span className="font-bold text-sm">Deploy</span>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Launch & mint your video</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                    Launch & mint your video · {captionReadinessText}
+                  </span>
                 </div>
               </DropdownMenuItem>
             )}
