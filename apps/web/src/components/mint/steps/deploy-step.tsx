@@ -64,6 +64,29 @@ function isRetryableCoinCalldataError(message: string) {
   ].some((fragment) => normalized.includes(fragment));
 }
 
+async function assertBackendHealthy() {
+  try {
+    const response = await fetch(`${BACKEND_EXPORT_URL}/api/health`, {
+      method: "GET",
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        // Connectivity is fine; backend health endpoint is rate-limited.
+        return;
+      }
+      throw new Error(`Backend health check failed (${response.status})`);
+    }
+  } catch (error) {
+    const reason =
+      error instanceof Error ? error.message : "Unable to reach backend health endpoint";
+    throw new Error(
+      `Backend is currently unavailable. Please retry in a moment. (${reason})`
+    );
+  }
+}
+
 async function requestCoinCalldata(contractCallParams: any) {
   let lastError: Error | null = null;
 
@@ -183,6 +206,7 @@ export function DeployStep({ data, updateData }: DeployStepProps) {
       setStatus("pending");
 
       try {
+        await assertBackendHealthy();
         const responseData = await requestCoinCalldata(contractCallParams);
         const { calls, predictedCoinAddress } = responseData;
 
