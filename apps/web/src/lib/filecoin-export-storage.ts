@@ -358,7 +358,7 @@ export class FilecoinExportStorage {
 
     return {
       canStore: true,
-      provider: fileSizeBytes > EIGHT_MB ? 'filecoin' : 'grove'
+      provider: fileSizeBytes > ONE_HUNDRED_TWENTY_FIVE_MB ? 'filecoin' : 'grove'
     };
   }
 }
