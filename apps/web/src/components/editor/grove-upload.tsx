@@ -24,8 +24,7 @@ export function GroveUpload({
     "image/*": [".jpg", ".jpeg", ".png", ".gif", ".webp"],
   },
   maxFiles = 1,
-  maxSize = 8 * 1024 * 1024, // 8MB Grove limit
-}: GroveUploadProps) {
+  maxSize = 125 * 1024 * 1024, // 125MB Grove limit}: GroveUploadProps) {
   const [uploading, setUploading] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);

@@ -61,9 +61,9 @@ export class FilecoinExportStorage {
    * - Files <= 8MB: Use Grove (faster, no wallet needed)
    */
   async initializeForSize(fileSizeBytes: number): Promise<'filecoin' | 'grove'> {
-    const EIGHT_MB = 8 * 1024 * 1024;
+    const ONE_HUNDRED_TWENTY_FIVE_MB = 125 * 1024 * 1024;
     
-    if (fileSizeBytes > EIGHT_MB) {
+    if (fileSizeBytes > ONE_HUNDRED_TWENTY_FIVE_MB) {
       // Large files need Filecoin
       await this.initializeFilecoin();
       return 'filecoin';
@@ -309,7 +309,7 @@ export class FilecoinExportStorage {
     maxSize: number;
     estimatedCost: string;
   } {
-    const EIGHT_MB = 8 * 1024 * 1024;
+    const ONE_HUNDRED_TWENTY_FIVE_MB = 125 * 1024 * 1024;
     const TWO_HUNDRED_FIFTY_FOUR_MB = 254 * 1024 * 1024;
 
     if (fileSizeBytes > TWO_HUNDRED_FIFTY_FOUR_MB) {
@@ -321,10 +321,10 @@ export class FilecoinExportStorage {
       };
     }
 
-    if (fileSizeBytes > EIGHT_MB) {
+    if (fileSizeBytes > ONE_HUNDRED_TWENTY_FIVE_MB) {
       return {
         provider: 'filecoin',
-        reason: 'File exceeds Grove limit (8MB). Filecoin supports up to 254MB.',
+        reason: 'File exceeds Grove limit (125MB). Filecoin supports up to 254MB.',
         maxSize: TWO_HUNDRED_FIFTY_FOUR_MB,
         estimatedCost: 'Uses FilCDN allowance'
       };
@@ -333,7 +333,7 @@ export class FilecoinExportStorage {
     return {
       provider: 'grove',
       reason: 'Small file - Grove provides fast, free storage via IPFS.',
-      maxSize: EIGHT_MB,
+      maxSize: ONE_HUNDRED_TWENTY_FIVE_MB,
       estimatedCost: 'Free'
     };
   }
@@ -347,7 +347,7 @@ export class FilecoinExportStorage {
     reason?: string;
   } {
     const TWO_HUNDRED_FIFTY_FOUR_MB = 254 * 1024 * 1024;
-    const EIGHT_MB = 8 * 1024 * 1024;
+    const ONE_HUNDRED_TWENTY_FIVE_MB = 125 * 1024 * 1024;
 
     if (fileSizeBytes > TWO_HUNDRED_FIFTY_FOUR_MB) {
       return {

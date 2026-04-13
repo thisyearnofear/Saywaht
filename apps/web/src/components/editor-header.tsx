@@ -161,8 +161,7 @@ export function EditorHeader() {
         }))
         .sort((a, b) => a.startTime - b.startTime);
 
-      const shouldArchiveToFilecoin = blob.size > 8 * 1024 * 1024 || captions.length > 0;
-
+      const shouldArchiveToFilecoin = blob.size > 125 * 1024 * 1024 || captions.length > 0;
       if (shouldArchiveToFilecoin) {
         toast.loading("Archiving to Filecoin...", { id: "filecoin-archive" });
         try {

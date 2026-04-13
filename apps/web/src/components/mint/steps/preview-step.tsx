@@ -113,11 +113,11 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
         if (status?.configured) {
           setFilecoinMaxSizeMB(254);
         } else {
-          setFilecoinMaxSizeMB(8);
+          setFilecoinMaxSizeMB(125);
         }
       } catch {
         if (!cancelled) {
-          setFilecoinMaxSizeMB(8);
+          setFilecoinMaxSizeMB(125);
         }
       }
     };
@@ -555,18 +555,16 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 flex items-start gap-3">
                   <Info className="h-4 w-4 text-blue-500 mt-0.5" />
                   <p className="text-[11px] text-blue-500/80 leading-relaxed font-medium">
-                    Smart optimization applied: Video quality adjusted to fit storage constraints while maintaining clarity.
-                  </p>
-                </div>
+                      Smart optimization applied: Video quality adjusted to fit 125MB storage limit while maintaining clarity.
+                    </p>                </div>
              )}
 
              {videoUploadError && (
                 <div className="bg-orange-500/10 border border-orange-500/20 rounded-2xl p-4 flex items-start gap-3">
                   <AlertCircle className="h-4 w-4 text-orange-500 mt-0.5" />
                   <p className="text-[11px] text-orange-500/80 leading-relaxed font-medium">
-                    {videoUploadError}. You can still deploy with a thumbnail only.
-                  </p>
-                </div>
+                    Video too long or complex for 125MB limit. Consider trimming content or using alternative storage. You can still deploy with a thumbnail only.
+                  </p>                </div>
              )}
           </div>
         </div>
