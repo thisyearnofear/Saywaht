@@ -2,26 +2,18 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { useProjectStore } from "@/stores/project-store";
 import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import { useState } from "react";
-import { Sparkles, Video, Plus, Clock, Play } from "@/lib/icons";
+import { Sparkles, Video, Plus } from "@/lib/icons";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { RecentProjects, RecentProjectsMobile } from "./recent-projects";
-import { formatRelativeTime } from "@/hooks/use-celebrations";
 
 // Templates section removed - users can click "Explore All Packs" to visit templates page
 
 export function WelcomeScreen() {
   const isMobile = useIsMobile();
-  const { createNewProject, recentProjects, addToRecentProjects, removeFromRecentProjects } = useProjectStore();
+  const { createNewProject } = useProjectStore();
   const { navigateToTemplate, navigateToTemplates } = useSmartNavigation();
   const [projectName, setProjectName] = useState("");
   const [showNameInput, setShowNameInput] = useState(false);
@@ -148,31 +140,15 @@ export function WelcomeScreen() {
               </div>
             </div>
 
-            {/* Recent Projects Section */}
-            {recentProjects.length > 0 && (
-              <div className="mt-8">
-                {isMobile ? (
-                  <RecentProjectsMobile
-                    projects={recentProjects}
-                    onSelectProject={(project) => {
-                      // For now, just create a new project with that name
-                      // In the future, we'd load the actual project
-                      createNewProject(project.name);
-                    }}
-                    onDeleteProject={removeFromRecentProjects}
-                  />
-                ) : (
-                  <RecentProjects
-                    projects={recentProjects}
-                    onSelectProject={(project) => {
-                      createNewProject(project.name);
-                    }}
-                    onDeleteProject={removeFromRecentProjects}
-                    onCreateNew={() => setShowNameInput(true)}
-                  />
-                )}
-              </div>
-            )}
+            {/* Recent Projects — intentionally omitted.
+                The old section listed recent project names but "restoring" one
+                just called createNewProject(name), silently blanking the user's
+                work (no media/timeline was actually restored — the media store
+                strips blob-backed items on persist, and RecentProject has no
+                snapshot or export URL). PG rule: no UI that lies. Restore this
+                section only when true per-project restoration exists (store an
+                export URL in RecentProject and hydrate via the dataUrl pattern
+                already used in mint-wizard.tsx:191-226). */}
 
             {/* Bottom Feature Bar */}
             <div className="bg-white/5 px-8 py-5">

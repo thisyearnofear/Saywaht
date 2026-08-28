@@ -55,7 +55,7 @@ import { ExportMethod } from "@/lib/canvas-export-utils";
 import { storageManager } from "@/lib/storage-manager";
 import { useFarcasterContext } from "@/farcaster/components/farcaster-provider";
 import { useFarcasterShare } from "@/farcaster/hooks/use-farcaster-share";
-import { saveFilecoinArchive } from "@/lib/filecoin-archives";
+import { saveFilecoinArchive, computeContentSignature } from "@/lib/filecoin-archives";
 import { FilecoinArchivesDialog } from "@/components/editor/filecoin-archives-dialog";
 import { useSessionRecovery } from "@/hooks/use-session-recovery";
 import { formatRelativeTime } from "@/hooks/use-celebrations";
@@ -181,6 +181,7 @@ export function EditorHeader() {
             projectId: activeProject.id,
             projectName: activeProject.name,
             createdAt: new Date().toISOString(),
+            contentSignature: computeContentSignature(tracks, mediaItems, getFormat()),
             ...archiveResult.retrieval,
           });
 

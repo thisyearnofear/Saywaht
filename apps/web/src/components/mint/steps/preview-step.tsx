@@ -34,7 +34,7 @@ import { storageManager, StorageErrorType } from "@/lib/storage-manager";
 import { Progress } from "@/components/ui/progress";
 import { useTextStore } from "@/stores/text-store";
 import { cn } from "@/lib/utils";
-import { loadFilecoinArchives } from "@/lib/filecoin-archives";
+import { loadFilecoinArchives, computeContentSignature, saveFilecoinArchive } from "@/lib/filecoin-archives";
 
 interface PreviewStepProps {
   data: MintWizardData;
@@ -144,12 +144,17 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
       setVideoUploadError(null);
 
       try {
-        // ENHANCEMENT: Check for existing Filecoin archive to avoid duplicate work
-        // If the user just exported in the editor, we can reuse that asset
+        // Reuse a cached export ONLY when the timeline content hasn't changed.
+        // Previously this checked a 30-minute clock — which could reuse a stale
+        // export (content changed but <30min passed) or needlessly re-export
+        // (content unchanged but >30min passed). The content signature is a
+        // hash of tracks/clips/media/format, so a match means the cached
+        // export is still valid regardless of elapsed time.
         const archives = loadFilecoinArchives();
-        const recentArchive = archives.find(a => 
-          a.projectId === activeProject.id && 
-          (new Date().getTime() - new Date(a.createdAt).getTime() < 1000 * 60 * 30) // Within 30 mins
+        const currentSignature = computeContentSignature(tracks, mediaItems, data.videoFormat);
+        const recentArchive = archives.find(a =>
+          a.projectId === activeProject.id &&
+          a.contentSignature === currentSignature
         );
 
         if (recentArchive) {
@@ -265,6 +270,21 @@ export function PreviewStep({ data, updateData }: PreviewStepProps) {
           setArchiveManifestUrl(archive.retrieval.manifestUrl);
           setArchiveCaptionsUrl(archive.retrieval.transcriptUrl || null);
           setVideoUploadStatus("success");
+
+          // Persist the archive so the next mint attempt (or a re-entry into
+          // the wizard) can reuse it via content-signature matching instead of
+          // re-exporting the whole video. Previously this only happened when
+          // the user exported from the editor (editor-header.tsx); a user who
+          // went straight to mint never cached, so they always re-exported.
+          if (activeProject?.id) {
+            saveFilecoinArchive({
+              projectId: activeProject.id,
+              projectName: activeProject?.name || data.coinName || "untitled",
+              createdAt: new Date().toISOString(),
+              contentSignature: computeContentSignature(tracks, mediaItems, data.videoFormat),
+              ...archive.retrieval,
+            });
+          }
 
           await generateMetadataWithVideo(
             archive.retrieval.videoUrl,
