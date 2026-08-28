@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
+import { useAccount } from "wagmi";
+import { getProfile } from "@zoralabs/coins-sdk";
 import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +30,7 @@ import { CoinDetailsStep } from "./steps/coin-details-step";
 import { PreviewStep } from "./steps/preview-step";
 import { DeployStep } from "./steps/deploy-step";
 import { triggerCelebration } from "@/lib/confetti";
+import { PLATFORM_URL, COIN_PAGE_URL } from "@/lib/platform-url";
 import type { VideoFormat } from "@/lib/video-utils";
 import { assertBackendHealthy } from "@/lib/backend-health";
 import { toast } from "sonner";
@@ -156,6 +159,32 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
       cancelled = true;
     };
   }, [isClient]);
+
+  // Currency auto-detection (no UI step — the 3-step flow keeps decisions the
+  // user actually has; this one the app makes for them, as the retired 6-step
+  // flow's Currency step did). If the user has a Zora Creator Coin, back the
+  // content coin with it (unified creator economy, matching the agent layer's
+  // CREATOR_COIN_OR_ZORA default); otherwise ZORA. Best-effort: a profile
+  // fetch failure just leaves the ZORA default.
+  const { address: walletAddress } = useAccount();
+  useEffect(() => {
+    if (!isClient || !walletAddress) return;
+    let cancelled = false;
+    getProfile({ identifier: walletAddress })
+      .then((response: any) => {
+        if (cancelled) return;
+        const profile: any = response?.data?.profile;
+        if (profile?.creatorCoin?.address) {
+          setWizardData((prev) => ({ ...prev, currency: "CREATOR_COIN" }));
+        }
+      })
+      .catch(() => {
+        // Default (ZORA) stands.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isClient, walletAddress]);
 
   useEffect(() => {
     if (!isClient || !dataUrl) {
@@ -391,8 +420,8 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
                 `I just launched my new commentary coin "${wizardData.deployedCoin?.name || ""}" on SayWaht! 🎬🪙`
               )}&embeds[]=${encodeURIComponent(
                 wizardData.deployedCoin?.address
-                  ? `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.app"}/coin/${wizardData.deployedCoin.address}`
-                  : "https://saywaht.app"
+                  ? COIN_PAGE_URL(wizardData.deployedCoin.address)
+                  : PLATFORM_URL
               )}`}
               target="_blank"
               rel="noopener noreferrer"
