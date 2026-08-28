@@ -24,19 +24,15 @@ import {
   Loader2,
 } from "@/lib/icons";
 import { useWalletAuth, formatWalletAddress } from "@saywaht/auth";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useConnectWithReturn } from "@/hooks/use-connect-with-return";
 import { useTrading } from "@/hooks/use-trading";
 import { type VideoCoin } from "@/lib/zora-coins";
+import { COIN_PAGE_URL as CANONICAL_COIN_URL } from "@/lib/platform-url";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 // Base chain id for the Zora "View on Zora" link.
 const ZORA_COIN_URL = (address: string) => `https://zora.co/coin/base:${address}`;
-
-// Canonical share URL — the *page itself*, not Zora. This is the rule everything
-// follows from: every coin has exactly one canonical, public, server-rendered URL.
-const CANONICAL_COIN_URL = (address: string) =>
-  `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.app"}/coin/${address}`;
 
 interface CoinPageClientProps {
   coin: VideoCoin;
@@ -44,7 +40,7 @@ interface CoinPageClientProps {
 
 export function CoinPageClient({ coin }: CoinPageClientProps) {
   const { isAuthenticated } = useWalletAuth();
-  const { openConnectModal } = useConnectModal();
+  const { ensureConnected } = useConnectWithReturn();
   const { buyCoin, sellCoin, isLoading: tradingLoading } = useTrading();
 
   const [isBuyOpen, setIsBuyOpen] = useState(false);
@@ -68,17 +64,27 @@ export function CoinPageClient({ coin }: CoinPageClientProps) {
   // The wallet wall lives HERE, on click — never on page load. A visitor who
   // is not connected sees the full page; only the Buy/Sell intent triggers the
   // connect modal, then returns here (the page is the return destination).
+  // ensureConnected() opens the shared rainbowkit modal (same affordance the
+  // hero/editor walls use); the page itself never navigates away.
   const handleTradeClick = useCallback(
     (side: "buy" | "sell") => {
-      if (!isAuthenticated) {
-        openConnectModal?.();
-        return;
-      }
+      if (!ensureConnected()) return;
       if (side === "buy") setIsBuyOpen(true);
       else setIsSellOpen(true);
     },
-    [isAuthenticated, openConnectModal],
+    [ensureConnected],
   );
+
+  const handleCopyLink = useCallback(async () => {
+    const url = CANONICAL_COIN_URL(coin.address as string);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied");
+    } catch {
+      // Clipboard API needs a secure context; fall back to showing the URL.
+      toast.error("Could not copy", { description: url });
+    }
+  }, [coin.address]);
 
   const handleBuy = async () => {
     try {
