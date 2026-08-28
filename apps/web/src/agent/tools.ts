@@ -34,6 +34,11 @@ import type { AgentTool, ToolContext } from "./types";
 // must stay importable from server (route handler) contexts.
 const PLATFORM_ADDRESS = "0x55A5705453Ee82c742274154136Fce8149597058" as const;
 
+// Canonical base URL for human/agent-clickable coin links. Same re-declaration
+// rationale as PLATFORM_ADDRESS. Every coin gets exactly one public URL:
+// ${PLATFORM_URL}/coin/${address} — humans, shares, and agents all converge there.
+const PLATFORM_URL = process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.app";
+
 const address = z
   .string()
   .refine((v) => isAddress(v), { message: "invalid EVM address" }) as z.ZodType<`0x${string}`>;
@@ -214,7 +219,7 @@ const prepareCoinTool: AgentTool<
     currency?: "CREATOR_COIN_OR_ZORA" | "ZORA" | "ETH" | "CREATOR_COIN";
     startingMarketCap?: "LOW" | "HIGH";
   },
-  { calls: unknown[]; predictedCoinAddress: string; estCostWei: string }
+  { calls: unknown[]; predictedCoinAddress: string; estCostWei: string; url: string }
 > = {
   name: "prepare_coin",
   description:
@@ -263,6 +268,7 @@ const prepareCoinTool: AgentTool<
       calls,
       predictedCoinAddress,
       estCostWei: "0", // factory create needs gas only; no buy-on-create
+      url: `${PLATFORM_URL}/coin/${predictedCoinAddress}`,
     };
   },
 };
@@ -277,7 +283,7 @@ const createCoinTool: AgentTool<
     metadataUri: string;
     currency?: "CREATOR_COIN_OR_ZORA" | "ZORA" | "ETH" | "CREATOR_COIN";
   },
-  { requiresSignature: true; calls: unknown[]; predictedCoinAddress: string; instruction: string }
+  { requiresSignature: true; calls: unknown[]; predictedCoinAddress: string; url: string; instruction: string }
 > = {
   name: "create_coin",
   description:
@@ -327,6 +333,7 @@ const createCoinTool: AgentTool<
       requiresSignature: true as const,
       calls,
       predictedCoinAddress,
+      url: `${PLATFORM_URL}/coin/${predictedCoinAddress}`,
       instruction:
         "Sign these calls with the creator wallet (wagmi sendTransaction) or submit via the agent smart wallet. The deployment emits CoinCreatedV4; read the coin address from logs.",
     };

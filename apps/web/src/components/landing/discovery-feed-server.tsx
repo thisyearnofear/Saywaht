@@ -109,7 +109,7 @@ export function DiscoveryFeedServer({ initialCoins }: DiscoveryFeedServerProps) 
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {coins.slice(0, 6).map((coin) => (
-            <Link key={coin.address} href={`/trade?coin=${coin.address}`}>
+            <Link key={coin.address} href={`/coin/${coin.address}`}>
               <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
                 <div className="aspect-video relative bg-muted">
                   {coin.thumbnail ? (

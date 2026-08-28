@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -163,9 +164,11 @@ export function CoinCard({ coin, onBuy, onSell, onPlay }: CoinCardProps) {
             {/* Info Section */}
             <div className="p-5 space-y-4">
               <div className="space-y-1">
-                <h3 className="font-black text-lg tracking-tight truncate group-hover:text-primary transition-colors">
-                  {coin.name}
-                </h3>
+                <Link href={`/coin/${coin.address}`} className="block group-hover:text-primary transition-colors">
+                  <h3 className="font-black text-lg tracking-tight truncate">
+                    {coin.name}
+                  </h3>
+                </Link>
                 
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[8px] font-black">
