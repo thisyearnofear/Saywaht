@@ -9,6 +9,8 @@ import { MobileOnboardingOverlay } from "@/components/editor/mobile-onboarding-o
 import { MobileTemplateBrowser } from "@/components/templates/mobile-template-browser";
 import { TradingFeed } from "@/components/trading/trading-feed";
 import { MintWizard } from "@/components/mint/mint-wizard";
+import { useProjectStore } from "@/stores/project-store";
+import { useTimelineStore } from "@/stores/timeline-store";
 import { useMobileOnboarding } from "@/components/editor/mobile-onboarding-overlay";
 import { FarcasterClientLogic } from "@/farcaster/components/farcaster-client-logic";
 import { CastContextPanel } from "./cast-context-panel";
@@ -33,6 +35,8 @@ export function FarcasterMobileEditorLayout({
   const { navigateToTemplates } = useSmartNavigation();
   const { showOnboarding, completeOnboarding, skipOnboarding } =
     useMobileOnboarding();
+  const { activeProject } = useProjectStore();
+  const { tracks } = useTimelineStore();
   const [showFarcasterOnboarding, setShowFarcasterOnboarding] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -299,8 +303,66 @@ export function FarcasterMobileEditorLayout({
   /**
    * Render the minting page — reuses MintWizard which handles the full
    * mint flow (Details → Preview → Deploy on mobile, 6 steps on desktop).
+   *
+   * Hydration: the wizard reads from the project/timeline/media stores
+   * directly, so if the user was just editing in the Mini App, the stores
+   * are already populated and the wizard has content to mint. If there's
+   * no active project with tracks, we redirect to templates instead of
+   * showing an empty wizard (the old behavior: "Create Coin wizard renders
+   * with no project hydrated").
    */
   const renderMintingPage = () => {
+    // No active project or no timeline content → don't show an empty wizard.
+    if (!activeProject || tracks.length === 0) {
+      return (
+        <div className={cn(
+          "flex-1 min-h-0 overflow-y-auto scrollable flex flex-col transition-opacity duration-500",
+          "opacity-100 visible"
+        )}>
+          <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFrameState({ step: 'welcome' })}
+              className="text-white"
+            >
+              ← Back
+            </Button>
+            <h2 className="text-lg font-black uppercase tracking-widest">Create Coin</h2>
+            <div className="w-16" />
+          </div>
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
+            <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center">
+              <span className="text-4xl">🎬</span>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold">No video to mint</h3>
+              <p className="text-muted-foreground text-sm max-w-xs">
+                Create or edit a video first, then come back to mint it as a coin.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 w-full max-w-xs">
+              <Button
+                size="lg"
+                className="w-full h-14 font-black uppercase tracking-widest rounded-2xl"
+                onClick={() => handleMiniAppAction('start_recording')}
+              >
+                Record Commentary
+              </Button>
+              <Button
+                size="lg"
+                variant="secondary"
+                className="w-full h-14 font-black uppercase tracking-widest rounded-2xl"
+                onClick={() => handleMiniAppAction('templates')}
+              >
+                Browse Templates
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className={cn(
         "flex-1 min-h-0 overflow-y-auto scrollable flex flex-col transition-opacity duration-500",
@@ -316,10 +378,10 @@ export function FarcasterMobileEditorLayout({
             ← Back
           </Button>
           <h2 className="text-lg font-black uppercase tracking-widest">Create Coin</h2>
-          <div className="w-16" />{/* Spacer for centering */}
+          <div className="w-16" />
         </div>
         <div className="flex-1 overflow-y-auto">
-          <MintWizard />
+          <MintWizard projectId={activeProject.id} />
         </div>
       </div>
     );

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import { useSmartNavigation } from "@/hooks/use-smart-navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,27 +13,25 @@ import {
   ChevronRight,
   Check,
   Zap,
-  Sparkles,
   Layers,
-  Coins,
   Share2,
-  Video,
   ArrowRight,
   ExternalLink,
+  AlertCircle,
 } from "@/lib/icons";
 
-// Step components
-import { ThumbnailStep } from "./steps/thumbnail-step";
+// Step components — only the 3 unified steps are imported.
+// FormatStep, ThumbnailStep, CurrencySelectionStep are no longer rendered
+// (their logic is auto-detected or folded into Details/Preview). They remain
+// as files for potential future use but are not in the wizard's import graph.
 import { CoinDetailsStep } from "./steps/coin-details-step";
-import { CurrencySelectionStep } from "./steps/currency-selection-step";
-import { FormatStep } from "./steps/format-step";
 import { PreviewStep } from "./steps/preview-step";
 import { DeployStep } from "./steps/deploy-step";
 import { triggerCelebration } from "@/lib/confetti";
 import type { VideoFormat } from "@/lib/video-utils";
+import { assertBackendHealthy } from "@/lib/backend-health";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useCanvasStore } from "@/stores/canvas-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useTimelineStore } from "@/stores/timeline-store";
@@ -63,46 +62,11 @@ export interface MintWizardData {
   deployedCoin: { name: string; symbol: string; address?: string } | null;
 }
 
-const STEPS = [
-  {
-    id: "format",
-    title: "Video Format",
-    description: "Choose your video aspect ratio",
-    icon: Video,
-  },
-  {
-    id: "thumbnail",
-    title: "Thumbnail",
-    description: "Create your coin's artwork",
-    icon: Sparkles,
-  },
-  {
-    id: "details",
-    title: "Coin Details",
-    description: "Name your new creation",
-    icon: Layers,
-  },
-  {
-    id: "currency",
-    title: "Currency",
-    description: "Choose backing asset",
-    icon: Coins,
-  },
-  {
-    id: "preview",
-    title: "Review",
-    description: "Check your configuration",
-    icon: Zap,
-  },
-  {
-    id: "deploy",
-    title: "Deploy",
-    description: "Launch to blockchain",
-    icon: Zap,
-  },
-];
-
-// Mobile steps: Details → Preview → Deploy (3 steps)
+// The old 6-step desktop flow (Format → Thumbnail → Details → Currency →
+// Preview → Deploy) is retired. Both desktop and mobile now use the unified
+// 3-step flow below. The extra steps made the user decide things the app
+// already decides for them (format = auto-detected from canvas, currency =
+// default ZORA, thumbnail = set in Details/Preview).
 const MOBILE_STEPS = [
   { id: "details", title: "Coin Details", description: "Name your new creation", icon: Layers },
   { id: "preview", title: "Review", description: "Check your configuration", icon: Zap },
@@ -115,7 +79,6 @@ interface MintWizardProps {
 }
 
 export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
-  const isMobile = useIsMobile();
   const { getFormat: getVideoFormat } = useCanvasStore();
   const { updateProject } = useProjectStore();
   const { setTracks } = useTimelineStore();
@@ -124,6 +87,7 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [backendWarning, setBackendWarning] = useState<string | null>(null);
   const [wizardData, setWizardData] = useState<MintWizardData>({
     thumbnail: null,
     thumbnailPrompt: "",
@@ -138,29 +102,13 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
     deployedCoin: null,
   });
 
-  const activeSteps = isMobile ? MOBILE_STEPS : STEPS;
-  const prevIsMobileRef = useRef(isMobile);
-
-  // Remap step index when switching between mobile/desktop flows
-  useEffect(() => {
-    if (prevIsMobileRef.current === isMobile) return;
-
-    const previousSteps = prevIsMobileRef.current ? MOBILE_STEPS : STEPS;
-    const nextSteps = isMobile ? MOBILE_STEPS : STEPS;
-    const previousId = previousSteps[currentStep]?.id;
-    const nextIndex = previousId
-      ? nextSteps.findIndex((step) => step.id === previousId)
-      : -1;
-
-    if (nextIndex >= 0 && nextIndex !== currentStep) {
-      setCurrentStep(nextIndex);
-    } else if (nextIndex === -1 && nextSteps.length > 0) {
-      // Default to first step if the previous step doesn't exist in the new flow
-      setCurrentStep(0);
-    }
-
-    prevIsMobileRef.current = isMobile;
-  }, [isMobile, currentStep]);
+  // Unified 3-step flow for both desktop and mobile.
+  // Previously desktop had 6 steps (Format → Thumbnail → Details → Currency →
+  // Preview → Deploy); mobile had 3 (Details → Preview → Deploy). The extra
+  // steps asked the user to make decisions they don't really have: format is
+  // auto-detected from the canvas, currency defaults to ZORA, and the thumbnail
+  // can be set in Details/Preview. The 3-step flow is the only flow now.
+  const activeSteps = MOBILE_STEPS;
 
   // Clamp out-of-range indexes (e.g. during resize)
   useEffect(() => {
@@ -180,6 +128,34 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Fail-fast: check backend health the moment the wizard mounts, not at the
+  // final deploy step. Previously assertBackendHealthy ran inside deployNow()
+  // (deploy-step.tsx) — after the user had already invested in thumbnail,
+  // format, preview, export, and IPFS upload. If the backend was down, they
+  // discovered it only after all that work. Now they know at step 1.
+  // (The deploy step still calls assertBackendHealthy as a final gate — the
+  // backend could have gone down between step 1 and deploy.)
+  useEffect(() => {
+    if (!isClient) return;
+    let cancelled = false;
+    assertBackendHealthy()
+      .then(() => {
+        if (!cancelled) setBackendWarning(null);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          const message = error instanceof Error ? error.message : "Backend unavailable";
+          setBackendWarning(message);
+          toast.warning("Backend check", {
+            description: "The export service is slow or unavailable. You can continue configuring, but deployment may fail.",
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isClient]);
 
   useEffect(() => {
     if (!isClient || !dataUrl) {
@@ -276,42 +252,22 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
     }
   }, [wizardData.deployedCoin]);
 
-  // Auto-detect format from canvas on mobile
+  // Auto-detect format from canvas (runs on both mobile and desktop now;
+  // previously only ran on mobile since desktop had a Format step).
   useEffect(() => {
-    if (isMobile && isClient) {
+    if (isClient) {
       const detectedFormat = getVideoFormat();
-      updateWizardData({ videoFormat: detectedFormat, currency: "ETH" });
+      updateWizardData({ videoFormat: detectedFormat });
     }
-  }, [isMobile, isClient, getVideoFormat, updateWizardData]);
+  }, [isClient, getVideoFormat, updateWizardData]);
 
   const canProceedToNext = (stepIndex: number = currentStep) => {
-    if (isMobile) {
-      switch (stepIndex) {
-        case 0: // Details step
-          return wizardData.coinName.trim() !== "" && wizardData.coinSymbol.trim() !== "";
-        case 1: // Preview step
-          return wizardData.metadataUri !== null;
-        case 2: // Deploy step
-          return wizardData.deployedCoin !== null;
-        default:
-          return false;
-      }
-    }
     switch (stepIndex) {
-      case 0: // Format step
-        return wizardData.videoFormat !== undefined;
-      case 1: // Thumbnail step
-        return wizardData.thumbnail !== null;
-      case 2: // Details step
-        return (
-          wizardData.coinName.trim() !== "" &&
-          wizardData.coinSymbol.trim() !== ""
-        );
-      case 3: // Currency selection step
-        return wizardData.currency !== undefined;
-      case 4: // Preview step
+      case 0: // Details step
+        return wizardData.coinName.trim() !== "" && wizardData.coinSymbol.trim() !== "";
+      case 1: // Preview step
         return wizardData.metadataUri !== null;
-      case 5: // Deploy step
+      case 2: // Deploy step
         return wizardData.deployedCoin !== null;
       default:
         return false;
@@ -338,34 +294,12 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
     activeSteps.length > 0 && safeStepIndex === activeSteps.length - 1;
 
   const renderStep = () => {
-    if (isMobile) {
-      switch (safeStepIndex) {
-        case 0:
-          return <CoinDetailsStep data={wizardData} updateData={updateWizardData} />;
-        case 1:
-          return <PreviewStep data={wizardData} updateData={updateWizardData} />;
-        case 2:
-          return <DeployStep data={wizardData} updateData={updateWizardData} />;
-        default:
-          return null;
-      }
-    }
     switch (safeStepIndex) {
       case 0:
-        return <FormatStep data={wizardData} updateData={updateWizardData} />;
+        return <CoinDetailsStep data={wizardData} updateData={updateWizardData} />;
       case 1:
-        return (
-          <ThumbnailStep data={wizardData} updateData={updateWizardData} />
-        );
-      case 2:
-        return (
-          <CoinDetailsStep data={wizardData} updateData={updateWizardData} />
-        );
-      case 3:
-        return <CurrencySelectionStep data={wizardData} updateData={updateWizardData} />;
-      case 4:
         return <PreviewStep data={wizardData} updateData={updateWizardData} />;
-      case 5:
+      case 2:
         return <DeployStep data={wizardData} updateData={updateWizardData} />;
       default:
         return null;
@@ -428,6 +362,18 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
         </div>
 
         <div className="flex flex-col gap-3 pt-4">
+          {/* Primary CTA: the canonical coin page. Closes the create→own loop.
+              Uses next/link (no full-page reload) — the old <a href> reloads
+              are gone. */}
+          {wizardData.deployedCoin?.address && (
+            <Button asChild size="lg" className="w-full rounded-2xl h-14 font-bold shadow-lg shadow-primary/20 btn-hover">
+              <Link href={`/coin/${wizardData.deployedCoin.address}`}>
+                <ArrowRight className="mr-2 h-5 w-5" />
+                See your coin
+              </Link>
+            </Button>
+          )}
+
           <Button asChild size="lg" className="w-full rounded-2xl h-14 font-bold shadow-lg shadow-primary/20 btn-hover">
             <a
               href={wizardData.deployedCoin?.address ? `https://zora.co/coin/base:${wizardData.deployedCoin.address}` : "/trade"}
@@ -438,14 +384,14 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
               View on Zora
             </a>
           </Button>
-          
+
           <Button asChild variant="secondary" size="lg" className="w-full rounded-2xl h-14 font-bold">
             <a
               href={`https://warpcast.com/~/compose?text=${encodeURIComponent(
                 `I just launched my new commentary coin "${wizardData.deployedCoin?.name || ""}" on SayWaht! 🎬🪙`
               )}&embeds[]=${encodeURIComponent(
                 wizardData.deployedCoin?.address
-                  ? `https://zora.co/coin/base:${wizardData.deployedCoin.address}`
+                  ? `${process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.app"}/coin/${wizardData.deployedCoin.address}`
                   : "https://saywaht.app"
               )}`}
               target="_blank"
@@ -455,13 +401,13 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
               Share on Farcaster
             </a>
           </Button>
-          
+
           <div className="flex gap-3 mt-2">
             <Button asChild variant="ghost" className="flex-1 rounded-xl">
-              <a href="/templates">Create Another</a>
+              <Link href="/templates">Create Another</Link>
             </Button>
             <Button asChild variant="ghost" className="flex-1 rounded-xl">
-              <a href="/">Browse Feed</a>
+              <Link href="/">Browse Feed</Link>
             </Button>
           </div>
         </div>
@@ -517,6 +463,21 @@ export function MintWizard({ projectId, dataUrl }: MintWizardProps) {
           </div>
         </div>
       </div>
+
+      {/* Backend health warning — fail-fast. Shown at step 1 if the export
+          backend is unreachable, so the user knows before investing in
+          thumbnail/format/preview/export. */}
+      {backendWarning && (
+        <div className="rounded-2xl border border-yellow-500/40 bg-yellow-500/10 p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-bold text-yellow-600 dark:text-yellow-500">Backend unavailable</p>
+            <p className="text-muted-foreground mt-1">
+              {backendWarning}. You can continue configuring your coin, but deployment may fail until the service recovers.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Step Content */}
       <AnimatePresence mode="wait">

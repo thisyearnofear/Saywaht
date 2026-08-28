@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Header } from "@/components/header";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,8 @@ import {
   ShieldCheck,
   Clock,
   Award,
-  Bot
+  Bot,
+  Coins
 } from "lucide-react";
 import { useMissionStore, AVAILABLE_MISSIONS } from "@/services/mission-service";
 import { getZoraCoins } from "@/lib/zora-coins";
@@ -47,6 +49,10 @@ export default function ProfilePage() {
     trendingTopic: "...",
     marketSentiment: "neutral"
   });
+  const [myCoins, setMyCoins] = useState<
+    Array<{ address: string; name: string; symbol: string; thumbnailUrl?: string; createdAt: string }>
+  >([]);
+  const [loadingCoins, setLoadingCoins] = useState(false);
 
   // Load external stats and sync progress
   useEffect(() => {
@@ -75,6 +81,25 @@ export default function ProfilePage() {
       }
     };
     fetchStats();
+
+    // 3. Fetch the user's deployed coins from the platform DB
+    //    (the same /api/coins writes that feed the discovery feed).
+    const fetchMyCoins = async () => {
+      setLoadingCoins(true);
+      try {
+        const { fetchPlatformCoins } = await import("@/lib/coins-cache");
+        const all = await fetchPlatformCoins();
+        const mine = all
+          .filter((c) => c.creatorAddress?.toLowerCase() === userAddress)
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setMyCoins(mine);
+      } catch (e) {
+        console.error("Failed to load user coins", e);
+      } finally {
+        setLoadingCoins(false);
+      }
+    };
+    fetchMyCoins();
   }, [address, fetchProgress, resetDailyMissions]);
 
   const handleShareProfile = () => {
@@ -147,8 +172,9 @@ export default function ProfilePage() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8">
+          <TabsList className="grid w-full grid-cols-5 mb-8">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="coins">My Coins</TabsTrigger>
             <TabsTrigger value="missions">Missions</TabsTrigger>
             <TabsTrigger value="agent" className="flex items-center gap-1">
               <Bot className="w-3 h-3" />
@@ -160,6 +186,63 @@ export default function ProfilePage() {
           {/* AGENT TAB */}
           <TabsContent value="agent" className="space-y-6">
             <AgentDashboard />
+          </TabsContent>
+
+          {/* MY COINS TAB — closes the create→own loop on the profile.
+              Fed by the existing /api/coins writes (same source as the
+              discovery feed). Each coin links to the canonical /coin/[address]
+              page where it can be viewed, shared, and traded. */}
+          <TabsContent value="coins" className="space-y-4">
+            {loadingCoins ? (
+              <div className="flex items-center justify-center py-12">
+                <p className="text-muted-foreground">Loading your coins...</p>
+              </div>
+            ) : myCoins.length === 0 ? (
+              <div className="text-center py-16 space-y-4">
+                <div className="w-16 h-16 mx-auto rounded-full bg-muted/50 flex items-center justify-center">
+                  <Coins className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">No coins yet</h3>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Create your first commentary coin to see it here.
+                  </p>
+                </div>
+                <Link href="/templates">
+                  <Button>Create a Coin</Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {myCoins.map((coin) => (
+                  <Link key={coin.address} href={`/coin/${coin.address}`}>
+                    <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+                          {coin.thumbnailUrl ? (
+                            <img
+                              src={coin.thumbnailUrl}
+                              alt={coin.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center h-full">
+                              <Coins className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-bold truncate">{coin.name}</h3>
+                          <p className="text-xs text-muted-foreground">
+                            ${coin.symbol} · {new Date(coin.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           {/* DASHBOARD TAB */}
