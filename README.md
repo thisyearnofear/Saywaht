@@ -39,10 +39,20 @@
 
 ### **🪙 Creator Economy**
 
-- **Video creator coins** - Each video becomes a tradeable coin using Zora Protocol
+- **Video creator coins** - Each video becomes a tradeable coin using Zora Protocol (`@zoralabs/coins-sdk` v0.8: quote-first trading, creator-coin-backed content coins, smart-wallet/ERC-4337 paths, platform referrals)
 - **Creator-supporter trading** - Fans can invest in creators through coin trading
 - **Automated rewards** - Creators earn from trading fees (50% of all trades)
 - **Uniswap V4 integration** - Seamless liquidity and price discovery
+
+### **🤖 Agentic Layer (agent-native surface)**
+
+- **MCP server** (`/api/mcp`) - Any MCP client (Claude, OpenAI Agents SDK, LangChain) can discover and drive Saywaht's nine tools: market insights, quotes, metadata generation, coin creation/trading, and more
+- **Agent discovery** (`/.well-known/agent-card.json`) - A2A-style machine-readable agent card; no scraping, no guesswork
+- **Mission runtime** (`/api/agent/run`) - JSON-RPC goal -> plan -> policy-gated tool calls -> audited outcome
+- **Policy engine** - Spend ceilings, tool allowlists, and a hard human-approval gate: agents propose, humans dispose; the agent never holds user keys
+- **x402 payments** - Premium agent endpoints accept per-call payment in ETH on Base (verified onchain; opt-in via `NEXT_PUBLIC_X402_ENABLED=1`)
+- **Agent dashboard** - Profile → Agent tab: run goals, approve pending actions, inspect the live activity log
+- See [docs/agentic-era.md](docs/agentic-era.md) for the full design rationale.
 
 ### **🤖 AI & Privacy**
 
@@ -165,7 +175,7 @@ Before you begin, ensure you have the following installed on your system:
     FILECOIN_WALLET_ADDRESS=0xYourWalletAddress
     FILECOIN_CALIBRATION_RPC=https://api.calibration.node.glif.io/rpc/v1
     NEXT_PUBLIC_FILECOIN_CALIBRATION_RPC=https://api.calibration.node.glif.io/rpc/v1
-    ZORA_API_KEY=your-zora-api-key
+    ZORA_API_KEY=<your-zora-api-key>
 
     # Storacha (Optional - for permanent caption archival)
     # Get started at: https://storacha.network/
@@ -176,9 +186,15 @@ Before you begin, ensure you have the following installed on your system:
     NEXT_PUBLIC_BACKEND_EXPORT_URL=http://157.180.36.156:3100
 
     # Optional Features
-    ELEVENLABS_API_KEY=your-elevenlabs-key
+    ELEVENLABS_API_KEY=<your-elevenlabs-key>
     UPSTASH_REDIS_REST_URL=your-redis-url
     UPSTASH_REDIS_REST_TOKEN=your-redis-token
+
+    # Agentic Layer (Optional)
+    # Arm the x402 paywall on premium agent endpoints (default: off)
+    NEXT_PUBLIC_X402_ENABLED=0
+    # Treasury for x402 agent payments (defaults to the platform referrer address)
+    NEXT_PUBLIC_AGENT_PAY_TO_ADDRESS=0xYourTreasuryAddress
 
     # Analytics (Optional)
     # DataBuddy - 100% Anonymized & Non-invasive analytics

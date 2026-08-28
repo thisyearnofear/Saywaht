@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAccount, useWalletClient, usePublicClient } from "wagmi";
-import { tradeCoin } from "@zoralabs/coins-sdk";
-import { parseEther } from "viem";
+import { createQuote, tradeCoin, type TradeParameters } from "@zoralabs/coins-sdk";
+import { formatEther, parseEther } from "viem";
 import { toast } from "sonner";
 import { handleError, withRetry, zoraCircuitBreaker } from "@/lib/error-handler";
 import { trackBugFix } from "@/lib/monitoring";
@@ -37,7 +37,7 @@ export function useTrading() {
       // PERFORMANT: Use circuit breaker for external trading service
       const tradingStartTime = performance.now();
       const receipt = await zoraCircuitBreaker.execute(async () => {
-        const tradeParameters = {
+        const tradeParameters: TradeParameters = {
           sell: { type: "eth" as const },
           buy: { 
             type: "erc20" as const, 
@@ -48,7 +48,21 @@ export function useTrading() {
           sender: address,
         };
 
-        toast.loading("Executing buy transaction...");
+        // AGENTIC-ERA PRIMITIVE: quote-first execution. createQuote (SDK 0.8)
+        // prices the exact path server-side before any signature, so the user
+        // sees real amountOut instead of discovering it in the wallet popup.
+        const quote = await withRetry(
+          () => createQuote(tradeParameters),
+          2,
+          1500,
+        ).catch(() => null);
+        if (quote?.success && quote.quote?.amountOut) {
+          toast.loading(
+            `Executing buy (~${Number(formatEther(BigInt(quote.quote.amountOut))).toFixed(4)} coins)...`,
+          );
+        } else {
+          toast.loading("Executing buy transaction...");
+        }
 
         // ENHANCEMENT: Retry with exponential backoff for network issues
         return withRetry(async () => {
@@ -105,7 +119,7 @@ export function useTrading() {
       // PERFORMANT: Use circuit breaker for external trading service
       const tradingStartTime = performance.now();
       const receipt = await zoraCircuitBreaker.execute(async () => {
-        const tradeParameters = {
+        const tradeParameters: TradeParameters = {
           sell: { 
             type: "erc20" as const, 
             address: coinAddress as `0x${string}`
@@ -116,7 +130,20 @@ export function useTrading() {
           sender: address,
         };
 
-        toast.loading("Executing sell transaction...");
+        // Quote-first: preview the exact ETH proceeds before prompting for a
+        // signature (SDK 0.8 createQuote; falls back silently if unavailable).
+        const quote = await withRetry(
+          () => createQuote(tradeParameters),
+          2,
+          1500,
+        ).catch(() => null);
+        if (quote?.success && quote.quote?.amountOut) {
+          toast.loading(
+            `Executing sell (~${Number(formatEther(BigInt(quote.quote.amountOut))).toFixed(5)} ETH)...`,
+          );
+        } else {
+          toast.loading("Executing sell transaction...");
+        }
 
         // ENHANCEMENT: Retry with exponential backoff for network issues
         return withRetry(async () => {

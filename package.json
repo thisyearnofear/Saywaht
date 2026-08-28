@@ -2,6 +2,7 @@
   "name": "opencut",
   "packageManager": "npm@10.0.0",
   "devDependencies": {
+    "@virtuals-protocol/acp-cli": "^1.0.12",
     "pino-pretty": "^13.0.0",
     "turbo": "^2.5.4"
   },
@@ -24,8 +25,8 @@
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.4.1",
     "@rainbow-me/rainbowkit": "^2.2.8",
-    "@tanstack/query-core": "^5.85.5",
-    "@zoralabs/coins-sdk": "^0.3.0",
+    "@tanstack/query-core": "5.85.5",
+    "@zoralabs/coins-sdk": "^0.8.0",
     "dotenv": "^17.0.0",
     "graceful-fs": "^4.2.11",
     "mp4box": "^1.4.2",

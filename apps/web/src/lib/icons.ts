@@ -115,6 +115,7 @@ import {
   Keyboard,
   Command,
   Film,
+  Bot,
 
   // Social & Engagement
   Heart,
@@ -136,7 +137,7 @@ export {
   Cloud, Zap, Globe, Wifi, WifiOff, ExternalLink, Coins, Wallet, TrendingUp,
   TrendingDown, DollarSign, BarChart3, Loader2, AlertCircle, CheckCircle, Shield, AlertTriangle, Users, User, Clock,
   Layers, LayoutGrid, HardDrive, Type, Palette, Snowflake, Heart, MessageCircle, Eye, Github, LogOut,
-  Settings, Tag, Info, AlignLeft, AlignCenter, AlignRight, Keyboard, Command, Film,
+  Settings, Tag, Info, AlignLeft, AlignCenter, AlignRight, Keyboard, Command, Film, Bot,
 };
 
 // Enhanced icon registry for better DX and type safety
@@ -240,6 +241,7 @@ export const ICONS = {
 
   // Social & External
   github: Github,
+  bot: Bot,
 } as const satisfies Record<string, LucideIcon>;
 
 // Type for icon names (enables autocomplete)

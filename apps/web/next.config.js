@@ -32,6 +32,17 @@ const nextConfig = {
     ],
   },
 
+  // A2A discovery: /.well-known/* can't be an app-router folder (dot dirs are
+  // ignored by Next), so canonical agent discovery URLs rewrite to API routes.
+  async rewrites() {
+    return [
+      {
+        source: "/.well-known/agent-card.json",
+        destination: "/api/agent-card.json",
+      },
+    ];
+  },
+
   // Security headers (COOP/COEP removed to support Coinbase Smart Wallet)
   async headers() {
     return [

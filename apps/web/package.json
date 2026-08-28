@@ -27,8 +27,8 @@
     "@saywaht/auth": "file:../../packages/auth",
     "@saywaht/db": "file:../../packages/db",
     "@storacha/client": "^1.0.0",
-    "@tanstack/react-query": "^5.90.10",
-    "@zoralabs/coins-sdk": "^0.3.3",
+    "@tanstack/react-query": "5.90.10",
+    "@zoralabs/coins-sdk": "^0.8.0",
     "bs58": "^6.0.0",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
@@ -44,7 +44,7 @@
     "lucide-react": "^0.468.0",
     "motion": "^12.18.1",
     "multiformats": "^13.4.2",
-    "next": "^16.1.1",
+    "next": "16.2.6",
     "next-themes": "^0.4.6",
     "onnxruntime-common": "^1.24.1",
     "pg": "^8.16.2",
@@ -68,7 +68,8 @@
     "wagmi": "^2.15.6",
     "wavesurfer.js": "^7.12.1",
     "zod": "^3.25.67",
-    "zustand": "^5.0.2"
+    "zustand": "^5.0.2",
+    "@modelcontextprotocol/sdk": "^1.12.0"
   },
   "devDependencies": {
     "@next/eslint-plugin-next": "^14.2.15",

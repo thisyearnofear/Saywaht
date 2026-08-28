@@ -15,6 +15,7 @@ import {
   ChevronUp,
   ChevronDown,
   Sparkles,
+  Bot,
 } from "@/lib/icons";
 import { toast } from "sonner";
 import { SUPPORTED_LANGUAGES } from "@/constants/transcription-constants";
@@ -95,6 +96,38 @@ export function TextPanel() {
     deleteCaptionGroup,
     updateCaptionGroup,
   });
+
+  const [isRefining, setIsRefining] = useState(false);
+
+  const handleRefineCaptions = async () => {
+    if (!captionElements.length) return;
+    setIsRefining(true);
+    try {
+      const segments = captionElements.map((el) => el.content);
+      const response = await fetch("/api/ai/refine-captions", {
+        method: "POST",
+        body: JSON.stringify({ segments }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) throw new Error("Refinement failed");
+
+      const { refined } = await response.json();
+
+      // Update each caption element with the refined text
+      captionElements.forEach((el, i) => {
+        if (refined[i]) {
+          updateTextElement(el.id, { content: refined[i] });
+        }
+      });
+
+      toast.success("Captions refined by Agent AI!");
+    } catch (e) {
+      toast.error("Failed to refine captions.");
+    } finally {
+      setIsRefining(false);
+    }
+  };
 
   // Manual text
   const handleAddText = (presetIndex?: number) => {
@@ -267,23 +300,39 @@ export function TextPanel() {
                 <span className="text-xs text-muted-foreground">
                   {captionElements.length} captions
                 </span>
-                <Button
-                  onClick={handleApplyCaptionStyle}
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                >
-                  Style All
-                </Button>
-                <Button
-                  onClick={handleClearCaptions}
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Clear
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    onClick={handleRefineCaptions}
+                    disabled={isRefining}
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-primary hover:text-primary/80"
+                  >
+                    {isRefining ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Bot className="h-3 w-3 mr-1" />
+                    )}
+                    Refine
+                  </Button>
+                  <Button
+                    onClick={handleApplyCaptionStyle}
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                  >
+                    Style All
+                  </Button>
+                  <Button
+                    onClick={handleClearCaptions}
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Clear
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1 max-h-32 overflow-y-auto">
                   {captionElements.map((caption) => (

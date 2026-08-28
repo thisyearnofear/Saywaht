@@ -20,12 +20,14 @@ import {
   ExternalLink,
   ShieldCheck,
   Clock,
-  Award
+  Award,
+  Bot
 } from "lucide-react";
 import { useMissionStore, AVAILABLE_MISSIONS } from "@/services/mission-service";
 import { getZoraCoins } from "@/lib/zora-coins";
 import { useFarcasterShare } from "@/farcaster/hooks/use-farcaster-share";
 import { toast } from "sonner";
+import { AgentDashboard } from "@/components/agent/agent-dashboard";
 
 export default function ProfilePage() {
   const { address } = useParams();
@@ -145,11 +147,20 @@ export default function ProfilePage() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
+          <TabsList className="grid w-full grid-cols-4 mb-8">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="missions">Missions</TabsTrigger>
+            <TabsTrigger value="agent" className="flex items-center gap-1">
+              <Bot className="w-3 h-3" />
+              Agent
+            </TabsTrigger>
             <TabsTrigger value="network">Network</TabsTrigger>
           </TabsList>
+
+          {/* AGENT TAB */}
+          <TabsContent value="agent" className="space-y-6">
+            <AgentDashboard />
+          </TabsContent>
 
           {/* DASHBOARD TAB */}
           <TabsContent value="dashboard" className="space-y-6">
