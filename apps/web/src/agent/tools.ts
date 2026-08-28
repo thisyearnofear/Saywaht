@@ -34,10 +34,12 @@ import type { AgentTool, ToolContext } from "./types";
 // must stay importable from server (route handler) contexts.
 const PLATFORM_ADDRESS = "0x55A5705453Ee82c742274154136Fce8149597058" as const;
 
-// Canonical base URL for human/agent-clickable coin links. Same re-declaration
-// rationale as PLATFORM_ADDRESS. Every coin gets exactly one public URL:
-// ${PLATFORM_URL}/coin/${address} — humans, shares, and agents all converge there.
-const PLATFORM_URL = process.env.NEXT_PUBLIC_APP_URL || "https://saywaht.app";
+// Canonical base URL for human/agent-clickable coin links, shared with the
+// coin page and mint wizard via a dependency-free module (importable from
+// server route contexts without pulling the client-only @/lib barrel).
+// Every coin gets exactly one public URL: ${PLATFORM_URL}/coin/${address} —
+// humans, shares, and agents all converge there.
+import { PLATFORM_URL } from "@/lib/platform-url";
 
 const address = z
   .string()

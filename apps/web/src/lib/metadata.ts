@@ -2,6 +2,7 @@ import { MediaItem } from "@/stores/media-store";
 import { TimelineTrack } from "@/stores/timeline-store";
 import { validateMetadataJSON } from "@zoralabs/coins-sdk";
 import { processThumbnailForMetadata } from "./thumbnail-upload";
+import { PLATFORM_URL } from "./platform-url";
 
 const METADATA_PROPAGATION_TIMEOUT_MS = 15000;
 
@@ -108,7 +109,7 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
   }
 
   // Final Image URL processing
-  let imageSource = thumbnailUrl || "https://saywaht.app/opengraph-image.jpg";
+  let imageSource = thumbnailUrl || `${PLATFORM_URL}/opengraph-image.jpg`;
   const imageUrl = await processThumbnailForMetadata(imageSource);
 
   // Final Video URL priority: Exported > Primary Media
@@ -120,7 +121,7 @@ export async function generateCoinMetadata(params: GenerateMetadataParams): Prom
     name: coinName,
     description: `A unique commentary coin created on SayWaht. Join the attention economy where every insight has value.`,
     image: imageUrl,
-    external_url: `https://saywaht.app/project/${projectId}`,
+    external_url: `${PLATFORM_URL}/project/${projectId}`,
     attributes,
     properties: {
       category: "video",

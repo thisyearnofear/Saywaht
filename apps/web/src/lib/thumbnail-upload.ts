@@ -1,4 +1,5 @@
 import { groveStorage } from './grove-storage';
+import { PLATFORM_URL } from './platform-url';
 
 /**
  * Upload a thumbnail image to Grove storage
@@ -88,7 +89,7 @@ export async function processThumbnailForMetadata(thumbnailSource: string | null
 
   // For any other format, try to make it absolute
   if (thumbnailSource.startsWith('/')) {
-    return `https://saywaht.app${thumbnailSource}`;
+    return `${PLATFORM_URL}${thumbnailSource}`;
   }
 
   // Default: return as-is
