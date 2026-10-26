@@ -14,6 +14,10 @@
 - **Free features**: Every basic feature of CapCut is paywalled now
 - **Simple**: People want editors that are easy to use - CapCut proved that
 
+## Proposed direction (not shipped)
+
+The current proposal is a focused creator response/repurposing studio: *turn your audience's questions and existing footage into captioned video responses, ready to publish* — with Zora as the first integration and distribution channel. This direction is **proposed and pending creator validation**, not shipped functionality. See [docs/ROADMAP.md](docs/ROADMAP.md) for the canonical strategy, October 1, 2026 research review, and phased plan.
+
 ## Features
 
 ### **🎬 Video Creation**
@@ -41,7 +45,7 @@
 
 - **Video creator coins** - Each video becomes a tradeable coin using Zora Protocol (`@zoralabs/coins-sdk` v0.8: quote-first trading, creator-coin-backed content coins, smart-wallet/ERC-4337 paths, platform referrals)
 - **Creator-supporter trading** - Fans can invest in creators through coin trading
-- **Automated rewards** - Creators earn from trading fees (50% of all trades)
+- **Automated rewards** - On applicable standard creator/content coins, creators receive 50% of the documented 1% base trading fee (0.5% of the traded amount), not 50% of trade value. Custom Pairs, legacy coins, and hook versions can use different reward structures. See [docs/ROADMAP.md](docs/ROADMAP.md) and [Zora rewards](https://support.zora.co/en/articles/2509953)
 - **Uniswap V4 integration** - Seamless liquidity and price discovery
 
 ### **🤖 Agentic Layer (agent-native surface)**

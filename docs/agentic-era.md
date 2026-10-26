@@ -1,23 +1,29 @@
 # Saywaht in the Agentic Era
 
-## The secret (Thiel)
+> **Canonical plan:** [ROADMAP.md](ROADMAP.md) is the canonical strategy document
+> (October 1, 2026 research review). This file is supporting rationale for the
+> agent-native surface; where they differ, the roadmap wins.
 
-*What valuable company is nobody building?* Everyone is wiring agents to
-chat, code, and commerce. Almost nobody is wiring agents to **media** — yet
-the next marginal consumer, payer, and creator of video is a machine, not a
-human with thumbs.
+## The secret (Thiel) — a hypothesis, not an established fact
 
-Saywaht's contrarian bet: **the audience for content is no longer only
-human.** An agent can watch (transcribe), judge (market signals), pay (x402 +
-Base), and publish (deploy a commentary coin) without ever opening the app's
-UI. The app that is first *legible to agents* inherits that demand curve the
-way Zora inherited the creator wave.
+*What valuable company is nobody building?* One hypothesis is that
+agent-readable media workflows could help creators turn audience context into
+publishable responses. We have not established a distinct machine-audience
+market or demand curve.
 
-The existing moat is real: a working video editor, Grove/IPFS media pipeline,
-Zora protocol integration with platform referrals, a Farcaster mini-app
-surface. What it lacked was any agent-readable surface. That is now fixed.
+Saywaht exposes tools that can read market context and prepare
+publishing/trading calls without opening the UI. Financial and publishing
+actions still require human approval and a wallet signature; the agent
+transcription tool currently returns only an acknowledgement. Being legible to
+agents is useful infrastructure, not a guaranteed advantage.
 
-## Make something people (and their agents) want (PG)
+The existing surface is real but is **not a moat**: a working video editor,
+Grove/IPFS media pipeline, Zora protocol integration, a Farcaster mini-app
+surface. These are tools anyone can build on. If defensibility exists, it would
+come from the directing/response workflow and creator/community relationships —
+per the roadmap's framing — not from SDK/API access or tokenization.
+
+## Make something people (and maybe their agents) want (PG)
 
 - **Do things that don't scale, safely.** The deterministic goal planner
   recognizes real intents (buy/sell/create/scan) rather than hallucinating a
@@ -26,22 +32,29 @@ surface. What it lacked was any agent-readable surface. That is now fixed.
   or publishing tool halts at an approval gate and returns *sign-ready
   calldata*; the agent never holds the user's keys. Policy ceilings
   (0.01 ETH/mission, 0.005 ETH/trade) are defaults, not suggestions.
-- **Default alive.** Platform referral on every agent-created coin and the
-  existing reward rails mean autonomous usage compounds platform revenue
-  without asking permission from a human on the other side of each trade.
+- **Referral economics — bounded, not "default alive".** A platform referral
+  applies only to *applicable standard coins* (0.2% of traded amount under the
+  current documented fee schedule); **Custom Pairs carry no platform or trade
+  referral share** and Trend Coins none at all — see the roadmap's research
+  review. Whether autonomous usage produces meaningful revenue is an open
+  question, not a compounding guarantee.
 
 ## What was built
 
-### 1. Latest Zora protocol primitives (`@zoralabs/coins-sdk` 0.3.3 → 0.8.0)
+### 1. Zora protocol primitives (`@zoralabs/coins-sdk` 0.8.0 in lockfile)
 - Quote-first trading: `createQuote` prices exact `amountOut` before any
   signature (`use-trading.ts`, agent `quote_trade`/`trade_coin` tools).
 - `createCoinCall` with `platformReferrer`, `payoutRecipientOverride`, and
   `CREATOR_COIN_OR_ZORA` backing (content coins unified with creator coins).
-- Smart-account (ERC-4337) paths available for fully autonomous agent
-  wallets: `createCoinSmartWallet`, `tradeCoinSmartWallet`,
-  `updateCoinURISmartWallet`, `prepareUserOperation`/`submitUserOperation`.
+- Smart-account (ERC-4337) paths are **available in the SDK**
+  (`createCoinSmartWallet`, `tradeCoinSmartWallet`,
+  `updateCoinURISmartWallet`, `prepareUserOperation`/`submitUserOperation`) —
+  availability in the SDK is not the same as wired autonomous execution in
+  this app; see the roadmap's integration audit phase.
 - `updateCoinURI` / `updatePayoutRecipient` for post-publish management.
-- Server-side `setApiKey` support (`ZORA_API_KEY`) for higher rate limits.
+- Server-side `setApiKey` support (`ZORA_API_KEY`) for higher rate limits;
+  which call sites actually route through the authenticated server path is
+  part of the pending audit, not a settled claim.
 
 ### 2. Agent core (`apps/web/src/agent/`)
 - `types.ts` — identity, tools, policy, missions, x402 type contract.
@@ -63,7 +76,19 @@ surface. What it lacked was any agent-readable surface. That is now fixed.
 - Profile → Agent tab: live dashboard with goal runner, approval queue,
   mission history, activity log.
 
-## Verification (run against dev server)
+### Known limitations of the current surface
+
+- The agent `transcribe` tool returns a **queued acknowledgement**, not a real
+  scheduling/execution pipeline (local browser captioning itself works).
+- Smart-wallet *autonomous* execution is not wired end-to-end; the approval
+  gate is the operative boundary today.
+- On-chain remix attribution is **not verified as implemented** — the current
+  plan stores source links in Saywaht (see ROADMAP).
+
+## Verification (historical reported results — not rerun this session)
+
+The following were reported run against a dev server previously; they have not
+been re-verified in this review.
 
 - MCP `initialize` + `tools/list` → 9 tools advertised.
 - `mission.run "scan the commentary coin market"` → done, live Zora market
@@ -73,13 +98,15 @@ surface. What it lacked was any agent-readable surface. That is now fixed.
   `mission.approve`.
 - `tsc --noEmit`: zero errors in all agent-layer and touched files.
 
-## Next moves
+## Next moves (reprioritized — see ROADMAP for the canonical plan)
 
-1. Persist missions/activity in `packages/db`; add ERC-8004-style onchain
-   registration for agent reputation.
-2. Wire a dedicated agent smart wallet (Coinbase Smart Wallet exists in this
-   repo's connectors) so opted-in users get true autonomy within policy caps.
-3. Editor co-pilot: expose timeline/canvas stores as MCP tools so external
-   agents can *edit*, not just publish.
-4. LLM planner behind the same policy gate (planner is swappable; the gate
-   is not).
+1. **Integration audit & reconciliation** (ROADMAP Phase A): verify the wired
+   SDK surface against 0.8.0 reality — authenticated server boundary, coin
+   field mapping, portfolio/balances/comments wiring, authoritative reward
+   data. This gates everything else.
+2. **Creator response pilot** (ROADMAP Phase B): a handful of active Zora
+   creators using the editor to answer audience questions — evidence first.
+3. Persist missions/activity in `packages/db`; agent timeline-editing tools
+   and an LLM planner behind the same policy gate — *optional, later*.
+4. Dedicated agent smart wallet within policy caps — *optional, later*.
+5. Generic trading autonomy — **deferred** per the roadmap.

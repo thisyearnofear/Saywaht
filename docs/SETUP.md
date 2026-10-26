@@ -4,6 +4,8 @@
 
 A decentralized video commentary platform that enables users to create memetic content and deploy it as tradeable Zora coins. Features FilCDN integration for low-latency content delivery and real-time video editing capabilities.
 
+> For current strategy, the October 1, 2026 research review, and pending integration work, see [ROADMAP.md](ROADMAP.md).
+
 ## Commands
 
 - Build: `bun run build` (all), `bun run build --filter=web` (single app)
@@ -111,33 +113,29 @@ The schema (`packages/db/src/schema.ts`) includes:
 DATABASE_URL=postgresql://user:password@host.neon.tech/neondb?sslmode=require
 ```
 
-### Optional for Enhanced Features
-
-```bash
-# AI Voice Generation
-ELEVENLABS_API_KEY=your-elevenlabs-key
-
-# Blockchain Integration
-ZORA_API_KEY=your-zora-api-key
-```
-
 ### Required for FilCDN (Hackathon)
 
 ```bash
 # Filecoin Calibration Testnet
-NEXT_PUBLIC_FILECOIN_PRIVATE_KEY=your-private-key
-NEXT_PUBLIC_FILECOIN_WALLET_ADDRESS=0xYourWalletAddress
+FILECOIN_PRIVATE_KEY=your-private-key
+FILECOIN_WALLET_ADDRESS=0xYourWalletAddress
 ```
+
+**Security note:** `FILECOIN_PRIVATE_KEY` is a **server-only secret**. It must never carry a `NEXT_PUBLIC_` prefix — anything prefixed `NEXT_PUBLIC_` is bundled into browser JavaScript, which would expose the private key to every visitor. Keep it in `apps/web/.env.local` (gitignored) and never commit or print it.
 
 ### Optional Enhancements
 
 ```bash
 # AI Voice Generation
-ELEVENLABS_API_KEY=your-elevenlabs-key
+ELEVENLABS_API_KEY=your_elevenlabs_key
 
 # Zora API (recommended to avoid rate limits)
-ZORA_API_KEY=your-zora-api-key
+ZORA_API_KEY=your_zora_api_key
+
+TAVILY_API_KEY=your_tavily_api_key
 ```
+
+`TAVILY_API_KEY` is optional and research-only — it is used by ad-hoc research scripts, not the app. It is a server-only secret (no `NEXT_PUBLIC_` prefix), is not required for editing, captions, or publishing, and must never be committed or printed.
 
 ## FilCDN Setup (Hackathon Demo)
 
@@ -509,7 +507,7 @@ npx drizzle-kit studio
 ### **FilCDN Issues**
 
 - **"Allowance not sufficient"**: Need more USDFC tokens or increase allowance
-- **"Private key required"**: Check `NEXT_PUBLIC_FILECOIN_PRIVATE_KEY` is set
+- **"Private key required"**: Check `FILECOIN_PRIVATE_KEY` is set (server-side, no `NEXT_PUBLIC_` prefix)
 - **Upload timeout**: File might be too large (254MB limit)
 
 ### **Build Issues**
