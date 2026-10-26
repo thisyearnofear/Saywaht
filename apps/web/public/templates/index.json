@@ -112,20 +112,6 @@
           "hasAudio": false,
           "aspectRatio": "square",
           "recommendedFormat": "square"
-        },
-        {
-          "id": "dog-thinking",
-          "name": "Dog Thinking",
-          "description": "Give voice to this thoughtful dog's inner monologue",
-          "category": "voiceovers",
-          "subcategory": "square",
-          "thumbnailUrl": "/templates/voiceovers/square/dog-thinking.mp4",
-          "videoUrl": "/templates/voiceovers/square/dog-thinking.mp4",
-          "duration": 10,
-          "tags": ["dog", "thinking", "monologue", "contemplative"],
-          "hasAudio": false,
-          "aspectRatio": "square",
-          "recommendedFormat": "square"
         }
       ]
     }
